@@ -1,7 +1,8 @@
+from .mixins import LimitedUseGrantorMixin
 from .shared import Sourced
 
 
-class Feat(Sourced):
+class Feat(LimitedUseGrantorMixin, Sourced):
     entity_type = 'feat'
     type_id = 1088085227
 
@@ -15,7 +16,7 @@ class Feat(Sourced):
         if ability is None:
             ability = []
 
-        super().__init__(False, **kwargs)
+        super().__init__(homebrew=False, **kwargs)
         self.name = name
         self.desc = desc
         self.prerequisite = prerequisite
@@ -23,9 +24,11 @@ class Feat(Sourced):
 
     @classmethod
     def from_data(cls, d):
-        return cls(d['name'], d['description'],
-                   d.get('prerequisite'), d.get('ability'),
-                   source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
+        return cls(
+            d['name'], d['description'],
+            d.get('prerequisite'), d.get('ability'),
+            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
+        ).initialize_limited_use(d)
 
 
 class FeatOption(Sourced):

@@ -33,6 +33,7 @@ class Monster(StatBlock, Sourced):
                  display_resists: Resistances, condition_immune: list, languages: list, cr: str, xp: int,
                  # optional
                  traits: list = None, actions: list = None, reactions: list = None, legactions: list = None,
+                 bonus_actions: list = None, mythic_actions: list = None,
                  la_per_round=3, passiveperc: int = None,
                  # augmented
                  resistances: Resistances = None, attacks: AttackList = None, proper: bool = False,
@@ -47,6 +48,10 @@ class Monster(StatBlock, Sourced):
             reactions = []
         if legactions is None:
             legactions = []
+        if mythic_actions is None:
+            mythic_actions = []
+        if bonus_actions is None:
+            bonus_actions = []
         if attacks is None:
             attacks = AttackList()
         if spellcasting is None:
@@ -91,6 +96,8 @@ class Monster(StatBlock, Sourced):
         self.actions = actions
         self.reactions = reactions
         self.legactions = legactions
+        self.mythic_actions = mythic_actions
+        self.bonus_actions = bonus_actions
         self.la_per_round = la_per_round
         self.proper = proper
         self.image_url = image_url
@@ -109,6 +116,8 @@ class Monster(StatBlock, Sourced):
         actions = [Trait(**t) for t in d['actions']]
         reactions = [Trait(**t) for t in d['reactions']]
         legactions = [Trait(**t) for t in d['legactions']]
+        bonus_actions = [Trait(**t) for t in d.get('bonus_actions', [])]
+        mythic_actions = [Trait(**t) for t in d.get('mythic_actions', [])]
         resistances = Resistances.from_dict(d['resistances'])
         attacks = AttackList.from_dict(d['attacks'])
         if d['spellbook'] is not None:
@@ -118,11 +127,12 @@ class Monster(StatBlock, Sourced):
         return cls(d['name'], d['size'], d['race'], d['alignment'], d['ac'], d['armortype'], d['hp'], d['hitdice'],
                    d['speed'], ability_scores, saves, skills, d['senses'], display_resists, d['condition_immune'],
                    d['languages'], d['cr'], d['xp'],
-                   traits, actions, reactions, legactions,
-                   d['la_per_round'], d['passiveperc'],
+                   traits=traits, actions=actions, reactions=reactions, legactions=legactions,
+                   bonus_actions=bonus_actions, mythic_actions=mythic_actions,
+                   la_per_round=d['la_per_round'], passiveperc=d['passiveperc'],
                    # augmented
-                   resistances, attacks, d['proper'], d['image_url'], spellcasting=spellcasting,
-                   token_free_fp=d['token_free'], token_sub_fp=d['token_sub'],
+                   resistances=resistances, attacks=attacks, proper=d['proper'], image_url=d['image_url'],
+                   spellcasting=spellcasting, token_free_fp=d['token_free'], token_sub_fp=d['token_sub'],
                    # sourcing
                    source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
 
@@ -155,8 +165,10 @@ class Monster(StatBlock, Sourced):
             'condition_immune': self.condition_immune,
             'saves': self.saves.to_dict(), 'skills': self.skills.to_dict(), 'languages': self.languages,
             'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
-            'reactions': [t.to_dict() for t in self.reactions],
-            'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
+            'reactions': [t.to_dict() for t in self.reactions], 'legactions': [t.to_dict() for t in self.legactions],
+            'bonus_actions': [t.to_dict() for t in self.bonus_actions],
+            'mythic_actions': [t.to_dict() for t in self.mythic_actions],
+            'la_per_round': self.la_per_round,
             'attacks': self.attacks.to_dict(), 'proper': self.proper,
             'image_url': self.image_url, 'spellbook': self.spellbook.to_dict(),
             'display_resists': self._displayed_resistances.to_dict()

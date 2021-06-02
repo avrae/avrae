@@ -18,6 +18,7 @@ LOAD_FILES = {
     'races': [],
     'subraces': [],
     'books': [],
+    'limiteduse': [],
 
     'srd-references': []
 }

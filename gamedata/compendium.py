@@ -12,6 +12,7 @@ from gamedata.book import Book
 from gamedata.feat import Feat
 from gamedata.item import Item
 from gamedata.klass import Class, ClassFeature, Subclass
+from gamedata.mixins import LimitedUseGrantorMixin
 from gamedata.monster import Monster
 from gamedata.race import Race, RaceFeature, SubRace
 from gamedata.shared import Sourced
@@ -157,7 +158,7 @@ class Compendium:
                 copied = copy.copy(subcls)
                 copied.name = f"{cls.name}: {subcls.name}"
                 # register lookups
-                self._register_entity_lookup(copied)
+                self._register_entity_lookup(subcls)
                 self.subclasses.append(copied)
 
     def _load_classfeats(self):
@@ -177,19 +178,19 @@ class Compendium:
                         copied.name = f"{copied.name} (Level {i + 1})"
                     seen.add(copied.name)
                     self.cfeats.append(copied)
-                    self._register_entity_lookup(copied)
+                    self._register_entity_lookup(feature)
 
-            for feature in cls_or_sub.feature_options:
-                copied = copy.copy(feature)
-                copied.name = f"{cls_or_sub.name}: {feature.name}"
-                self.cfeats.append(copied)
-                self._register_entity_lookup(copied)
+                    for cfo in feature.options:
+                        copied = copy.copy(cfo)
+                        copied.name = f"{cls_or_sub.name}: {feature.name}: {cfo.name}"
+                        self.cfeats.append(copied)
+                        self._register_entity_lookup(cfo)
 
             for feature in cls_or_sub.optional_features:
                 copied = copy.copy(feature)
                 copied.name = f"{cls_or_sub.name}: {feature.name}"
                 self.optional_cfeats.append(copied)
-                self._register_entity_lookup(copied)
+                self._register_entity_lookup(feature)
 
         for cls in self.classes:
             handle_class(cls)
@@ -205,10 +206,12 @@ class Compendium:
                 copied = copy.copy(feature)
                 copied.name = f"{race.name}: {feature.name}"
                 yield copied
-                self._register_entity_lookup(feature)
-                # race feature options (e.g. breath weapon, silver dragon) are registered here as well
-                for rfo in feature.options:
-                    self._register_entity_lookup(rfo)
+
+                if not feature.inherited:
+                    self._register_entity_lookup(feature)
+                    # race feature options (e.g. breath weapon, silver dragon) are registered here as well
+                    for rfo in feature.options:
+                        self._register_entity_lookup(rfo)
 
         for base_race in self.races:
             self.rfeats.extend(handle_race(base_race))
@@ -223,12 +226,17 @@ class Compendium:
                 log.info(f"Overwriting existing entity lookup key: {k} "
                          f"({self._entity_lookup[k].name} -> {entity.name})")
             else:
-                log.debug(f"Entity lookup key {k} is registered multiple times: "
-                          f"({self._entity_lookup[k].name}, {entity.name})")
+                log.info(f"Entity lookup key {k} is registered multiple times: "
+                         f"({self._entity_lookup[k].name}, {entity.name})")
         log.debug(f"Registered entity {k}: {entity!r}")
         self._entity_lookup[k] = entity
         kt = (entity.type_id, entity.entity_id)
         self._entity_lookup[kt] = entity
+
+        # if the entity has granted limited uses, register those too
+        if isinstance(entity, LimitedUseGrantorMixin):
+            for lu in entity.limited_use:
+                self._register_entity_lookup(lu)
 
     def _register_book_lookups(self):
         for book in self.books:

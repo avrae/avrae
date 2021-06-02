@@ -307,6 +307,10 @@ class Lookup(commands.Cog):
                 action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.actions)
                 if action:
                     safe_append("Actions", action)
+            if monster.bonus_actions:
+                bonus_action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.bonus_actions)
+                if bonus_action:
+                    safe_append("Bonus Actions", bonus_action)
             if monster.reactions:
                 reaction = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.reactions)
                 if reaction:
@@ -324,6 +328,10 @@ class Lookup(commands.Cog):
                         legendary.append(a.desc)
                 if legendary:
                     safe_append("Legendary Actions", '\n\n'.join(legendary))
+            if monster.mythic_actions:
+                mythic_action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.mythic_actions)
+                if mythic_action:
+                    safe_append("Mythic Actions", mythic_action)
 
         else:
             hp = monster.hp
@@ -368,6 +376,9 @@ class Lookup(commands.Cog):
 
             if monster.actions:
                 embed_queue[-1].add_field(name="Actions", value=str(len(monster.actions)))
+
+            if monster.bonus_actions:
+                embed_queue[-1].add_field(name="Bonus Actions", value=str(len(monster.bonus_actions)))
 
             if monster.reactions:
                 embed_queue[-1].add_field(name="Reactions", value=str(len(monster.reactions)))
@@ -611,10 +622,10 @@ class Lookup(commands.Cog):
         """
         :type ctx: discord.ext.commands.Context
         :param entities: A dict mapping entitlements entity types to the entities themselves.
-        :type entities: dict[str, list[gamedata.shared.Sourced]]
+        :type entities: dict[str, list[T]]
         :type query: str
         :param str query_type: The type of the object being queried for (default entity type if only one dict key)
-        :rtype: gamedata.shared.Sourced
+        :rtype: T
         :raises: RequiresLicense if an entity that requires a license is selected
         """
         # sanity checks

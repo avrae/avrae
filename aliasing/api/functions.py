@@ -156,5 +156,9 @@ def rand():
     return random.random()
 
 
-def randint(top):
-    return random.randrange(top)
+def randint(start, stop=None, step=1):
+    return random.randrange(start, stop, step)
+
+
+def randchoice(seq):
+    return random.choice(seq)

@@ -6,25 +6,24 @@ import discord
 
 import gamedata.lookuputils
 from cogs5e.models import initiative
-from cogs5e.models.automation import Automation
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException, InvalidArgument
 from cogs5e.models.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import confirm, smart_trim, verbose_stat
+from .mixins import AutomatibleMixin
 from .shared import Sourced
 
 log = logging.getLogger(__name__)
 
 
-class Spell(Sourced):
+class Spell(AutomatibleMixin, Sourced):
     entity_type = 'spell'
     type_id = 1118725998
 
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
                  description: str, homebrew: bool, classes=None, subclasses=None, ritual: bool = False,
-                 higherlevels: str = None, concentration: bool = False, automation: Automation = None,
-                 image: str = None, **kwargs):
+                 higherlevels: str = None, concentration: bool = False, image: str = None, **kwargs):
         if classes is None:
             classes = []
         if isinstance(classes, str):
@@ -34,7 +33,7 @@ class Spell(Sourced):
         if isinstance(subclasses, str):
             subclasses = [cls.strip() for cls in subclasses.split(',') if cls.strip()]
 
-        super().__init__(homebrew, **kwargs)
+        super().__init__(homebrew=homebrew, **kwargs)
 
         self.name = name
         self.level = level
@@ -49,7 +48,6 @@ class Spell(Sourced):
         self.description = description
         self.higherlevels = higherlevels
         self.concentration = concentration
-        self.automation = automation
         self.image = image
 
         if self.concentration and 'Concentration' not in self.duration:
@@ -57,20 +55,19 @@ class Spell(Sourced):
 
     @classmethod
     def from_data(cls, d):  # local JSON
-        automation = Automation.from_data(d["automation"])
         return cls(
             d['name'], d['level'], d['school'], d['casttime'], d['range'], d['components'], d['duration'],
             d['description'],
             homebrew=False, classes=d['classes'], subclasses=d['subclasses'], ritual=d['ritual'],
-            higherlevels=d['higherlevels'], concentration=d['concentration'], automation=automation,
-            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
+            higherlevels=d['higherlevels'], concentration=d['concentration'],
+            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
+        ).initialize_automation(d)
 
     @classmethod
     def from_homebrew(cls, data, source):  # homebrew spells
         data['components'] = parse_homebrew_components(data['components'])
         data["range_"] = data.pop("range")
-        data["automation"] = Automation.from_data(data["automation"])
-        return cls(homebrew=True, source=source, **data)
+        return cls(homebrew=True, source=source, **data).initialize_automation(data)
 
     def get_school(self):
         return {
@@ -238,7 +235,9 @@ class Spell(Sourced):
         # begin setup
         embed = discord.Embed()
         if title:
-            embed.title = title.replace('[sname]', self.name)
+            embed.title = title.replace('[name]', caster.name) \
+                .replace('[aname]', self.name) \
+                .replace('[sname]', self.name)  # #1514, [aname] is action name now
         else:
             embed.title = f"{caster.get_title_name()} casts {self.name}{stat_override}!"
         if targets is None:

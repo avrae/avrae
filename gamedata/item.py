@@ -1,7 +1,8 @@
+from .mixins import DescribableMixin
 from .shared import Sourced
 
 
-class Item(Sourced):
+class Item(DescribableMixin, Sourced):
     # not necessarily true for nonmagical items...
     entity_type = 'magic-item'
     type_id = 112130694
@@ -32,3 +33,7 @@ class Item(Sourced):
     def from_homebrew(cls, d, source):
         return cls(d['name'], d['desc'], False, d.get('meta'), d.get('image'),
                    source=source, homebrew=True)
+
+    @property
+    def description(self):
+        return self.desc

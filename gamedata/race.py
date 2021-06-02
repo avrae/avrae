@@ -1,4 +1,4 @@
-from .mixins import LimitedUseGrantorMixin
+from .mixins import DescribableMixin, LimitedUseGrantorMixin
 from .shared import Sourced
 
 
@@ -32,7 +32,7 @@ class SubRace(Race):
     type_id = 1228963568
 
 
-class RaceFeature(LimitedUseGrantorMixin, Sourced):
+class RaceFeature(LimitedUseGrantorMixin, DescribableMixin, Sourced):
     entity_type = 'race-feature'
     type_id = 1960452172
 
@@ -57,6 +57,10 @@ class RaceFeature(LimitedUseGrantorMixin, Sourced):
         inst.options = [RaceFeatureOption.from_race_feature(o, inst) for o in d['options']]
         inst.initialize_limited_use(d)
         return inst
+
+    @property
+    def description(self):
+        return self.text
 
 
 class RaceFeatureOption(LimitedUseGrantorMixin, Sourced):

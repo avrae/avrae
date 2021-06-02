@@ -51,6 +51,11 @@ class Effect:
         meta = Effect.serialize(self.meta or [])
         return {"type": self.type, "meta": meta}
 
+    async def preflight(self, autoctx):
+        """Runs exactly once (in a DFS manner) before any effects are executed. Do any async stuff here."""
+        for child in self.children:
+            await child.preflight(autoctx)
+
     def run(self, autoctx):
         log.debug(f"Running {self.type}")
         if self.meta:
@@ -75,7 +80,7 @@ class Effect:
 
     @property
     def children(self):
-        """Returns the child effects of this effect."""
+        """Returns all child effects of this effect."""
         return self.meta
 
 

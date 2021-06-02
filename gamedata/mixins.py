@@ -1,4 +1,3 @@
-from cogs5e.models.automation import Automation
 from .shared import LimitedUse
 
 
@@ -40,5 +39,11 @@ class AutomatibleMixin:
         Given an instance that is in the process of being constructed, set up the Automation and return the instance
         (for initialization chaining).
         """
+        from cogs5e.models.automation import Automation
         self.automation = Automation.from_data(data['automation'])
         return self
+
+
+class DescribableMixin:
+    """This entity has a singular description that can be displayed in a single field"""
+    description: str = ...

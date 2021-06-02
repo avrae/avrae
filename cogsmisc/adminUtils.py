@@ -18,7 +18,7 @@ from discord.ext import commands
 import utils.redisIO as redis
 from gamedata.compendium import compendium
 from utils import checks, config
-from utils.functions import confirm
+from utils.functions import confirm, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -211,6 +211,18 @@ class AdminUtils(commands.Cog):
         permissions = await self.bot.mdb.user_permissions.find_one({"id": str(member.id)})
         del permissions['_id']
         await ctx.send(f"Updated user permissions: ```json\n{json.dumps(permissions, indent=2)}\n```")
+
+    @admin.command(hidden=True, name='debug_entity')
+    @checks.is_owner()
+    async def admin_debug_entity(self, ctx, tid, eid: int = None):
+        if eid is not None:
+            e = compendium.lookup_entity(int(tid), eid)
+        else:
+            # noinspection PyProtectedMember
+            options = list(compendium._entity_lookup.values())
+            e = await search_and_select(ctx, options, tid, lambda en: en.name,
+                                        selectkey=lambda en: f"{en.name} ({en.entity_type})")
+        await ctx.send(f"```py\n# {e.entity_id=}, {e.type_id=}\n{e!r}\n```")
 
     # ---- cluster management ----
     @admin.command(hidden=True, name="restart-shard")

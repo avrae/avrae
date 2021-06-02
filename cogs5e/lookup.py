@@ -622,10 +622,10 @@ class Lookup(commands.Cog):
         """
         :type ctx: discord.ext.commands.Context
         :param entities: A dict mapping entitlements entity types to the entities themselves.
-        :type entities: dict[str, list[gamedata.shared.Sourced]]
+        :type entities: dict[str, list[T]]
         :type query: str
         :param str query_type: The type of the object being queried for (default entity type if only one dict key)
-        :rtype: gamedata.shared.Sourced
+        :rtype: T
         :raises: RequiresLicense if an entity that requires a license is selected
         """
         # sanity checks

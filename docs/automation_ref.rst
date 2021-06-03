@@ -461,9 +461,12 @@ Cast Spell
         type: "spell";
         id: int;
         level?: int;
+        dc?: IntExpression;
+        attackBonus?: IntExpression;
+        castingMod?: IntExpression;
     }
 
-Stops execution of the current automation, and begins execution of the given spell's automation. Does not use a spell
+Executes the given spell's automation as if it were immediately cast. Does not use a spell
 slot to cast the spell. Can only be used at the root of automation. Cannot be used inside a spell's automation.
 
 This is usually used in features that cast spells using alternate resources (i.e. Use Counter, Cast Spell).
@@ -474,7 +477,22 @@ This is usually used in features that cast spells using alternate resources (i.e
 
 .. attribute:: level
 
-     *optional* - The (slot) level to cast the spell at.
+    *optional* - The (slot) level to cast the spell at.
+
+.. attribute:: dc
+
+    *optional* - The saving throw DC to use when casting the spell. If not provided, defaults to the caster's default
+    spellcasting DC (or any DC specified in the spell automation).
+
+.. attribute:: attackBonus
+
+    *optional* - The spell attack bonus to use when casting the spell. If not provided, defaults to the caster's
+    default spell attack bonus (or any attack bonus specified in the spell automation).
+
+.. attribute:: castingMod
+
+    *optional* - The spellcasting modifier to use when casting the spell. If not provided, defaults to the caster's
+    default spellcasting modifier.
 
 **Variables**
 

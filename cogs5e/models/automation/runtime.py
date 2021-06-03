@@ -21,11 +21,12 @@ class AutomationContext:
         self.args = args
         self.combat = combat
 
+        # spellcasting utils
         self.spell = spell
-        self.is_spell = spell is not None
-        self.conc_effect = conc_effect
         self.ab_override = ab_override
         self.dc_override = dc_override
+        self.spell_level_override = None  # used in Cast Spell effect
+        self.conc_effect = conc_effect
 
         self.metavars = {
             # caster, targets as default (#1335)
@@ -129,9 +130,13 @@ class AutomationContext:
         self.pm_queue[user].append(message)
 
     # ===== utils =====
+    @property
+    def is_spell(self):
+        return self.spell is not None
+
     def get_cast_level(self):
         if self.is_spell:
-            return self.args.last('l', self.spell.level, int)
+            return self.args.last('l', self.spell_level_override or self.spell.level, int)
         return 0
 
     def parse_annostr(self, annostr, is_full_expression=False):

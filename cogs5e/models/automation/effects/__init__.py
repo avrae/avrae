@@ -4,7 +4,7 @@ from ..errors import AutomationException, StopExecution
 
 __all__ = (
     'Effect', 'Target', 'Attack', 'Save', 'Damage', 'TempHP', 'IEffect', 'Roll', 'Text', 'SetVariable', 'Condition',
-    'UseCounter',
+    'UseCounter', 'CastSpell',
 )
 
 log = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class Effect:
         return self.meta
 
 
-from . import attack, condition, damage, ieffect, roll, save, target, temphp, text, usecounter, variable
+from . import attack, condition, damage, ieffect, roll, save, target, temphp, text, usecounter, variable, castspell
 
 Target = target.Target
 Attack = attack.Attack
@@ -97,6 +97,7 @@ Text = text.Text
 SetVariable = variable.SetVariable
 Condition = condition.Condition
 UseCounter = usecounter.UseCounter
+CastSpell = castspell.CastSpell
 
 EFFECT_MAP = {
     "target": Target,
@@ -110,4 +111,5 @@ EFFECT_MAP = {
     "variable": SetVariable,
     "condition": Condition,
     "counter": UseCounter,
+    "spell": CastSpell,
 }

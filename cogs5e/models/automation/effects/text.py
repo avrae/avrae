@@ -13,7 +13,6 @@ class Text(Effect):
         """
         super().__init__("text", **kwargs)
         self.text = text
-        self.added = False
 
     @classmethod
     def from_data(cls, data):
@@ -48,10 +47,11 @@ class Text(Effect):
         if isinstance(self.text, EntityReference):
             entity = self.text.entity
             if entity is None:
-                raise AutomationException("Invalid entity specified in text.")
+                text = "**Error**: Invalid entity specified in text."
             elif not isinstance(entity, gamedata.mixins.DescribableMixin):
-                raise AutomationException(f"The supplied {entity.entity_type} does not have a description.")
-            text = entity.description
+                text = f"**Error**: The supplied {entity.entity_type} does not have a description."
+            else:
+                text = entity.description
         elif self.text:
             text = autoctx.parse_annostr(self.text)
 

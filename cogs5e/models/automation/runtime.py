@@ -80,8 +80,16 @@ class AutomationContext:
         if text not in self._effect_queue:
             self._effect_queue.append(text)
 
-    def postflight_queue_field(self, name, value):
-        """Adds a field to the queue that will appear after all other fields (but before user-supplied -f fields)."""
+    def postflight_queue_field(self, name, value, merge=True):
+        """
+        Adds a field to the queue that will appear after all other fields (but before user-supplied -f fields).
+        If *merge* is true, adds a line to a field that might already have the same name.
+        """
+        if merge:
+            existing_field = next((f for f in self._postflight_queue if f['name'] == name), None)
+            if existing_field and value != existing_field['value']:
+                existing_field['value'] = f"{existing_field['value']}\n{value}"
+                return
         field = {"name": name, "value": value, "inline": False}
         if field not in self._postflight_queue:
             self._postflight_queue.append(field)

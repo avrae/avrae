@@ -800,6 +800,16 @@ class AliasSpellbookSpell:
         """
         return self._spell.mod
 
+    @property
+    def prepared(self):
+        """
+        Whether or not the spell is prepared. If the spell is always prepared, the caster is not a prepared caster
+        (e.g. Sorcerer), or the spell is a cantrip, this will be True.
+
+        :rtype: bool
+        """
+        return self._spell.prepared
+
     def __str__(self):
         return self.name
 

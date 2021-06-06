@@ -202,7 +202,7 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         adv/dis - Give advantage or disadvantage to the initiative roll.
         -b <condition bonus> - Adds a bonus to the combatant's initiative roll.
-        -n <number> - Adds more than one of that monster.
+        -n <number or dice> - Adds more than one of that monster. Supports dice.
         -p <value> - Places combatant at the given value, instead of rolling.
         -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
         -h - Hides HP, AC, Resists, etc. Default: True.
@@ -233,6 +233,7 @@ class InitTracker(commands.Cog):
         init_skill = monster.skills.initiative
 
         combat = await Combat.from_ctx(ctx)
+        
         out = ''
         to_pm = ''
 

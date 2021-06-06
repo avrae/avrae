@@ -359,7 +359,7 @@ class Customization(commands.Cog):
     async def prefix(self, ctx, prefix: str = None):
         """Sets the bot's prefix for this server.
 
-        You must have Manage Server permissions or a role called "Bot Admin" to use this command.
+        You must have Manage Server permissions or a role called "Bot Admin" to use this command. Due to Discord conflict, a prefix cannot begin with `/`. However, prefixes such as `a/` are still valid.
 
         Forgot the prefix? Reset it with "@Avrae#6944 prefix !".
         """

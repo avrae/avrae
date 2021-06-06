@@ -233,7 +233,7 @@ class InitTracker(commands.Cog):
         init_skill = monster.skills.initiative
 
         combat = await Combat.from_ctx(ctx)
-        
+
         out = ''
         to_pm = ''
 

@@ -371,6 +371,10 @@ class Customization(commands.Cog):
         if not checks._role_or_permissions(ctx, lambda r: r.name.lower() == 'bot admin', manage_guild=True):
             return await ctx.send("You do not have permissions to change the guild prefix.")
 
+        # Check for Discord Slash-command conflict
+        if prefix.startswith('/'):
+            return await ctx.send(f"Due to Discord conflict, a prefix cannot begin with /")
+
         # insert into cache
         self.bot.prefixes[guild_id] = prefix
 

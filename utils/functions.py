@@ -246,14 +246,16 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
     return choices[int(m.content) - 1][1]
 
 
-async def confirm(ctx, message, delete_msgs=False, required_response=""):
+async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity):
     """
     Confirms whether a user wants to take an action.
+
     :rtype: bool|None
     :param ctx: The current Context.
     :param message: The message for the user to confirm.
     :param delete_msgs: Whether to delete the messages.
-    :param require_response: Specifies an exact match response that must be used to confirm.
+    :param response_check: A function (str) -> bool that returns whether a given reply is a valid response.
+    :type response_check: (str) -> bool
     :return: Whether the user confirmed or not. None if no reply was recieved
     """
     msg = await ctx.channel.send(message)
@@ -261,14 +263,14 @@ async def confirm(ctx, message, delete_msgs=False, required_response=""):
         reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
     except asyncio.TimeoutError:
         return None
-    replyBool = (reply.content == required_response if required_response else get_positivity(reply.content)) if reply is not None else None
+    reply_bool = response_check(reply.content) if reply is not None else None
     if delete_msgs:
         try:
             await msg.delete()
             await reply.delete()
         except:
             pass
-    return replyBool
+    return reply_bool
 
 
 # ==== display helpers ====
@@ -296,9 +298,11 @@ def bubble_format(value: int, max_: int, fill_from_right=False):
         return f"{empty}{filled}"
     return f"{filled}{empty}"
 
+
 def verbose_stat(stat):
     """Returns the long stat name for a abbreviation (e.g. "str" -> "Strength", etc)"""
     return constants.STAT_ABBR_MAP[stat.lower()]
+
 
 def natural_join(things, between: str):
     if len(things) < 3:

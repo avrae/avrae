@@ -202,7 +202,7 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         adv/dis - Give advantage or disadvantage to the initiative roll.
         -b <condition bonus> - Adds a bonus to the combatant's initiative roll.
-        -n <number> - Adds more than one of that monster.
+        -n <number or dice> - Adds more than one of that monster. Supports dice.
         -p <value> - Places combatant at the given value, instead of rolling.
         -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
         -h - Hides HP, AC, Resists, etc. Default: True.
@@ -227,7 +227,7 @@ class InitTracker(commands.Cog):
         hp = args.last('hp', type_=int)
         thp = args.last('thp', type_=int)
         ac = args.last('ac', type_=int)
-        n = args.last('n', 1, int)
+        n = args.last('n', 1)
         note = args.last('note')
         name_template = args.last('name', monster.name[:2].upper() + '#')
         init_skill = monster.skills.initiative
@@ -236,7 +236,15 @@ class InitTracker(commands.Cog):
 
         out = ''
         to_pm = ''
-        recursion = 25 if n > 25 else 1 if n < 1 else n
+
+        try: # Attempt to get the add as a number
+            n_result = int(n)
+        except ValueError: # if we're not a number, are we dice
+            roll_result = roll(str(n))
+            n_result = roll_result.total
+            out += f"Rolling random number of combatants: {roll_result}\n"
+
+        recursion = 25 if n_result > 25 else 1 if n_result < 1 else n_result
 
         name_num = 1
         for i in range(recursion):

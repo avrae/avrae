@@ -28,7 +28,7 @@ from ddb.gamelog.errors import NoCampaignLink
 from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import auth_and_chan, confirm, get_positivity, list_get, search_and_select, try_delete
+from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -383,19 +383,11 @@ class SheetManager(commands.Cog):
         selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
                                                 selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
 
-        await ctx.send(f"Are you sure you want to delete {selected_char['name']}? (Reply with yes/no)")
-        try:
-            reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
-        except asyncio.TimeoutError:
-            reply = None
-        reply = get_positivity(reply.content) if reply is not None else None
-        if reply is None:
-            return await ctx.send('Timed out waiting for a response or invalid response.')
-        elif reply:
+        if await confirm(ctx, f"Are you sure you want to delete {selected_char['name']}? (Reply with yes/no)"):
             await Character.delete(ctx, str(ctx.author.id), selected_char['upstream'])
             return await ctx.send(f"{selected_char['name']} has been deleted.")
         else:
-            return await ctx.send("OK, cancelling.")
+            return await ctx.send("Ok, cancelling.")
 
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
@@ -506,15 +498,8 @@ class SheetManager(commands.Cog):
         Returns True to overwrite, False or None otherwise."""
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
-            await ctx.channel.send(
-                "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+            return await confirm(ctx, f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
                 f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
-            try:
-                reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
-            except asyncio.TimeoutError:
-                reply = None
-            replyBool = get_positivity(reply.content) if reply is not None else None
-            return replyBool
         return True
 
     @commands.command()

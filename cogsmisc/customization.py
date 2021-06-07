@@ -20,7 +20,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
-from utils.functions import auth_and_chan, confirm, get_selection, user_from_id
+from utils.functions import confirm, get_selection, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
@@ -430,12 +430,12 @@ class Customization(commands.Cog):
     @alias.command(name='deleteall', aliases=['removeall'])
     async def alias_deleteall(self, ctx):
         """Deletes ALL user aliases."""
-        await ctx.send("This will delete **ALL** of your personal user aliases "
-                       "(it will not affect workshop subscriptions). "
-                       "Are you *absolutely sure* you want to continue?\n"
-                       "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
-        if not reply.content == "Yes, I am sure":
+        if not await confirm(
+                ctx,
+                f"This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
+                f"Are you *absolutely sure* you want to continue?\n"
+                f"Type `Yes, I am sure` to confirm.",
+                response_check=lambda r: r == "Yes, I am sure"):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.aliases.delete_many({"owner": str(ctx.author.id)})
@@ -479,11 +479,12 @@ class Customization(commands.Cog):
     @snippet.command(name='deleteall', aliases=['removeall'])
     async def snippet_deleteall(self, ctx):
         """Deletes ALL user snippets."""
-        await ctx.send("This will delete **ALL** of your user snippets. "
-                       "Are you *absolutely sure* you want to continue?\n"
-                       "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for('message', timeout=30, check=lambda m: auth_and_chan(ctx)(m))
-        if not reply.content == "Yes, I am sure":
+        if not await confirm(
+                ctx,
+                f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
+                f"Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm.",
+                response_check=lambda r: r == "Yes, I am sure"):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.snippets.delete_many({"owner": str(ctx.author.id)})
@@ -586,15 +587,12 @@ class Customization(commands.Cog):
     async def cvar_deleteall(self, ctx):
         """Deletes ALL character variables for the active character."""
         char: Character = await Character.from_ctx(ctx)
-
-        await ctx.send(f"This will delete **ALL** of your character variables for {char.name}. "
-                       "Are you *absolutely sure* you want to continue?\n"
-                       "Type `Yes, I am sure` to confirm.")
-        try:
-            reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
-        except asyncio.TimeoutError:
-            reply = None
-        if (not reply) or (not reply.content == "Yes, I am sure"):
+        if not await confirm(
+                ctx,
+                f"This will delete **ALL** of your character variables for {char.name}. "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm.",
+                response_check=lambda r: r == "Yes, I am sure"):
             return await ctx.send("Unconfirmed. Aborting.")
 
         char.cvars = {}
@@ -650,11 +648,12 @@ class Customization(commands.Cog):
     @uservar.command(name='deleteall', aliases=['removeall'])
     async def uvar_deleteall(self, ctx):
         """Deletes ALL user variables."""
-        await ctx.send("This will delete **ALL** of your user variables (uvars). "
-                       "Are you *absolutely sure* you want to continue?\n"
-                       "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for('message', timeout=30, check=lambda m: auth_and_chan(ctx)(m))
-        if (not reply) or (not reply.content == "Yes, I am sure"):
+        if not await confirm(
+                ctx,
+                f"This will delete **ALL** of your user variables (uvars). "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm.",
+                response_check=lambda r: r == "Yes, I am sure"):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.uvars.delete_many({"owner": str(ctx.author.id)})

@@ -246,13 +246,14 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
     return choices[int(m.content) - 1][1]
 
 
-async def confirm(ctx, message, delete_msgs=False):
+async def confirm(ctx, message, delete_msgs=False, required_response=""):
     """
     Confirms whether a user wants to take an action.
     :rtype: bool|None
     :param ctx: The current Context.
     :param message: The message for the user to confirm.
     :param delete_msgs: Whether to delete the messages.
+    :param require_response: Specifies an exact match response that must be used to confirm.
     :return: Whether the user confirmed or not. None if no reply was recieved
     """
     msg = await ctx.channel.send(message)
@@ -260,7 +261,7 @@ async def confirm(ctx, message, delete_msgs=False):
         reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
     except asyncio.TimeoutError:
         return None
-    replyBool = get_positivity(reply.content) if reply is not None else None
+    replyBool = (reply.content == required_response if required_response else get_positivity(reply.content)) if reply is not None else None
     if delete_msgs:
         try:
             await msg.delete()

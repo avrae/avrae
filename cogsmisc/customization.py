@@ -359,7 +359,7 @@ class Customization(commands.Cog):
     async def prefix(self, ctx, prefix: str = None):
         """Sets the bot's prefix for this server.
 
-        You must have Manage Server permissions or a role called "Bot Admin" to use this command.
+        You must have Manage Server permissions or a role called "Bot Admin" to use this command. Due to a possible Discord conflict, a prefix beginning with `/` will require confirmation.
 
         Forgot the prefix? Reset it with "@Avrae#6944 prefix !".
         """
@@ -370,6 +370,12 @@ class Customization(commands.Cog):
 
         if not checks._role_or_permissions(ctx, lambda r: r.name.lower() == 'bot admin', manage_guild=True):
             return await ctx.send("You do not have permissions to change the guild prefix.")
+
+        # Check for Discord Slash-command conflict
+        if prefix.startswith('/'):
+            if not await confirm(ctx, f"Setting a prefix that begins with / may cause issues. "
+                       "Are you sure you want to continue?"):
+                return await ctx.send("Ok, cancelling.")
 
         # insert into cache
         self.bot.prefixes[guild_id] = prefix

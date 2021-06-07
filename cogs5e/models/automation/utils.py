@@ -32,11 +32,11 @@ def upcast_scaled_dice(effect, autoctx, dice_ast):
 
             dice_ast = d20.utils.tree_map(mapper, dice_ast)
 
-        if effect.higher and not autoctx.get_cast_level() == autoctx.spell.level:
-            higher = effect.higher.get(str(autoctx.get_cast_level()))
-            if higher:
-                higher_ast = d20.parse(higher)
-                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', higher_ast.roll)
+    if effect.higher:
+        higher = effect.higher.get(str(autoctx.get_cast_level()))
+        if higher:
+            higher_ast = d20.parse(higher)
+            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', higher_ast.roll)
 
     return dice_ast
 

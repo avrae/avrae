@@ -106,6 +106,9 @@ class UseCounter(Effect):
         overflow = abs(new_value - target_value)
         slots_str = autoctx.caster.spellbook.slots_str(level)
 
+        # update the runtime to set the level
+        autoctx.spell_level_override = level
+
         # queue resource usage in own field
         overflow_str = f"\n({overflow} overflow)" if overflow else ""
         autoctx.postflight_queue_field(name="Spell Slots", value=f"{slots_str} ({delta:+}){overflow_str}")

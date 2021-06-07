@@ -143,9 +143,10 @@ class AutomationContext:
         return self.spell is not None
 
     def get_cast_level(self):
-        if self.is_spell:
-            return self.args.last('l', self.spell_level_override or self.spell.level, int)
-        return 0
+        default = self.spell_level_override or 0
+        if self.spell:
+            default = default or self.spell.level
+        return self.args.last('l', default, int)
 
     def parse_annostr(self, annostr, is_full_expression=False):
         """

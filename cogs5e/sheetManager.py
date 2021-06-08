@@ -516,6 +516,8 @@ class SheetManager(commands.Cog):
         `-nocc` - Do not automatically create custom counters for class resources and features.
 
         __Sheet-specific Notes__
+        D&D Beyond:
+            Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
         Gsheet:
             The sheet must be shared with Avrae for this to work.
             Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.

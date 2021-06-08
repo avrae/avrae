@@ -502,6 +502,59 @@ class SheetManager(commands.Cog):
                 f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
 
+    @commands.command(name='import')
+    @commands.max_concurrency(1, BucketType.user)
+    async def import_sheet(self, ctx, url: str, *args):
+        """
+        Loads a character sheet in one of the accepted formats:
+            [Dicecloud](https://dicecloud.com/)
+            [GSheet v2.1](http://gsheet2.avrae.io) (auto)
+            [GSheet v1.4](http://gsheet.avrae.io) (manual)
+            [D&D Beyond](https://www.dndbeyond.com/)
+        
+        __Valid Arguments__
+        `-nocc` - Do not automatically create custom counters for class resources and features.
+
+        __Sheet-specific Notes__
+        Gsheet:
+            The sheet must be shared with Avrae for this to work.
+            Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
+
+        Dicecloud:
+            Share your character with `avrae` on Dicecloud (edit perms) for live updates.
+        """
+        loading = await ctx.send('Loading character data to Avrae...')
+        prefix = ''
+        parser = None
+
+        url = await self._check_url(ctx, url) # check for < >
+        # Sheets in order: DDB, Dicecloud, Gsheet
+        beyond_url = DDB_URL_RE.match(url)
+        if beyond_url:
+            loading = await ctx.send('Loading character data from Beyond...')
+            prefix = 'beyond'
+            url = beyond_url.group(1)
+            parser = BeyondSheetParser(url)
+        elif 'dicecloud.com' in url:
+            url = url.split('/character/')[-1].split('/')[0]
+            loading = await ctx.send('Loading character data from Dicecloud...')            
+            prefix = 'dicecloud'
+            parser = DicecloudParser(url)
+        else:
+            try:
+                url = extract_gsheet_id_from_url(url)
+                loading = await ctx.send('Loading character data from Google...')
+                prefix = 'google'
+                parser = GoogleSheet(url)
+            except ExternalImportError:
+                return await loading.edit(content="Sheet type did not match accepted formats.")
+
+        override = await self._confirm_overwrite(ctx, f"{prefix}-{url}")
+        if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
+
+        # Load the parsed sheet
+        await self._load_sheet(ctx, parser, args, loading)
+
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def dicecloud(self, ctx, url: str, *args):

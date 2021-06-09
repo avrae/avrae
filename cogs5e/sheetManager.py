@@ -523,7 +523,7 @@ class SheetManager(commands.Cog):
             Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
 
         Dicecloud:
-            Share your character with `avrae` on Dicecloud (edit perms) for live updates.
+            Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
         """
         loading = await ctx.send('Loading character data to Avrae...')
         prefix = ''

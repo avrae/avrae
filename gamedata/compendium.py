@@ -290,5 +290,22 @@ class Compendium:
         """
         return self._book_lookup.get(short_source)
 
+    def lookup_action(self, uid):
+        """
+        Gets an action by its unique ID.
+
+        :type uid: str
+        :rtype: Action or None
+        """
+        return self._actions_by_uid.get(uid)
+
+    def lookup_actions_for_entity(self, tid, eid):
+        """
+        Returns the list of actions (possibly empty) granted by an entity with the given type id/id.
+
+        :rtype: list of Action
+        """
+        return self._actions_by_eid[(tid, eid)]
+
 
 compendium = Compendium()

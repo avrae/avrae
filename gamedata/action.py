@@ -24,3 +24,7 @@ class Action(AutomatibleMixin):
             name=d['name'], uid=d['uid'], id=d['id'], type_id=d['type_id'],
             activation_type=ActivationType(d['activation_type'])
         ).initialize_automation(d)
+
+    def __repr__(self):
+        return f"<Action name={self.name!r} uid={self.uid!r} id={self.id!r} type_id={self.type_id!r} " \
+               f"activation_type={self.activation_type!r} automation={self.automation!r}>"

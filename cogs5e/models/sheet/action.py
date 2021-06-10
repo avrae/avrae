@@ -1,3 +1,5 @@
+from typing import Optional
+
 from utils.enums import ActivationType
 
 
@@ -25,7 +27,7 @@ class Actions:
 
 
 class Action:
-    def __init__(self, name: str, uid: str, id: int, type_id: int,
+    def __init__(self, name: str, uid: Optional[str], id: int, type_id: int,
                  activation_type: ActivationType = None, snippet: str = None):
         self.name = name
         self.uid = uid
@@ -36,17 +38,20 @@ class Action:
 
     @classmethod
     def from_dict(cls, d):
-        activation_type = ActivationType(d.pop('activation_type'))
+        activation_type = ActivationType(at) if (at := d.pop('activation_type')) is not None else None
         return cls(activation_type=activation_type, **d)
 
     def to_dict(self):
+        activation_type = self.activation_type.value if self.activation_type is not None else None
         return {
             "name": self.name, "uid": self.uid, "id": self.id, "type_id": self.type_id,
-            "activation_type": self.activation_type.value, "snippet": self.snippet
+            "activation_type": activation_type, "snippet": self.snippet
         }
 
     @property
     def gamedata(self):
+        if self.uid is None:
+            return None
         import gamedata
         return gamedata.compendium.lookup_action(self.uid)
 

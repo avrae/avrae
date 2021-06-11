@@ -6,6 +6,7 @@ Created on Jan 30, 2017
 import asyncio
 import io
 import re
+import d20
 import textwrap
 from collections import Counter
 
@@ -21,9 +22,13 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
 from utils.functions import confirm, get_selection, user_from_id
+from utils.constants import DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES
+
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
+SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical'
+                'strengthsave', 'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
 
 class CollectableManagementGroup(commands.Group):
     def __init__(self, func=None, *, personal_cls, workshop_cls, workshop_sub_meth, is_alias, is_server,
@@ -336,6 +341,28 @@ async def _servsnippet_before_edit(ctx, _=None):
                          "is required.")
 
 
+async def _snippet_before_edit(ctx, name=None):
+    confirmation = None
+    # special arg checking
+    if not name:
+        raise InvalidArgument("Snippet names can not be empty.")
+    name = name.lower()
+    if name in SPECIAL_ARGS or name in DAMAGE_TYPES or \
+        name in STAT_NAMES or name in STAT_ABBREVIATIONS or \
+        name in SKILL_NAMES or name in STAT_VAR_NAMES or name.startswith('-'):
+        confirmation = f"Warning: making a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to make this snippet?(Y/N)"
+    # roll string checking
+    try:
+        d20.parse(name)
+    except d20.RollSyntaxError:
+        pass
+    else:
+        raise InvalidArgument('You can not use any valid dice strings as the name of a snippet.')
+
+    if confirmation is not None:
+        await confirm(ctx, confirmation)
+
+
 def guild_only_check(ctx):
     if ctx.guild is None:
         raise NoPrivateMessage()
@@ -465,6 +492,7 @@ class Customization(commands.Cog):
         workshop_sub_meth=workshop.WorkshopCollection.my_subs,
         is_alias=False,
         is_server=False,
+        before_edit_check=_snippet_before_edit,
         name='snippet',
         invoke_without_command=True,
         help="""

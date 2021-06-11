@@ -341,7 +341,6 @@ class DicecloudParser(SheetLoaderABC):
 
     def get_actions(self):
         # iterate over features and look for actions with the same name, snippet is the feature description?
-        # todo maybe this can be improved
         actions = []
         g_actions_by_name = {a.name: a for a in compendium.actions}
 

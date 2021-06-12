@@ -360,7 +360,8 @@ async def _snippet_before_edit(ctx, name=None):
         raise InvalidArgument('You can not use any valid dice strings as the name of a snippet.')
 
     if confirmation is not None:
-        await confirm(ctx, confirmation)
+        if not await confirm(ctx, confirmation):
+            raise InvalidArgument('The snippet was not created.')
 
 
 def guild_only_check(ctx):

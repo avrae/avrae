@@ -10,7 +10,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     
     avrae.message('!snippet test adv')
     await dhttp.receive_delete()
-    await dhttp.receive_message(rf"Snippet `test` added.\n```py\n!snippet test adv\n*```")
+    await dhttp.receive_message(rf"Snippet `test` added.\n```py\n!snippet test adv\n```")
 
     avrae.message('!snippet 2d6 adv')
     await dhttp.receive_delete
@@ -20,7 +20,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     await dhttp.receive_delete()
     await dhttp.receive_message("Warning: making a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to make this snippet?(Y/N)")
     avrae.message('yes')
-    await dhttp.receive_message(rf"Snippet `adv` added.\n```py\n!snippet adv adv\n*```")
+    await dhttp.receive_message(rf"Snippet `adv` added.\n```py\n!snippet adv adv\n```")
 
     avrae.message('!snippet adv adv')
     await dhttp.receive_delete()

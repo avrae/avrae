@@ -361,7 +361,7 @@ async def _snippet_before_edit(ctx, name=None):
 
     if confirmation is not None:
         if not await confirm(ctx, confirmation):
-            raise InvalidArgument('The snippet was not created.')
+            raise InvalidArgument('Ok, cancelling.')
 
 
 def guild_only_check(ctx):

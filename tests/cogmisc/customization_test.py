@@ -37,7 +37,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     await dhttp.receive_message('Snippet test removed.', regex = False)
 
     avrae.message('!snippet remove adv')
-    await dhttp.receive_message('Snippet adv removed.' regex = False)
+    await dhttp.receive_message('Snippet adv removed.', regex = False)
 
     avrae.message('!serversnippet adv adv')
     await dhttp.receive_message("Warning: making a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to make this snippet?(Y/N)", regex = False)
@@ -49,10 +49,10 @@ async def test_snippet_before_edit(avrae, dhttp):
     await dhttp.receive_message('Alias `tester` added.```py\n!alias tester echo test\n```', regex = False)
 
     avrae.message('!alias test echo test')
-    await dhttp.receive_message('`test` is already a builtin command. Try another name.' regex = False)
+    await dhttp.receive_message('`test` is already a builtin command. Try another name.', regex = False)
 
     avrae.message('!servalias tester echo test')
     await dhttp.receive_message('Server alias `tester` added.```py\n!alias tester echo test\n```', regex = False)
 
     avrae.message('!servalias test echo test')
-    await dhttp.receive_message('`test` is already a builtin command. Try another name.' regex = False)
+    await dhttp.receive_message('`test` is already a builtin command. Try another name.', regex = False)

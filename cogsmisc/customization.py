@@ -187,7 +187,7 @@ class CollectableManagementGroup(commands.Group):
 
     async def delete(self, ctx, name):
         if self.before_edit_check:
-            await self.before_edit_check(ctx, name)
+            await self.before_edit_check(ctx, name, delete=True)
 
         obj = await self.personal_cls.get_named(name, ctx)
         if obj is None:
@@ -321,12 +321,12 @@ def _can_edit_servaliases(ctx):
            checks.author_is_owner(ctx)
 
 
-async def _alias_before_edit(ctx, name=None):
+async def _alias_before_edit(ctx, name=None, delete=False):
     if name and name in ctx.bot.all_commands:
         raise InvalidArgument(f"`{name}` is already a builtin command. Try another name.")
 
 
-async def _servalias_before_edit(ctx, name=None):
+async def _servalias_before_edit(ctx, name=None, delete=False):
     if not _can_edit_servaliases(ctx):
         raise NotAllowed("You do not have permission to edit server aliases. Either __Administrator__ "
                          "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
@@ -334,14 +334,17 @@ async def _servalias_before_edit(ctx, name=None):
     await _alias_before_edit(ctx, name)
 
 
-async def _servsnippet_before_edit(ctx, _=None):
+async def _servsnippet_before_edit(ctx, name=None, delete=False):
     if not _can_edit_servaliases(ctx):
         raise NotAllowed("You do not have permission to edit server snippets. Either __Administrator__ "
                          "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                          "is required.")
+    await _snippet_before_edit(ctx, name)
 
 
-async def _snippet_before_edit(ctx, name=None):
+async def _snippet_before_edit(ctx, name=None, delete=False):
+    if delete:
+        return
     confirmation = None
     # special arg checking
     if not name:

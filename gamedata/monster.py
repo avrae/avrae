@@ -124,7 +124,7 @@ class Monster(StatBlock, Sourced):
             spellcasting = MonsterSpellbook.from_dict(d['spellbook'])
         else:
             spellcasting = None
-        return cls(d['name'], d['size'], d['creature_type'], d['alignment'], d['ac'], d['armortype'], d['hp'], d['hitdice'],
+        return cls(d['name'], d['size'], d['race'], d['alignment'], d['ac'], d['armortype'], d['hp'], d['hitdice'],
                    d['speed'], ability_scores, saves, skills, d['senses'], display_resists, d['condition_immune'],
                    d['languages'], d['cr'], d['xp'],
                    traits=traits, actions=actions, reactions=reactions, legactions=legactions,
@@ -157,7 +157,7 @@ class Monster(StatBlock, Sourced):
 
     def to_dict(self):
         return {
-            'name': self.name, 'size': self.size, 'creature_type': self.creature_type, 'alignment': self.alignment, 'ac': self.ac,
+            'name': self.name, 'size': self.size, 'race': self.creature_type, 'alignment': self.alignment, 'ac': self.ac,
             'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
             'ability_scores': self.stats.to_dict(),
             'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,

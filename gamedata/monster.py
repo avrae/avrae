@@ -28,7 +28,7 @@ class Monster(StatBlock, Sourced):
     entity_type = 'monster'
     type_id = 779871897
 
-    def __init__(self, name: str, size: str, creature_type: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
+    def __init__(self, name: str, size: str, race: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
                  speed: str, ability_scores: BaseStats, saves: Saves, skills: Skills, senses: str,
                  display_resists: Resistances, condition_immune: list, languages: list, cr: str, xp: int,
                  # optional
@@ -81,7 +81,7 @@ class Monster(StatBlock, Sourced):
             spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels
         )
         self.size = size
-        self.creature_type = creature_type
+        self.creature_type = race
         self.alignment = alignment
         self.armortype = armortype
         self.hitdice = hitdice

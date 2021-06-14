@@ -353,7 +353,7 @@ async def _snippet_before_edit(ctx, name=None, delete=False):
     if name in SPECIAL_ARGS or name in DAMAGE_TYPES or \
         name in STAT_NAMES or name in STAT_ABBREVIATIONS or \
         name in SKILL_NAMES or name in STAT_VAR_NAMES or name.startswith('-'):
-        confirmation = f"Warning: making a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to make this snippet?(Y/N)"
+        confirmation = f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)"
     # roll string checking
     try:
         d20.parse(name)

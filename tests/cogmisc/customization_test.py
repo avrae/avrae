@@ -16,17 +16,17 @@ async def test_snippet_before_edit(avrae, dhttp):
     await dhttp.receive_message('You can not use any valid dice strings as the name of a snippet.', regex = False)
 
     avrae.message('!snippet adv adv')
-    await dhttp.receive_message("Warning: making a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to make this snippet?(Y/N)", regex = False)
+    await dhttp.receive_message("**Warning:** Creating a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)", regex = False)
     avrae.message('yes')
     await dhttp.receive_message("Snippet `adv` added.```py\n!snippet adv adv\n```", regex = False)
 
     avrae.message('!snippet adv adv')
-    await dhttp.receive_message("Warning: making a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to make this snippet?(Y/N)", regex = False)
+    await dhttp.receive_message("**Warning:** Creating a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)", regex = False)
     avrae.message('no')
     await dhttp.receive_message('Ok, cancelling.', regex = False)
 
     avrae.message('!snippet str adv')
-    await dhttp.receive_message("Warning: making a snippet named `str` will prevent you from using the built-in `str` argument in Avrae commands.\nAre you sure you want to make this snippet?(Y/N)", regex = False)
+    await dhttp.receive_message("**Warning:** Creating a snippet named `str` will prevent you from using the built-in `str` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)", regex = False)
     avrae.message('no')
     await dhttp.receive_message('Ok, cancelling.', regex = False)
 
@@ -40,7 +40,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     await dhttp.receive_message('Snippet adv removed.', regex = False)
 
     avrae.message('!serversnippet adv adv')
-    await dhttp.receive_message("Warning: making a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to make this snippet?(Y/N)", regex = False)
+    await dhttp.receive_message("**Warning:** Creating a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)", regex = False)
     avrae.message('yes')
     await dhttp.receive_message("Server snippet `adv` added.```py\n!snippet adv adv\n```", regex = False)
 

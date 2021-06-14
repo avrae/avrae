@@ -101,6 +101,10 @@ class SimpleCombatant(AliasStatBlock):
         self.init = self._combatant.init
         self._update_effects()
         # Type-specific Properties
+        self._race = None
+        self._creature_type = None
+        self._monster_name = None
+
         if combatant.type == CombatantType.MONSTER:
             self._creature_type = combatant._creature_type
             self._monster_name = combatant.monster_name

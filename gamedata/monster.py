@@ -28,7 +28,7 @@ class Monster(StatBlock, Sourced):
     entity_type = 'monster'
     type_id = 779871897
 
-    def __init__(self, name: str, size: str, race: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
+    def __init__(self, name: str, size: str, creature_type: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
                  speed: str, ability_scores: BaseStats, saves: Saves, skills: Skills, senses: str,
                  display_resists: Resistances, condition_immune: list, languages: list, cr: str, xp: int,
                  # optional
@@ -81,7 +81,7 @@ class Monster(StatBlock, Sourced):
             spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels
         )
         self.size = size
-        self.race = race
+        self.creature_type = creature_type
         self.alignment = alignment
         self.armortype = armortype
         self.hitdice = hitdice
@@ -124,7 +124,7 @@ class Monster(StatBlock, Sourced):
             spellcasting = MonsterSpellbook.from_dict(d['spellbook'])
         else:
             spellcasting = None
-        return cls(d['name'], d['size'], d['race'], d['alignment'], d['ac'], d['armortype'], d['hp'], d['hitdice'],
+        return cls(d['name'], d['size'], d['creature_type'], d['alignment'], d['ac'], d['armortype'], d['hp'], d['hitdice'],
                    d['speed'], ability_scores, saves, skills, d['senses'], display_resists, d['condition_immune'],
                    d['languages'], d['cr'], d['xp'],
                    traits=traits, actions=actions, reactions=reactions, legactions=legactions,
@@ -157,7 +157,7 @@ class Monster(StatBlock, Sourced):
 
     def to_dict(self):
         return {
-            'name': self.name, 'size': self.size, 'race': self.race, 'alignment': self.alignment, 'ac': self.ac,
+            'name': self.name, 'size': self.size, 'creature_type': self.creature_type, 'alignment': self.alignment, 'ac': self.ac,
             'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
             'ability_scores': self.stats.to_dict(),
             'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
@@ -212,7 +212,7 @@ class Monster(StatBlock, Sourced):
         Should be the portion between the embed title and special abilities.
         """
         size = self.size
-        type_ = self.race
+        type_ = self.creature_type
         alignment = self.alignment
         ac = str(self.ac) + (f" ({self.armortype})" if self.armortype else "")
         hp = f"{self.hp} ({self.hitdice})"

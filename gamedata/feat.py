@@ -1,8 +1,8 @@
-from .mixins import LimitedUseGrantorMixin
+from .mixins import DescribableMixin, LimitedUseGrantorMixin
 from .shared import Sourced
 
 
-class Feat(LimitedUseGrantorMixin, Sourced):
+class Feat(LimitedUseGrantorMixin, DescribableMixin, Sourced):
     entity_type = 'feat'
     type_id = 1088085227
 
@@ -29,6 +29,10 @@ class Feat(LimitedUseGrantorMixin, Sourced):
             d.get('prerequisite'), d.get('ability'),
             source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
         ).initialize_limited_use(d)
+
+    @property
+    def description(self):
+        return self.desc
 
 
 class FeatOption(Sourced):

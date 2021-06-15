@@ -14,8 +14,8 @@ from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
 from aliasing import helpers
+from cogs5e.models import embeds
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
@@ -64,14 +64,16 @@ class SheetManager(commands.Cog):
         args = argparse(args)
         return args
 
-    @commands.group(aliases=['a'], invoke_without_command=True, help=f"""
-    Rolls an attack for the current active character.
+    @commands.group(aliases=['a', 'attack'], invoke_without_command=True, help=f"""
+    Performs an action (attack or ability) for the current active character.
     __**Valid Arguments**__
     {VALID_AUTOMATION_ARGS}
     """)
-    async def attack(self, ctx, atk_name=None, *, args: str = ''):
+    async def action(self, ctx, atk_name=None, *, args: str = ''):
         if atk_name is None:
-            return await self.attack_list(ctx)
+            return await self.action_list(ctx)
+
+        # todo action execution
 
         char: Character = await Character.from_ctx(ctx)
         args = await self.new_arg_stuff(args, ctx, char)
@@ -81,7 +83,7 @@ class SheetManager(commands.Cog):
 
         hide = args.last('h', type_=bool)
 
-        embed = EmbedWithCharacter(char, name=False, image=not hide)
+        embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
         result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
@@ -89,16 +91,40 @@ class SheetManager(commands.Cog):
         if gamelog := self.bot.get_cog('GameLog'):
             await gamelog.send_automation(ctx, char, attack.name, result)
 
-    @attack.command(name="list")
-    async def attack_list(self, ctx):
-        """Lists the active character's attacks."""
+    @action.command(name="list")
+    async def action_list(self, ctx):
+        """Lists the active character's actions."""
         char: Character = await Character.from_ctx(ctx)
-        atk_str = char.attacks.build_str(char)
-        if len(atk_str) > 1000:
-            atk_str = f"{atk_str[:1000]}\n[...]"
-        return await ctx.send(f"{char.name}'s attacks:\n{atk_str}")
+        embed = embeds.EmbedWithCharacter(char, name=False)
+        embed.title = f"{char.name}'s Actions"
 
-    @attack.command(name="add", aliases=['create'])
+        if not (char.attacks or char.actions):
+            embed.description = f"{char.name} has no actions."
+
+        if char.attacks:
+            atk_str = char.attacks.build_str(char)
+            embeds.add_fields_from_long_text(embed, field_name="Attacks", text=atk_str)
+
+        # todo automatibility checks
+        # since the sheet displays the description regardless of entitlements, we do here too
+        def add_action_field(title, action_source):
+            action_texts = (f"**{action.name}**: {action.build_str(char)}" for action in action_source)
+            action_text = '\n'.join(action_texts)
+            embeds.add_fields_from_long_text(embed, field_name=title, text=action_text)
+
+        if char.actions.full_actions:
+            add_action_field("Actions", char.actions.full_actions)
+        if char.actions.bonus_actions:
+            add_action_field("Bonus Actions", char.actions.bonus_actions)
+        if char.actions.reactions:
+            add_action_field("Reactions", char.actions.reactions)
+        if char.actions.other_actions:
+            add_action_field("Other", char.actions.other_actions)
+
+        await ctx.send(embed=embed)
+
+    # ---- attack management commands ----
+    @action.command(name="add", aliases=['create'])
     async def attack_add(self, ctx, name, *args):
         """
         Adds an attack to the active character.
@@ -136,7 +162,7 @@ class SheetManager(commands.Cog):
             out += f" Removed a duplicate attack."
         await ctx.send(out)
 
-    @attack.command(name="import")
+    @action.command(name="import")
     async def attack_import(self, ctx, *, data):
         """
         Imports an attack from JSON exported from the Avrae Dashboard.
@@ -171,7 +197,7 @@ class SheetManager(commands.Cog):
         out = f"Imported {len(attacks)} attacks:\n{attacks.build_str(character)}"
         await ctx.send(out)
 
-    @attack.command(name="delete", aliases=['remove'])
+    @action.command(name="delete", aliases=['remove'])
     async def attack_delete(self, ctx, name):
         """
         Deletes an attack override.
@@ -201,7 +227,7 @@ class SheetManager(commands.Cog):
 
         hide = args.last('h', type_=bool)
 
-        embed = EmbedWithCharacter(char, name=False, image=not hide)
+        embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
         checkutils.update_csetting_args(char, args)
         caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
@@ -225,7 +251,7 @@ class SheetManager(commands.Cog):
 
         hide = args.last('h', type_=bool)
 
-        embed = EmbedWithCharacter(char, name=False, image=not hide)
+        embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
         skill = char.skills[skill_key]
 
         checkutils.update_csetting_args(char, args, skill)
@@ -250,7 +276,7 @@ class SheetManager(commands.Cog):
         elif len(desc) < 2:
             desc = 'No description available.'
 
-        embed = EmbedWithCharacter(char, name=False)
+        embed = embeds.EmbedWithCharacter(char, name=False)
         embed.title = char.name
         embed.description = desc
 
@@ -327,7 +353,7 @@ class SheetManager(commands.Cog):
             return await ctx.send(f"Error generating token: {e}")
 
         file = discord.File(processed, filename="image.png")
-        embed = EmbedWithCharacter(char, image=False)
+        embed = embeds.EmbedWithCharacter(char, image=False)
         embed.set_image(url="attachment://image.png")
         await ctx.send(file=file, embed=embed)
         processed.close()
@@ -498,8 +524,9 @@ class SheetManager(commands.Cog):
         Returns True to overwrite, False or None otherwise."""
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
-            return await confirm(ctx, f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
-                f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
+            return await confirm(ctx,
+                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+                                 f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
 
     @commands.command()
@@ -590,8 +617,9 @@ class SheetManager(commands.Cog):
     async def _check_url(ctx, url):
         if url.startswith('<') and url.endswith('>'):
             url = url.strip('<>')
-            await ctx.send("Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to include those for other arguments!"
-                           f"\nUse `{ctx.prefix}help` for more details")
+            await ctx.send(
+                "Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to include those for other arguments!"
+                f"\nUse `{ctx.prefix}help` for more details")
         return url
 
 
@@ -608,7 +636,7 @@ async def send_ddb_ctas(ctx, character):
     if await ctx.bot.rdb.get(f"cog.sheetmanager.cta.seen.{ctx.author.id}"):
         return
 
-    embed = EmbedWithCharacter(character)
+    embed = embeds.EmbedWithCharacter(character)
     embed.title = "Heads up!"
     embed.description = "There's a couple of things you can do to make your experience even better!"
     embed.set_footer(text="You won't see this message again this week.")

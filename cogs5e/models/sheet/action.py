@@ -16,6 +16,28 @@ class Actions:
     def to_dict(self):
         return [a.to_dict() for a in self.actions]
 
+    @property
+    def full_actions(self):
+        """Returns a list of actions that require a full action to activate."""
+        return [a for a in self.actions if a.activation_type == ActivationType.ACTION]
+
+    @property
+    def bonus_actions(self):
+        """Returns a list of actions that require a bonus action to activate."""
+        return [a for a in self.actions if a.activation_type == ActivationType.BONUS_ACTION]
+
+    @property
+    def reactions(self):
+        """Returns a list of actions that require a reaction to activate."""
+        return [a for a in self.actions if a.activation_type == ActivationType.REACTION]
+
+    @property
+    def other_actions(self):
+        """Returns a list of actions that do not fall into the other action categories."""
+        return [a for a in self.actions if a.activation_type not in (ActivationType.ACTION,
+                                                                     ActivationType.BONUS_ACTION,
+                                                                     ActivationType.REACTION)]
+
     def __iter__(self):
         return iter(self.actions)
 
@@ -54,6 +76,18 @@ class Action:
             return None
         import gamedata
         return gamedata.compendium.lookup_action(self.uid)
+
+    def build_str(self, caster=None):
+        if self.snippet:
+            return self.snippet
+        if self.gamedata and self.gamedata.automation:
+            if caster is None:
+                return str(self.gamedata.automation)
+            return self.gamedata.automation.build_str(caster)
+        return "Unknown action."
+
+    def __str__(self):
+        return self.build_str(caster=None)
 
     def __repr__(self):
         return f"<Action name={self.name!r} uid={self.uid!r} id={self.id!r} type_id={self.type_id!r} " \

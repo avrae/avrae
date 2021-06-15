@@ -13,8 +13,10 @@ async def test_snippet_before_edit(avrae, dhttp):
     await dhttp.receive_message("Snippet `test` added.```py\n!snippet test adv\n```", regex = False)
 
     avrae.message('!snippet 2d6 adv')
-    await dhttp.receive_message('You can not use any valid dice strings as the name of a snippet.', regex = False)
-
+    await dhttp.receive_message('**Warning:** Creating a snippet named `2d6` might cause hidden problems if you try to use the same roll in other commands.\nAre you sure you want to create this snippet? (yes/no)', regex = False)
+    avrae.message('no')
+    await dhttp.receive_message('Ok, cancelling.', regex = False)
+    
     avrae.message('!snippet adv adv')
     await dhttp.receive_message("**Warning:** Creating a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)", regex = False)
     avrae.message('yes')

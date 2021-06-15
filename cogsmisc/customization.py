@@ -30,6 +30,9 @@ ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical'
                 'strengthsave', 'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
 
+# Don't use any iterables with a string as only element. It will add all the chars instead of the string
+SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES)
+
 class CollectableManagementGroup(commands.Group):
     def __init__(self, func=None, *, personal_cls, workshop_cls, workshop_sub_meth, is_alias, is_server,
                  before_edit_check=None,
@@ -39,7 +42,7 @@ class CollectableManagementGroup(commands.Group):
         :type workshop_sub_meth: Coroutine
         :type is_alias: bool
         :type is_server: bool
-        :type before_edit_check: Coroutine[Context, Optional[str]] -> None
+        :type before_edit_check: Coroutine[Context, Optional[str], Optional[str]] -> None
         """
         if func is None:
             func = self.create_or_view
@@ -348,11 +351,9 @@ async def _snippet_before_edit(ctx, name=None, delete=False):
     confirmation = None
     # special arg checking
     if not name:
-        raise InvalidArgument("Snippet names can not be empty.")
+        return
     name = name.lower()
-    if name in SPECIAL_ARGS or name in DAMAGE_TYPES or \
-        name in STAT_NAMES or name in STAT_ABBREVIATIONS or \
-        name in SKILL_NAMES or name in STAT_VAR_NAMES or name.startswith('-'):
+    if name in SPECIAL_ARGS or name.startswith('-'):
         confirmation = f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)"
     # roll string checking
     try:
@@ -360,7 +361,7 @@ async def _snippet_before_edit(ctx, name=None, delete=False):
     except d20.RollSyntaxError:
         pass
     else:
-        raise InvalidArgument('You can not use any valid dice strings as the name of a snippet.')
+        confirmation = f"**Warning:** Creating a snippet named `{name}` might cause hidden problems if you try to use the same roll in other commands.\nAre you sure you want to create this snippet? (yes/no)"
 
     if confirmation is not None:
         if not await confirm(ctx, confirmation):

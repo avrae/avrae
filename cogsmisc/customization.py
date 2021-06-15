@@ -288,7 +288,7 @@ class CollectableManagementGroup(commands.Group):
 
     async def rename(self, ctx, old_name, new_name):
         if self.before_edit_check:
-            await self.before_edit_check(ctx)
+            await self.before_edit_check(ctx, new_name)
 
         self.personal_cls.precreate_checks(new_name, '')
 

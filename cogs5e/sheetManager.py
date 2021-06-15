@@ -538,14 +538,14 @@ class SheetManager(commands.Cog):
             url = beyond_url.group(1)
             parser = BeyondSheetParser(url)
         elif 'dicecloud.com' in url:
-            url = url.split('/character/')[-1].split('/')[0]
-            loading = await ctx.send('Loading character data from Dicecloud...')            
+            loading = await ctx.send('Loading character data from Dicecloud...')
+            url = url.split('/character/')[-1].split('/')[0]        
             prefix = 'dicecloud'
             parser = DicecloudParser(url)
         else:
             try:
-                url = extract_gsheet_id_from_url(url)
                 loading = await ctx.send('Loading character data from Google...')
+                url = extract_gsheet_id_from_url(url)
                 prefix = 'google'
                 parser = GoogleSheet(url)
             except ExternalImportError:

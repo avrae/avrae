@@ -27,6 +27,17 @@ from utils.constants import DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
+STAT_VAR_NAMES = ("armor",
+                  "charisma", "charismaMod", "charismaSave",
+                  "constitution", "constitutionMod", "constitutionSave",
+                  "description",
+                  "dexterity", "dexterityMod", "dexteritySave",
+                  "hp", "image",
+                  "intelligence", "intelligenceMod", "intelligenceSave",
+                  "level", "name", "proficiencyBonus",
+                  "strength", "strengthMod", "strengthSave",
+                  "wisdom", "wisdomMod", "wisdomSave")
+
 SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical'
                 'strengthsave', 'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
 
@@ -899,15 +910,3 @@ async def send_long_code_text(destination, outside_codeblock, inside_codeblock, 
 
 def setup(bot):
     bot.add_cog(Customization(bot))
-
-
-STAT_VAR_NAMES = ("armor",
-                  "charisma", "charismaMod", "charismaSave",
-                  "constitution", "constitutionMod", "constitutionSave",
-                  "description",
-                  "dexterity", "dexterityMod", "dexteritySave",
-                  "hp", "image",
-                  "intelligence", "intelligenceMod", "intelligenceSave",
-                  "level", "name", "proficiencyBonus",
-                  "strength", "strengthMod", "strengthSave",
-                  "wisdom", "wisdomMod", "wisdomSave")

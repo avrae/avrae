@@ -267,14 +267,17 @@ Text
 
     {
         type: "text";
-        text: AnnotatedString;
+        text: AnnotatedString | AbilityReference;
     }
 
 Outputs a short amount of text in the resulting embed.
 
 .. attribute:: text
 
-    An AnnotatedString detailing the text to display.
+    Either:
+
+    - An AnnotatedString (the text to display).
+    - An AbilityReference (see :ref:`AbilityReference`). Displays the ability's description in whole.
 
 Set Variable
 ------------
@@ -447,6 +450,53 @@ ability instead. A list of valid abilities can be retrieved from the API at ``/g
 .. attribute:: typeId
 
     The DDB entity type ID of the ability referenced.
+
+Cast Spell
+----------
+.. versionadded:: 2.11.0
+
+.. code-block:: typescript
+
+    {
+        type: "spell";
+        id: int;
+        level?: int;
+        dc?: IntExpression;
+        attackBonus?: IntExpression;
+        castingMod?: IntExpression;
+    }
+
+Executes the given spell's automation as if it were immediately cast. Does not use a spell
+slot to cast the spell. Can only be used at the root of automation. Cannot be used inside a spell's automation.
+
+This is usually used in features that cast spells using alternate resources (i.e. Use Counter, Cast Spell).
+
+.. attribute:: id
+
+    The DDB entity id of the spell to cast. Use the ``/gamedata/spells`` API endpoint to retrieve a list of valid IDs.
+
+.. attribute:: level
+
+    *optional* - The (slot) level to cast the spell at.
+
+.. attribute:: dc
+
+    *optional* - The saving throw DC to use when casting the spell. If not provided, defaults to the caster's default
+    spellcasting DC (or any DC specified in the spell automation).
+
+.. attribute:: attackBonus
+
+    *optional* - The spell attack bonus to use when casting the spell. If not provided, defaults to the caster's
+    default spell attack bonus (or any attack bonus specified in the spell automation).
+
+.. attribute:: castingMod
+
+    *optional* - The spellcasting modifier to use when casting the spell. If not provided, defaults to the caster's
+    default spellcasting modifier.
+
+**Variables**
+
+No variables are exposed.
 
 AnnotatedString
 ---------------

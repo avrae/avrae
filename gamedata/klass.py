@@ -1,5 +1,5 @@
-from .mixins import LimitedUseGrantorMixin
-from .shared import LimitedUse, Sourced
+from .mixins import DescribableMixin, LimitedUseGrantorMixin
+from .shared import Sourced
 
 
 class Class(Sourced):
@@ -99,7 +99,7 @@ class Subclass(Sourced):
         return inst
 
 
-class ClassFeature(LimitedUseGrantorMixin, Sourced):
+class ClassFeature(LimitedUseGrantorMixin, DescribableMixin, Sourced):
     entity_type = 'class-feature'
     type_id = 12168134
 
@@ -124,6 +124,10 @@ class ClassFeature(LimitedUseGrantorMixin, Sourced):
             inst.options = [ClassFeatureOption.from_data(o, source_class, inst) for o in d['options']]
         inst.initialize_limited_use(d)
         return inst
+
+    @property
+    def description(self):
+        return self.text
 
 
 class ClassFeatureOption(ClassFeature):

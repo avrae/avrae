@@ -66,6 +66,9 @@ class Automation:
             before(autoctx)
 
         for effect in self.effects:
+            await effect.preflight(autoctx)
+
+        for effect in self.effects:
             results.append(effect.run(autoctx))
 
         if after is not None:

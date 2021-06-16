@@ -53,7 +53,7 @@ class CollectableManagementGroup(commands.Group):
         :type workshop_sub_meth: Coroutine
         :type is_alias: bool
         :type is_server: bool
-        :type before_edit_check: Coroutine[Context, Optional[str], Optional[str]] -> None
+        :type before_edit_check: Coroutine[Context, Optional[str], bool] -> None
         """
         if func is None:
             func = self.create_or_view

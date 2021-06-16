@@ -1112,11 +1112,11 @@ class InitTracker(commands.Cog):
     async def check(self, ctx, check, *, args=''):
         return await self._check(ctx, None, check, args)
 
-    @init.command(aliases=['rch'], help=f"""
+    @init.command(aliases=['oc'], help=f"""
     Rolls an ability check as another combatant.
     {VALID_CHECK_ARGS}
     """)
-    async def reactcheck(self, ctx, combatant_name, check, *, args=''):
+    async def offturncheck(self, ctx, combatant_name, check, *, args=''):
         return await self._check(ctx, combatant_name, check, args)
 
     async def _check(self, ctx, combatant_name, check, args):
@@ -1154,11 +1154,11 @@ class InitTracker(commands.Cog):
     async def save(self, ctx, save, *, args=''):
         return await self._check(ctx, None, save, args)
 
-    @init.command(aliases=['rs'], help=f"""
+    @init.command(aliases=['os'], help=f"""
     Rolls an ability save as another combatant.
     {VALID_CHECK_ARGS}
     """)
-    async def reactsave(self, ctx, combatant_name, save, *, args=''):
+    async def offturnsave(self, ctx, combatant_name, save, *, args=''):
         return await self._check(ctx, combatant_name, save, args)
 
     async def _save(self, ctx, combatant_name, save, args):

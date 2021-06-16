@@ -17,7 +17,7 @@ from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, 
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
-from cogs5e.utils import attackutils, checkutils, targetutils
+from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
@@ -1106,9 +1106,9 @@ class InitTracker(commands.Cog):
 
         # run
         if isinstance(attack, Attack):
-            result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+            result = await actionutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
         else:
-            result = await attackutils.run_action(ctx, embed, args, caster, attack, targets, combat)
+            result = await actionutils.run_action(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
         if (gamelog := self.bot.get_cog('GameLog')) and is_player and result is not None:

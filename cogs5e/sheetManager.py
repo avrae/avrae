@@ -22,7 +22,7 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
-from cogs5e.utils import attackutils, checkutils, targetutils
+from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
@@ -85,9 +85,9 @@ class SheetManager(commands.Cog):
             ctx, list(itertools.chain(caster.attacks, char.actions)), atk_name, lambda a: a.name)
 
         if isinstance(attack_or_action, Attack):
-            result = await attackutils.run_attack(ctx, embed, args, caster, attack_or_action, targets, combat)
+            result = await actionutils.run_attack(ctx, embed, args, caster, attack_or_action, targets, combat)
         else:
-            result = await attackutils.run_action(ctx, embed, args, caster, attack_or_action, targets, combat)
+            result = await actionutils.run_action(ctx, embed, args, caster, attack_or_action, targets, combat)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)

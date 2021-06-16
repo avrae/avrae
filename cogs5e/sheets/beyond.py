@@ -300,7 +300,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 for g_action in g_actions:
                     actions.append(Action(
                         name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                        activation_type=g_action.activation_type, snippet=d_action['snippet']
+                        activation_type=g_action.activation_type, snippet=html_to_md(d_action['snippet'])
                     ))
             else:  # just save the action w/ its snippet
                 activation_type = enums.ActivationType(d_action['activationType']) \
@@ -308,7 +308,7 @@ class BeyondSheetParser(SheetLoaderABC):
                     else None
                 actions.append(Action(
                     name=d_action['name'], uid=None, id=int(d_action['id']), type_id=int(d_action['typeId']),
-                    activation_type=activation_type, snippet=d_action['snippet']
+                    activation_type=activation_type, snippet=html_to_md(d_action['snippet'])
                 ))
 
         # features: save only if gamedata references them
@@ -325,7 +325,7 @@ class BeyondSheetParser(SheetLoaderABC):
     # ==== helpers ====
     @staticmethod
     def _transform_attack(attack) -> Attack:
-        desc = attack['desc'] and html2text.html2text(attack['desc'], bodywidth=0).strip()
+        desc = html_to_md(attack['desc'])
 
         if attack['saveDc'] is not None and attack['saveStat'] is not None:
             stat = constants.STAT_ABBREVIATIONS[attack['saveStat'] - 1]
@@ -353,3 +353,9 @@ class BeyondSheetParser(SheetLoaderABC):
             return Attack(attack['name'], automation.Automation(effects))
         else:
             return Attack.new(attack['name'], attack['toHit'], attack['damage'] or '0', desc)
+
+
+def html_to_md(text):
+    if not text:
+        return text
+    return html2text.html2text(text, bodywidth=0).strip()

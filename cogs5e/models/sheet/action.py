@@ -72,18 +72,30 @@ class Action:
 
     @property
     def gamedata(self):
+        """
+        :rtype: gamedata.action.Action or None
+        """
         if self.uid is None:
             return None
         import gamedata
         return gamedata.compendium.lookup_action(self.uid)
 
-    def build_str(self, caster=None):
-        if self.snippet:
+    @property
+    def automation(self):
+        gamedata = self.gamedata
+        if gamedata is None:
+            return None
+        return gamedata.automation
+
+    def build_str(self, caster=None, automation_only=False):
+        if not automation_only and self.snippet:
             return self.snippet
-        if self.gamedata and self.gamedata.automation:
+        if self.automation:
             if caster is None:
-                return str(self.gamedata.automation)
-            return self.gamedata.automation.build_str(caster)
+                return str(self.automation)
+            return self.automation.build_str(caster)
+        elif automation_only:
+            return "No automation."
         return "Unknown action."
 
     def __str__(self):

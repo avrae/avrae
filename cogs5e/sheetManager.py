@@ -92,8 +92,13 @@ class SheetManager(commands.Cog):
             await gamelog.send_automation(ctx, char, attack.name, result)
 
     @action.command(name="list")
-    async def action_list(self, ctx):
-        """Lists the active character's actions."""
+    async def action_list(self, ctx, *args):
+        """
+        Lists the active character's actions.
+        __Valid Arguments__
+        -v - Verbose: Displays each action's character sheet description rather than the effect summary.
+        """
+        verbose = '-v' in args
         char: Character = await Character.from_ctx(ctx)
         embed = embeds.EmbedWithCharacter(char, name=False)
         embed.title = f"{char.name}'s Actions"
@@ -105,10 +110,10 @@ class SheetManager(commands.Cog):
             atk_str = char.attacks.build_str(char)
             embeds.add_fields_from_long_text(embed, field_name="Attacks", text=atk_str)
 
-        # todo automatibility checks
         # since the sheet displays the description regardless of entitlements, we do here too
         def add_action_field(title, action_source):
-            action_texts = (f"**{action.name}**: {action.build_str(char)}" for action in action_source)
+            action_texts = (f"**{action.name}**: {action.build_str(caster=char, automation_only=not verbose)}"
+                            for action in action_source)
             action_text = '\n'.join(action_texts)
             embeds.add_fields_from_long_text(embed, field_name=title, text=action_text)
 
@@ -120,6 +125,9 @@ class SheetManager(commands.Cog):
             add_action_field("Reactions", char.actions.reactions)
         if char.actions.other_actions:
             add_action_field("Other", char.actions.other_actions)
+
+        if not verbose:
+            embed.set_footer(text="Use the -v argument to view each action's full description.")
 
         await ctx.send(embed=embed)
 

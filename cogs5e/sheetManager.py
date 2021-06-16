@@ -4,6 +4,7 @@ Created on Jan 19, 2017
 @author: andrew
 """
 import asyncio
+import itertools
 import json
 import logging
 import time
@@ -28,7 +29,7 @@ from ddb.gamelog.errors import NoCampaignLink
 from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete
+from utils.functions import confirm, get_positivity, list_get, natural_join, search_and_select, try_delete
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -97,16 +98,32 @@ class SheetManager(commands.Cog):
         Lists the active character's actions.
         __Valid Arguments__
         -v - Verbose: Displays each action's character sheet description rather than the effect summary.
+        attacks - Only displays the available attacks.
+        actions - Only displays the available actions.
+        bonus - Only displays the available bonus actions.
+        reactions - Only displays the available reactions.
+        other - Only displays the available actions that have another activation time.
         """
+        # arg setup
         verbose = '-v' in args
+        display_attacks = 'attacks' in args
+        display_actions = 'actions' in args
+        display_bonus = 'bonus' in args
+        display_reactions = 'reactions' in args
+        display_other = 'other' in args
+        is_display_filtered = any((display_attacks, display_actions, display_bonus, display_reactions, display_other))
+        filtered_action_type_strs = list(itertools.compress(
+            ('attacks', 'actions', 'bonus actions', 'reactions', 'other actions'),
+            (display_attacks, display_actions, display_bonus, display_reactions, display_other)
+        ))
+
+        # embed setup
         char: Character = await Character.from_ctx(ctx)
         embed = embeds.EmbedWithCharacter(char, name=False)
         embed.title = f"{char.name}'s Actions"
 
-        if not (char.attacks or char.actions):
-            embed.description = f"{char.name} has no actions."
-
-        if char.attacks:
+        # action display
+        if char.attacks and (display_attacks or not is_display_filtered):
             atk_str = char.attacks.build_str(char)
             embeds.add_fields_from_long_text(embed, field_name="Attacks", text=atk_str)
 
@@ -117,14 +134,23 @@ class SheetManager(commands.Cog):
             action_text = '\n'.join(action_texts)
             embeds.add_fields_from_long_text(embed, field_name=title, text=action_text)
 
-        if char.actions.full_actions:
+        if char.actions.full_actions and (display_actions or not is_display_filtered):
             add_action_field("Actions", char.actions.full_actions)
-        if char.actions.bonus_actions:
+        if char.actions.bonus_actions and (display_bonus or not is_display_filtered):
             add_action_field("Bonus Actions", char.actions.bonus_actions)
-        if char.actions.reactions:
+        if char.actions.reactions and (display_reactions or not is_display_filtered):
             add_action_field("Reactions", char.actions.reactions)
-        if char.actions.other_actions:
+        if char.actions.other_actions and (display_other or not is_display_filtered):
             add_action_field("Other", char.actions.other_actions)
+
+        # misc helper displays
+        if not embed.fields:
+            if is_display_filtered:
+                embed.description = f"{char.name} has no {natural_join(filtered_action_type_strs, 'or')}."
+            else:
+                embed.description = f"{char.name} has no actions."
+        elif is_display_filtered:
+            embed.description = f"Only displaying {natural_join(filtered_action_type_strs, 'and')}."
 
         if not verbose:
             embed.set_footer(text="Use the -v argument to view each action's full description.")

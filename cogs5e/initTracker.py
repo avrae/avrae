@@ -1,5 +1,6 @@
 import collections
 import functools
+import itertools
 import logging
 import traceback
 
@@ -237,9 +238,9 @@ class InitTracker(commands.Cog):
         out = ''
         to_pm = ''
 
-        try: # Attempt to get the add as a number
+        try:  # Attempt to get the add as a number
             n_result = int(n)
-        except ValueError: # if we're not a number, are we dice
+        except ValueError:  # if we're not a number, are we dice
             roll_result = roll(str(n))
             n_result = roll_result.total
             out += f"Rolling random number of combatants: {roll_result}\n"
@@ -1007,7 +1008,7 @@ class InitTracker(commands.Cog):
         await ctx.send(out)
         await combat.final()
 
-    @init.group(aliases=['a'], invoke_without_command=True, help=f"""
+    @init.group(aliases=['a', 'action'], invoke_without_command=True, help=f"""
     Rolls an attack against another combatant.
     __**Valid Arguments**__
     {VALID_AUTOMATION_ARGS}
@@ -1087,6 +1088,10 @@ class InitTracker(commands.Cog):
                 caster = combatant
                 if 'custom' in args:  # single, custom
                     attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                elif is_player:  # single, noncustom, action?
+                    attack = await search_and_select(
+                        ctx, list(itertools.chain(combatant.attacks, combatant.character.actions)), atk_name,
+                        lambda a: a.name, message="Select your action.")
                 else:  # single, noncustom
                     attack = await search_and_select(ctx, combatant.attacks, atk_name, lambda a: a.name,
                                                      message="Select your attack.")
@@ -1100,9 +1105,13 @@ class InitTracker(commands.Cog):
         embed = discord.Embed(color=combatant.get_color())
 
         # run
-        result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        if isinstance(attack, Attack):
+            result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        else:
+            result = await attackutils.run_action(ctx, embed, args, caster, attack, targets, combat)
+
         await ctx.send(embed=embed)
-        if (gamelog := self.bot.get_cog('GameLog')) and is_player:
+        if (gamelog := self.bot.get_cog('GameLog')) and is_player and result is not None:
             await gamelog.send_automation(ctx, combatant.character, attack.name, result)
 
     @init.command(aliases=['c'], help=f"""

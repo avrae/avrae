@@ -74,23 +74,25 @@ class SheetManager(commands.Cog):
         if atk_name is None:
             return await self.action_list(ctx)
 
-        # todo action execution
-
         char: Character = await Character.from_ctx(ctx)
         args = await self.new_arg_stuff(args, ctx, char)
+        hide = args.last('h', type_=bool)
+        embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
-        attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
+        # we select from caster attacks b/c a combat effect could add some
+        attack_or_action = await search_and_select(
+            ctx, list(itertools.chain(caster.attacks, char.actions)), atk_name, lambda a: a.name)
 
-        hide = args.last('h', type_=bool)
-
-        embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
-        result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        if isinstance(attack_or_action, Attack):
+            result = await attackutils.run_attack(ctx, embed, args, caster, attack_or_action, targets, combat)
+        else:
+            result = await attackutils.run_action(ctx, embed, args, caster, attack_or_action, targets, combat)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
-        if gamelog := self.bot.get_cog('GameLog'):
-            await gamelog.send_automation(ctx, char, attack.name, result)
+        if (gamelog := self.bot.get_cog('GameLog')) and result is not None:
+            await gamelog.send_automation(ctx, char, attack_or_action.name, result)
 
     @action.command(name="list")
     async def action_list(self, ctx, *args):

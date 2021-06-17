@@ -21,7 +21,6 @@ from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from gamedata.compendium import compendium
-from utils import config
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from .abc import SHEET_VERSION, SheetLoaderABC
@@ -34,6 +33,7 @@ CLASS_RESOURCE_NAMES = {"expertiseDice": "Expertise Dice", "ki": "Ki", "rages": 
 CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long',
                          "sorceryPoints": 'long', "superiorityDice": 'short'}
 API_BASE = "https://dicecloud.com/character/"
+DICECLOUD_URL_RE = re.compile(r"(?:https?://)?dicecloud\.com/character/([\d\w]+)/?")
 
 
 class DicecloudParser(SheetLoaderABC):

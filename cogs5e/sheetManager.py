@@ -19,7 +19,7 @@ from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
-from cogs5e.sheets.dicecloud import DicecloudParser
+from cogs5e.sheets.dicecloud import DICECLOUD_URL_RE, DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from cogs5e.utils import attackutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
@@ -498,8 +498,9 @@ class SheetManager(commands.Cog):
         Returns True to overwrite, False or None otherwise."""
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
-            return await confirm(ctx, f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
-                f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
+            return await confirm(ctx,
+                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+                                 f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
 
     @commands.command(name='import')
@@ -525,34 +526,30 @@ class SheetManager(commands.Cog):
         Dicecloud:
             Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
         """
-        loading = await ctx.send('Loading character data to Avrae...')
-        prefix = ''
-        parser = None
-
-        url = await self._check_url(ctx, url) # check for < >
+        url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet
-        beyond_url = DDB_URL_RE.match(url)
-        if beyond_url:
+        if beyond_match := DDB_URL_RE.match(url):
             loading = await ctx.send('Loading character data from Beyond...')
             prefix = 'beyond'
-            url = beyond_url.group(1)
+            url = beyond_match.group(1)
             parser = BeyondSheetParser(url)
-        elif 'dicecloud.com' in url:
+        elif dicecloud_match := DICECLOUD_URL_RE.match(url):
             loading = await ctx.send('Loading character data from Dicecloud...')
-            url = url.split('/character/')[-1].split('/')[0]        
+            url = dicecloud_match.group(1)
             prefix = 'dicecloud'
             parser = DicecloudParser(url)
         else:
             try:
-                loading = await ctx.send('Loading character data from Google...')
                 url = extract_gsheet_id_from_url(url)
-                prefix = 'google'
-                parser = GoogleSheet(url)
             except ExternalImportError:
-                return await loading.edit(content="Sheet type did not match accepted formats.")
+                return await ctx.send("Sheet type did not match accepted formats.")
+            loading = await ctx.send('Loading character data from Google...')
+            prefix = 'google'
+            parser = GoogleSheet(url)
 
         override = await self._confirm_overwrite(ctx, f"{prefix}-{url}")
-        if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
+        if not override:
+            return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         # Load the parsed sheet
         await self._load_sheet(ctx, parser, args, loading)
@@ -645,8 +642,9 @@ class SheetManager(commands.Cog):
     async def _check_url(ctx, url):
         if url.startswith('<') and url.endswith('>'):
             url = url.strip('<>')
-            await ctx.send("Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to include those for other arguments!"
-                           f"\nUse `{ctx.prefix}help` for more details")
+            await ctx.send(
+                "Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to include those for other arguments!"
+                f"\nUse `{ctx.prefix}help` for more details")
         return url
 
 

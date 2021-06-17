@@ -10,7 +10,8 @@ from discord.ext import commands
 from cogs5e.models import embeds
 from utils.argparser import argparse
 from utils.functions import try_delete
-
+from cogs5e.models.character import Character
+from cogs5e.models.errors import NoCharacter
 
 class PBPUtils(commands.Cog):
     """Commands to help streamline playing-by-post over Discord."""
@@ -56,8 +57,14 @@ class PBPUtils(commands.Cog):
         embed.set_thumbnail(url=args.last('thumb', '') if 'http' in str(args.last('thumb')) else '')
         embed.set_image(url=args.last('image', '') if 'http' in str(args.last('image')) else '')
         embed.set_footer(text=args.last('footer', ''))
+
+        color = args.last('color', "0")
         try:
-            embed.colour = int(args.last('color', "0").strip('#'), base=16)
+            if color == '<color>':
+                char = await Character.from_ctx(ctx)
+                embed.colour = char.get_color()
+            else:
+                embed.colour = int((color).strip('#'), base=16)
         except:
             pass
 

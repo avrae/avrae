@@ -6,6 +6,7 @@ Created on Jan 30, 2017
 import asyncio
 import io
 import re
+import d20
 import textwrap
 from collections import Counter
 
@@ -21,9 +22,27 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
 from utils.functions import confirm, get_selection, user_from_id
+from utils.constants import DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES
+
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
+STAT_VAR_NAMES = ("armor",
+                  "charisma", "charismaMod", "charismaSave",
+                  "constitution", "constitutionMod", "constitutionSave",
+                  "description",
+                  "dexterity", "dexterityMod", "dexteritySave",
+                  "hp", "image",
+                  "intelligence", "intelligenceMod", "intelligenceSave",
+                  "level", "name", "proficiencyBonus",
+                  "strength", "strengthMod", "strengthSave",
+                  "wisdom", "wisdomMod", "wisdomSave")
+
+SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical'
+                'strengthsave', 'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
+
+# Don't use any iterables with a string as only element. It will add all the chars instead of the string
+SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES)
 
 class CollectableManagementGroup(commands.Group):
     def __init__(self, func=None, *, personal_cls, workshop_cls, workshop_sub_meth, is_alias, is_server,
@@ -34,7 +53,7 @@ class CollectableManagementGroup(commands.Group):
         :type workshop_sub_meth: Coroutine
         :type is_alias: bool
         :type is_server: bool
-        :type before_edit_check: Coroutine[Context, Optional[str]] -> None
+        :type before_edit_check: Coroutine[Context, Optional[str], bool] -> None
         """
         if func is None:
             func = self.create_or_view
@@ -182,7 +201,7 @@ class CollectableManagementGroup(commands.Group):
 
     async def delete(self, ctx, name):
         if self.before_edit_check:
-            await self.before_edit_check(ctx, name)
+            await self.before_edit_check(ctx, name, delete=True)
 
         obj = await self.personal_cls.get_named(name, ctx)
         if obj is None:
@@ -269,7 +288,7 @@ class CollectableManagementGroup(commands.Group):
 
     async def rename(self, ctx, old_name, new_name):
         if self.before_edit_check:
-            await self.before_edit_check(ctx)
+            await self.before_edit_check(ctx, new_name)
 
         self.personal_cls.precreate_checks(new_name, '')
 
@@ -316,12 +335,12 @@ def _can_edit_servaliases(ctx):
            checks.author_is_owner(ctx)
 
 
-async def _alias_before_edit(ctx, name=None):
+async def _alias_before_edit(ctx, name=None, delete=False):
     if name and name in ctx.bot.all_commands:
         raise InvalidArgument(f"`{name}` is already a builtin command. Try another name.")
 
 
-async def _servalias_before_edit(ctx, name=None):
+async def _servalias_before_edit(ctx, name=None, delete=False):
     if not _can_edit_servaliases(ctx):
         raise NotAllowed("You do not have permission to edit server aliases. Either __Administrator__ "
                          "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
@@ -329,11 +348,35 @@ async def _servalias_before_edit(ctx, name=None):
     await _alias_before_edit(ctx, name)
 
 
-async def _servsnippet_before_edit(ctx, _=None):
+async def _servsnippet_before_edit(ctx, name=None, delete=False):
     if not _can_edit_servaliases(ctx):
         raise NotAllowed("You do not have permission to edit server snippets. Either __Administrator__ "
                          "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                          "is required.")
+    await _snippet_before_edit(ctx, name, delete)
+
+
+async def _snippet_before_edit(ctx, name=None, delete=False):
+    if delete:
+        return
+    confirmation = None
+    # special arg checking
+    if not name:
+        return
+    name = name.lower()
+    if name in SPECIAL_ARGS or name.startswith('-'):
+        confirmation = f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)"
+    # roll string checking
+    try:
+        d20.parse(name)
+    except d20.RollSyntaxError:
+        pass
+    else:
+        confirmation = f"**Warning:** Creating a snippet named `{name}` might cause hidden problems if you try to use the same roll in other commands.\nAre you sure you want to create this snippet? (yes/no)"
+
+    if confirmation is not None:
+        if not await confirm(ctx, confirmation):
+            raise InvalidArgument('Ok, cancelling.')
 
 
 def guild_only_check(ctx):
@@ -465,6 +508,7 @@ class Customization(commands.Cog):
         workshop_sub_meth=workshop.WorkshopCollection.my_subs,
         is_alias=False,
         is_server=False,
+        before_edit_check=_snippet_before_edit,
         name='snippet',
         invoke_without_command=True,
         help="""
@@ -866,15 +910,3 @@ async def send_long_code_text(destination, outside_codeblock, inside_codeblock, 
 
 def setup(bot):
     bot.add_cog(Customization(bot))
-
-
-STAT_VAR_NAMES = ("armor",
-                  "charisma", "charismaMod", "charismaSave",
-                  "constitution", "constitutionMod", "constitutionSave",
-                  "description",
-                  "dexterity", "dexterityMod", "dexteritySave",
-                  "hp", "image",
-                  "intelligence", "intelligenceMod", "intelligenceSave",
-                  "level", "name", "proficiencyBonus",
-                  "strength", "strengthMod", "strengthSave",
-                  "wisdom", "wisdomMod", "wisdomSave")

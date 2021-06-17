@@ -353,7 +353,7 @@ async def _servsnippet_before_edit(ctx, name=None, delete=False):
         raise NotAllowed("You do not have permission to edit server snippets. Either __Administrator__ "
                          "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                          "is required.")
-    await _snippet_before_edit(ctx, name)
+    await _snippet_before_edit(ctx, name, delete)
 
 
 async def _snippet_before_edit(ctx, name=None, delete=False):

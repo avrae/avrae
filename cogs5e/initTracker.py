@@ -1018,7 +1018,7 @@ class InitTracker(commands.Cog):
         return await self._attack(ctx, None, atk_name, args)
 
     @attack.command(name="list")
-    async def attack_list(self, ctx):
+    async def attack_list(self, ctx, *args):
         """Lists the active combatant's attacks."""
         combat = await Combat.from_ctx(ctx)
         combatant = combat.current_combatant
@@ -1028,15 +1028,16 @@ class InitTracker(commands.Cog):
         if combatant.is_private and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
             return await ctx.send("You do not have permission to view this combatant's attacks.")
 
-        atk_str = combatant.attacks.build_str(combatant)
-        if len(atk_str) > 1000:
-            atk_str = f"{atk_str[:1000]}\n[...]"
-
         if not combatant.is_private:
             destination = ctx.message.channel
         else:
             destination = ctx.message.author
-        return await destination.send("{}'s attacks:\n{}".format(combatant.name, atk_str))
+
+        if isinstance(combatant, PlayerCombatant):
+            await actionutils.send_action_list(destination, caster=combatant, attacks=combatant.attacks,
+                                               actions=combatant.character.actions, args=args)
+        else:
+            await actionutils.send_action_list(destination, caster=combatant, attacks=combatant.attacks, args=args)
 
     @init.command(help=f"""
     Rolls an attack against another combatant.

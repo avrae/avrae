@@ -194,10 +194,8 @@ class Dice(commands.Cog):
     async def monster_atk_list(self, ctx, monster_name):
         """Lists a monster's attacks."""
         await try_delete(ctx.message)
-
         monster = await select_monster_full(ctx, monster_name)
-        monster_name = monster.get_title_name()
-        return await ctx.send(f"{monster_name}'s attacks:\n{monster.attacks.build_str(monster)}")
+        await actionutils.send_action_list(ctx, caster=monster, attacks=monster.attacks)
 
     @commands.command(name='moncheck', aliases=['mc', 'monster_check'], help=f"""
     Rolls a check for a monster.

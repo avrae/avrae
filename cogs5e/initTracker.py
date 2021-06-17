@@ -1152,14 +1152,14 @@ class InitTracker(commands.Cog):
     {VALID_SAVE_ARGS}
     """)
     async def save(self, ctx, save, *, args=''):
-        return await self._check(ctx, None, save, args)
+        return await self._save(ctx, None, save, args)
 
     @init.command(aliases=['os'], help=f"""
     Rolls an ability save as another combatant.
     {VALID_CHECK_ARGS}
     """)
     async def offturnsave(self, ctx, combatant_name, save, *, args=''):
-        return await self._check(ctx, combatant_name, save, args)
+        return await self._save(ctx, combatant_name, save, args)
 
     async def _save(self, ctx, combatant_name, save, args):
         combat = await Combat.from_ctx(ctx)

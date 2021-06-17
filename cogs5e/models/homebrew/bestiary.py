@@ -334,7 +334,7 @@ def _monster_factory(data, bestiary_name):
                                              resist=data['stats']['damageResistances'],
                                              immune=data['stats']['damageImmunities']))
 
-    return Monster(name=data['name'], size=data['stats']['size'], creature_type=data['stats']['race'],
+    return Monster(name=data['name'], size=data['stats']['size'], race=data['stats']['race'],
                    alignment=data['stats']['alignment'],
                    ac=data['stats']['armorClass'], armortype=data['stats']['armorType'], hp=hp, hitdice=hitdice,
                    speed=data['stats']['speed'], ability_scores=ability_scores, saves=saves, skills=skills,

@@ -173,7 +173,7 @@ second \"third word\" words
 .. _cvar-table:
 
 Cvar Table
----------------------
+----------
 This table lists the available cvars when a character is active.
 
 ================ =========================================== ====

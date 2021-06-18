@@ -4,6 +4,7 @@ Created on Jan 13, 2017
 @author: andrew
 """
 from math import sqrt
+from random import randint
 
 from discord.ext import commands
 
@@ -45,7 +46,7 @@ class PBPUtils(commands.Cog):
         -f "<Field Title>|<Field Text>[|inline]"
             (e.g. "Donuts|I have 15 donuts|inline" for an inline field, or "Donuts|I have 15 donuts" for one with its own line.)
         -color <hex color> 
-            Leave blank for random color. Does not accept the csettings color. Use `!tembed` for accessing cvars in an embed.
+            Leave blank for random color.
         -t <timeout (0..600)>
         """
         await try_delete(ctx.message)
@@ -58,9 +59,10 @@ class PBPUtils(commands.Cog):
         embed.set_image(url=args.last('image', '') if 'http' in str(args.last('image')) else '')
         embed.set_footer(text=args.last('footer', ''))
         try:
-            embed.colour = int(args.last('color', "0").strip('#'), base=16)
-        except:
-            pass
+            color = args.last('color')
+            embed.colour = int(color.strip('#'), base=16)
+        except (AttributeError, ValueError):
+            embed.colour = randint(0, 0xffffff)
 
         embeds.add_fields_from_args(embed, args.get('f'))
 

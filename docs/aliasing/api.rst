@@ -5,7 +5,7 @@ So you want to write aliases for your commonly used commands - cool!
 This cheatsheet details some of the nitty-gritty syntactical shenanigans that you can use to make your aliases very powerful.
 
 When placed inline in an alias, any syntax in the syntax table will have the listed effect.
-For a list of built-in cvars, see the :ref:`attribute-cvar-table`.
+For a list of built-in cvars, see the :ref:`cvar-table`.
 
 For a list of user-created aliases, plus help aliasing, join the `Avrae Discord <https://support.avrae.io>`_!
 
@@ -170,11 +170,11 @@ second \"third word\" words
 >>> !asdf first "second arg"
 ['first', 'second arg']
 
-.. _attribute-cvar-table:
+.. _cvar-table:
 
-Attribute Cvars Table
+Cvar Table
 ---------------------
-This table lists the available cvars for attributes when a character is active.
+This table lists the available cvars when a character is active.
 
 ================ =========================================== ====
 Name             Description                                 Type
@@ -197,19 +197,8 @@ strengthSave     Strength saving throw modifier.             int
 wisdom           Wisdom score.                               int
 wisdomMod        Wisdom modifier.                            int
 wisdomSave       Wisdom saving throw modifier.               int
-================ =========================================== ====
-
-.. _other-cvar-table:
-
-Other Cvars Table
-------------------
-This table lists the other available cvars when a character is active.
-
-================ =========================================== ====
-Name             Description                                 Type
-================ =========================================== ====
 armor            Armor Class.                                int
-color            The CSettings color for the character       hex
+color            The CSettings color for the character       str
 description      Full character description.                 str
 hp               Maximum hit points.                         int
 image            Character image URL.                        str
@@ -553,8 +542,8 @@ Custom Counters
         Creates a custom counter. If a counter with the same name already exists, it will replace it.
 
         :param str name: The name of the counter to create.
-        :param str minVal: The minimum value of the counter. Supports :ref:`attribute-cvar-table` parsing.
-        :param str maxVal: The maximum value of the counter. Supports :ref:`attribute-cvar-table` parsing.
+        :param str minVal: The minimum value of the counter. Supports :ref:`cvar-table` parsing.
+        :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
         :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
         :param str dispType: Either ``None`` or ``'bubble'``.
 
@@ -772,7 +761,7 @@ Cvars
 
         Sets a custom character variable, which will be available in all scripting contexts using this character.
 
-        :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`attribute-cvar-table`.
+        :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
         :param str value: The value to set it to.
 
     .. function:: set_cvar_nx(name, value)
@@ -782,7 +771,7 @@ Cvars
 
         Sets a custom character variable if it is not already set.
 
-        :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`attribute-cvar-table`.
+        :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
         :param str value: The value to set it to.
 
 Other
@@ -827,7 +816,7 @@ or options for aliases and snippets (e.g. a character's familiar type/name). Whe
 Cvars can be written or deleted in Draconic using :meth:`.AliasCharacter.set_cvar` and
 :meth:`.AliasCharacter.delete_cvar`, respectively.
 
-All characters contain some built-in character variables (see :ref:`attribute-cvar-table`). These cannot be overwritten.
+All characters contain some built-in character variables (see :ref:`cvar-table`). These cannot be overwritten.
 
 User Variables
 ^^^^^^^^^^^^^^

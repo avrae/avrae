@@ -575,7 +575,7 @@ class Customization(commands.Cog):
         -image [image url]
         -footer [footer text]
         -f ["Field Title|Field Text"]
-        -color [hex color]
+        -color [hex color] or `<color>` for character color, leave blank for random color.
         -t [timeout (0..600)]
         """
         try:

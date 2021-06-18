@@ -44,7 +44,8 @@ class PBPUtils(commands.Cog):
         -footer <footer text>
         -f "<Field Title>|<Field Text>[|inline]"
             (e.g. "Donuts|I have 15 donuts|inline" for an inline field, or "Donuts|I have 15 donuts" for one with its own line.)
-        -color <hex color>
+        -color <hex color> 
+            Leave blank for random color. Does not accept the csettings color. Use `!tembed` for accessing cvars in an embed.
         -t <timeout (0..600)>
         """
         await try_delete(ctx.message)

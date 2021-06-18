@@ -466,9 +466,9 @@ class SheetManager(commands.Cog):
 
     @commands.command()
     async def csettings(self, ctx, *args):
-        """Updates personalization settings for the currently active character.
+        """Updates personalization settings for the currently active character. Stored 
         Valid Arguments:
-        `color <hex color>` - Colors all embeds this color.
+        `color <hex color>` - Colors all character-based built-in embeds this color. Accessible as the cvar `color`
         `criton <number>` - Makes attacks crit on something other than a 20.
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.

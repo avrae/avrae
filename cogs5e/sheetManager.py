@@ -466,7 +466,7 @@ class SheetManager(commands.Cog):
 
     @commands.command()
     async def csettings(self, ctx, *args):
-        """Updates personalization settings for the currently active character. Stored 
+        """Updates personalization settings for the currently active character.
         Valid Arguments:
         `color <hex color>` - Colors all character-based built-in embeds this color. Accessible as the cvar `color`
         `criton <number>` - Makes attacks crit on something other than a 20.

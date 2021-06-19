@@ -929,7 +929,8 @@ class InitTracker(commands.Cog):
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
         -neutral <damage type> - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
-        magical - Makes all damage from the combatant magical
+        magical - Makes all damage from the combatant magical.
+        silvered - Makes all damage from the combatant silvered.
         __General__
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
         -sb <save bonus> - Adds a bonus to all saving throws.

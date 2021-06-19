@@ -288,4 +288,4 @@ SPECIAL_ARGS = {  # 2-tuple of effect, str
 }
 VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
               'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus',
-              'magical': 'Magical Damage'}
+              'magical': 'Magical Damage', 'silvered': 'Silvered Damage'}

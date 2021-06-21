@@ -147,6 +147,7 @@ class TestYourStandardInitiative:
 
             avrae.message(f'!i hp "{combatant}" set 100')
             avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar] silvered')
+            await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
             await dhttp.drain()
             avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar]')
@@ -160,9 +161,10 @@ class TestYourStandardInitiative:
 
             avrae.message(f'!i hp "{combatant}" set 100')
             avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar] magical')
-            assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
             await dhttp.drain()
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
             avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar]')
+            await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
 
     async def test_effect_durations(self, avrae, dhttp):

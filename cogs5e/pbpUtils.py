@@ -62,7 +62,7 @@ class PBPUtils(commands.Cog):
             color = args.last('color')
             embed.colour = int(color.strip('#'), base=16)
         except (AttributeError, ValueError):
-            embed.colour = randint(0, 0xffffff)
+            pass
 
         embeds.add_fields_from_args(embed, args.get('f'))
 

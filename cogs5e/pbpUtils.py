@@ -4,7 +4,6 @@ Created on Jan 13, 2017
 @author: andrew
 """
 from math import sqrt
-from random import randint
 
 from discord.ext import commands
 
@@ -59,8 +58,7 @@ class PBPUtils(commands.Cog):
         embed.set_image(url=args.last('image', '') if 'http' in str(args.last('image')) else '')
         embed.set_footer(text=args.last('footer', ''))
         try:
-            color = args.last('color')
-            embed.colour = int(color.strip('#'), base=16)
+            embed.colour = int(args.last('color').strip('#'), base=16)
         except (AttributeError, ValueError):
             pass
 

@@ -139,6 +139,30 @@ class TestYourStandardInitiative:
             assert 'foobar' in [r.dtype for r in resistances.vuln]
             assert 'foobar' in [r.dtype for r in resistances.resist]
 
+    async def test_silver_resists(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1", "TEST2"):
+            avrae.message(f'!i opt "{combatant}" -resist "nonsilvered foobar"') #make sure silvered will work
+            await dhttp.drain()
+
+            avrae.message(f'!i hp "{combatant}" set 100')
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar] silvered')
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar]')
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
+
+    async def test_magical_resists(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1", "TEST2"):
+            avrae.message(f'!i opt "{combatant}" -resist "nonmagical foobar"') #since a change was made to magical
+            await dhttp.drain()
+
+            avrae.message(f'!i hp "{combatant}" set 100')
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar] magical')
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar]')
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
+
     async def test_effect_durations(self, avrae, dhttp):
         avrae.message(f"!i next")
         await dhttp.drain()

@@ -110,13 +110,14 @@ class Damage(Effect):
         # evaluate damage
         dmgroll = d20.roll(dice_ast)
 
-        # magic arg (#853), magical effect (#1063)
+        # magic and silvered
+        always = set()
         magical_effect = autoctx.combatant and autoctx.combatant.active_effects('magical')
-        always = {'magical'} if (magical_effect or autoctx.is_spell or magic_arg) else None
-        # silvered arg(#825)
+        if (magical_effect or autoctx.is_spell or magic_arg):
+            always.add('magical')
         silvered_effect = autoctx.combatant and autoctx.combatant.active_effects('silvered')
         if silvered_effect or silvered_arg:
-            always = {'magical', 'silvered'} if always else {'silvered'}  
+            always.add('silvered')
         # dtype transforms/overrides (#876)
         transforms = {}
         for dtype in dtype_args:

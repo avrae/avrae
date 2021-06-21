@@ -156,14 +156,14 @@ class TestYourStandardInitiative:
     async def test_magical_resists(self, avrae, dhttp):
         character = await active_character(avrae)
         for combatant in (character.name, "KO1", "TEST1"):
-            avrae.message(f'!i opt "{combatant}" -resist "nonmagical foobar"') #since a change was made to magical
+            avrae.message(f'!i opt "{combatant}" -resist "nonmagical foo"') #since a change was made to magical
             await dhttp.drain()
 
             avrae.message(f'!i hp "{combatant}" set 100')
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar] magical')
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foo] magical')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar]')
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foo]')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
 

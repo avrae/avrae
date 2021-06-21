@@ -149,8 +149,8 @@ class TestYourStandardInitiative:
             avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar] silvered')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
-            await dhttp.drain()
             avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foobar]')
+            await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
 
     async def test_magical_resists(self, avrae, dhttp):

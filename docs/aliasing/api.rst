@@ -179,32 +179,33 @@ This table lists the available cvars when a character is active.
 ================ =========================================== ====
 Name             Description                                 Type
 ================ =========================================== ====
-armor            Armor Class.                                int
 charisma         Charisma score.                             int
 charismaMod      Charisma modifier.                          int
 charismaSave     Charisma saving throw modifier.             int
 constitution     Constitution score.                         int
 constitutionMod  Constitution modifier.                      int
 constitutionSave Constitution saving throw modifier.         int
-description      Full character description.                 str
 dexterity        Dexterity score.                            int
 dexterityMod     Dexterity modifier.                         int
 dexteritySave    Dexterity saving throw modifier.            int
-hp               Maximum hit points.                         int
-image            Character image URL.                        str
 intelligence     Intelligence score.                         int
 intelligenceMod  Intelligence modifier.                      int
 intelligenceSave Intelligence saving throw modifier.         int
-level            Character level.                            int
-name             The character's name.                       str
-proficiencyBonus Proficiency bonus.                          int
-spell            The character's spellcasting ability mod.   int
 strength         Strength score.                             int
 strengthMod      Strength modifier.                          int
 strengthSave     Strength saving throw modifier.             int
 wisdom           Wisdom score.                               int
 wisdomMod        Wisdom modifier.                            int
 wisdomSave       Wisdom saving throw modifier.               int
+armor            Armor Class.                                int
+color            The CSettings color for the character       str
+description      Full character description.                 str
+hp               Maximum hit points.                         int
+image            Character image URL.                        str
+level            Character level.                            int
+name             The character's name.                       str
+proficiencyBonus Proficiency bonus.                          int
+spell            The character's spellcasting ability mod.   int
 XLevel           How many levels a character has in class X. int
 ================ =========================================== ====
 

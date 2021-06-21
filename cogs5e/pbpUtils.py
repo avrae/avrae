@@ -44,7 +44,8 @@ class PBPUtils(commands.Cog):
         -footer <footer text>
         -f "<Field Title>|<Field Text>[|inline]"
             (e.g. "Donuts|I have 15 donuts|inline" for an inline field, or "Donuts|I have 15 donuts" for one with its own line.)
-        -color <hex color>
+        -color [hex color]
+            Leave blank for random color.
         -t <timeout (0..600)>
         """
         await try_delete(ctx.message)
@@ -57,8 +58,8 @@ class PBPUtils(commands.Cog):
         embed.set_image(url=args.last('image', '') if 'http' in str(args.last('image')) else '')
         embed.set_footer(text=args.last('footer', ''))
         try:
-            embed.colour = int(args.last('color', "0").strip('#'), base=16)
-        except:
+            embed.colour = int(args.last('color').strip('#'), base=16)
+        except (AttributeError, ValueError):
             pass
 
         embeds.add_fields_from_args(embed, args.get('f'))

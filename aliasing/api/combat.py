@@ -287,7 +287,7 @@ class SimpleCombatant(AliasStatBlock):
         Adds an effect to the combatant.
 
         :param str name: The name of the effect to add.
-        :param str args: The effect arguments to add (same syntax as init effect).
+        :param str args: The effect arguments to add (same syntax as [!init effect](https://avrae.io/commands#init-effect)).
         :param int duration: The duration of the effect, in rounds.
         :param bool concentration: Whether the effect requires concentration.
         :param parent: The parent of the effect.

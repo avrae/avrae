@@ -20,7 +20,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
-from cogs5e.sheets.dicecloud import DicecloudParser
+from cogs5e.sheets.dicecloud import DICECLOUD_URL_RE, DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
@@ -484,7 +484,7 @@ class SheetManager(commands.Cog):
     async def csettings(self, ctx, *args):
         """Updates personalization settings for the currently active character.
         Valid Arguments:
-        `color <hex color>` - Colors all embeds this color.
+        `color <hex color>` - Colors all character-based built-in embeds this color. Accessible as the cvar `color`
         `criton <number>` - Makes attacks crit on something other than a 20.
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
@@ -518,6 +518,57 @@ class SheetManager(commands.Cog):
                                  f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
                                  f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
+
+    @commands.command(name='import')
+    @commands.max_concurrency(1, BucketType.user)
+    async def import_sheet(self, ctx, url: str, *args):
+        """
+        Loads a character sheet in one of the accepted formats:
+            [Dicecloud](https://dicecloud.com/)
+            [GSheet v2.1](http://gsheet2.avrae.io) (auto)
+            [GSheet v1.4](http://gsheet.avrae.io) (manual)
+            [D&D Beyond](https://www.dndbeyond.com/)
+        
+        __Valid Arguments__
+        `-nocc` - Do not automatically create custom counters for class resources and features.
+
+        __Sheet-specific Notes__
+        D&D Beyond:
+            Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
+        Gsheet:
+            The sheet must be shared with Avrae for this to work.
+            Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
+
+        Dicecloud:
+            Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
+        """
+        url = await self._check_url(ctx, url)  # check for < >
+        # Sheets in order: DDB, Dicecloud, Gsheet
+        if beyond_match := DDB_URL_RE.match(url):
+            loading = await ctx.send('Loading character data from Beyond...')
+            prefix = 'beyond'
+            url = beyond_match.group(1)
+            parser = BeyondSheetParser(url)
+        elif dicecloud_match := DICECLOUD_URL_RE.match(url):
+            loading = await ctx.send('Loading character data from Dicecloud...')
+            url = dicecloud_match.group(1)
+            prefix = 'dicecloud'
+            parser = DicecloudParser(url)
+        else:
+            try:
+                url = extract_gsheet_id_from_url(url)
+            except ExternalImportError:
+                return await ctx.send("Sheet type did not match accepted formats.")
+            loading = await ctx.send('Loading character data from Google...')
+            prefix = 'google'
+            parser = GoogleSheet(url)
+
+        override = await self._confirm_overwrite(ctx, f"{prefix}-{url}")
+        if not override:
+            return await ctx.send("Character overwrite unconfirmed. Aborting.")
+
+        # Load the parsed sheet
+        await self._load_sheet(ctx, parser, args, loading)
 
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)

@@ -44,6 +44,7 @@ class Damage(Effect):
         nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         max_arg = args.last('max', None, bool, ephem=True)
         magic_arg = args.last('magical', None, bool, ephem=True)
+        silvered_arg = args.last('silvered', None, bool, ephem=True)
         mi_arg = args.last('mi', None, int)
         dtype_args = args.get('dtype', [], ephem=True)
         critdice = args.last('critdice', 0, int)
@@ -110,8 +111,14 @@ class Damage(Effect):
         dmgroll = d20.roll(dice_ast)
 
         # magic arg (#853), magical effect (#1063)
+        # silvered arg (#1544)
+        always = set()
         magical_effect = autoctx.combatant and autoctx.combatant.active_effects('magical')
-        always = {'magical'} if (magical_effect or autoctx.is_spell or magic_arg) else None
+        if magical_effect or autoctx.is_spell or magic_arg:
+            always.add('magical')
+        silvered_effect = autoctx.combatant and autoctx.combatant.active_effects('silvered')
+        if silvered_effect or silvered_arg:
+            always.add('silvered')
         # dtype transforms/overrides (#876)
         transforms = {}
         for dtype in dtype_args:

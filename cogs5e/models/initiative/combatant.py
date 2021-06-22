@@ -448,17 +448,19 @@ class MonsterCombatant(Combatant):
                  spellbook: Spellbook = None,
                  ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
                  # monster specific
-                 monster_name=None, monster_id=None,
+                 monster_name=None, monster_id=None, creature_type=None,
                  **_):
         super(MonsterCombatant, self).__init__(
             ctx, combat, id, name, controller_id, private, init, index, notes, effects, group_id,
             stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp)
         self._monster_name = monster_name
         self._monster_id = monster_id
+        self._creature_type = creature_type
 
     @classmethod
     def from_monster(cls, monster, ctx, combat, name, controller_id, init, private, hp=None, ac=None):
         monster_name = monster.name
+        creature_type = monster.creature_type
         hp = int(monster.hp) if not hp else int(hp)
         ac = int(monster.ac) if not ac else int(ac)
         id = create_combatant_id()
@@ -477,7 +479,7 @@ class MonsterCombatant(Combatant):
                    skills=monster.skills, saves=monster.saves, resistances=resistances,
                    spellbook=spellbook, ac=ac, max_hp=hp,
                    # monster specific
-                   monster_name=monster_name, monster_id=monster.entity_id)
+                   monster_name=monster_name, monster_id=monster.entity_id, creature_type=creature_type)
 
     # ser/deser
     @classmethod
@@ -485,12 +487,13 @@ class MonsterCombatant(Combatant):
         inst = super().from_dict(raw, ctx, combat)
         inst._monster_name = raw['monster_name']
         inst._monster_id = raw.get('monster_id')
+        inst._creature_type = raw.get('creature_type')
         return inst
 
     def to_dict(self):
         raw = super().to_dict()
         raw.update({
-            'monster_name': self._monster_name, 'monster_id': self._monster_id
+            'monster_name': self._monster_name, 'monster_id': self._monster_id, 'creature_type': self._creature_type
         })
         return raw
 
@@ -503,6 +506,9 @@ class MonsterCombatant(Combatant):
     def monster_id(self):
         return self._monster_id
 
+    @property
+    def creature_type(self):
+        return self._creature_type
 
 class PlayerCombatant(Combatant):
     type = CombatantType.PLAYER

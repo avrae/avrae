@@ -934,7 +934,7 @@ class InitTracker(commands.Cog):
         __General__
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
         -sb <save bonus> - Adds a bonus to all saving throws.
-        -cb <check bonus> - Adds a bonus to all attribute checks.
+        -cb <check bonus> - Adds a bonus to all ability checks.
         -desc <description> - Adds a description of the effect."""
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)

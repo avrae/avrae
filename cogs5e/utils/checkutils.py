@@ -58,6 +58,10 @@ def run_check(skill_key, caster, args, embed):
     else:
         embed.title = f'{caster.get_title_name()} makes {a_or_an(skill_name)} check!'
 
+    # ieffect -cb
+    if isinstance(caster, init.Combatant):
+        args['b'] = args.get('b') + caster.active_effects('cb')
+
     result = _run_common(skill, args, embed, mod_override=mod)
     return CheckResult(rolls=result.rolls, skill=skill, skill_name=skill_name, skill_roll_result=result)
 

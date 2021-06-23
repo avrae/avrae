@@ -233,7 +233,9 @@ class SheetManager(commands.Cog):
         skill = char.skills[skill_key]
 
         checkutils.update_csetting_args(char, args, skill)
-        result = checkutils.run_check(skill_key, char, args, embed)
+        caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
+        
+        result = checkutils.run_check(skill_key, caster, args, embed)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)

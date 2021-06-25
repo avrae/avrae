@@ -142,8 +142,8 @@ class SheetManager(commands.Cog):
         Imports an attack from JSON or YAML exported from the Avrae Dashboard.
         """
         # strip any code blocks
-        if data.startswith(('```\n', '```json\n', '```yaml\n', '```yml\n', '```py\n')) and data.endswith('\n```'):
-            data = '\n'.join(data.split('\n')[1:-1])
+        if data.startswith(('```\n', '```json\n', '```yaml\n', '```yml\n', '```py\n')) and data.endswith('```'):
+            data = '\n'.join(data.split('\n')[1:]).rstrip('`\n')
 
         character: Character = await Character.from_ctx(ctx)
 
@@ -234,7 +234,7 @@ class SheetManager(commands.Cog):
 
         checkutils.update_csetting_args(char, args, skill)
         caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
-        
+
         result = checkutils.run_check(skill_key, caster, args, embed)
 
         await ctx.send(embed=embed)

@@ -148,7 +148,7 @@ class DMInitiative(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Taking Your Turn - Attacks"
             embed.description = f"""
-            Your death dog got the higher roll for initiative, so it goes first.  Let's have it move in to attack, which you can do with `{ctx.prefix}init [attack|action|a] <atk_name> [args]`.  (We'll be using the `{ctx.prefix}i a` shortcut here).
+            Your death dog got the higher roll for initiative, so it goes first.  Let's have it move in to attack, which you can do with `{ctx.prefix}init [attack|a] <atk_name> [args]`.  (We'll be using the `{ctx.prefix}i a` shortcut here).
             
             First we'll enter the name of our attack, `bite`.  Then we need to tell it to target our player.  For that, we add `-t` followed by the target's name.  In this case, it's `-t Orkira`.
             ```

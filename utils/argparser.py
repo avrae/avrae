@@ -307,7 +307,7 @@ class ParsedArguments:
         :type key: str
         :type value: str or list[str]
         """
-        if not isinstance(value, collections.UserList) or not isinstance(value, list):
+        if not isinstance(value, (collections.UserList, list)):
             value = [value]
         self._parsed[key] = value
         self._original_parsed[key] = value.copy()

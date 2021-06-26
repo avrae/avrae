@@ -63,7 +63,7 @@ class Attack(Effect):
             elif effect_b:
                 b = effect_b
 
-         # adv/dis (#TODO)
+         # adv/dis (#1552)
          # Only apply if we don't already have any advantage changes
             if not adv:
                 if autoctx.combatant.active_effects('adv'):

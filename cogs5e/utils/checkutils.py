@@ -100,10 +100,18 @@ def run_save(save_key, caster, args, embed):
         embed.title = f"An unknown creature makes {a_or_an(save_name)}!"
     else:
         embed.title = f'{caster.get_title_name()} makes {a_or_an(save_name)}!'
-
-    # ieffect -sb
+    
+    # ieffect handling
     if isinstance(caster, init.Combatant):
+        # -sb
         args['b'] = args.get('b') + caster.active_effects('sb')
+        # -sadv/sdis
+        if not args.adv(boolwise=False, ephem=True):
+            adv = 0
+            if save_key[:3] in caster.active_effects('sadv'):
+                args['adv'] = True
+            if save_key[:3] in caster.active_effects('sdis'):
+                args['dis'] = True
 
     result = _run_common(save, args, embed, rr_format="Save {}")
     return SaveResult(rolls=result.rolls, skill=save, skill_name=stat_name, skill_roll_result=result)

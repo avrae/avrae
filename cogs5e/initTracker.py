@@ -921,6 +921,7 @@ class InitTracker(commands.Cog):
         -t <target> - Specifies more combatant's to target, chainable (e.g., "-t or1 -t or2").
         -parent <"[combatant]|[effect]"> - Sets a parent effect from a specified combatant.
         __Attacks__
+        adv/dis - Give advantage or disadvantage to the attack roll(s).
         -b <bonus> - Adds a bonus to hit.
         -d <damage> - Adds additional damage.
         -attack <"[hit]|[damage]|[description]"> - Adds an attack to the combatant. The effect name will be the name of the attack. No [hit] will autohit (e.g., -attack "|1d6[fire]|")
@@ -935,6 +936,7 @@ class InitTracker(commands.Cog):
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
         -sb <save bonus> - Adds a bonus to all saving throws.
         -cb <check bonus> - Adds a bonus to all ability checks.
+        -sadv/sdis <ability> - Gives advantage/disadvantage on saving throws for the provided ability.
         -desc <description> - Adds a description of the effect."""
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)

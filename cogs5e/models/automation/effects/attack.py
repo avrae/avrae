@@ -54,13 +54,22 @@ class Attack(Effect):
             if 'criton' not in args:
                 criton = autoctx.character.get_setting('criton', 20)
 
-        # check for combatant IEffect bonus (#224)
+        # check for combatant IEffects
         if autoctx.combatant:
+            # bonus (#224)
             effect_b = '+'.join(autoctx.combatant.active_effects('b'))
             if effect_b and b:
                 b = f"{b}+{effect_b}"
             elif effect_b:
                 b = effect_b
+
+         # adv/dis (#TODO)
+         # Only apply if we don't already have any advantage changes
+            if not adv:
+                if autoctx.combatant.active_effects('adv'):
+                    adv += 1
+                if  autoctx.combatant.active_effects('dis'):
+                    adv -= 1
 
         attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
 

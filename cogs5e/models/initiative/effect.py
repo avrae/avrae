@@ -1,3 +1,5 @@
+from utils.constants import STAT_ABBREVIATIONS
+from utils.functions import verbose_stat
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
 from utils.argparser import argparse
@@ -281,11 +283,24 @@ def parse_resist_str(resist_list):
     return ', '.join([str(Resistance.from_dict(r)) for r in resist_list])
 
 
+def parse_stat_choice(arg, _):
+    if not arg in STAT_ABBREVIATIONS:
+        raise InvalidArgument(f"{arg} is not a valid stat")
+    return arg
+
+
+def parse_stat_choice_str(stat):
+    return verbose_stat(stat)
+
+
 LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
 SPECIAL_ARGS = {  # 2-tuple of effect, str
     'attack': (parse_attack_arg, parse_attack_str),
-    'resist': (parse_resist_arg, parse_resist_str)
+    'resist': (parse_resist_arg, parse_resist_str),
+    'sadv': (parse_stat_choice, parse_stat_choice_str),
+    'sdis': (parse_stat_choice, parse_stat_choice_str)
 }
 VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
               'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus', 'cb': 'Check Bonus',
-              'magical': 'Magical Damage', 'silvered': 'Silvered Damage'}
+              'magical': 'Magical Damage', 'silvered': 'Silvered Damage', 'adv': 'Attack Advantage', 'dis': 'Attack Disadvantage',
+              'sadv': 'Save Advantage', 'sdis': 'Save Disadvantage'}

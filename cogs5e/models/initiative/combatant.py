@@ -185,13 +185,15 @@ class Combatant(BaseCombatant, StatBlock):
         if resist_type not in RESIST_TYPES:
             raise ValueError("Resistance type is invalid")
 
+        resistance = Resistance.from_str(damage_type)
+
         for rt in RESIST_TYPES:
             for resist in reversed(self._resistances[rt]):
-                if resist.dtype == damage_type:
+                # remove any existing identical resistances, or any filtered variant of a given non-complex resistance
+                if resist == resistance or (not resistance.is_complex and resist.dtype == resistance.dtype):
                     self._resistances[rt].remove(resist)
 
-        if resist_type != 'neutral':
-            resistance = Resistance.from_str(damage_type)
+        if resist_type != 'neutral' or resistance.is_complex:
             self._resistances[resist_type].append(resistance)
 
     @property
@@ -425,6 +427,8 @@ class Combatant(BaseCombatant, StatBlock):
                 resist_str += "\n> Immunities: " + ', '.join([str(r) for r in self.resistances.immune])
             if len(self.resistances.vuln) > 0:
                 resist_str += "\n> Vulnerabilities: " + ', '.join([str(r) for r in self.resistances.vuln])
+            if len(self.resistances.neutral) > 0:
+                resist_str += "\n> Ignored: " + ', '.join([str(r) for r in self.resistances.neutral])
         return resist_str
 
     def __str__(self):
@@ -509,6 +513,7 @@ class MonsterCombatant(Combatant):
     @property
     def creature_type(self):
         return self._creature_type
+
 
 class PlayerCombatant(Combatant):
     type = CombatantType.PLAYER

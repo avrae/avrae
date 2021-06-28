@@ -34,13 +34,7 @@ class Attack(Effect):
                                   "of a Target effect.")
 
         # arguments
-        args = autoctx.args
-        # adv/dis (#1552)
-        for check_arg in ['adv','dis']:
-            if autoctx.combatant.active_effects(check_arg):
-                args.update({check_arg: True})  # Because adv() only checks last() just forcibly add them
-
-        adv = args.adv(ea=True, ephem=True)
+        args = autoctx.args       
         crit = args.last('crit', None, bool, ephem=True) and 1
         nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         hit = args.last('hit', None, bool, ephem=True) and 1
@@ -67,6 +61,12 @@ class Attack(Effect):
                 b = f"{b}+{effect_b}"
             elif effect_b:
                 b = effect_b
+            # adv/dis (#1552)
+            for check_arg in ['adv','dis']:
+                if autoctx.combatant.active_effects(check_arg):
+                    args.update({check_arg: True})  # Because adv() only checks last() just forcibly add them
+        # Check adv after effects
+        adv = args.adv(ea=True, ephem=True)
 
         attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
 

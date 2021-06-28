@@ -35,6 +35,11 @@ class Attack(Effect):
 
         # arguments
         args = autoctx.args
+        # adv/dis (#1552)
+        for check_arg in ['adv','dis']:
+            if autoctx.combatant.active_effects(check_arg):
+                args.update({check_arg: True})  # Because adv() only checks last() just forcibly add them
+
         adv = args.adv(ea=True, ephem=True)
         crit = args.last('crit', None, bool, ephem=True) and 1
         nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
@@ -62,14 +67,6 @@ class Attack(Effect):
                 b = f"{b}+{effect_b}"
             elif effect_b:
                 b = effect_b
-
-         # adv/dis (#1552)
-         # Only apply if we don't already have any advantage changes
-            if not adv:
-                if autoctx.combatant.active_effects('adv'):
-                    adv += 1
-                if  autoctx.combatant.active_effects('dis'):
-                    adv -= 1
 
         attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
 

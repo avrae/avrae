@@ -284,7 +284,7 @@ def parse_resist_str(resist_list):
 
 
 def parse_stat_choice(arg, _):
-    if not arg in STAT_ABBREVIATIONS:
+    if arg not in STAT_ABBREVIATIONS:
         raise InvalidArgument(f"{arg} is not a valid stat")
     return arg
 
@@ -297,8 +297,8 @@ LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
 SPECIAL_ARGS = {  # 2-tuple of effect, str
     'attack': (parse_attack_arg, parse_attack_str),
     'resist': (parse_resist_arg, parse_resist_str),
-    'sadv': (parse_stat_choice, parse_stat_choice_str),
-    'sdis': (parse_stat_choice, parse_stat_choice_str)
+    'sadv': (parse_stat_choice, verbose_stat),
+    'sdis': (parse_stat_choice, verbose_stat)
 }
 VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
               'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus', 'cb': 'Check Bonus',

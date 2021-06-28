@@ -40,6 +40,13 @@ class Save(Effect):
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
         hide = autoctx.args.last('h', type_=bool)
+
+        # combatant i effect
+        if autoctx.target.combatant:
+            for check_arg in ['sadv','sdis']:
+                if save in autoctx.target.combatant.active_effects(check_arg):
+                    autoctx.args.update({check_arg: True})  # Because adv() only checks last() just forcibly add them
+
         adv = autoctx.args.adv(custom={'adv': 'sadv', 'dis': 'sdis'})
 
         dc_override = None

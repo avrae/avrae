@@ -34,7 +34,7 @@ class Attack(Effect):
                                   "of a Target effect.")
 
         # arguments
-        args = autoctx.args       
+        args = autoctx.args
         crit = args.last('crit', None, bool, ephem=True) and 1
         nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         hit = args.last('hit', None, bool, ephem=True) and 1

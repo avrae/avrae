@@ -51,12 +51,6 @@ jobs:
       - name: Run Tests
         run: pytest --cov=cogs5e --cov=cogsmisc --cov=utils --cov-report=xml:shared/coverage.xml tests/ test
 
-      - name: Setup flake8 annotations
-        uses: rbialon/flake8-annotations@v1
-
-      - name: Lint Diff
-        run: git diff -u | flake8 . --count --exit-zero --max-line-length=120 --statistics --diff
-
       - name: Upload Coverage
         uses: codecov/codecov-action@v1
         with:

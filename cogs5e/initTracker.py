@@ -935,6 +935,7 @@ class InitTracker(commands.Cog):
         __General__
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
         -sb <save bonus> - Adds a bonus to all saving throws.
+        -cb <check bonus> - Adds a bonus to all ability checks.
         -desc <description> - Adds a description of the effect."""
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
@@ -1120,11 +1121,30 @@ class InitTracker(commands.Cog):
     Rolls an ability check as the current combatant.
     {VALID_CHECK_ARGS}
     """)
-    async def check(self, ctx, check, *args):
+    async def check(self, ctx, check, *, args=''):
+        return await self._check(ctx, None, check, args)
+
+    @init.command(aliases=['oc'], help=f"""
+    Rolls an ability check as another combatant.
+    {VALID_CHECK_ARGS}
+    """)
+    async def offturncheck(self, ctx, combatant_name, check, *, args=''):
+        return await self._check(ctx, combatant_name, check, args)
+
+    async def _check(self, ctx, combatant_name, check, args):
         combat = await Combat.from_ctx(ctx)
-        combatant = combat.current_combatant
-        if combatant is None:
-            return await ctx.send("It is not currently anyone's turn.")
+        if combatant_name is None:
+            combatant = combat.current_combatant
+            if combatant is None:
+                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` to make a check as the current combatant.")
+        else:
+            try:
+                combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the check.")
+            except SelectionException:
+                return await ctx.send("Combatant not found.")
+
+        if isinstance(combatant, CombatantGroup):
+            return await ctx.send("Groups cannot make checks.")
 
         skill_key = await search_and_select(ctx, constants.SKILL_NAMES, check, lambda s: s)
         embed = discord.Embed(color=combatant.get_color())
@@ -1143,11 +1163,30 @@ class InitTracker(commands.Cog):
     Rolls an ability save as the current combatant.
     {VALID_SAVE_ARGS}
     """)
-    async def save(self, ctx, save, *args):
+    async def save(self, ctx, save, *, args=''):
+        return await self._save(ctx, None, save, args)
+
+    @init.command(aliases=['os'], help=f"""
+    Rolls an ability save as another combatant.
+    {VALID_CHECK_ARGS}
+    """)
+    async def offturnsave(self, ctx, combatant_name, save, *, args=''):
+        return await self._save(ctx, combatant_name, save, args)
+
+    async def _save(self, ctx, combatant_name, save, args):
         combat = await Combat.from_ctx(ctx)
-        combatant = combat.current_combatant
-        if combatant is None:
-            return await ctx.send("It is not currently anyone's turn.")
+        if combatant_name is None:
+            combatant = combat.current_combatant
+            if combatant is None:
+                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` to make a save as the current combatant.")
+        else:
+            try:
+                combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the save.")
+            except SelectionException:
+                return await ctx.send("Combatant not found.")
+
+        if isinstance(combatant, CombatantGroup):
+            return await ctx.send("Groups cannot make saves.")
 
         embed = discord.Embed(color=combatant.get_color())
         args = await helpers.parse_snippets(args, ctx)

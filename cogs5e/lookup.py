@@ -337,7 +337,7 @@ class Lookup(commands.Cog):
             hp = monster.hp
             ac = monster.ac
             size = monster.size
-            _type = monster.race
+            _type = monster.creature_type
             if hp < 10:
                 hp = "Very Low"
             elif 10 <= hp < 50:

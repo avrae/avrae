@@ -5,12 +5,12 @@ Created on Jan 19, 2017
 """
 import asyncio
 import itertools
-import json
 import logging
 import time
 import traceback
 
 import discord
+import yaml
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
@@ -153,15 +153,19 @@ class SheetManager(commands.Cog):
         await ctx.send(out)
 
     @action.command(name="import")
-    async def attack_import(self, ctx, *, data):
+    async def attack_import(self, ctx, *, data: str):
         """
-        Imports an attack from JSON exported from the Avrae Dashboard.
+        Imports an attack from JSON or YAML exported from the Avrae Dashboard.
         """
+        # strip any code blocks
+        if data.startswith(('```\n', '```json\n', '```yaml\n', '```yml\n', '```py\n')) and data.endswith('```'):
+            data = '\n'.join(data.split('\n')[1:]).rstrip('`\n')
+
         character: Character = await Character.from_ctx(ctx)
 
         try:
-            attack_json = json.loads(data)
-        except json.decoder.JSONDecodeError:
+            attack_json = yaml.safe_load(data)
+        except yaml.YAMLError:
             return await ctx.send("This is not a valid attack.")
 
         if not isinstance(attack_json, list):
@@ -245,7 +249,9 @@ class SheetManager(commands.Cog):
         skill = char.skills[skill_key]
 
         checkutils.update_csetting_args(char, args, skill)
-        result = checkutils.run_check(skill_key, char, args, embed)
+        caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
+
+        result = checkutils.run_check(skill_key, caster, args, embed)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)

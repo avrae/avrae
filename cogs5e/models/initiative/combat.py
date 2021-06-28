@@ -253,6 +253,8 @@ class Combat:
         if current is not None:
             self._current_index = current.index
             self._turn = current.init
+        else:
+            self._current_index = None
 
     def combatant_by_id(self, combatant_id):
         """Gets a combatant by their ID."""

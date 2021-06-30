@@ -348,7 +348,7 @@ class DMInitiative(Tutorial):
                 if orkira is None:
                     addback = await confirm(ctx,
                                             "Uh oh, it looks like Orkira isn't in the fight anymore. "
-                                            "Would you like me to add her back?")
+                                            "Would you like me to add her back?  (Reply with yes/no)")
                     if addback:
                         orkira = await add_orkira(ctx, the_combat)
                         await ctx.send("Ok. I've added her back to the fight - try again!")

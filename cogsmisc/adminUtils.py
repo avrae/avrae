@@ -229,7 +229,7 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def admin_restart_shard(self, ctx, shard_id: int):
         """Forces a shard to disconnect from the Discord API and reconnect."""
-        if not await confirm(ctx, f"Are you sure you want to restart shard {shard_id}?"):
+        if not await confirm(ctx, f"Are you sure you want to restart shard {shard_id}?  (Reply with yes/no)"):
             return await ctx.send("ok, not restarting")
         resp = await self.pscall("restart_shard", kwargs={"shard_id": shard_id}, expected_replies=1)
         await self._send_replies(ctx, resp)
@@ -239,7 +239,7 @@ class AdminUtils(commands.Cog):
     async def admin_kill_cluster(self, ctx, cluster_id: int):
         """Forces a cluster to restart by killing it."""
         num_shards = len(self.bot.shard_ids) if self.bot.shard_ids is not None else 1
-        if not await confirm(ctx, f"Are you absolutely sure you want to kill cluster {cluster_id}?\n"
+        if not await confirm(ctx, f"Are you absolutely sure you want to kill cluster {cluster_id}?  (Reply with yes/no)\n"
                                   f"**This will terminate approximately {num_shards} shards, which "
                                   f"will take at least {num_shards * 5} seconds to restart, and "
                                   f"impact about {len(self.bot.guilds)} servers.**"):

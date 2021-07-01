@@ -10,11 +10,10 @@ from ..results import DamageResult
 
 
 class Damage(Effect):
-    def __init__(self, damage: str, overheal: bool = False, higher: dict = None, cantripScale: bool = None, nocrtical: bool = None, **kwargs):
+    def __init__(self, damage: str, overheal: bool = False, higher: dict = None, cantripScale: bool = None, **kwargs):
         super(Damage, self).__init__("damage", **kwargs)
         self.damage = damage
         self.overheal = overheal
-        self.nocritical = nocrtical
         # common
         self.higher = higher
         self.cantripScale = cantripScale
@@ -22,7 +21,7 @@ class Damage(Effect):
     def to_dict(self):
         out = super(Damage, self).to_dict()
         out.update({
-            "damage": self.damage, "overheal": self.overheal, "nocritical": self.nocritical
+            "damage": self.damage, "overheal": self.overheal
         })
         if self.higher is not None:
             out['higher'] = self.higher
@@ -42,7 +41,7 @@ class Damage(Effect):
         d_args = args.get('d', [], ephem=True)
         c_args = args.get('c', [], ephem=True)
         crit_arg = args.last('crit', None, bool, ephem=True)
-        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True) or self.nocritical
+        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         max_arg = args.last('max', None, bool, ephem=True)
         magic_arg = args.last('magical', None, bool, ephem=True)
         silvered_arg = args.last('silvered', None, bool, ephem=True)
@@ -88,7 +87,7 @@ class Damage(Effect):
 
         # crit
         # nocrit (#1216)
-        in_crit = (autoctx.in_crit or crit_arg) and not nocrit 
+        in_crit = (autoctx.in_crit or crit_arg) and not nocrit
         roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
         if in_crit:
             dice_ast = d20.utils.tree_map(utils.crit_mapper, dice_ast)

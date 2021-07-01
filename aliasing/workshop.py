@@ -2,6 +2,7 @@ import abc
 import collections
 import datetime
 import enum
+from re import compile
 
 from bson import ObjectId
 
@@ -15,6 +16,7 @@ class PublicationState(enum.Enum):
     UNLISTED = 'UNLISTED'
     PUBLISHED = 'PUBLISHED'
 
+WORKSHOP_ADDRESS_RE = compile(r'(?:https?://)?avrae\.io/dashboard/workshop/([0-9a-f]{24})(?:$|/)')
 
 class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
     """

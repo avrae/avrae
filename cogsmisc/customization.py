@@ -16,6 +16,7 @@ from discord.ext.commands import BucketType, NoPrivateMessage
 
 from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
+from aliasing.workshop import WORKSHOP_ADDRESS_RE
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
@@ -89,6 +90,9 @@ class CollectableManagementGroup(commands.Group):
         self.subscribe = self.command(
             name='subscribe', aliases=['sub'],
             help='Subscribes to all aliases and snippets in a workshop collection.')(self.subscribe)
+        self.unsubscribe = self.command(
+            name='unsubscribe', aliases=['unsub'],
+            help='Unsubscribes from all aliases and snippets in a workshop collection.')(self.unsubscribe)
         self.autofix = self.command(
             name='autofix', hidden=True,
             help='Ensures that all server and subscribed workshop aliases have unique names.')(self.autofix)
@@ -212,7 +216,7 @@ class CollectableManagementGroup(commands.Group):
         await ctx.send(f'{self.obj_name.capitalize()} {name} removed.')
 
     async def subscribe(self, ctx, url):
-        coll_match = re.match(r'(?:https?://)?avrae\.io/dashboard/workshop/([0-9a-f]{24})(?:$|/)', url)
+        coll_match = re.match(WORKSHOP_ADDRESS_RE, url)
         if coll_match is None:
             return await ctx.send("This is not an Alias Workshop link.")
 
@@ -229,6 +233,34 @@ class CollectableManagementGroup(commands.Group):
 
         embed = EmbedWithAuthor(ctx)
         embed.title = f"Subscribed to {the_collection.name}"
+        embed.url = the_collection.url
+        embed.description = the_collection.description
+        if the_collection.aliases:
+            embed.add_field(name="Server Aliases" if self.is_server else "Aliases",
+                            value=", ".join(sorted(a.name for a in the_collection.aliases)))
+        if the_collection.snippets:
+            embed.add_field(name="Server Snippets" if self.is_server else "Snippets",
+                            value=", ".join(sorted(a.name for a in the_collection.snippets)))
+        await ctx.send(embed=embed)
+
+    async def unsubscribe(self, ctx, url):
+        coll_match = re.match(WORKSHOP_ADDRESS_RE, url)
+        if coll_match is None:
+            return await ctx.send("This is not an Alias Workshop link.")
+
+        if self.before_edit_check:
+            await self.before_edit_check(ctx)
+
+        collection_id = coll_match.group(1)
+        the_collection = await workshop.WorkshopCollection.from_id(ctx, collection_id)
+        # private and duplicate logic handled here, also loads aliases/snippets
+        if self.is_server:
+            await the_collection.unset_server_active(ctx)
+        else:
+            await the_collection.unsubscribe(ctx)
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = f"Unsubscribed from {the_collection.name}"
         embed.url = the_collection.url
         embed.description = the_collection.description
         if the_collection.aliases:

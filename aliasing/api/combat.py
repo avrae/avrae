@@ -145,6 +145,7 @@ class SimpleCombatant(AliasStatBlock):
     def race(self):
         """
         The race of the combatant. Will return None for monsters or combatants with no race.
+        
         :rtype: str or None
         """
         return self._race
@@ -153,6 +154,7 @@ class SimpleCombatant(AliasStatBlock):
     def creature_type(self):
         """
         The creature type of the combatant. Will return None for players or combatants with no creature type.
+        
         :rtype: str or None
         """
         return self._creature_type
@@ -161,6 +163,7 @@ class SimpleCombatant(AliasStatBlock):
     def monster_name(self):
         """
         The monster name of the combatant. Will return None for players.
+        
         :rtype: str or None
         """
         return self._monster_name

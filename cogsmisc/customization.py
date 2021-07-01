@@ -444,26 +444,10 @@ class Customization(commands.Cog):
         !spell Fly
         !monster Rat"
         """
-        cmds = cmds.splitlines(True)
-        combined_cmds = []
-        combine_str = ""
-        # iterate through the commands after the first
-        for c in cmds:
-            if not c.startswith(ctx.prefix):  # Append to the current command
-                combine_str += c
-            else:  # Found a new valid command
-                combined_cmds.append(combine_str)
-                combine_str = c
-        # handle the last entry
-        if not c.startswith(ctx.prefix):
-            combined_cmds.append(combine_str)
-            combined_cmds.append(c)
-        else:
-            combined_cmds.append(combine_str+c)
-
-        # raise InvalidArgument(combined_cmds)
-        for c in combined_cmds[:20]:
-            ctx.message.content = c
+        # Remove the first prefix to simplify loop. Split only on actual new commands
+        cmds = cmds.lstrip(ctx.prefix).split(f"\n{ctx.prefix}")
+        for c in cmds[:20]:
+            ctx.message.content = ctx.prefix+c
             await self.bot.process_commands(ctx.message)
             await asyncio.sleep(1)
 

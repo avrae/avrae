@@ -505,7 +505,7 @@ class SheetManager(commands.Cog):
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
             return await confirm(ctx,
-                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue?[query]\n"
+                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue?[reply]\n"
                                  f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
 

@@ -276,7 +276,7 @@ class CollectableManagementGroup(commands.Group):
         # confirm mass change
         changes = '\n'.join([f"`{old}` ({collection}) -> `{new}`" for old, new, collection in rename_tris])
         response = await confirm(ctx, f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
-                                      f"Do you want to continue?[query]\n"
+                                      f"Do you want to continue?[reply]\n"
                                       f"{changes}")
         if not response:
             return await ctx.send("Ok, aborting.")

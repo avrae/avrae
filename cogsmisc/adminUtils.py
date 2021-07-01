@@ -239,7 +239,7 @@ class AdminUtils(commands.Cog):
     async def admin_kill_cluster(self, ctx, cluster_id: int):
         """Forces a cluster to restart by killing it."""
         num_shards = len(self.bot.shard_ids) if self.bot.shard_ids is not None else 1
-        if not await confirm(ctx, f"Are you absolutely sure you want to kill cluster {cluster_id}?[query]\n"
+        if not await confirm(ctx, f"Are you absolutely sure you want to kill cluster {cluster_id}?[reply]\n"
                                   f"**This will terminate approximately {num_shards} shards, which "
                                   f"will take at least {num_shards * 5} seconds to restart, and "
                                   f"impact about {len(self.bot.guilds)} servers.**"):

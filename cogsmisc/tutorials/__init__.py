@@ -91,7 +91,7 @@ class Tutorials(commands.Cog):
             return await ctx.send(f"The tutorial you were running no longer exists. "
                                   f"Please run `{ctx.prefix}tutorial end` to start a new tutorial!")
         # confirm
-        result = await confirm(ctx, "Are you sure you want to skip the current tutorial objective?  (Reply with yes/no)")
+        result = await confirm(ctx, "Are you sure you want to skip the current tutorial objective?")
         if not result:
             return await ctx.send("Ok, aborting.")
         # run tutorial state transition
@@ -106,7 +106,7 @@ class Tutorials(commands.Cog):
         if user_state is None:
             return await ctx.send("You are not currently running a tutorial.")
         # confirm
-        result = await confirm(ctx, "Are you sure you want to end the current tutorial?  (Reply with yes/no)")
+        result = await confirm(ctx, "Are you sure you want to end the current tutorial?")
         if not result:
             return await ctx.send("Ok, aborting.")
         # delete tutorial state map

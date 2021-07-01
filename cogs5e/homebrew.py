@@ -68,7 +68,7 @@ class Homebrew(commands.Cog):
         except NoSelectionElements:
             return await ctx.send("Bestiary not found.")
 
-        resp = await confirm(ctx, 'Are you sure you want to delete {}?  (Reply with yes/no)'.format(bestiary.name))
+        resp = await confirm(ctx, 'Are you sure you want to delete {}?'.format(bestiary.name))
 
         if resp:
             await bestiary.unsubscribe(ctx)

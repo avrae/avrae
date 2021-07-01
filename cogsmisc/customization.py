@@ -276,7 +276,7 @@ class CollectableManagementGroup(commands.Group):
         # confirm mass change
         changes = '\n'.join([f"`{old}` ({collection}) -> `{new}`" for old, new, collection in rename_tris])
         response = await confirm(ctx, f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
-                                      f"Do you want to continue?  (Reply with yes/no)\n"
+                                      f"Do you want to continue?[query]\n"
                                       f"{changes}")
         if not response:
             return await ctx.send("Ok, aborting.")
@@ -365,14 +365,14 @@ async def _snippet_before_edit(ctx, name=None, delete=False):
         return
     name = name.lower()
     if name in SPECIAL_ARGS or name.startswith('-'):
-        confirmation = f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to create this snippet?  (Reply with yes/no)"
+        confirmation = f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to create this snippet?"
     # roll string checking
     try:
         d20.parse(name)
     except d20.RollSyntaxError:
         pass
     else:
-        confirmation = f"**Warning:** Creating a snippet named `{name}` might cause hidden problems if you try to use the same roll in other commands.\nAre you sure you want to create this snippet?  (Reply with yes/no)"
+        confirmation = f"**Warning:** Creating a snippet named `{name}` might cause hidden problems if you try to use the same roll in other commands.\nAre you sure you want to create this snippet?"
 
     if confirmation is not None:
         if not await confirm(ctx, confirmation):
@@ -417,7 +417,7 @@ class Customization(commands.Cog):
         # Check for Discord Slash-command conflict
         if prefix.startswith('/'):
             if not await confirm(ctx, f"Setting a prefix that begins with / may cause issues. "
-                       "Are you sure you want to continue?  (Reply with yes/no)"):
+                       "Are you sure you want to continue?"):
                 return await ctx.send("Ok, cancelling.")
 
         # insert into cache
@@ -476,9 +476,9 @@ class Customization(commands.Cog):
         if not await confirm(
                 ctx,
                 f"This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
-                f"Are you *absolutely sure* you want to continue?\n"
-                f"Type `Yes, I am sure` to confirm.",
-                response_check=lambda r: r == "Yes, I am sure"):
+                f"Are you *absolutely sure* you want to continue?\n",
+                response_check=lambda r: r == "Yes, I am sure",
+                replies="`Yes, I am sure` to confirm."):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.aliases.delete_many({"owner": str(ctx.author.id)})
@@ -526,9 +526,9 @@ class Customization(commands.Cog):
         if not await confirm(
                 ctx,
                 f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
-                f"Are you *absolutely sure* you want to continue?\n"
-                "Type `Yes, I am sure` to confirm.",
-                response_check=lambda r: r == "Yes, I am sure"):
+                f"Are you *absolutely sure* you want to continue?\n",
+                response_check=lambda r: r == "Yes, I am sure",
+                replies="`Yes, I am sure` to confirm."):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.snippets.delete_many({"owner": str(ctx.author.id)})
@@ -634,9 +634,9 @@ class Customization(commands.Cog):
         if not await confirm(
                 ctx,
                 f"This will delete **ALL** of your character variables for {char.name}. "
-                "Are you *absolutely sure* you want to continue?\n"
-                "Type `Yes, I am sure` to confirm.",
-                response_check=lambda r: r == "Yes, I am sure"):
+                "Are you *absolutely sure* you want to continue?\n",
+                response_check=lambda r: r == "Yes, I am sure",
+                replies="`Yes, I am sure` to confirm."):
             return await ctx.send("Unconfirmed. Aborting.")
 
         char.cvars = {}
@@ -695,9 +695,9 @@ class Customization(commands.Cog):
         if not await confirm(
                 ctx,
                 f"This will delete **ALL** of your user variables (uvars). "
-                "Are you *absolutely sure* you want to continue?\n"
-                "Type `Yes, I am sure` to confirm.",
-                response_check=lambda r: r == "Yes, I am sure"):
+                "Are you *absolutely sure* you want to continue?\n",
+                response_check=lambda r: r == "Yes, I am sure",
+                replies="`Yes, I am sure` to confirm."):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.uvars.delete_many({"owner": str(ctx.author.id)})
@@ -831,7 +831,7 @@ class Customization(commands.Cog):
         elif gvar['owner'] != str(ctx.author.id):
             return await ctx.send("You are not the owner of this variable.")
         else:
-            if await confirm(ctx, f"Are you sure you want to delete `{name}`?  (Reply with yes/no)"):
+            if await confirm(ctx, f"Are you sure you want to delete `{name}`?"):
                 await self.bot.mdb.gvars.delete_one({"key": name})
             else:
                 return await ctx.send("Ok, cancelling.")

@@ -74,7 +74,7 @@ class GameLog(commands.Cog):
             return await ctx.send("This campaign is already linked to this channel.")
         elif existing_link is not None:
             result = await confirm(
-                ctx, "This campaign is already linked to another channel. Link it to this one instead?  (Reply with yes/no)")
+                ctx, "This campaign is already linked to another channel. Link it to this one instead?")
             if not result:
                 return await ctx.send("Ok, canceling.")
 

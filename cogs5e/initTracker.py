@@ -1284,7 +1284,7 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         -force - Forces an init to end, in case it's erroring."""
 
-        to_end = await confirm(ctx, 'Are you sure you want to end combat?  (Reply with yes/no)', True)
+        to_end = await confirm(ctx, 'Are you sure you want to end combat?', True)
 
         if to_end is None:
             return await ctx.send('Timed out waiting for a response or invalid response.', delete_after=10)

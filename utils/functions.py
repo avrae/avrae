@@ -246,7 +246,7 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
     return choices[int(m.content) - 1][1]
 
 
-async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity):
+async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity, replies=None):
     """
     Confirms whether a user wants to take an action.
 
@@ -256,8 +256,16 @@ async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity
     :param delete_msgs: Whether to delete the messages.
     :param response_check: A function (str) -> bool that returns whether a given reply is a valid response.
     :type response_check: (str) -> bool
+    :param replies: The replies to accept. Will substitue for [reply] in text or append to end. If None, default to (Reply with yes/no)
     :return: Whether the user confirmed or not. None if no reply was recieved
     """
+    if not replies:
+        replies = ' (Reply with yes/no)'
+    if '[reply]' in message:
+        message.replace('[reply]', replies)
+    else:
+        message += replies
+
     msg = await ctx.channel.send(message)
     try:
         reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))

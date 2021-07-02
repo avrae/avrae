@@ -56,7 +56,7 @@ class Compendium:
         self.feats = []  # type: list[Feat]
         self.items = []  # type: list[Item]
         self.monsters = []  # type: list[Monster]
-        self.spells = []  # type: list[Spell]
+        self.spells = []  # type: list[gamedata.spell.Spell]
         self.books = []  # type: list[Book]
         self.actions = []  # type: list[Action]
 

@@ -41,10 +41,14 @@ class Save(Effect):
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
         hide = autoctx.args.last('h', type_=bool)
 
-        # Combine args/ieffect advantages - adv/dis (#1552)
-        adv = reconcile_adv(
-            adv= autoctx.args.last('sadv', bool, ephem=True) or autoctx.combatant.active_effects('adv'),
-            dis= autoctx.args.last('sdis', bool, ephem=True) or autoctx.combatant.active_effects('dis'))
+        # check for combatant IEffects
+        if autoctx.combatant:
+            # Combine args/ieffect advantages - adv/dis (#1552)
+            adv = reconcile_adv(
+                adv= autoctx.args.last('sadv', bool, ephem=True) or autoctx.combatant.active_effects('adv'),
+                dis= autoctx.args.last('sdis', bool, ephem=True) or autoctx.combatant.active_effects('dis'))
+        else:
+            adv = autoctx.args.adv(custom={'adv': 'sadv', 'dis': 'sdis'})
 
         dc_override = None
         if self.dc:

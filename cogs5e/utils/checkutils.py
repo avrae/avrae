@@ -103,6 +103,10 @@ def run_save(save_key, caster, args, embed):
     else:
         embed.title = f'{caster.get_title_name()} makes {a_or_an(save_name)}!'
 
+    # ieffect -sb
+    if isinstance(caster, init.Combatant):
+        args['b'] = args.get('b') + 
+
     result = _run_common(save, stat, caster, args, embed, rr_format="Save {}")
     return SaveResult(rolls=result.rolls, skill=save, skill_name=stat_name, skill_roll_result=result)
 

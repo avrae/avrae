@@ -289,8 +289,6 @@ def parse_stat_choice(arg, _):
     return arg
 
 
-def parse_stat_choice_str(stat):
-    return verbose_stat(stat)
 
 
 LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')

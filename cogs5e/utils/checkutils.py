@@ -1,3 +1,4 @@
+from cogs5e.models.automation.errors import AutomationException
 from collections import namedtuple
 
 from d20 import roll
@@ -7,7 +8,7 @@ from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.base import Skill
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS
-from utils.functions import a_or_an, camel_to_title, verbose_stat
+from utils.functions import a_or_an, camel_to_title, verbose_stat, reconcile_adv
 
 
 def update_csetting_args(char, args, skill=None):
@@ -62,7 +63,7 @@ def run_check(skill_key, caster, args, embed):
     if isinstance(caster, init.Combatant):
         args['b'] = args.get('b') + caster.active_effects('cb')
 
-    result = _run_common(skill, args, embed, mod_override=mod)
+    result = _run_common(skill, None, caster, args, embed, mod_override=mod)
     return CheckResult(rolls=result.rolls, skill=skill, skill_name=skill_name, skill_roll_result=result)
 
 
@@ -102,20 +103,11 @@ def run_save(save_key, caster, args, embed):
     else:
         embed.title = f'{caster.get_title_name()} makes {a_or_an(save_name)}!'
 
-    # ieffect handling
-    if isinstance(caster, init.Combatant):
-        # -sb
-        args['b'] = args.get('b') + caster.active_effects('sb')
-        # -sadv/sdis
-        for check_arg in ['adv','dis']:
-            if stat in caster.active_effects(check_arg):
-                args[check_arg] = True # Because adv() only checks last() just forcibly add them
-
-    result = _run_common(save, args, embed, rr_format="Save {}")
+    result = _run_common(save, stat, caster, args, embed, rr_format="Save {}")
     return SaveResult(rolls=result.rolls, skill=save, skill_name=stat_name, skill_roll_result=result)
 
 
-def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
+def _run_common(skill, stat, caster, args, embed, mod_override=None, rr_format="Check {}"):
     """
     Runs a roll for a given Skill.
 
@@ -142,8 +134,15 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
         desc_out.append(f"**DC {dc}**")
 
     for i in range(iterations):
-        # advantage
-        adv = args.adv(boolwise=True, ephem=True)
+        # ieffect handling
+        # Combine args/ieffect advantages - adv/dis (#1552)
+        if isinstance(caster, init.Combatant):
+            adv = reconcile_adv(
+                adv = args.last('adv', type_=bool, ephem=True) or stat in caster.active_effects('sadv'),
+                dis = args.last('dis', type_=bool, ephem=True) or stat in caster.active_effects('sdis'))
+        else:
+            adv = args.adv(boolwise=True, ephem=True)
+
         # roll bonus
         b = args.join('b', '+', ephem=True)
 

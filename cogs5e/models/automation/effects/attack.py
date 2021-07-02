@@ -64,9 +64,9 @@ class Attack(Effect):
 
         # Combine args/ieffect advantages - adv/dis (#1552)
         adv = reconcile_adv(
-            adv= args.last('adv', bool, ephem=True) or autoctx.combatant.active_effects('adv'),
-            dis= args.last('dis', bool, ephem=True) or autoctx.combatant.active_effects('dis'),
-            dis= args.last('ea', bool, ephem=True) or autoctx.combatant.active_effects('ea'))
+            adv= args.last('adv', type_=bool, ephem=True) or autoctx.combatant.active_effects('adv'),
+            dis= args.last('dis', type_=bool, ephem=True) or autoctx.combatant.active_effects('dis'),
+            ea= args.last('ea', type_=bool, ephem=True) or autoctx.combatant.active_effects('ea'))
 
         attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
 

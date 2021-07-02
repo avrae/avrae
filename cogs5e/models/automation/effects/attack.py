@@ -61,12 +61,13 @@ class Attack(Effect):
                 b = f"{b}+{effect_b}"
             elif effect_b:
                 b = effect_b
-
-        # Combine args/ieffect advantages - adv/dis (#1552)
-        adv = reconcile_adv(
-            adv= args.last('adv', type_=bool, ephem=True) or autoctx.combatant.active_effects('adv'),
-            dis= args.last('dis', type_=bool, ephem=True) or autoctx.combatant.active_effects('dis'),
-            ea= args.last('ea', type_=bool, ephem=True) or autoctx.combatant.active_effects('ea'))
+            # Combine args/ieffect advantages - adv/dis (#1552)
+            adv = reconcile_adv(
+                adv= args.last('adv', type_=bool, ephem=True) or autoctx.combatant.active_effects('adv'),
+                dis= args.last('dis', type_=bool, ephem=True) or autoctx.combatant.active_effects('dis'),
+                ea= args.last('ea', type_=bool, ephem=True) or autoctx.combatant.active_effects('ea'))
+        else:
+            adv = args.adv(ea=True, ephem=True)
 
         attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
 

@@ -105,7 +105,7 @@ def run_save(save_key, caster, args, embed):
 
     # ieffect -sb
     if isinstance(caster, init.Combatant):
-        args['b'] = args.get('b') + 
+        args['b'] = args.get('b') + caster.active_effects('sb')
 
     result = _run_common(save, stat, caster, args, embed, rr_format="Save {}")
     return SaveResult(rolls=result.rolls, skill=save, skill_name=stat_name, skill_roll_result=result)

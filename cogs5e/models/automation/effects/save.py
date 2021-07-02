@@ -1,7 +1,7 @@
 import d20
 
 from cogs5e.models.errors import InvalidSaveType
-from utils.functions import maybe_mod
+from utils.functions import maybe_mod, reconcile_adv
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
 from ..results import SaveResult
@@ -41,13 +41,10 @@ class Save(Effect):
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
         hide = autoctx.args.last('h', type_=bool)
 
-        # combatant i effect
-        if autoctx.target.combatant:
-            for check_arg in ['sadv','sdis']:
-                if save in autoctx.target.combatant.active_effects(check_arg):
-                    autoctx.args.update({check_arg: True})  # Because adv() only checks last() just forcibly add them
-
-        adv = autoctx.args.adv(custom={'adv': 'sadv', 'dis': 'sdis'})
+        # Combine args/ieffect advantages - adv/dis (#1552)
+        adv = reconcile_adv(
+            adv= autoctx.args.last('sadv', bool, ephem=True) or autoctx.combatant.active_effects('adv'),
+            dis= autoctx.args.last('sdis', bool, ephem=True) or autoctx.combatant.active_effects('dis'))
 
         dc_override = None
         if self.dc:

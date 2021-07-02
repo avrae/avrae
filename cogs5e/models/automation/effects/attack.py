@@ -3,7 +3,7 @@ import d20
 from . import Effect
 from ..errors import AutomationException, NoAttackBonus, TargetException
 from ..results import AttackResult
-
+from utils.functions import reconcile_adv
 
 class Attack(Effect):
     def __init__(self, hit: list, miss: list, attackBonus: str = None, **kwargs):
@@ -61,12 +61,12 @@ class Attack(Effect):
                 b = f"{b}+{effect_b}"
             elif effect_b:
                 b = effect_b
-            # adv/dis (#1552)
-            for check_arg in ['adv','dis']:
-                if autoctx.combatant.active_effects(check_arg):
-                    args.update({check_arg: True})  # Because adv() only checks last() just forcibly add them
-        # Check adv after effects
-        adv = args.adv(ea=True, ephem=True)
+
+        # Combine args/ieffect advantages - adv/dis (#1552)
+        adv = reconcile_adv(
+            adv= args.last('adv', bool, ephem=True) or autoctx.combatant.active_effects('adv'),
+            dis= args.last('dis', bool, ephem=True) or autoctx.combatant.active_effects('dis'),
+            dis= args.last('ea', bool, ephem=True) or autoctx.combatant.active_effects('ea'))
 
         attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
 

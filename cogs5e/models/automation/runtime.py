@@ -187,6 +187,8 @@ class AutomationTarget:
         #: :type: :class:`~cogs5e.models.sheet.statblock.StatBlock`
         self.target = target
         self.is_simple = isinstance(target, str) or target is None
+        # ignorecrit (#1556)
+        self.ignorecrit = self.character.get_setting('ignorecrit', 0) if self.character else 0
 
     @property
     def name(self):

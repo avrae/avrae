@@ -45,6 +45,8 @@ CHARACTER_SETTINGS = {
                            display_func=lambda val: 'enabled' if val else 'disabled'),
     "critdice": CSetting("critdice", "number", description="extra crit dice", default=0),
     "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
+                       display_func=lambda val: 'enabled' if val else 'disabled'),
+    "ignorecrit": CSetting("ignorecrit", "boolean", description="ignore crits", default='disabled',
                        display_func=lambda val: 'enabled' if val else 'disabled')
 }
 
@@ -480,7 +482,8 @@ class SheetManager(commands.Cog):
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
         `critdice <number>` - Adds additional dice for to critical attacks.
-        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with."""
+        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with.
+        `ignorecrit true/false` - Prevents critical hits from applying, for example with adamantine armor."""
         char = await Character.from_ctx(ctx)
 
         out = []

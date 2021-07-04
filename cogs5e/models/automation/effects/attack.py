@@ -37,7 +37,7 @@ class Attack(Effect):
         args = autoctx.args
         adv = args.adv(ea=True, ephem=True)
         crit = args.last('crit', None, bool, ephem=True) and 1
-        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
+        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True) or autoctx.target.ignorecrit
         hit = args.last('hit', None, bool, ephem=True) and 1
         miss = (args.last('miss', None, bool, ephem=True) and not hit) and 1
         b = args.join('b', '+', ephem=True)

@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 import re
 from fnmatch import fnmatchcase
 from queue import Queue
@@ -359,5 +360,6 @@ async def end_init(avrae, dhttp):
 async def global_fixture(avrae, dhttp):
     """Things to do before and after every test."""
     dhttp.clear()
+    random.seed(123)  # we want to make our tests as deterministic as possible, so each one uses the same RNG seed
     yield
     await dhttp.drain()

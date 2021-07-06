@@ -163,7 +163,7 @@ class Attack(Effect):
             else:
                 children = self.on_hit(autoctx)
         elif hit:
-            autoctx.queue(f"**To Hit**: Automatic hit!")
+            autoctx.queue("**To Hit**: Automatic hit!")
             # nocrit and crit cancel out
             if crit and not nocrit:
                 did_crit = True
@@ -172,7 +172,7 @@ class Attack(Effect):
                 children = self.on_hit(autoctx)
         else:
             did_hit = False
-            autoctx.queue(f"**To Hit**: Automatic miss!")
+            autoctx.queue("**To Hit**: Automatic miss!")
             children = self.on_miss(autoctx)
 
         autoctx.in_save = original  # Restore proper crit state #1556

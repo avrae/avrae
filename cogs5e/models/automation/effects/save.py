@@ -100,7 +100,7 @@ class Save(Effect):
             autoctx.meta_queue('{} Save'.format(stat.upper()))
             is_success = False
 
-        # Disable critical damage state for children #1556
+        # Disable critical damage state for children (#1556)
         original = autoctx.in_save
         autoctx.in_save = True
 
@@ -109,7 +109,7 @@ class Save(Effect):
         else:
             children = self.on_fail(autoctx)
 
-        autoctx.in_save = original  # Restore proper crit state #1556
+        autoctx.in_save = original  # Restore proper crit state (#1556)
 
         return SaveResult(dc=dc, ability=save_skill, save_roll=save_roll, adv=adv, did_save=is_success,
                           children=children)

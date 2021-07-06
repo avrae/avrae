@@ -433,7 +433,6 @@ class Customization(commands.Cog):
         await ctx.send("Prefix set to `{}` for this server.".format(prefix))
 
     @commands.command()
-    @commands.cooldown(1, 9, BucketType.user)
     @commands.max_concurrency(1, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.

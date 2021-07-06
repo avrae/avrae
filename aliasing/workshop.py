@@ -2,7 +2,7 @@ import abc
 import collections
 import datetime
 import enum
-from re import compile
+import re
 
 from bson import ObjectId
 
@@ -16,7 +16,9 @@ class PublicationState(enum.Enum):
     UNLISTED = 'UNLISTED'
     PUBLISHED = 'PUBLISHED'
 
-WORKSHOP_ADDRESS_RE = compile(r'(?:https?://)?avrae\.io/dashboard/workshop/([0-9a-f]{24})(?:$|/)')
+
+WORKSHOP_ADDRESS_RE = re.compile(r'(?:https?://)?avrae\.io/dashboard/workshop/([0-9a-f]{24})(?:$|/)')
+
 
 class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
     """
@@ -233,6 +235,9 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         )
 
     async def unset_server_active(self, ctx):
+        if not await self.is_server_active(ctx):
+            raise NotAllowed("This collection is not installed on this server.")
+
         # remove sub doc
         await super().unset_server_active(ctx)
         # decr sub count

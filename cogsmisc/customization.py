@@ -6,10 +6,10 @@ Created on Jan 30, 2017
 import asyncio
 import io
 import re
-import d20
 import textwrap
 from collections import Counter
 
+import d20
 import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType, NoPrivateMessage
@@ -22,9 +22,8 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
-from utils.functions import confirm, get_selection, user_from_id
-from utils.constants import DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES
-
+from utils.constants import DAMAGE_TYPES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
+from utils.functions import confirm, get_selection, search_and_select, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
@@ -40,10 +39,12 @@ STAT_VAR_NAMES = ("armor",
                   "wisdom", "wisdomMod", "wisdomSave")
 
 SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical'
-                'strengthsave', 'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
+                                                                                                      'strengthsave',
+                'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
 
 # Don't use any iterables with a string as only element. It will add all the chars instead of the string
 SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES)
+
 
 class CollectableManagementGroup(commands.Group):
     def __init__(self, func=None, *, personal_cls, workshop_cls, workshop_sub_meth, is_alias, is_server,
@@ -92,7 +93,7 @@ class CollectableManagementGroup(commands.Group):
             help='Subscribes to all aliases and snippets in a workshop collection.')(self.subscribe)
         self.unsubscribe = self.command(
             name='unsubscribe', aliases=['unsub'],
-            help='Unsubscribes from all aliases and snippets in a workshop collection.')(self.unsubscribe)
+            help='Unsubscribes from all aliases and snippets in a given workshop collection.')(self.unsubscribe)
         self.autofix = self.command(
             name='autofix', hidden=True,
             help='Ensures that all server and subscribed workshop aliases have unique names.')(self.autofix)
@@ -211,7 +212,8 @@ class CollectableManagementGroup(commands.Group):
         if obj is None:
             return await ctx.send(
                 f'{self.obj_name.capitalize()} not found. If this is a workshop {self.obj_name}, you '
-                f'can unsubscribe on the Avrae Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions>.')
+                f'can unsubscribe on the Avrae Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions> '
+                f'or by using `{ctx.prefix}{self.name} unsubscribe <collection name>`.')
         await obj.delete(ctx.bot.mdb)
         await ctx.send(f'{self.obj_name.capitalize()} {name} removed.')
 
@@ -243,17 +245,26 @@ class CollectableManagementGroup(commands.Group):
                             value=", ".join(sorted(a.name for a in the_collection.snippets)))
         await ctx.send(embed=embed)
 
-    async def unsubscribe(self, ctx, url):
-        coll_match = re.match(WORKSHOP_ADDRESS_RE, url)
-        if coll_match is None:
-            return await ctx.send("This is not an Alias Workshop link.")
-
+    async def unsubscribe(self, ctx, name):
         if self.before_edit_check:
             await self.before_edit_check(ctx)
 
-        collection_id = coll_match.group(1)
-        the_collection = await workshop.WorkshopCollection.from_id(ctx, collection_id)
-        # private and duplicate logic handled here, also loads aliases/snippets
+        # get the collection by URL or name
+        coll_match = re.match(WORKSHOP_ADDRESS_RE, name)
+        if coll_match is None:
+            # load all subscribed collections to search
+            subscribed_collections = []
+            async for subscription_doc in self.workshop_sub_meth(ctx):
+                try:
+                    coll = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+                    subscribed_collections.append(coll)
+                except workshop.CollectionNotFound:
+                    continue
+            the_collection = await search_and_select(ctx, subscribed_collections, name, key=lambda c: c.name)
+        else:
+            collection_id = coll_match.group(1)
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, collection_id)
+
         if self.is_server:
             await the_collection.unset_server_active(ctx)
         else:
@@ -263,12 +274,6 @@ class CollectableManagementGroup(commands.Group):
         embed.title = f"Unsubscribed from {the_collection.name}"
         embed.url = the_collection.url
         embed.description = the_collection.description
-        if the_collection.aliases:
-            embed.add_field(name="Server Aliases" if self.is_server else "Aliases",
-                            value=", ".join(sorted(a.name for a in the_collection.aliases)))
-        if the_collection.snippets:
-            embed.add_field(name="Server Snippets" if self.is_server else "Snippets",
-                            value=", ".join(sorted(a.name for a in the_collection.snippets)))
         await ctx.send(embed=embed)
 
     async def autofix(self, ctx):
@@ -362,16 +367,18 @@ def _can_edit_servaliases(ctx):
     """
     Returns whether a user can edit server aliases in the current context.
     """
-    return ctx.author.guild_permissions.administrator or \
-           any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles) or \
-           checks.author_is_owner(ctx)
+    return (ctx.author.guild_permissions.administrator or
+            any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles) or
+            checks.author_is_owner(ctx))
 
 
+# noinspection PyUnusedLocal
 async def _alias_before_edit(ctx, name=None, delete=False):
     if name and name in ctx.bot.all_commands:
         raise InvalidArgument(f"`{name}` is already a builtin command. Try another name.")
 
 
+# noinspection PyUnusedLocal
 async def _servalias_before_edit(ctx, name=None, delete=False):
     if not _can_edit_servaliases(ctx):
         raise NotAllowed("You do not have permission to edit server aliases. Either __Administrator__ "
@@ -449,7 +456,7 @@ class Customization(commands.Cog):
         # Check for Discord Slash-command conflict
         if prefix.startswith('/'):
             if not await confirm(ctx, f"Setting a prefix that begins with / may cause issues. "
-                       "Are you sure you want to continue?"):
+                                      "Are you sure you want to continue?"):
                 return await ctx.send("Ok, cancelling.")
 
         # insert into cache

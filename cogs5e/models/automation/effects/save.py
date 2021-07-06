@@ -69,8 +69,9 @@ class Save(Effect):
         autoctx.metavars['lastSaveDC'] = dc
 
         autoctx.meta_queue(f"**DC**: {dc}")
+        stat = save_skill[:3]
         if not autoctx.target.is_simple:
-            save_blurb = f'{save_skill[:3].upper()} Save'
+            save_blurb = f'{stat.upper()} Save'
             if auto_pass:
                 is_success = True
                 autoctx.queue(f"**{save_blurb}:** Automatic success!")
@@ -96,13 +97,20 @@ class Save(Effect):
                     autoctx.add_pm(str(autoctx.ctx.author.id), out)
                     autoctx.queue(f"**{save_blurb}**: 1d20...{success_str}")
         else:
-            autoctx.meta_queue('{} Save'.format(save_skill[:3].upper()))
+            autoctx.meta_queue(f'{stat.upper()} Save')
             is_success = False
+
+        # Disable critical damage state for children (#1556)
+        original = autoctx.in_save
+        autoctx.in_save = True
 
         if is_success:
             children = self.on_success(autoctx)
         else:
             children = self.on_fail(autoctx)
+
+        autoctx.in_save = original  # Restore proper crit state (#1556)
+
         return SaveResult(dc=dc, ability=save_skill, save_roll=save_roll, adv=adv, did_save=is_success,
                           children=children)
 

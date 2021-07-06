@@ -95,6 +95,10 @@ class Attack(Effect):
         did_crit = False
         to_hit_roll = None
 
+        # Disable critical damage state for children (#1556)
+        original = autoctx.in_save
+        autoctx.in_save = False
+
         # roll attack against autoctx.target
         if not (hit or miss):
             # reroll before kh/kl (#1199)
@@ -166,7 +170,7 @@ class Attack(Effect):
             else:
                 children = self.on_hit(autoctx)
         elif hit:
-            autoctx.queue(f"**To Hit**: Automatic hit!")
+            autoctx.queue("**To Hit**: Automatic hit!")
             # nocrit and crit cancel out
             if crit and not nocrit:
                 did_crit = True
@@ -175,8 +179,10 @@ class Attack(Effect):
                 children = self.on_hit(autoctx)
         else:
             did_hit = False
-            autoctx.queue(f"**To Hit**: Automatic miss!")
+            autoctx.queue("**To Hit**: Automatic miss!")
             children = self.on_miss(autoctx)
+
+        autoctx.in_save = original  # Restore proper crit state (#1556)
 
         return AttackResult(
             attack_bonus=attack_bonus, ac=ac, to_hit_roll=to_hit_roll, adv=adv, did_hit=did_hit, did_crit=did_crit,

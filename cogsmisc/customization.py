@@ -472,8 +472,9 @@ class Customization(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
-        """Runs each line as a separate command, with a 1 second delay between commands.
-        Limited to 1 multiline every 20 seconds, with a max of 20 commands, due to abuse.
+        """
+        Runs each line as a separate command, with a 1 second delay between commands.
+
         Usage:
         "!multiline
         !roll 1d20
@@ -483,7 +484,7 @@ class Customization(commands.Cog):
         # Remove the first prefix to simplify loop. Split only on actual new commands
         cmds = cmds.replace(ctx.prefix, '', 1).split(f"\n{ctx.prefix}")
         for c in cmds[:20]:
-            ctx.message.content = ctx.prefix+c
+            ctx.message.content = ctx.prefix + c
             await self.bot.process_commands(ctx.message)
             await asyncio.sleep(1)
 

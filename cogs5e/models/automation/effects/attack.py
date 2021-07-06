@@ -1,9 +1,10 @@
 import d20
 
+from utils.functions import reconcile_adv
 from . import Effect
 from ..errors import AutomationException, NoAttackBonus, TargetException
 from ..results import AttackResult
-from utils.functions import reconcile_adv
+
 
 class Attack(Effect):
     def __init__(self, hit: list, miss: list, attackBonus: str = None, **kwargs):
@@ -64,9 +65,10 @@ class Attack(Effect):
                 b = effect_b
             # Combine args/ieffect advantages - adv/dis (#1552)
             adv = reconcile_adv(
-                adv= args.last('adv', type_=bool, ephem=True) or autoctx.combatant.active_effects('adv'),
-                dis= args.last('dis', type_=bool, ephem=True) or autoctx.combatant.active_effects('dis'),
-                ea= args.last('ea', type_=bool, ephem=True) or autoctx.combatant.active_effects('ea'))
+                adv=args.last('adv', type_=bool, ephem=True) or autoctx.combatant.active_effects('adv'),
+                dis=args.last('dis', type_=bool, ephem=True) or autoctx.combatant.active_effects('dis'),
+                ea=args.last('ea', type_=bool, ephem=True) or autoctx.combatant.active_effects('ea')
+            )
         else:
             adv = args.adv(ea=True, ephem=True)
 

@@ -1,8 +1,8 @@
-from utils.constants import STAT_ABBREVIATIONS
-from utils.functions import verbose_stat
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
 from utils.argparser import argparse
+from utils.constants import STAT_ABBREVIATIONS
+from utils.functions import verbose_stat
 from .utils import CombatantType, create_effect_id
 
 
@@ -289,8 +289,6 @@ def parse_stat_choice(arg, _):
     return arg
 
 
-
-
 LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
 SPECIAL_ARGS = {  # 2-tuple of effect, str
     'attack': (parse_attack_arg, parse_attack_str),
@@ -298,7 +296,11 @@ SPECIAL_ARGS = {  # 2-tuple of effect, str
     'sadv': (parse_stat_choice, verbose_stat),
     'sdis': (parse_stat_choice, verbose_stat)
 }
-VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
-              'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus', 'cb': 'Check Bonus',
-              'magical': 'Magical Damage', 'silvered': 'Silvered Damage', 'adv': 'Attack Advantage', 'dis': 'Attack Disadvantage',
-              'sadv': 'Save Advantage', 'sdis': 'Save Disadvantage'}
+VALID_ARGS = {
+    'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
+    'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus',
+    'cb': 'Check Bonus',
+    'magical': 'Magical Damage', 'silvered': 'Silvered Damage', 'adv': 'Attack Advantage',
+    'dis': 'Attack Disadvantage',
+    'sadv': 'Save Advantage', 'sdis': 'Save Disadvantage'
+}

@@ -469,4 +469,4 @@ def reconcile_adv(adv=False, dis=False, ea=False):
         result += -1
     if ea and not dis:
         return 2
-    return {-1: False, 0: None, 1: True}.get(result)
+    return result

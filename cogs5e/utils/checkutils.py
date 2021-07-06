@@ -1,4 +1,3 @@
-from cogs5e.models.automation.errors import AutomationException
 from collections import namedtuple
 
 from d20 import roll
@@ -8,7 +7,7 @@ from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.base import Skill
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS
-from utils.functions import a_or_an, camel_to_title, verbose_stat, reconcile_adv
+from utils.functions import a_or_an, camel_to_title, verbose_stat
 
 
 def update_csetting_args(char, args, skill=None):
@@ -63,7 +62,7 @@ def run_check(skill_key, caster, args, embed):
     if isinstance(caster, init.Combatant):
         args['b'] = args.get('b') + caster.active_effects('cb')
 
-    result = _run_common(skill, None, caster, args, embed, mod_override=mod)
+    result = _run_common(skill, args, embed, mod_override=mod)
     return CheckResult(rolls=result.rolls, skill=skill, skill_name=skill_name, skill_roll_result=result)
 
 
@@ -82,7 +81,7 @@ def run_save(save_key, caster, args, embed):
     """
     if save_key.startswith('death'):
         save = Skill(0)
-        stat_name = 'Death'
+        stat_name = stat = 'Death'
         save_name = 'Death Save'
     else:
         try:
@@ -103,15 +102,23 @@ def run_save(save_key, caster, args, embed):
     else:
         embed.title = f'{caster.get_title_name()} makes {a_or_an(save_name)}!'
 
-    # ieffect -sb
+    # ieffect handling
     if isinstance(caster, init.Combatant):
+        # -sb
         args['b'] = args.get('b') + caster.active_effects('sb')
+        # -sadv/sdis
+        sadv_effects = caster.active_effects('sadv')
+        sdis_effects = caster.active_effects('sdis')
+        if True in sadv_effects or stat in sadv_effects:
+            args['adv'] = True  # Because adv() only checks last() just forcibly add them
+        if True in sdis_effects or stat in sdis_effects:
+            args['dis'] = True
 
-    result = _run_common(save, stat, caster, args, embed, rr_format="Save {}")
+    result = _run_common(save, args, embed, rr_format="Save {}")
     return SaveResult(rolls=result.rolls, skill=save, skill_name=stat_name, skill_roll_result=result)
 
 
-def _run_common(skill, stat, caster, args, embed, mod_override=None, rr_format="Check {}"):
+def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
     """
     Runs a roll for a given Skill.
 
@@ -138,15 +145,8 @@ def _run_common(skill, stat, caster, args, embed, mod_override=None, rr_format="
         desc_out.append(f"**DC {dc}**")
 
     for i in range(iterations):
-        # ieffect handling
-        # Combine args/ieffect advantages - adv/dis (#1552)
-        if isinstance(caster, init.Combatant):
-            adv = reconcile_adv(
-                adv = args.last('adv', type_=bool, ephem=True) or stat in caster.active_effects('sadv'),
-                dis = args.last('dis', type_=bool, ephem=True) or stat in caster.active_effects('sdis'))
-        else:
-            adv = args.adv(boolwise=True, ephem=True)
-
+        # advantage
+        adv = args.adv(boolwise=True, ephem=True)
         # roll bonus
         b = args.join('b', '+', ephem=True)
 

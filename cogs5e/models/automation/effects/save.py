@@ -66,15 +66,15 @@ class Save(Effect):
             raise InvalidSaveType()
 
         # ==== ieffects ====
-        if autoctx.combatant:
+        if autoctx.target.combatant:
             # Combine args/ieffect advantages - adv/dis (#1552)
-            sadv_effects = autoctx.combatant.active_effects('sadv')
-            sdis_effects = autoctx.combatant.active_effects('sdis')
-            sadv = True in sadv_effects or stat in sadv_effects
-            sdis = True in sdis_effects or stat in sdis_effects
+            sadv_effects = autoctx.target.combatant.active_effects('sadv')
+            sdis_effects = autoctx.target.combatant.active_effects('sdis')
+            sadv = 'all' in sadv_effects or stat in sadv_effects
+            sdis = 'all' in sdis_effects or stat in sdis_effects
             adv = reconcile_adv(
-                adv=autoctx.args.last('sadv', bool, ephem=True) or sadv,
-                dis=autoctx.args.last('sdis', bool, ephem=True) or sdis
+                adv=autoctx.args.last('sadv', type_=bool, ephem=True) or sadv,
+                dis=autoctx.args.last('sdis', type_=bool, ephem=True) or sdis
             )
         else:
             adv = autoctx.args.adv(custom={'adv': 'sadv', 'dis': 'sdis'})

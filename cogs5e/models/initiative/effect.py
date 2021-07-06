@@ -261,6 +261,7 @@ class Effect:
         self.combatant.remove_effect(self)
 
 
+# ---- attack ieffect ----
 def parse_attack_arg(arg, name):
     data = arg.split('|')
     if not len(data) == 3:
@@ -275,6 +276,7 @@ def parse_attack_str(atk):
         return f"{atk['attackBonus']}|{atk['damage']}"
 
 
+# ---- resistance ieffect ----
 def parse_resist_arg(arg, _):
     return [Resistance.from_dict(r).to_dict() for r in arg]
 
@@ -283,18 +285,27 @@ def parse_resist_str(resist_list):
     return ', '.join([str(Resistance.from_dict(r)) for r in resist_list])
 
 
-def parse_stat_choice(arg, _):
-    if arg not in STAT_ABBREVIATIONS:
-        raise InvalidArgument(f"{arg} is not a valid stat")
-    return arg
+# ---- sadv/sdis ieffect ----
+def parse_stat_choice(args, _):
+    for arg in args:
+        if arg not in STAT_ABBREVIATIONS and arg != 'all':
+            raise InvalidArgument(f"{arg} is not a valid stat")
+    return args
 
 
-LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
+def parse_stat_str(stat_list):
+    if 'all' in stat_list:
+        return 'All'
+    return ', '.join(verbose_stat(s) for s in stat_list)
+
+
+# ==== effect defs ====
+LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral', 'sadv', 'sdis')
 SPECIAL_ARGS = {  # 2-tuple of effect, str
     'attack': (parse_attack_arg, parse_attack_str),
     'resist': (parse_resist_arg, parse_resist_str),
-    'sadv': (parse_stat_choice, verbose_stat),
-    'sdis': (parse_stat_choice, verbose_stat)
+    'sadv': (parse_stat_choice, parse_stat_str),
+    'sdis': (parse_stat_choice, parse_stat_str)
 }
 VALID_ARGS = {
     'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',

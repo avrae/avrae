@@ -109,9 +109,9 @@ def run_save(save_key, caster, args, embed):
         # -sadv/sdis
         sadv_effects = caster.active_effects('sadv')
         sdis_effects = caster.active_effects('sdis')
-        if True in sadv_effects or stat in sadv_effects:
+        if 'all' in sadv_effects or stat in sadv_effects:
             args['adv'] = True  # Because adv() only checks last() just forcibly add them
-        if True in sdis_effects or stat in sdis_effects:
+        if 'all' in sdis_effects or stat in sdis_effects:
             args['dis'] = True
 
     result = _run_common(save, args, embed, rr_format="Save {}")

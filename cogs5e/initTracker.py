@@ -936,8 +936,7 @@ class InitTracker(commands.Cog):
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
         -sb <save bonus> - Adds a bonus to all saving throws.
         -cb <check bonus> - Adds a bonus to all ability checks.
-        sadv/sdis - Gives advantage/disadvantage on all saving throws.
-        -sadv/sdis <ability> - Gives advantage/disadvantage on saving throws for the provided ability.
+        -sadv/sdis <ability> - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
         -desc <description> - Adds a description of the effect."""
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)

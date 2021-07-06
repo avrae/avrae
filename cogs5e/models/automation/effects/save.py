@@ -97,7 +97,7 @@ class Save(Effect):
                     autoctx.add_pm(str(autoctx.ctx.author.id), out)
                     autoctx.queue(f"**{save_blurb}**: 1d20...{success_str}")
         else:
-            autoctx.meta_queue('{} Save'.format(stat.upper()))
+            autoctx.meta_queue(f'{stat.upper()} Save')
             is_success = False
 
         # Disable critical damage state for children (#1556)

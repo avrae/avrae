@@ -33,11 +33,11 @@ class Attack(Effect):
             raise TargetException("Tried to make an attack without a target! Make sure all Attack effects are inside "
                                   "of a Target effect.")
 
-        # arguments
+        # ==== arguments ====
         args = autoctx.args
         adv = args.adv(ea=True, ephem=True)
         crit = args.last('crit', None, bool, ephem=True) and 1
-        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True) or autoctx.target.ignorecrit
+        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         hit = args.last('hit', None, bool, ephem=True) and 1
         miss = (args.last('miss', None, bool, ephem=True) and not hit) and 1
         b = args.join('b', '+', ephem=True)
@@ -47,6 +47,7 @@ class Attack(Effect):
         criton = args.last('criton', 20, int)
         ac = args.last('ac', None, int)
 
+        # ==== caster options ====
         # character-specific arguments
         if autoctx.character:
             if 'reroll' not in args:
@@ -62,6 +63,12 @@ class Attack(Effect):
             elif effect_b:
                 b = effect_b
 
+        # ==== target options ====
+        if autoctx.target.character:
+            # 1556
+            nocrit = nocrit or autoctx.target.character.get_setting("ignorecrit", False)
+
+        # ==== execution ====
         attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
 
         # explicit bonus

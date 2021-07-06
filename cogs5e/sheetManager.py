@@ -47,7 +47,7 @@ CHARACTER_SETTINGS = {
     "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
                        display_func=lambda val: 'enabled' if val else 'disabled'),
     "ignorecrit": CSetting("ignorecrit", "boolean", description="ignore crits", default='disabled',
-                       display_func=lambda val: 'enabled' if val else 'disabled')
+                           display_func=lambda val: 'enabled' if val else 'disabled')
 }
 
 

@@ -85,8 +85,7 @@ These are the required/recommended environment variables for local dev.
 #### Testing
 To test Avrae, run these commands:
 ```
-docker-compose -f docker-compose.ci.yml -p avrae build
-docker-compose -f docker-compose.ci.yml -p avrae up -d
+docker-compose -f docker-compose.ci.yml -p avrae up -d --build
 docker logs -f avrae_tests_1
 ```
 This should initialize an ephemeral database to run command unit tests in. 

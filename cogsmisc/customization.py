@@ -433,7 +433,7 @@ class Customization(commands.Cog):
         await ctx.send("Prefix set to `{}` for this server.".format(prefix))
 
     @commands.command()
-    @commands.cooldown(1, 20, BucketType.user)
+    @commands.cooldown(1, 9, BucketType.user)
     @commands.max_concurrency(1, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.
@@ -445,7 +445,7 @@ class Customization(commands.Cog):
         !monster Rat"
         """
         # Remove the first prefix to simplify loop. Split only on actual new commands
-        cmds = cmds.lstrip(ctx.prefix).split(f"\n{ctx.prefix}")
+        cmds = cmds.replace(ctx.prefix,'',1).split(f"\n{ctx.prefix}")
         for c in cmds[:20]:
             ctx.message.content = ctx.prefix+c
             await self.bot.process_commands(ctx.message)

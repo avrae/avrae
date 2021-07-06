@@ -87,7 +87,7 @@ class Damage(Effect):
 
         # crit
         # nocrit (#1216)
-        in_crit = (autoctx.in_crit or crit_arg ) and not (nocrit or autoctx.in_save)
+        in_crit = (autoctx.in_crit or crit_arg) and not (nocrit or autoctx.in_save)
         roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
         if in_crit:
             dice_ast = d20.utils.tree_map(utils.crit_mapper, dice_ast)

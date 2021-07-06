@@ -27,20 +27,18 @@ from utils.functions import confirm, get_selection, search_and_select, user_from
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
-STAT_VAR_NAMES = ("armor",
-                  "charisma", "charismaMod", "charismaSave",
-                  "constitution", "constitutionMod", "constitutionSave",
-                  "description",
-                  "dexterity", "dexterityMod", "dexteritySave",
-                  "hp", "image",
-                  "intelligence", "intelligenceMod", "intelligenceSave",
-                  "level", "name", "proficiencyBonus",
-                  "strength", "strengthMod", "strengthSave",
-                  "wisdom", "wisdomMod", "wisdomSave")
+STAT_VAR_NAMES = (
+    "charisma", "charismaMod", "charismaSave",
+    "constitution", "constitutionMod", "constitutionSave",
+    "dexterity", "dexterityMod", "dexteritySave",
+    "intelligence", "intelligenceMod", "intelligenceSave",
+    "strength", "strengthMod", "strengthSave",
+    "wisdom", "wisdomMod", "wisdomSave",
+    "armor", "description", "hp", "image", "level", "name", "proficiencyBonus",
+)
 
-SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical'
-                                                                                                      'strengthsave',
-                'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
+SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical',
+                'strengthsave', 'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
 
 # Don't use any iterables with a string as only element. It will add all the chars instead of the string
 SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES)

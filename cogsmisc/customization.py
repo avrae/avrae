@@ -444,7 +444,7 @@ class Customization(commands.Cog):
         !monster Rat"
         """
         # Remove the first prefix to simplify loop. Split only on actual new commands
-        cmds = cmds.replace(ctx.prefix,'',1).split(f"\n{ctx.prefix}")
+        cmds = cmds.replace(ctx.prefix, '', 1).split(f"\n{ctx.prefix}")
         for c in cmds[:20]:
             ctx.message.content = ctx.prefix+c
             await self.bot.process_commands(ctx.message)

@@ -101,15 +101,14 @@ class Save(Effect):
             is_success = False
 
         # Disable critical damage state for children #1556
-        old_no_crit = autoctx.args.last('nocrit', default=False, type_=bool)
-        autoctx.args.update({'nocrit': True})
+        autoctx.in_save = True
 
         if is_success:
             children = self.on_success(autoctx)
         else:
             children = self.on_fail(autoctx)
-        
-        autoctx.args.update({'nocrit': old_no_crit})  # Restore proper crit state #1556
+
+        autoctx.in_save = False  # Restore proper crit state #1556
 
         return SaveResult(dc=dc, ability=save_skill, save_roll=save_roll, adv=adv, did_save=is_success,
                           children=children)

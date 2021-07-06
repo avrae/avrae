@@ -88,6 +88,10 @@ class Attack(Effect):
         did_crit = False
         to_hit_roll = None
 
+        # Disable critical damage state for children #1556
+        original = autoctx.in_save
+        autoctx.in_save = False
+
         # roll attack against autoctx.target
         if not (hit or miss):
             # reroll before kh/kl (#1199)
@@ -135,10 +139,6 @@ class Attack(Effect):
 
             autoctx.metavars['lastAttackRollTotal'] = to_hit_roll.total  # 1362
             autoctx.metavars['lastAttackNaturalRoll'] = d20_value  # 1495
-
-            # Disable critical damage state for children #1556
-            original = autoctx.in_save
-            autoctx.in_save = False
 
             # output
             if not hide:  # not hidden

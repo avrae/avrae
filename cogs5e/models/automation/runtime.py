@@ -35,6 +35,7 @@ class AutomationContext:
         }
         self.target = None
         self.in_crit = False
+        self.in_save = False
 
         self.caster_needs_commit = False
 

@@ -136,6 +136,10 @@ class Attack(Effect):
             autoctx.metavars['lastAttackRollTotal'] = to_hit_roll.total  # 1362
             autoctx.metavars['lastAttackNaturalRoll'] = d20_value  # 1495
 
+            # Disable critical damage state for children #1556
+            original = autoctx.in_save
+            autoctx.in_save = False
+
             # output
             if not hide:  # not hidden
                 autoctx.queue(f"**{to_hit_message}**: {to_hit_roll.result}")
@@ -170,6 +174,8 @@ class Attack(Effect):
             did_hit = False
             autoctx.queue(f"**To Hit**: Automatic miss!")
             children = self.on_miss(autoctx)
+
+        autoctx.in_save = original  # Restore proper crit state #1556
 
         return AttackResult(
             attack_bonus=attack_bonus, ac=ac, to_hit_roll=to_hit_roll, adv=adv, did_hit=did_hit, did_crit=did_crit,

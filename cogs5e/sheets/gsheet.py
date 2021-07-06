@@ -472,7 +472,7 @@ class GoogleSheet(SheetLoaderABC):
 
     def get_hp(self):
         try:
-            return int(self.character_data.value("U16"))
+            return int(self.character_data.unformatted_value("U16"))
         except (TypeError, ValueError):
             raise MissingAttribute("Max HP")
 

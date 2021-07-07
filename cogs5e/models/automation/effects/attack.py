@@ -1,5 +1,6 @@
 import d20
 
+from utils.functions import reconcile_adv
 from . import Effect
 from ..errors import AutomationException, NoAttackBonus, TargetException
 from ..results import AttackResult
@@ -35,7 +36,6 @@ class Attack(Effect):
 
         # ==== arguments ====
         args = autoctx.args
-        adv = args.adv(ea=True, ephem=True)
         crit = args.last('crit', None, bool, ephem=True) and 1
         nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         hit = args.last('hit', None, bool, ephem=True) and 1
@@ -55,13 +55,22 @@ class Attack(Effect):
             if 'criton' not in args:
                 criton = autoctx.character.get_setting('criton', 20)
 
-        # check for combatant IEffect bonus (#224)
+        # check for combatant IEffects
         if autoctx.combatant:
+            # bonus (#224)
             effect_b = '+'.join(autoctx.combatant.active_effects('b'))
             if effect_b and b:
                 b = f"{b}+{effect_b}"
             elif effect_b:
                 b = effect_b
+            # Combine args/ieffect advantages - adv/dis (#1552)
+            adv = reconcile_adv(
+                adv=args.last('adv', type_=bool, ephem=True) or autoctx.combatant.active_effects('adv'),
+                dis=args.last('dis', type_=bool, ephem=True) or autoctx.combatant.active_effects('dis'),
+                ea=args.last('ea', type_=bool, ephem=True) or autoctx.combatant.active_effects('ea')
+            )
+        else:
+            adv = args.adv(ea=True, ephem=True)
 
         # ==== target options ====
         if autoctx.target.character:

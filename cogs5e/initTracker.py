@@ -121,7 +121,7 @@ class InitTracker(commands.Cog):
         """
 
         args = argparse(args)
-        private = not args.last('h', type_=bool)
+        private = args.last('h', type_=bool)
         controller = str(ctx.author.id)
 
         group = args.last('group')
@@ -397,7 +397,7 @@ class InitTracker(commands.Cog):
 
         embed = EmbedWithCharacter(char, False)
 
-        private = not args.last('h', type_=bool)
+        private = args.last('h', type_=bool)
         controller = str(ctx.author.id)
 
         group = args.last('group')

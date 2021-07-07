@@ -15,9 +15,8 @@ from cogs5e.models.errors import InvalidArgument, NoSelectionElements, Selection
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
-from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import attackutils, checkutils, targetutils
-from cogs5e.utils.help_constants import *
+from cogs5e.utils.help_constants import *  # noqa: F403
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import constants
@@ -120,7 +119,7 @@ class InitTracker(commands.Cog):
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
         -note <note> - Sets the combatant's note.
         """
-        
+
         args = argparse(args)
         private = not args.last('h', type_=bool)
         controller = str(ctx.author.id)
@@ -220,7 +219,8 @@ class InitTracker(commands.Cog):
                 else:
                     grp = combat.get_group(group, create=init)
                     grp.add_combatant(me)
-                    await ctx.send(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
+                    await ctx.send(f"{name} was added to combat with initiative {grp.init}"
+                                   f" as part of group {grp.name}.")
 
             except Exception as e:
                 log.warning('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
@@ -482,8 +482,8 @@ class InitTracker(commands.Cog):
 
         # check: is the user allowed to move combat on
         allowed_to_pass = (combat.index is None) \
-                          or (str(ctx.author.id) in (combat.current_combatant.controller, combat.dm)) \
-                          or DM_ROLES.intersection({r.name.lower() for r in ctx.author.roles})
+            or (str(ctx.author.id) in (combat.current_combatant.controller, combat.dm)) \
+            or DM_ROLES.intersection({r.name.lower() for r in ctx.author.roles})
         if not allowed_to_pass:
             await ctx.send("It is not your turn.")
             return
@@ -697,7 +697,7 @@ class InitTracker(commands.Cog):
         -neutral <damage type> - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
         -group <group> - Adds the combatant to a group. To remove them from group, use -group None.
         -max <maxhp> - Modifies the combatants' Max HP. Adds if starts with +/- or sets otherwise.
-        -hp <hp> - Modifies current HP. Adds if starts with +/- or sets otherwise."""
+        -hp <hp> - Modifies current HP. Adds if starts with +/- or sets otherwise."""  # noqa: E501
         combat = await Combat.from_ctx(ctx)
 
         comb = await combat.select_combatant(name, select_group=True)
@@ -973,7 +973,7 @@ class InitTracker(commands.Cog):
     async def thp(self, ctx, name: str, *, thp: str):
         """Modifies the temporary HP of a combatant.
         Usage: !init thp <NAME> <HP>
-        Sets the combatants' THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP)."""
+        Sets the combatants' THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP)."""  # noqa: E501
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
@@ -1025,7 +1025,7 @@ class InitTracker(commands.Cog):
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
         -sb <save bonus> - Adds a bonus to all saving throws.
         -cb <check bonus> - Adds a bonus to all ability checks.
-        -desc <description> - Adds a description of the effect."""
+        -desc <description> - Adds a description of the effect."""  # noqa: E501
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
 
@@ -1104,7 +1104,7 @@ class InitTracker(commands.Cog):
     __**Valid Arguments**__
     {VALID_AUTOMATION_ARGS}
     -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
-    """)
+    """)  # noqa: F405
     async def attack(self, ctx, atk_name, *, args=''):
         return await self._attack(ctx, None, atk_name, args)
 
@@ -1134,7 +1134,7 @@ class InitTracker(commands.Cog):
     __**Valid Arguments**__
     {VALID_AUTOMATION_ARGS}
     -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
-    """)
+    """)  # noqa: F405
     async def aoo(self, ctx, combatant_name, atk_name, *, args=''):
         return await self._attack(ctx, combatant_name, atk_name, args)
 
@@ -1200,14 +1200,14 @@ class InitTracker(commands.Cog):
     @init.command(aliases=['c'], help=f"""
     Rolls an ability check as the current combatant.
     {VALID_CHECK_ARGS}
-    """)
+    """)  # noqa: F405
     async def check(self, ctx, check, *, args=''):
         return await self._check(ctx, None, check, args)
 
     @init.command(aliases=['oc'], help=f"""
     Rolls an ability check as another combatant.
     {VALID_CHECK_ARGS}
-    """)
+    """)  # noqa: F405
     async def offturncheck(self, ctx, combatant_name, check, *, args=''):
         return await self._check(ctx, combatant_name, check, args)
 
@@ -1216,7 +1216,8 @@ class InitTracker(commands.Cog):
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
-                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` to make a check as the current combatant.")
+                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` "
+                                      "to make a check as the current combatant.")
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the check.")
@@ -1242,14 +1243,14 @@ class InitTracker(commands.Cog):
     @init.command(aliases=['s'], help=f"""
     Rolls an ability save as the current combatant.
     {VALID_SAVE_ARGS}
-    """)
+    """)  # noqa: F405
     async def save(self, ctx, save, *, args=''):
         return await self._save(ctx, None, save, args)
 
     @init.command(aliases=['os'], help=f"""
     Rolls an ability save as another combatant.
     {VALID_CHECK_ARGS}
-    """)
+    """)  # noqa: F405
     async def offturnsave(self, ctx, combatant_name, save, *, args=''):
         return await self._save(ctx, combatant_name, save, args)
 
@@ -1258,7 +1259,8 @@ class InitTracker(commands.Cog):
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
-                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` to make a save as the current combatant.")
+                return await ctx.send(f"You must start combat with `{ctx.prefix}init next`"
+                                      "to make a save as the current combatant.")
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the save.")
@@ -1284,9 +1286,9 @@ class InitTracker(commands.Cog):
     Casts a spell against another combatant.
     __**Valid Arguments**__
     {VALID_SPELLCASTING_ARGS}
-    
+
     {VALID_AUTOMATION_ARGS}
-    """)
+    """)  # noqa: F405
     async def cast(self, ctx, spell_name, *, args=''):
         return await self._cast(ctx, None, spell_name, args)
 
@@ -1294,9 +1296,9 @@ class InitTracker(commands.Cog):
     Casts a spell against another combatant.
     __**Valid Arguments**__
     {VALID_SPELLCASTING_ARGS}
-    
+
     {VALID_AUTOMATION_ARGS}
-    """)
+    """)  # noqa: F405
     async def reactcast(self, ctx, combatant_name, spell_name, *, args=''):
         return await self._cast(ctx, combatant_name, spell_name, args)
 
@@ -1330,8 +1332,8 @@ class InitTracker(commands.Cog):
                 spell = await select_spell_full(ctx, spell_name,
                                                 list_filter=lambda s: s.name in combatant.spellbook)
             except NoSelectionElements:
-                return await ctx.send(f"No matching spells found in the combatant's spellbook. Cast again "
-                                      f"with the `-i` argument to ignore restrictions!")
+                return await ctx.send("No matching spells found in the combatant's spellbook. Cast again "
+                                      "with the `-i` argument to ignore restrictions!")
         else:
             spell = await select_spell_full(ctx, spell_name)
 

@@ -43,6 +43,34 @@ async def test_save_strs(dc):
     assert result
 
 
+# ==== Text ====
+class TestText:
+    async def test_valid_entityreference(self, character, avrae, dhttp):
+        avrae.message(
+            '!a import {"name":"Text Test","automation":[{"type": "text", "text": {"id": 75, "typeId": 12168134}}],"_v":2}')
+        avrae.message('!a "Text Test"')
+        await dhttp.drain()
+
+    async def test_missing_entitlement_entityreference(self, character, avrae, dhttp):
+        avrae.message(
+            '!a import {"name":"Text Test2","automation":[{"type": "text", "text": {"id": -75, "typeId": 12168134}}],"_v":2}')
+        avrae.message('!a "Text Test2"')
+        await dhttp.drain()
+
+    async def test_invalid_entityreference(self, character, avrae, dhttp):
+        avrae.message(
+            '!a import {"name":"Text Test3","automation":[{"type": "text", "text": {"id": -9999999, "typeId": 12168134}}],"_v":2}')
+        avrae.message('!a "Text Test3"')
+        await dhttp.drain()
+
+    async def test_invalid2_entityreference(self, character, avrae, dhttp):
+        avrae.message(
+            '!a import {"name":"Text Test4","automation":[{"type": "text", "text": {"id": 2102, "typeId": 1118725998}}],"_v":2}')
+        await dhttp.drain()
+        avrae.message('!a "Text Test4"')
+        await dhttp.drain()
+
+
 # ==== UseCounter ====
 class TestUseCustomCounter:
     async def test_e2e(self, character, avrae, dhttp):
@@ -105,7 +133,7 @@ class TestUseCustomCounter:
         }
         result = automation.UseCounter.from_data(data)
         assert result
-        assert isinstance(result.counter, automation.utils.SpellSlotReference)
+        assert isinstance(result.counter, automation.effects.usecounter.SpellSlotReference)
         assert result.counter.slot == 3
 
         data = {
@@ -115,26 +143,27 @@ class TestUseCustomCounter:
         }
         result = automation.UseCounter.from_data(data)
         assert result
-        assert isinstance(result.counter, automation.utils.AbilityReference)
+        assert isinstance(result.counter, automation.effects.usecounter.AbilityReference)
         assert result.counter.entity is compendium.lookup_entity(12168134, 75)
 
     async def test_serialize(self):
         result = automation.UseCounter('Bardic Inspiration', '1').to_dict()
         assert json.dumps(result)  # result should be JSON-encodable
 
-        result = automation.UseCounter(automation.utils.SpellSlotReference(1), '1').to_dict()
+        result = automation.UseCounter(automation.effects.usecounter.SpellSlotReference(1), '1').to_dict()
         assert json.dumps(result)
 
-        result = automation.UseCounter(automation.utils.AbilityReference(12168134, 75), '1').to_dict()
+        result = automation.UseCounter(automation.effects.usecounter.AbilityReference(12168134, 75), '1').to_dict()
         assert json.dumps(result)
 
     @pytest.mark.parametrize("counter", [
         # counters by name
         "counter", "other counter name",
         # spell slot
-        automation.utils.SpellSlotReference(1), automation.utils.SpellSlotReference(9),
+        automation.effects.usecounter.SpellSlotReference(1), automation.effects.usecounter.SpellSlotReference(9),
         # ability reference
-        automation.utils.AbilityReference(12168134, 75), automation.utils.AbilityReference(-1, -1)
+        automation.effects.usecounter.AbilityReference(12168134, 75),
+        automation.effects.usecounter.AbilityReference(-1, -1)
     ])
     @pytest.mark.parametrize("amount", [
         # valid inputs

@@ -21,11 +21,12 @@ class AutomationContext:
         self.args = args
         self.combat = combat
 
+        # spellcasting utils
         self.spell = spell
-        self.is_spell = spell is not None
-        self.conc_effect = conc_effect
         self.ab_override = ab_override
         self.dc_override = dc_override
+        self.spell_level_override = None  # used in Cast Spell effect
+        self.conc_effect = conc_effect
 
         self.metavars = {
             # caster, targets as default (#1335)
@@ -34,6 +35,7 @@ class AutomationContext:
         }
         self.target = None
         self.in_crit = False
+        self.in_save = False
 
         self.caster_needs_commit = False
 
@@ -79,8 +81,16 @@ class AutomationContext:
         if text not in self._effect_queue:
             self._effect_queue.append(text)
 
-    def postflight_queue_field(self, name, value):
-        """Adds a field to the queue that will appear after all other fields (but before user-supplied -f fields)."""
+    def postflight_queue_field(self, name, value, merge=True):
+        """
+        Adds a field to the queue that will appear after all other fields (but before user-supplied -f fields).
+        If *merge* is true, adds a line to a field that might already have the same name.
+        """
+        if merge:
+            existing_field = next((f for f in self._postflight_queue if f['name'] == name), None)
+            if existing_field and value != existing_field['value']:
+                existing_field['value'] = f"{existing_field['value']}\n{value}"
+                return
         field = {"name": name, "value": value, "inline": False}
         if field not in self._postflight_queue:
             self._postflight_queue.append(field)
@@ -129,10 +139,15 @@ class AutomationContext:
         self.pm_queue[user].append(message)
 
     # ===== utils =====
+    @property
+    def is_spell(self):
+        return self.spell is not None
+
     def get_cast_level(self):
-        if self.is_spell:
-            return self.args.last('l', self.spell.level, int)
-        return 0
+        default = self.spell_level_override or 0
+        if self.spell:
+            default = default or self.spell.level
+        return self.args.last('l', default, int)
 
     def parse_annostr(self, annostr, is_full_expression=False):
         """

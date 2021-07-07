@@ -1,13 +1,17 @@
 import abc
 import typing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import d20
+
+import cogs5e.models.initiative
+import cogs5e.models.sheet.statblock
+import gamedata
 
 __all__ = (
     'EffectResult', 'AutomationResult',
     'TargetResult', 'AttackResult', 'SaveResult', 'DamageResult', 'TempHPResult', 'IEffectResult', 'RollResult',
-    'TextResult', 'SetVariableResult', 'ConditionResult', 'UseCounterResult'
+    'TextResult', 'SetVariableResult', 'ConditionResult', 'UseCounterResult', 'CastSpellResult'
 )
 
 
@@ -128,3 +132,10 @@ class UseCounterResult(EffectResult):
     used_amount: int = 0
     requested_amount: int = 0
     skipped: bool = False
+
+
+@dataclass(frozen=True)
+class CastSpellResult(EffectResult):
+    success: bool
+    spell: typing.Optional['gamedata.Spell'] = None
+    children: typing.List[EffectResult] = field(default_factory=list)

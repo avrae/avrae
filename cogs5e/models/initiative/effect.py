@@ -1,6 +1,8 @@
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
 from utils.argparser import argparse
+from utils.constants import STAT_ABBREVIATIONS
+from utils.functions import verbose_stat
 from .utils import CombatantType, create_effect_id
 
 
@@ -259,6 +261,7 @@ class Effect:
         self.combatant.remove_effect(self)
 
 
+# ---- attack ieffect ----
 def parse_attack_arg(arg, name):
     data = arg.split('|')
     if not len(data) == 3:
@@ -273,6 +276,7 @@ def parse_attack_str(atk):
         return f"{atk['attackBonus']}|{atk['damage']}"
 
 
+# ---- resistance ieffect ----
 def parse_resist_arg(arg, _):
     return [Resistance.from_dict(r).to_dict() for r in arg]
 
@@ -281,11 +285,33 @@ def parse_resist_str(resist_list):
     return ', '.join([str(Resistance.from_dict(r)) for r in resist_list])
 
 
-LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
+# ---- sadv/sdis ieffect ----
+def parse_stat_choice(args, _):
+    for arg in args:
+        if arg not in STAT_ABBREVIATIONS and arg != 'all':
+            raise InvalidArgument(f"{arg} is not a valid stat")
+    return args
+
+
+def parse_stat_str(stat_list):
+    if 'all' in stat_list:
+        return 'All'
+    return ', '.join(verbose_stat(s) for s in stat_list)
+
+
+# ==== effect defs ====
+LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral', 'sadv', 'sdis')
 SPECIAL_ARGS = {  # 2-tuple of effect, str
     'attack': (parse_attack_arg, parse_attack_str),
-    'resist': (parse_resist_arg, parse_resist_str)
+    'resist': (parse_resist_arg, parse_resist_str),
+    'sadv': (parse_stat_choice, parse_stat_str),
+    'sdis': (parse_stat_choice, parse_stat_str)
 }
-VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
-              'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus',
-              'magical': 'Magical Damage'}
+VALID_ARGS = {
+    'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
+    'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus',
+    'cb': 'Check Bonus',
+    'magical': 'Magical Damage', 'silvered': 'Silvered Damage', 'adv': 'Attack Advantage',
+    'dis': 'Attack Disadvantage',
+    'sadv': 'Save Advantage', 'sdis': 'Save Disadvantage'
+}

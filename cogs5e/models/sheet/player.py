@@ -154,6 +154,8 @@ class CustomCounter:
             raise InvalidArgument("Reset passed but no valid reset value (`max`, `resetto`, `resetby`) passed.")
         if reset_to is not None and reset_by is not None:
             raise InvalidArgument("Both `resetto` and `resetby` arguments found.")
+        if not name.strip():
+            raise InvalidArgument("The name of the counter can not be empty.")
 
         min_value = None
         if minv is not None:

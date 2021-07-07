@@ -202,7 +202,7 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         adv/dis - Give advantage or disadvantage to the initiative roll.
         -b <condition bonus> - Adds a bonus to the combatant's initiative roll.
-        -n <number> - Adds more than one of that monster.
+        -n <number or dice> - Adds more than one of that monster. Supports dice.
         -p <value> - Places combatant at the given value, instead of rolling.
         -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
         -h - Hides HP, AC, Resists, etc. Default: True.
@@ -227,7 +227,7 @@ class InitTracker(commands.Cog):
         hp = args.last('hp', type_=int)
         thp = args.last('thp', type_=int)
         ac = args.last('ac', type_=int)
-        n = args.last('n', 1, int)
+        n = args.last('n', 1)
         note = args.last('note')
         name_template = args.last('name', monster.name[:2].upper() + '#')
         init_skill = monster.skills.initiative
@@ -236,7 +236,15 @@ class InitTracker(commands.Cog):
 
         out = ''
         to_pm = ''
-        recursion = 25 if n > 25 else 1 if n < 1 else n
+
+        try: # Attempt to get the add as a number
+            n_result = int(n)
+        except ValueError: # if we're not a number, are we dice
+            roll_result = roll(str(n))
+            n_result = roll_result.total
+            out += f"Rolling random number of combatants: {roll_result}\n"
+
+        recursion = 25 if n_result > 25 else 1 if n_result < 1 else n_result
 
         name_num = 1
         for i in range(recursion):
@@ -913,6 +921,7 @@ class InitTracker(commands.Cog):
         -t <target> - Specifies more combatant's to target, chainable (e.g., "-t or1 -t or2").
         -parent <"[combatant]|[effect]"> - Sets a parent effect from a specified combatant.
         __Attacks__
+        adv/dis - Give advantage or disadvantage to all attack rolls.
         -b <bonus> - Adds a bonus to hit.
         -d <damage> - Adds additional damage.
         -attack <"[hit]|[damage]|[description]"> - Adds an attack to the combatant. The effect name will be the name of the attack. No [hit] will autohit (e.g., -attack "|1d6[fire]|")
@@ -921,10 +930,13 @@ class InitTracker(commands.Cog):
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
         -neutral <damage type> - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
-        magical - Makes all damage from the combatant magical
+        magical - Makes all damage from the combatant magical.
+        silvered - Makes all damage from the combatant silvered.
         __General__
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
         -sb <save bonus> - Adds a bonus to all saving throws.
+        -cb <check bonus> - Adds a bonus to all ability checks.
+        -sadv/sdis <ability> - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
         -desc <description> - Adds a description of the effect."""
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
@@ -1101,11 +1113,30 @@ class InitTracker(commands.Cog):
     Rolls an ability check as the current combatant.
     {VALID_CHECK_ARGS}
     """)
-    async def check(self, ctx, check, *args):
+    async def check(self, ctx, check, *, args=''):
+        return await self._check(ctx, None, check, args)
+
+    @init.command(aliases=['oc'], help=f"""
+    Rolls an ability check as another combatant.
+    {VALID_CHECK_ARGS}
+    """)
+    async def offturncheck(self, ctx, combatant_name, check, *, args=''):
+        return await self._check(ctx, combatant_name, check, args)
+
+    async def _check(self, ctx, combatant_name, check, args):
         combat = await Combat.from_ctx(ctx)
-        combatant = combat.current_combatant
-        if combatant is None:
-            return await ctx.send("It is not currently anyone's turn.")
+        if combatant_name is None:
+            combatant = combat.current_combatant
+            if combatant is None:
+                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` to make a check as the current combatant.")
+        else:
+            try:
+                combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the check.")
+            except SelectionException:
+                return await ctx.send("Combatant not found.")
+
+        if isinstance(combatant, CombatantGroup):
+            return await ctx.send("Groups cannot make checks.")
 
         skill_key = await search_and_select(ctx, constants.SKILL_NAMES, check, lambda s: s)
         embed = discord.Embed(color=combatant.get_color())
@@ -1124,11 +1155,30 @@ class InitTracker(commands.Cog):
     Rolls an ability save as the current combatant.
     {VALID_SAVE_ARGS}
     """)
-    async def save(self, ctx, save, *args):
+    async def save(self, ctx, save, *, args=''):
+        return await self._save(ctx, None, save, args)
+
+    @init.command(aliases=['os'], help=f"""
+    Rolls an ability save as another combatant.
+    {VALID_CHECK_ARGS}
+    """)
+    async def offturnsave(self, ctx, combatant_name, save, *, args=''):
+        return await self._save(ctx, combatant_name, save, args)
+
+    async def _save(self, ctx, combatant_name, save, args):
         combat = await Combat.from_ctx(ctx)
-        combatant = combat.current_combatant
-        if combatant is None:
-            return await ctx.send("It is not currently anyone's turn.")
+        if combatant_name is None:
+            combatant = combat.current_combatant
+            if combatant is None:
+                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` to make a save as the current combatant.")
+        else:
+            try:
+                combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the save.")
+            except SelectionException:
+                return await ctx.send("Combatant not found.")
+
+        if isinstance(combatant, CombatantGroup):
+            return await ctx.send("Groups cannot make saves.")
 
         embed = discord.Embed(color=combatant.get_color())
         args = await helpers.parse_snippets(args, ctx)

@@ -11,13 +11,13 @@ from cogs5e.models.errors import AvraeException, InvalidArgument
 from cogs5e.models.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import confirm, smart_trim, verbose_stat
-from .mixins import AutomatibleMixin
+from .mixins import AutomatibleMixin, DescribableMixin
 from .shared import Sourced
 
 log = logging.getLogger(__name__)
 
 
-class Spell(AutomatibleMixin, Sourced):
+class Spell(AutomatibleMixin, DescribableMixin, Sourced):
     entity_type = 'spell'
     type_id = 1118725998
 

@@ -3,7 +3,7 @@ from d20 import roll
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
-from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, Effect
+from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, Effect, CombatantType
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
 
@@ -100,6 +100,16 @@ class SimpleCombatant(AliasStatBlock):
         self.initmod = int(self._combatant.init_skill)
         self.init = self._combatant.init
         self._update_effects()
+        # Type-specific Properties
+        self._race = None
+        self._creature_type = None
+        self._monster_name = None
+
+        if combatant.type == CombatantType.MONSTER:
+            self._creature_type = combatant._creature_type
+            self._monster_name = combatant.monster_name
+        elif combatant.type == CombatantType.PLAYER:
+            self._race = combatant.character.race
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
@@ -130,6 +140,33 @@ class SimpleCombatant(AliasStatBlock):
         :rtype: str or None
         """
         return self._combatant.group
+
+    @property
+    def race(self):
+        """
+        The race of the combatant. Will return None for monsters or combatants with no race.
+        
+        :rtype: str or None
+        """
+        return self._race
+
+    @property
+    def creature_type(self):
+        """
+        The creature type of the combatant. Will return None for players or combatants with no creature type.
+        
+        :rtype: str or None
+        """
+        return self._creature_type
+
+    @property
+    def monster_name(self):
+        """
+        The monster name of the combatant. Will return None for players.
+        
+        :rtype: str or None
+        """
+        return self._monster_name
 
     def save(self, ability: str, adv: bool = None):
         """
@@ -287,7 +324,7 @@ class SimpleCombatant(AliasStatBlock):
         Adds an effect to the combatant.
 
         :param str name: The name of the effect to add.
-        :param str args: The effect arguments to add (same syntax as init effect).
+        :param str args: The effect arguments to add (same syntax as [!init effect](https://avrae.io/commands#init-effect)).
         :param int duration: The duration of the effect, in rounds.
         :param bool concentration: Whether the effect requires concentration.
         :param parent: The parent of the effect.

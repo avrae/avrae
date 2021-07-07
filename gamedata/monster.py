@@ -81,7 +81,7 @@ class Monster(StatBlock, Sourced):
             spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels
         )
         self.size = size
-        self.race = race
+        self.creature_type = race
         self.alignment = alignment
         self.armortype = armortype
         self.hitdice = hitdice
@@ -157,7 +157,7 @@ class Monster(StatBlock, Sourced):
 
     def to_dict(self):
         return {
-            'name': self.name, 'size': self.size, 'race': self.race, 'alignment': self.alignment, 'ac': self.ac,
+            'name': self.name, 'size': self.size, 'race': self.creature_type, 'alignment': self.alignment, 'ac': self.ac,
             'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
             'ability_scores': self.stats.to_dict(),
             'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
@@ -212,7 +212,7 @@ class Monster(StatBlock, Sourced):
         Should be the portion between the embed title and special abilities.
         """
         size = self.size
-        type_ = self.race
+        type_ = self.creature_type
         alignment = self.alignment
         ac = str(self.ac) + (f" ({self.armortype})" if self.armortype else "")
         hp = f"{self.hp} ({self.hitdice})"

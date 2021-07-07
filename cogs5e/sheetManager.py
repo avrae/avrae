@@ -4,12 +4,12 @@ Created on Jan 19, 2017
 @author: andrew
 """
 import asyncio
-import json
 import logging
 import time
 import traceback
 
 import discord
+import yaml
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
@@ -19,7 +19,7 @@ from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
-from cogs5e.sheets.dicecloud import DicecloudParser
+from cogs5e.sheets.dicecloud import DICECLOUD_URL_RE, DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from cogs5e.utils import attackutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
@@ -28,7 +28,7 @@ from ddb.gamelog.errors import NoCampaignLink
 from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import auth_and_chan, confirm, get_positivity, list_get, search_and_select, try_delete
+from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -45,7 +45,9 @@ CHARACTER_SETTINGS = {
                            display_func=lambda val: 'enabled' if val else 'disabled'),
     "critdice": CSetting("critdice", "number", description="extra crit dice", default=0),
     "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
-                       display_func=lambda val: 'enabled' if val else 'disabled')
+                       display_func=lambda val: 'enabled' if val else 'disabled'),
+    "ignorecrit": CSetting("ignorecrit", "boolean", description="ignore crits", default='disabled',
+                           display_func=lambda val: 'enabled' if val else 'disabled')
 }
 
 
@@ -137,15 +139,19 @@ class SheetManager(commands.Cog):
         await ctx.send(out)
 
     @attack.command(name="import")
-    async def attack_import(self, ctx, *, data):
+    async def attack_import(self, ctx, *, data: str):
         """
-        Imports an attack from JSON exported from the Avrae Dashboard.
+        Imports an attack from JSON or YAML exported from the Avrae Dashboard.
         """
+        # strip any code blocks
+        if data.startswith(('```\n', '```json\n', '```yaml\n', '```yml\n', '```py\n')) and data.endswith('```'):
+            data = '\n'.join(data.split('\n')[1:]).rstrip('`\n')
+
         character: Character = await Character.from_ctx(ctx)
 
         try:
-            attack_json = json.loads(data)
-        except json.decoder.JSONDecodeError:
+            attack_json = yaml.safe_load(data)
+        except yaml.YAMLError:
             return await ctx.send("This is not a valid attack.")
 
         if not isinstance(attack_json, list):
@@ -229,7 +235,9 @@ class SheetManager(commands.Cog):
         skill = char.skills[skill_key]
 
         checkutils.update_csetting_args(char, args, skill)
-        result = checkutils.run_check(skill_key, char, args, embed)
+        caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
+
+        result = checkutils.run_check(skill_key, caster, args, embed)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -383,19 +391,11 @@ class SheetManager(commands.Cog):
         selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
                                                 selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
 
-        await ctx.send(f"Are you sure you want to delete {selected_char['name']}? (Reply with yes/no)")
-        try:
-            reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
-        except asyncio.TimeoutError:
-            reply = None
-        reply = get_positivity(reply.content) if reply is not None else None
-        if reply is None:
-            return await ctx.send('Timed out waiting for a response or invalid response.')
-        elif reply:
+        if await confirm(ctx, f"Are you sure you want to delete {selected_char['name']}? (Reply with yes/no)"):
             await Character.delete(ctx, str(ctx.author.id), selected_char['upstream'])
             return await ctx.send(f"{selected_char['name']} has been deleted.")
         else:
-            return await ctx.send("OK, cancelling.")
+            return await ctx.send("Ok, cancelling.")
 
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
@@ -478,14 +478,18 @@ class SheetManager(commands.Cog):
     @commands.command()
     async def csettings(self, ctx, *args):
         """Updates personalization settings for the currently active character.
-        Valid Arguments:
-        `color <hex color>` - Colors all embeds this color.
+
+        __**Valid Arguments**__
+        Use `<setting> reset` to reset a setting to the default.
+
+        `color <hex color>` - Colors all character-based built-in embeds this color. Accessible as the cvar `color`
         `criton <number>` - Makes attacks crit on something other than a 20.
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
         `critdice <number>` - Adds additional dice for to critical attacks.
-        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with."""
+        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with.
+        `ignorecrit true/false` - Prevents critical hits from applying, for example with adamantine armor."""
         char = await Character.from_ctx(ctx)
 
         out = []
@@ -509,16 +513,61 @@ class SheetManager(commands.Cog):
         Returns True to overwrite, False or None otherwise."""
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
-            await ctx.channel.send(
-                "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
-                f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
-            try:
-                reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
-            except asyncio.TimeoutError:
-                reply = None
-            replyBool = get_positivity(reply.content) if reply is not None else None
-            return replyBool
+            return await confirm(ctx,
+                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+                                 f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
+
+    @commands.command(name='import')
+    @commands.max_concurrency(1, BucketType.user)
+    async def import_sheet(self, ctx, url: str, *args):
+        """
+        Loads a character sheet in one of the accepted formats:
+            [Dicecloud](https://dicecloud.com/)
+            [GSheet v2.1](http://gsheet2.avrae.io) (auto)
+            [GSheet v1.4](http://gsheet.avrae.io) (manual)
+            [D&D Beyond](https://www.dndbeyond.com/)
+        
+        __Valid Arguments__
+        `-nocc` - Do not automatically create custom counters for class resources and features.
+
+        __Sheet-specific Notes__
+        D&D Beyond:
+            Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
+        Gsheet:
+            The sheet must be shared with Avrae for this to work.
+            Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
+
+        Dicecloud:
+            Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
+        """
+        url = await self._check_url(ctx, url)  # check for < >
+        # Sheets in order: DDB, Dicecloud, Gsheet
+        if beyond_match := DDB_URL_RE.match(url):
+            loading = await ctx.send('Loading character data from Beyond...')
+            prefix = 'beyond'
+            url = beyond_match.group(1)
+            parser = BeyondSheetParser(url)
+        elif dicecloud_match := DICECLOUD_URL_RE.match(url):
+            loading = await ctx.send('Loading character data from Dicecloud...')
+            url = dicecloud_match.group(1)
+            prefix = 'dicecloud'
+            parser = DicecloudParser(url)
+        else:
+            try:
+                url = extract_gsheet_id_from_url(url)
+            except ExternalImportError:
+                return await ctx.send("Sheet type did not match accepted formats.")
+            loading = await ctx.send('Loading character data from Google...')
+            prefix = 'google'
+            parser = GoogleSheet(url)
+
+        override = await self._confirm_overwrite(ctx, f"{prefix}-{url}")
+        if not override:
+            return await ctx.send("Character overwrite unconfirmed. Aborting.")
+
+        # Load the parsed sheet
+        await self._load_sheet(ctx, parser, args, loading)
 
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
@@ -614,8 +663,9 @@ class SheetManager(commands.Cog):
     async def _check_url(ctx, url):
         if url.startswith('<') and url.endswith('>'):
             url = url.strip('<>')
-            await ctx.send("Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to include those for other arguments!"
-                           f"\nUse `{ctx.prefix}help` for more details")
+            await ctx.send(
+                "Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to include those for other arguments!"
+                f"\nUse `{ctx.prefix}help` for more details")
         return url
 
 

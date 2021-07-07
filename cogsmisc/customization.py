@@ -9,20 +9,39 @@ import re
 import textwrap
 from collections import Counter
 
+import d20
 import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType, NoPrivateMessage
 
 from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
+from aliasing.workshop import WORKSHOP_ADDRESS_RE
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
-from utils.functions import auth_and_chan, confirm, get_selection, user_from_id
+from utils.constants import DAMAGE_TYPES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
+from utils.functions import confirm, get_selection, search_and_select, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
+
+STAT_VAR_NAMES = (
+    "charisma", "charismaMod", "charismaSave",
+    "constitution", "constitutionMod", "constitutionSave",
+    "dexterity", "dexterityMod", "dexteritySave",
+    "intelligence", "intelligenceMod", "intelligenceSave",
+    "strength", "strengthMod", "strengthSave",
+    "wisdom", "wisdomMod", "wisdomSave",
+    "armor", "description", "hp", "image", "level", "name", "proficiencyBonus",
+)
+
+SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical',
+                'strengthsave', 'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
+
+# Don't use any iterables with a string as only element. It will add all the chars instead of the string
+SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES)
 
 
 class CollectableManagementGroup(commands.Group):
@@ -34,7 +53,7 @@ class CollectableManagementGroup(commands.Group):
         :type workshop_sub_meth: Coroutine
         :type is_alias: bool
         :type is_server: bool
-        :type before_edit_check: Coroutine[Context, Optional[str]] -> None
+        :type before_edit_check: Coroutine[Context, Optional[str], bool] -> None
         """
         if func is None:
             func = self.create_or_view
@@ -70,6 +89,9 @@ class CollectableManagementGroup(commands.Group):
         self.subscribe = self.command(
             name='subscribe', aliases=['sub'],
             help='Subscribes to all aliases and snippets in a workshop collection.')(self.subscribe)
+        self.unsubscribe = self.command(
+            name='unsubscribe', aliases=['unsub'],
+            help='Unsubscribes from all aliases and snippets in a given workshop collection.')(self.unsubscribe)
         self.autofix = self.command(
             name='autofix', hidden=True,
             help='Ensures that all server and subscribed workshop aliases have unique names.')(self.autofix)
@@ -182,18 +204,19 @@ class CollectableManagementGroup(commands.Group):
 
     async def delete(self, ctx, name):
         if self.before_edit_check:
-            await self.before_edit_check(ctx, name)
+            await self.before_edit_check(ctx, name, delete=True)
 
         obj = await self.personal_cls.get_named(name, ctx)
         if obj is None:
             return await ctx.send(
                 f'{self.obj_name.capitalize()} not found. If this is a workshop {self.obj_name}, you '
-                f'can unsubscribe on the Avrae Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions>.')
+                f'can unsubscribe on the Avrae Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions> '
+                f'or by using `{ctx.prefix}{self.name} unsubscribe <collection name>`.')
         await obj.delete(ctx.bot.mdb)
         await ctx.send(f'{self.obj_name.capitalize()} {name} removed.')
 
     async def subscribe(self, ctx, url):
-        coll_match = re.match(r'(?:https?://)?avrae\.io/dashboard/workshop/([0-9a-f]{24})(?:$|/)', url)
+        coll_match = re.match(WORKSHOP_ADDRESS_RE, url)
         if coll_match is None:
             return await ctx.send("This is not an Alias Workshop link.")
 
@@ -218,6 +241,37 @@ class CollectableManagementGroup(commands.Group):
         if the_collection.snippets:
             embed.add_field(name="Server Snippets" if self.is_server else "Snippets",
                             value=", ".join(sorted(a.name for a in the_collection.snippets)))
+        await ctx.send(embed=embed)
+
+    async def unsubscribe(self, ctx, name):
+        if self.before_edit_check:
+            await self.before_edit_check(ctx)
+
+        # get the collection by URL or name
+        coll_match = re.match(WORKSHOP_ADDRESS_RE, name)
+        if coll_match is None:
+            # load all subscribed collections to search
+            subscribed_collections = []
+            async for subscription_doc in self.workshop_sub_meth(ctx):
+                try:
+                    coll = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+                    subscribed_collections.append(coll)
+                except workshop.CollectionNotFound:
+                    continue
+            the_collection = await search_and_select(ctx, subscribed_collections, name, key=lambda c: c.name)
+        else:
+            collection_id = coll_match.group(1)
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, collection_id)
+
+        if self.is_server:
+            await the_collection.unset_server_active(ctx)
+        else:
+            await the_collection.unsubscribe(ctx)
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = f"Unsubscribed from {the_collection.name}"
+        embed.url = the_collection.url
+        embed.description = the_collection.description
         await ctx.send(embed=embed)
 
     async def autofix(self, ctx):
@@ -269,7 +323,7 @@ class CollectableManagementGroup(commands.Group):
 
     async def rename(self, ctx, old_name, new_name):
         if self.before_edit_check:
-            await self.before_edit_check(ctx)
+            await self.before_edit_check(ctx, new_name)
 
         self.personal_cls.precreate_checks(new_name, '')
 
@@ -311,17 +365,19 @@ def _can_edit_servaliases(ctx):
     """
     Returns whether a user can edit server aliases in the current context.
     """
-    return ctx.author.guild_permissions.administrator or \
-           any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles) or \
-           checks.author_is_owner(ctx)
+    return (ctx.author.guild_permissions.administrator or
+            any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles) or
+            checks.author_is_owner(ctx))
 
 
-async def _alias_before_edit(ctx, name=None):
+# noinspection PyUnusedLocal
+async def _alias_before_edit(ctx, name=None, delete=False):
     if name and name in ctx.bot.all_commands:
         raise InvalidArgument(f"`{name}` is already a builtin command. Try another name.")
 
 
-async def _servalias_before_edit(ctx, name=None):
+# noinspection PyUnusedLocal
+async def _servalias_before_edit(ctx, name=None, delete=False):
     if not _can_edit_servaliases(ctx):
         raise NotAllowed("You do not have permission to edit server aliases. Either __Administrator__ "
                          "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
@@ -329,11 +385,35 @@ async def _servalias_before_edit(ctx, name=None):
     await _alias_before_edit(ctx, name)
 
 
-async def _servsnippet_before_edit(ctx, _=None):
+async def _servsnippet_before_edit(ctx, name=None, delete=False):
     if not _can_edit_servaliases(ctx):
         raise NotAllowed("You do not have permission to edit server snippets. Either __Administrator__ "
                          "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                          "is required.")
+    await _snippet_before_edit(ctx, name, delete)
+
+
+async def _snippet_before_edit(ctx, name=None, delete=False):
+    if delete:
+        return
+    confirmation = None
+    # special arg checking
+    if not name:
+        return
+    name = name.lower()
+    if name in SPECIAL_ARGS or name.startswith('-'):
+        confirmation = f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)"
+    # roll string checking
+    try:
+        d20.parse(name)
+    except d20.RollSyntaxError:
+        pass
+    else:
+        confirmation = f"**Warning:** Creating a snippet named `{name}` might cause hidden problems if you try to use the same roll in other commands.\nAre you sure you want to create this snippet? (yes/no)"
+
+    if confirmation is not None:
+        if not await confirm(ctx, confirmation):
+            raise InvalidArgument('Ok, cancelling.')
 
 
 def guild_only_check(ctx):
@@ -359,7 +439,7 @@ class Customization(commands.Cog):
     async def prefix(self, ctx, prefix: str = None):
         """Sets the bot's prefix for this server.
 
-        You must have Manage Server permissions or a role called "Bot Admin" to use this command.
+        You must have Manage Server permissions or a role called "Bot Admin" to use this command. Due to a possible Discord conflict, a prefix beginning with `/` will require confirmation.
 
         Forgot the prefix? Reset it with "@Avrae#6944 prefix !".
         """
@@ -370,6 +450,12 @@ class Customization(commands.Cog):
 
         if not checks._role_or_permissions(ctx, lambda r: r.name.lower() == 'bot admin', manage_guild=True):
             return await ctx.send("You do not have permissions to change the guild prefix.")
+
+        # Check for Discord Slash-command conflict
+        if prefix.startswith('/'):
+            if not await confirm(ctx, f"Setting a prefix that begins with / may cause issues. "
+                                      "Are you sure you want to continue?"):
+                return await ctx.send("Ok, cancelling.")
 
         # insert into cache
         self.bot.prefixes[guild_id] = prefix
@@ -384,20 +470,21 @@ class Customization(commands.Cog):
         await ctx.send("Prefix set to `{}` for this server.".format(prefix))
 
     @commands.command()
-    @commands.cooldown(1, 20, BucketType.user)
     @commands.max_concurrency(1, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
-        """Runs each line as a separate command, with a 1 second delay between commands.
-        Limited to 1 multiline every 20 seconds, with a max of 20 commands, due to abuse.
+        """
+        Runs each line as a separate command, with a 1 second delay between commands.
+
         Usage:
         "!multiline
         !roll 1d20
         !spell Fly
         !monster Rat"
         """
-        cmds = cmds.splitlines()
+        # Remove the first prefix to simplify loop. Split only on actual new commands
+        cmds = cmds.replace(ctx.prefix, '', 1).split(f"\n{ctx.prefix}")
         for c in cmds[:20]:
-            ctx.message.content = c
+            ctx.message.content = ctx.prefix + c
             await self.bot.process_commands(ctx.message)
             await asyncio.sleep(1)
 
@@ -424,12 +511,12 @@ class Customization(commands.Cog):
     @alias.command(name='deleteall', aliases=['removeall'])
     async def alias_deleteall(self, ctx):
         """Deletes ALL user aliases."""
-        await ctx.send("This will delete **ALL** of your personal user aliases "
-                       "(it will not affect workshop subscriptions). "
-                       "Are you *absolutely sure* you want to continue?\n"
-                       "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
-        if not reply.content == "Yes, I am sure":
+        if not await confirm(
+                ctx,
+                f"This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
+                f"Are you *absolutely sure* you want to continue?\n"
+                f"Type `Yes, I am sure` to confirm.",
+                response_check=lambda r: r == "Yes, I am sure"):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.aliases.delete_many({"owner": str(ctx.author.id)})
@@ -459,6 +546,7 @@ class Customization(commands.Cog):
         workshop_sub_meth=workshop.WorkshopCollection.my_subs,
         is_alias=False,
         is_server=False,
+        before_edit_check=_snippet_before_edit,
         name='snippet',
         invoke_without_command=True,
         help="""
@@ -473,11 +561,12 @@ class Customization(commands.Cog):
     @snippet.command(name='deleteall', aliases=['removeall'])
     async def snippet_deleteall(self, ctx):
         """Deletes ALL user snippets."""
-        await ctx.send("This will delete **ALL** of your user snippets. "
-                       "Are you *absolutely sure* you want to continue?\n"
-                       "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for('message', timeout=30, check=lambda m: auth_and_chan(ctx)(m))
-        if not reply.content == "Yes, I am sure":
+        if not await confirm(
+                ctx,
+                f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
+                f"Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm.",
+                response_check=lambda r: r == "Yes, I am sure"):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.snippets.delete_many({"owner": str(ctx.author.id)})
@@ -524,7 +613,7 @@ class Customization(commands.Cog):
         -image [image url]
         -footer [footer text]
         -f ["Field Title|Field Text"]
-        -color [hex color]
+        -color [hex color] or `<color>` for character color, leave blank for random color.
         -t [timeout (0..600)]
         """
         try:
@@ -580,15 +669,12 @@ class Customization(commands.Cog):
     async def cvar_deleteall(self, ctx):
         """Deletes ALL character variables for the active character."""
         char: Character = await Character.from_ctx(ctx)
-
-        await ctx.send(f"This will delete **ALL** of your character variables for {char.name}. "
-                       "Are you *absolutely sure* you want to continue?\n"
-                       "Type `Yes, I am sure` to confirm.")
-        try:
-            reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
-        except asyncio.TimeoutError:
-            reply = None
-        if (not reply) or (not reply.content == "Yes, I am sure"):
+        if not await confirm(
+                ctx,
+                f"This will delete **ALL** of your character variables for {char.name}. "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm.",
+                response_check=lambda r: r == "Yes, I am sure"):
             return await ctx.send("Unconfirmed. Aborting.")
 
         char.cvars = {}
@@ -644,11 +730,12 @@ class Customization(commands.Cog):
     @uservar.command(name='deleteall', aliases=['removeall'])
     async def uvar_deleteall(self, ctx):
         """Deletes ALL user variables."""
-        await ctx.send("This will delete **ALL** of your user variables (uvars). "
-                       "Are you *absolutely sure* you want to continue?\n"
-                       "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for('message', timeout=30, check=lambda m: auth_and_chan(ctx)(m))
-        if (not reply) or (not reply.content == "Yes, I am sure"):
+        if not await confirm(
+                ctx,
+                f"This will delete **ALL** of your user variables (uvars). "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm.",
+                response_check=lambda r: r == "Yes, I am sure"):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.uvars.delete_many({"owner": str(ctx.author.id)})
@@ -861,15 +948,3 @@ async def send_long_code_text(destination, outside_codeblock, inside_codeblock, 
 
 def setup(bot):
     bot.add_cog(Customization(bot))
-
-
-STAT_VAR_NAMES = ("armor",
-                  "charisma", "charismaMod", "charismaSave",
-                  "constitution", "constitutionMod", "constitutionSave",
-                  "description",
-                  "dexterity", "dexterityMod", "dexteritySave",
-                  "hp", "image",
-                  "intelligence", "intelligenceMod", "intelligenceSave",
-                  "level", "name", "proficiencyBonus",
-                  "strength", "strengthMod", "strengthSave",
-                  "wisdom", "wisdomMod", "wisdomSave")

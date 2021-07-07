@@ -96,17 +96,18 @@ class InitTracker(commands.Cog):
 
     @init.command()
     async def add(self, ctx, modifier: int, name: str, *args):
-        """Adds a generic combatant to the initiative order.
+        """
+        Adds a generic combatant to the initiative order.
         Generic combatants have a 10 in every stat and +0 to every modifier.
         If a character is set up with the SheetManager module, you can use !init join instead.
         If you are adding monsters to combat, you can use !init madd instead.
 
         __**Valid Arguments**__
-        __Initative Args__
+        __Initiative Args__
         -controller <controller> - Pings a different person on turn.
         -group <group> - Adds the combatant to a group.
         adv/dis - Give advantage or disadvantage to the initiative roll.
-        -p [value] - Places combatant at the given value, instead of rolling. If no value is passed, set the initative to modifier instead.
+        -p [value] - Places combatant at the given value, instead of rolling. If no value is passed, set the initiative to modifier instead.
         -n <number or dice> - Adds more than one of that monster. Supports dice.
 
         __Combatant Args__
@@ -411,13 +412,6 @@ class InitTracker(commands.Cog):
         note = args.last('note')
 
         combat = await Combat.from_ctx(ctx)
-
-        p = args.last('p', type_=int)
-        group = args.last('group')
-        note = args.last('note')
-        hp = args.last('hp', type_=int)
-        thp = args.last('thp', type_=int)
-        ac = args.last('ac', type_=int)
         check_result = None
 
         if p is None:
@@ -484,9 +478,9 @@ class InitTracker(commands.Cog):
             return
 
         # check: is the user allowed to move combat on
-        allowed_to_pass = (combat.index is None) \
-            or (str(ctx.author.id) in (combat.current_combatant.controller, combat.dm)) \
-            or DM_ROLES.intersection({r.name.lower() for r in ctx.author.roles})
+        allowed_to_pass = ((combat.index is None)
+                           or (str(ctx.author.id) in (combat.current_combatant.controller, combat.dm))
+                           or DM_ROLES.intersection({r.name.lower() for r in ctx.author.roles}))
         if not allowed_to_pass:
             await ctx.send("It is not your turn.")
             return
@@ -1031,7 +1025,7 @@ class InitTracker(commands.Cog):
         -cb <check bonus> - Adds a bonus to all ability checks.
         -sadv/sdis <ability> - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
         -desc <description> - Adds a description of the effect."""  # noqa: E501
-        
+
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
 

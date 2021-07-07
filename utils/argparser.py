@@ -305,7 +305,7 @@ class ParsedArguments:
     def __setitem__(self, key, value):
         """
         :type key: str
-        :type value: str or list[str]
+        :type value: str or bool or list[str or bool]
         """
         if not isinstance(value, (collections.UserList, list)):
             value = [value]

@@ -81,12 +81,13 @@ def run_save(save_key, caster, args, embed):
     """
     if save_key.startswith('death'):
         save = Skill(0)
-        stat_name = 'Death'
+        stat_name = stat = 'Death'
         save_name = 'Death Save'
     else:
         try:
             save = caster.saves.get(save_key)
-            stat_name = verbose_stat(save_key[:3]).title()
+            stat = save_key[:3]
+            stat_name = verbose_stat(stat).title()
             save_name = f"{stat_name} Save"
         except ValueError:
             raise InvalidArgument('That\'s not a valid save.')
@@ -101,9 +102,17 @@ def run_save(save_key, caster, args, embed):
     else:
         embed.title = f'{caster.get_title_name()} makes {a_or_an(save_name)}!'
 
-    # ieffect -sb
+    # ieffect handling
     if isinstance(caster, init.Combatant):
+        # -sb
         args['b'] = args.get('b') + caster.active_effects('sb')
+        # -sadv/sdis
+        sadv_effects = caster.active_effects('sadv')
+        sdis_effects = caster.active_effects('sdis')
+        if 'all' in sadv_effects or stat in sadv_effects:
+            args['adv'] = True  # Because adv() only checks last() just forcibly add them
+        if 'all' in sdis_effects or stat in sdis_effects:
+            args['dis'] = True
 
     result = _run_common(save, args, embed, rr_format="Save {}")
     return SaveResult(rolls=result.rolls, skill=save, skill_name=stat_name, skill_roll_result=result)

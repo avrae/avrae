@@ -106,19 +106,20 @@ class InitTracker(commands.Cog):
         -controller <controller> - Pings a different person on turn.
         -group <group> - Adds the combatant to a group.
         adv/dis - Give advantage or disadvantage to the initiative roll.
-        -p <value> - Places combatant at the given value, instead of rolling.
+        -p [value] - Places combatant at the given value, instead of rolling. If no value is passed, set the initative to modifier instead.
         -n <number or dice> - Adds more than one of that monster. Supports dice.
 
         __Combatant Args__
-        -h - Hides HP, AC, Resists, etc. Default: True.
+        -h - Hides HP, AC, Resists, etc.
         -hp <hp> - Sets starting HP. Default: None.
         -thp <thp> - Sets starting THP.
         -ac <ac> - Sets the combatant's starting AC. Default: None.
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
+        -neutral <damage type> - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
         -note <note> - Sets the combatant's note.
-        """
+        """  # noqa: E501
 
         args = argparse(args)
         private = args.last('h', type_=bool)
@@ -199,7 +200,7 @@ class InitTracker(commands.Cog):
                 me = Combatant.new(name, controller, init, init_skill, hp, ac, private, ctx, combat)
 
                 # add resist/vuln/immune (#1563)
-                for resist_type in ('resist', 'immune', 'vuln'):
+                for resist_type in constants.RESIST_TYPES:
                     res_list = args.get(resist_type)
                     for res in res_list:
                         if not res == 'True':  # Prevent adding True as a resist
@@ -250,8 +251,9 @@ class InitTracker(commands.Cog):
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
+        -neutral <damage type> - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
         -note <note> - Sets the combatant's note.
-        """
+        """  # noqa: E501
 
         monster = await select_monster_full(ctx, monster_name, pm=True)
 
@@ -333,7 +335,7 @@ class InitTracker(commands.Cog):
                 me = MonsterCombatant.from_monster(monster, ctx, combat, name, controller, init, private,
                                                    hp=hp or rolled_hp, ac=ac)
                 # add resist/vuln/immune (#1563)
-                for resist_type in ('resist', 'immune', 'vuln'):
+                for resist_type in constants.RESIST_TYPES:
                     res_list = args.get(resist_type)
                     for res in res_list:
                         if not res == 'True':  # Prevent adding True as a resist
@@ -376,20 +378,21 @@ class InitTracker(commands.Cog):
         -p <value> - Places combatant at the given value, instead of rolling.
 
         __Combatant Args__
-        -h - Hides HP, AC, Resists, etc. Default: True.
+        -h - Hides HP, AC, Resists, etc.
         -hp <hp> - Sets starting HP.
         -thp <thp> - Sets starting THP.
         -ac <ac> - Sets the combatant's starting AC.
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
+        -neutral <damage type> - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
         -note <note> - Sets the combatant's note.
 
         __Other Args__
         -phrase <phrase> - Adds flavor text.
         -thumb <thumbnail URL> - Adds flavor image.
         [user snippet]
-        """
+        """  # noqa: E501
         char: Character = await Character.from_ctx(ctx)
         args = await helpers.parse_snippets(args, ctx)
         args = await helpers.parse_with_character(ctx, char, args)
@@ -434,7 +437,7 @@ class InitTracker(commands.Cog):
 
         me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
         # add resist/vuln/immune (#1563)
-        for resist_type in ('resist', 'immune', 'vuln'):
+        for resist_type in constants.RESIST_TYPES:
             res_list = args.get(resist_type)
             for res in res_list:
                 if not res == 'True':  # Prevent adding True as a resist

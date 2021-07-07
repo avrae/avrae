@@ -51,13 +51,13 @@ class Combatant(BaseCombatant, StatBlock):
 
     @classmethod
     def new(cls, name: str, controller_id: str, init: int, init_skill: Skill, max_hp: int, ac: int, private: bool,
-            resists: Resistances, ctx, combat):
+            ctx, combat):
         skills = Skills.default()
         skills.update({"initiative": init_skill})
         levels = Levels({"Monster": 0})
         id = create_combatant_id()
         return cls(ctx, combat, id, name, controller_id, private, init,
-                   levels=levels, resistances=resists, skills=skills, max_hp=max_hp, ac=ac)
+                   levels=levels, skills=skills, max_hp=max_hp, ac=ac)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):

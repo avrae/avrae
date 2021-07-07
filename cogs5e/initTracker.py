@@ -120,28 +120,29 @@ class InitTracker(commands.Cog):
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
         -note <note> - Sets the combatant's note.
         """
-        private = False
-        place = None
-        controller = str(ctx.author.id)
-        group = None
-        hp = None
-        ac = None
-        resists = {}
+        
         args = argparse(args)
+        private = not args.last('h', type_=bool)
+        controller = str(ctx.author.id)
+
+        group = args.last('group')
         adv = args.adv(boolwise=True)
-
+        place = args.last('p')
+        hp = args.last('hp', type_=int)
         thp = args.last('thp', type_=int)
+        ac = args.last('ac', type_=int)
+        n = args.last('n', 1)
+        note = args.last('note')
 
-        if args.last('h', type_=bool):
-            private = True
+        combat = await Combat.from_ctx(ctx)
+        out = ''
 
-        if args.get('p'):
+        if place:  # Assign to modifier or override roll+modifier
             try:
-                place_arg = args.last('p')
-                if place_arg is True:
+                if place is True:
                     place = modifier
                 else:
-                    place = int(place_arg)
+                    place = int(place)
             except (ValueError, TypeError):
                 place = modifier
 
@@ -149,54 +150,81 @@ class InitTracker(commands.Cog):
             controller_name = args.last('controller')
             member = await commands.MemberConverter().convert(ctx, controller_name)
             controller = str(member.id) if member is not None and not member.bot else controller
-        if args.last('group'):
-            group = args.last('group')
-        if args.last('hp'):
-            hp = args.last('hp', type_=int)
-            if hp < 1:
-                return await ctx.send("You must pass in a positive, nonzero HP with the -hp tag.")
-        if args.last('ac'):
-            ac = args.last('ac', type_=int)
 
-        note = args.last('note')
+        if hp and hp < 1:
+            return await ctx.send("You must pass in a positive, nonzero HP with the -hp tag.")
 
-        for k in ('resist', 'immune', 'vuln'):  # Prevent adding True as a resist
-            resists[k] = [res for res in args.get(k) if not res == 'True']
+        try:  # Attempt to get the add as a number
+            n_result = int(n)
+        except ValueError:  # if we're not a number, are we dice
+            roll_result = roll(str(n))
+            n_result = roll_result.total
+            out += f"Rolling random number of combatants: {roll_result}\n"
 
-        combat = await Combat.from_ctx(ctx)
+        recursion = 25 if n_result > 25 else 1 if n_result < 1 else n_result
 
-        if combat.get_combatant(name) is not None:
-            await ctx.send("Combatant already exists.")
-            return
-
-        if place is None:
-            init_skill = Skill(modifier, adv=adv)
-            init_roll = roll(init_skill.d20())
-            init = init_roll.total
-            init_roll_skeleton = init_roll.result
+        if recursion == 1:  # Account for singular entities
+            name_template = name
         else:
-            init_skill = Skill(0, adv=adv)
-            init = place
-            init_roll_skeleton = str(init)
+            name_template = name + '#'
 
-        me = Combatant.new(name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx,
-                           combat)
+        name_num = 1
+        for i in range(recursion):
+            name = name_template.replace('#', str(name_num))
+            raw_name = name_template
+            to_continue = False
 
-        # -thp (#1142)
-        if thp and thp > 0:
-            me.temp_hp = thp
+            while combat.get_combatant(name) and name_num < 100:  # keep increasing to avoid duplicates
+                if '#' in raw_name:
+                    name_num += 1
+                    name = raw_name.replace('#', str(name_num))
+                else:
+                    out += "Combatant already exists.\n"
+                    to_continue = True
+                    break
 
-        # -note (#1211)
-        if note:
-            me.notes = note
+            if to_continue:
+                continue
 
-        if group is None:
-            combat.add_combatant(me)
-            await ctx.send(f"{name} was added to combat with initiative {init_roll_skeleton}.")
-        else:
-            grp = combat.get_group(group, create=init)
-            grp.add_combatant(me)
-            await ctx.send(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
+            try:
+                if place is None:
+                    init_skill = Skill(modifier, adv=adv)
+                    init_roll = roll(init_skill.d20())
+                    init = init_roll.total
+                    init_roll_skeleton = init_roll.result
+                else:
+                    init_skill = Skill(0, adv=adv)
+                    init = place
+                    init_roll_skeleton = str(init)
+
+                me = Combatant.new(name, controller, init, init_skill, hp, ac, private, ctx, combat)
+
+                # add resist/vuln/immune (#1563)
+                for resist_type in ('resist', 'immune', 'vuln'):
+                    res_list = args.get(resist_type)
+                    for res in res_list:
+                        if not res == 'True':  # Prevent adding True as a resist
+                            me.set_resist(res, resist_type)
+
+                # -thp (#1142)
+                if thp and thp > 0:
+                    me.temp_hp = thp
+
+                # -note (#1211)
+                if note:
+                    me.notes = note
+
+                if group is None:
+                    combat.add_combatant(me)
+                    await ctx.send(f"{name} was added to combat with initiative {init_roll_skeleton}.")
+                else:
+                    grp = combat.get_group(group, create=init)
+                    grp.add_combatant(me)
+                    await ctx.send(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
+
+            except Exception as e:
+                log.warning('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
+                out += "Error adding combatant: {}\n".format(e)
 
         await combat.final()
 
@@ -246,9 +274,16 @@ class InitTracker(commands.Cog):
         init_skill = monster.skills.initiative
 
         combat = await Combat.from_ctx(ctx)
-
         out = ''
         to_pm = ''
+
+        if args.last('controller'):
+            controller_name = args.last('controller')
+            member = await commands.MemberConverter().convert(ctx, controller_name)
+            controller = str(member.id) if member is not None and not member.bot else controller
+
+        if hp and hp < 1:
+            return await ctx.send("You must pass in a positive, nonzero HP with the -hp tag.")
 
         try:  # Attempt to get the add as a number
             n_result = int(n)
@@ -258,11 +293,6 @@ class InitTracker(commands.Cog):
             out += f"Rolling random number of combatants: {roll_result}\n"
 
         recursion = 25 if n_result > 25 else 1 if n_result < 1 else n_result
-
-        if args.last('controller'):
-            controller_name = args.last('controller')
-            member = await commands.MemberConverter().convert(ctx, controller_name)
-            controller = str(member.id) if member is not None and not member.bot else controller
 
         name_num = 1
         for i in range(recursion):
@@ -367,6 +397,18 @@ class InitTracker(commands.Cog):
 
         embed = EmbedWithCharacter(char, False)
 
+        private = not args.last('h', type_=bool)
+        controller = str(ctx.author.id)
+
+        group = args.last('group')
+        p = args.last('p', type_=int)
+        hp = args.last('hp', type_=int)
+        thp = args.last('thp', type_=int)
+        ac = args.last('ac', type_=int)
+        note = args.last('note')
+
+        combat = await Combat.from_ctx(ctx)
+
         p = args.last('p', type_=int)
         group = args.last('group')
         note = args.last('note')
@@ -385,11 +427,6 @@ class InitTracker(commands.Cog):
             init = p
             embed.title = "{} already rolled initiative!".format(char.name)
             embed.description = "Placed at initiative `{}`.".format(init)
-
-        controller = str(ctx.author.id)
-        private = args.last('h', type_=bool)
-
-        combat = await Combat.from_ctx(ctx)
 
         if combat.get_combatant(char.name) is not None:
             await ctx.send("Combatant already exists.")

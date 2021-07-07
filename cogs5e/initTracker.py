@@ -164,9 +164,8 @@ class InitTracker(commands.Cog):
 
         recursion = 25 if n_result > 25 else 1 if n_result < 1 else n_result
 
-        if recursion == 1:  # Account for singular entities
-            name_template = name
-        else:
+        name_template = name
+        if '#' not in name and recursion > 1:
             name_template = name + '#'
 
         name_num = 1

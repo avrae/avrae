@@ -736,5 +736,247 @@
     "id": 16939,
     "url": "https://www.dndbeyond.com/monsters/kobold",
     "isFree": false
+  },
+  {
+    "id": 16993,
+    "name": "Red Dragon Wyrmling",
+    "source": "BR",
+    "isFree": true,
+    "page": 288,
+    "url": "https://www.dndbeyond.com/monsters/red-dragon-wyrmling",
+    "size": "Medium",
+    "race": "dragon",
+    "alignment": "chaotic evil",
+    "ac": 17,
+    "armortype": "natural armor",
+    "hp": 75,
+    "hitdice": "10d8 + 30",
+    "speed": "30 ft., climb 30 ft., fly 60 ft.",
+    "ability_scores": {
+      "prof_bonus": 2,
+      "strength": 19,
+      "dexterity": 10,
+      "constitution": 17,
+      "intelligence": 12,
+      "wisdom": 11,
+      "charisma": 15
+    },
+    "saves": {
+      "strengthSave": {
+        "value": 4
+      },
+      "dexteritySave": {
+        "value": 2,
+        "prof": 1
+      },
+      "constitutionSave": {
+        "value": 5,
+        "prof": 1
+      },
+      "intelligenceSave": {
+        "value": 1
+      },
+      "wisdomSave": {
+        "value": 2,
+        "prof": 1
+      },
+      "charismaSave": {
+        "value": 4,
+        "prof": 1
+      }
+    },
+    "skills": {
+      "acrobatics": {
+        "value": 0
+      },
+      "animalHandling": {
+        "value": 0
+      },
+      "arcana": {
+        "value": 1
+      },
+      "athletics": {
+        "value": 4
+      },
+      "deception": {
+        "value": 2
+      },
+      "history": {
+        "value": 1
+      },
+      "initiative": {
+        "value": 0
+      },
+      "insight": {
+        "value": 0
+      },
+      "intimidation": {
+        "value": 2
+      },
+      "investigation": {
+        "value": 1
+      },
+      "medicine": {
+        "value": 0
+      },
+      "nature": {
+        "value": 1
+      },
+      "perception": {
+        "value": 4,
+        "prof": 1,
+        "bonus": 2
+      },
+      "performance": {
+        "value": 2
+      },
+      "persuasion": {
+        "value": 2
+      },
+      "religion": {
+        "value": 1
+      },
+      "sleightOfHand": {
+        "value": 0
+      },
+      "stealth": {
+        "value": 2,
+        "prof": 1
+      },
+      "survival": {
+        "value": 0
+      },
+      "strength": {
+        "value": 4
+      },
+      "dexterity": {
+        "value": 0
+      },
+      "constitution": {
+        "value": 3
+      },
+      "intelligence": {
+        "value": 1
+      },
+      "wisdom": {
+        "value": 0
+      },
+      "charisma": {
+        "value": 2
+      }
+    },
+    "senses": "blindsight 10 ft., darkvision 60 ft.",
+    "passiveperc": 14,
+    "display_resists": {
+      "resist": [],
+      "immune": [
+        "fire"
+      ],
+      "vuln": []
+    },
+    "condition_immune": [],
+    "languages": [
+      "Draconic"
+    ],
+    "cr": "4",
+    "xp": 1100,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Bite",
+        "desc": "_Melee Weapon Attack:_ +6 to hit, reach 5 ft., one target. _Hit:_ 9 (1d10 + 4) piercing damage plus 3 (1d6) fire damage."
+      },
+      {
+        "name": "Fire Breath (Recharge 5-6)",
+        "desc": "The dragon exhales fire in a 15-foot cone. Each creature in that area must make a DC 13 Dexterity saving throw, taking 24 (7d6) fire damage on a failed save, or half as much damage on a successful one."
+      }
+    ],
+    "reactions": [],
+    "legactions": [],
+    "la_per_round": 0,
+    "image_url": "https://media-waterdeep.cursecdn.com/avatars/thumbnails/0/239/1000/1000/636252766855622680.jpeg",
+    "spellbook": null,
+    "resistances": {
+      "resist": [],
+      "immune": [
+        {
+          "dtype": "fire"
+        }
+      ],
+      "vuln": []
+    },
+    "token_free": "16993-f.png",
+    "token_sub": "16993-s.png",
+    "attacks": [
+      {
+        "name": "Bite",
+        "automation": [
+          {
+            "type": "target",
+            "target": "each",
+            "effects": [
+              {
+                "type": "attack",
+                "hit": [
+                  {
+                    "type": "damage",
+                    "damage": "1d10 + 4 [piercing] + 1d6 [fire]"
+                  }
+                ],
+                "miss": [],
+                "attackBonus": "6"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "*Melee Weapon Attack:* +6 to hit, reach 5 ft., one target. *Hit:* 9 (1d10 + 4) piercing damage plus 3 (1d6) fire damage."
+          }
+        ],
+        "_v": 2
+      },
+      {
+        "name": "Fire Breath",
+        "automation": [
+          {
+            "type": "roll",
+            "dice": "7d6 [fire]",
+            "name": "damage"
+          },
+          {
+            "type": "target",
+            "target": "each",
+            "effects": [
+              {
+                "type": "save",
+                "stat": "dex",
+                "dc": "13",
+                "fail": [
+                  {
+                    "type": "damage",
+                    "damage": "{damage}"
+                  }
+                ],
+                "success": [
+                  {
+                    "type": "damage",
+                    "damage": "({damage}) / 2"
+                  }
+                ]
+              }
+            ],
+            "meta": []
+          },
+          {
+            "type": "text",
+            "text": "The dragon exhales fire in a 15-foot cone. Each creature in that area must make a DC 13 Dexterity saving throw, taking 24 (7d6) fire damage on a failed save, or half as much damage on a successful one."
+          }
+        ],
+        "_v": 2,
+        "verb": "unleashes their",
+        "proper": true
+      }
+    ],
+    "proper": false
   }
 ]

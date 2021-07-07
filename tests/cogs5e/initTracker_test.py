@@ -4,7 +4,7 @@ import pytest
 from cogs5e.models.sheet.resistance import Resistance
 from gamedata.compendium import compendium
 from tests.conftest import end_init, start_init
-from tests.utils import D20_PATTERN, active_character, active_combat
+from tests.utils import D20_PATTERN, NUMBER_PATTERN, active_character, active_combat
 
 pytestmark = pytest.mark.asyncio
 
@@ -51,7 +51,7 @@ class TestInitiativeWithCharacters:
         await dhttp.receive_delete()
         await dhttp.receive_edit()
         join_embed = discord.Embed(
-            title=rf".+ makes an Initiative check!",
+            title=rf".+ makes an Initiative check!",  # noqa: F541 This is regex
             description=D20_PATTERN
         )
         join_embed.set_footer(text="Added to combat!")
@@ -159,6 +159,47 @@ class TestYourStandardInitiative:
             assert 'foobar' in [r.dtype for r in resistances.vuln]
             assert 'foobar' in [r.dtype for r in resistances.resist]
 
+    async def test_add_singular_multi(self, avrae, dhttp):
+        # Check add isn't appending numbers to singular
+        avrae.message("!init add 10 \"Duke Fredrick\"")
+        await dhttp.receive_delete()
+        await dhttp.receive_edit()
+        await dhttp.receive_message(f"Duke Fredrick was added to combat with initiative {D20_PATTERN}")
+        await dhttp.drain()
+
+        # Check add multi is appending
+        avrae.message("!init add 10 Guard -n 2 -group Guards")
+        await dhttp.receive_delete()
+        await dhttp.receive_edit()
+        await dhttp.receive_message(f"Guard1 was added to combat with initiative {NUMBER_PATTERN} "
+                                    "as part of group Guards.\nGuard2 was added to combat with initiative "
+                                    f"{NUMBER_PATTERN} as part of group Guards.")
+        await dhttp.drain()
+        # Clean up
+        avrae.message("!init remove Duke Fredrick")
+        await dhttp.drain()
+        avrae.message("!init remove Guards")
+        await dhttp.drain()
+
+    async def test_madd_resistances(self, avrae, dhttp):
+        avrae.message("!init madd wyrmling -neutral fire -vuln thunder -immune poison -resist cold")  # madd
+        await dhttp.drain()
+
+        avrae.message("!init add 10 Duke -vuln thunder -immune poison -resist cold")  # add
+        await dhttp.drain()
+
+        for combatant in ("RE1", "Duke"):
+            resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
+            assert 'fire' not in [r.dtype for r in resistances.resist]  # Check -neutral removal works
+            assert 'cold' in [r.dtype for r in resistances.resist]  # Check -resist
+            assert 'poison' in [r.dtype for r in resistances.immune]  # Check -immune
+            assert 'thunder' in [r.dtype for r in resistances.vuln]  # Check -vuln
+
+        avrae.message("!init remove RE1")
+        await dhttp.drain()
+        avrae.message("!init remove Duke")
+        await dhttp.drain()
+
     async def test_silver_resists(self, avrae, dhttp):
         character = await active_character(avrae)
         for combatant in (character.name, "KO1", "TEST1", "TEST2"):
@@ -188,13 +229,13 @@ class TestYourStandardInitiative:
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
 
     async def test_effect_durations(self, avrae, dhttp):
-        avrae.message(f"!i next")
+        avrae.message("!i next")
         await dhttp.drain()
-        avrae.message(f"!i next")
+        avrae.message("!i next")
         await dhttp.drain()
-        avrae.message(f"!i next")
+        avrae.message("!i next")
         await dhttp.drain()
-        avrae.message(f"!i next")
+        avrae.message("!i next")
         await dhttp.drain()
 
         character = await active_character(avrae)
@@ -255,7 +296,7 @@ async def test_commands_no_error(avrae, dhttp):
     commands = [
         "!init begin",
         "!init madd kobold -n 3",
-        "!init madd mage"
+        "!init madd mage",
         # test round tracking
         "!init next",  # KO1
         "!init next",  # KO2

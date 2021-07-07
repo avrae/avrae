@@ -216,18 +216,18 @@ class InitTracker(commands.Cog):
 
                 if group is None:
                     combat.add_combatant(me)
-                    await ctx.send(f"{name} was added to combat with initiative {init_roll_skeleton}.")
+                    out += f"{name} was added to combat with initiative {init_roll_skeleton}.\n"
                 else:
                     grp = combat.get_group(group, create=init)
                     grp.add_combatant(me)
-                    await ctx.send(f"{name} was added to combat with initiative {grp.init}"
-                                   f" as part of group {grp.name}.")
+                    out += f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.\n"
 
             except Exception as e:
                 log.warning('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
                 out += "Error adding combatant: {}\n".format(e)
 
         await combat.final()
+        await ctx.send(out)
 
     @init.command()
     async def madd(self, ctx, monster_name: str, *args):

@@ -196,8 +196,8 @@ class InitTracker(commands.Cog):
                     init_skill = Skill(0, adv=adv)
                     init = place
                     init_roll_skeleton = str(init)
-
-                me = Combatant.new(name, controller, init, init_skill, hp, ac, private, ctx, combat)
+                # Unify Resistance applying (#1565)
+                me = Combatant.new(name, controller, init, init_skill, hp, ac, private, None, ctx, combat)
 
                 # add resist/vuln/immune (#1563)
                 for resist_type in constants.RESIST_TYPES:

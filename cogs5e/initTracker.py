@@ -102,18 +102,22 @@ class InitTracker(commands.Cog):
         If a character is set up with the SheetManager module, you can use !init join instead.
         If you are adding monsters to combat, you can use !init madd instead.
 
-        __Valid Arguments__
-        -h - Hides HP, AC, resistances, and attack list.
-        -p - Places combatant at the given modifier, instead of rolling
+        __**Valid Arguments**__
+        __Initative Args__
         -controller <controller> - Pings a different person on turn.
         -group <group> - Adds the combatant to a group.
+        adv/dis - Give advantage or disadvantage to the initiative roll.
+        -p <value> - Places combatant at the given value, instead of rolling.
+        -n <number or dice> - Adds more than one of that monster. Supports dice.
+
+        __Combatant Args__
+        -h - Hides HP, AC, Resists, etc. Default: True.
         -hp <hp> - Sets starting HP. Default: None.
-        -thp <thp> - Sets starting THP. Default: 0.
-        -ac <ac> - Sets the combatant' AC. Default: None.
+        -thp <thp> - Sets starting THP.
+        -ac <ac> - Sets the combatant's starting AC. Default: None.
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
-        adv/dis - Rolls the initiative check with advantage/disadvantage.
         -note <note> - Sets the combatant's note.
         """
         private = False
@@ -156,8 +160,8 @@ class InitTracker(commands.Cog):
 
         note = args.last('note')
 
-        for k in ('resist', 'immune', 'vuln'):
-            resists[k] = args.get(k)
+        for k in ('resist', 'immune', 'vuln'):  # Prevent adding True as a resist
+            resists[k] = [res for res in args.get(k) if not res == 'True']
 
         combat = await Combat.from_ctx(ctx)
 
@@ -199,18 +203,25 @@ class InitTracker(commands.Cog):
     @init.command()
     async def madd(self, ctx, monster_name: str, *args):
         """Adds a monster to combat.
-        __Valid Arguments__
-        adv/dis - Give advantage or disadvantage to the initiative roll.
-        -b <condition bonus> - Adds a bonus to the combatant's initiative roll.
-        -n <number or dice> - Adds more than one of that monster. Supports dice.
-        -p <value> - Places combatant at the given value, instead of rolling.
-        -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
-        -h - Hides HP, AC, Resists, etc. Default: True.
+        __**Valid Arguments**__
+        __Initative Args__
+        -controller <controller> - Pings a different person on turn.
         -group <group> - Adds the combatant to a group.
+        adv/dis - Give advantage or disadvantage to the initiative roll.
+        -b <condition bonus> - Adds a bonus to the combatants' Initiative roll.
+        -p <value> - Places combatant at the given value, instead of rolling.
+        -n <number or dice> - Adds more than one of that monster. Supports dice.
+        -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
+
+        __Combatant Args__
+        -h - Hides HP, AC, Resists, etc. Default: True.
         -rollhp - Rolls the monsters HP, instead of using the default value.
         -hp <hp> - Sets starting HP.
         -thp <thp> - Sets starting THP.
         -ac <ac> - Sets the combatant's starting AC.
+        -resist <damage type> - Gives the combatant resistance to the given damage type.
+        -immune <damage type> - Gives the combatant immunity to the given damage type.
+        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
         -note <note> - Sets the combatant's note.
         """
 
@@ -218,6 +229,7 @@ class InitTracker(commands.Cog):
 
         args = argparse(args)
         private = not args.last('h', type_=bool)
+        controller = str(ctx.author.id)
 
         group = args.last('group')
         adv = args.adv(boolwise=True)
@@ -229,6 +241,7 @@ class InitTracker(commands.Cog):
         ac = args.last('ac', type_=int)
         n = args.last('n', 1)
         note = args.last('note')
+
         name_template = args.last('name', monster.name[:2].upper() + '#')
         init_skill = monster.skills.initiative
 
@@ -237,14 +250,19 @@ class InitTracker(commands.Cog):
         out = ''
         to_pm = ''
 
-        try: # Attempt to get the add as a number
+        try:  # Attempt to get the add as a number
             n_result = int(n)
-        except ValueError: # if we're not a number, are we dice
+        except ValueError:  # if we're not a number, are we dice
             roll_result = roll(str(n))
             n_result = roll_result.total
             out += f"Rolling random number of combatants: {roll_result}\n"
 
         recursion = 25 if n_result > 25 else 1 if n_result < 1 else n_result
+
+        if args.last('controller'):
+            controller_name = args.last('controller')
+            member = await commands.MemberConverter().convert(ctx, controller_name)
+            controller = str(member.id) if member is not None and not member.bot else controller
 
         name_num = 1
         for i in range(recursion):
@@ -274,7 +292,6 @@ class InitTracker(commands.Cog):
                     init = check_roll.total
                 else:
                     init = int(p)
-                controller = str(ctx.author.id)
 
                 # -hp
                 rolled_hp = None
@@ -285,6 +302,12 @@ class InitTracker(commands.Cog):
 
                 me = MonsterCombatant.from_monster(monster, ctx, combat, name, controller, init, private,
                                                    hp=hp or rolled_hp, ac=ac)
+                # add resist/vuln/immune (#1563)
+                for resist_type in ('resist', 'immune', 'vuln'):
+                    res_list = args.get(resist_type)
+                    for res in res_list:
+                        if not res == 'True':  # Prevent adding True as a resist
+                            me.set_resist(res, resist_type)
 
                 # -thp (#1142)
                 if thp and thp > 0:
@@ -315,15 +338,26 @@ class InitTracker(commands.Cog):
     async def join(self, ctx, *, args: str = ''):
         """
         Adds the current active character to combat. A character must be loaded through the SheetManager module first.
-        __Valid Arguments__
+        __**Valid Arguments**__
+        __Initative Args__
+        -group <group> - Adds the combatant to a group.
         adv/dis - Give advantage or disadvantage to the initiative roll.
         -b <condition bonus> - Adds a bonus to the combatants' Initiative roll.
+        -p <value> - Places combatant at the given value, instead of rolling.
+
+        __Combatant Args__
+        -h - Hides HP, AC, Resists, etc. Default: True.
+        -hp <hp> - Sets starting HP.
+        -thp <thp> - Sets starting THP.
+        -ac <ac> - Sets the combatant's starting AC.
+        -resist <damage type> - Gives the combatant resistance to the given damage type.
+        -immune <damage type> - Gives the combatant immunity to the given damage type.
+        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
+        -note <note> - Sets the combatant's note.
+
+        __Other Args__
         -phrase <phrase> - Adds flavor text.
         -thumb <thumbnail URL> - Adds flavor image.
-        -p <value> - Places combatant at the given value, instead of rolling.
-        -h - Hides HP, AC, Resists, etc.
-        -group <group> - Adds the combatant to a group.
-        -note <note> - Sets the combatant's note.
         [user snippet]
         """
         char: Character = await Character.from_ctx(ctx)
@@ -336,6 +370,9 @@ class InitTracker(commands.Cog):
         p = args.last('p', type_=int)
         group = args.last('group')
         note = args.last('note')
+        hp = args.last('hp', type_=int)
+        thp = args.last('thp', type_=int)
+        ac = args.last('ac', type_=int)
         check_result = None
 
         if p is None:
@@ -359,6 +396,22 @@ class InitTracker(commands.Cog):
             return
 
         me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
+        # add resist/vuln/immune (#1563)
+        for resist_type in ('resist', 'immune', 'vuln'):
+            res_list = args.get(resist_type)
+            for res in res_list:
+                if not res == 'True':  # Prevent adding True as a resist
+                    me.set_resist(res, resist_type)
+
+        # arg unification (#1563)
+        if hp:
+            me.hp = hp
+
+        if thp and thp > 0:
+            me.temp_hp = thp
+
+        if ac:
+            me.ac = ac
 
         # -note (#1211)
         if note:

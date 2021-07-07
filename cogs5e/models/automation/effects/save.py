@@ -1,7 +1,7 @@
 import d20
 
 from cogs5e.models.errors import InvalidSaveType
-from utils.functions import maybe_mod
+from utils.functions import maybe_mod, reconcile_adv
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
 from ..results import SaveResult
@@ -36,12 +36,13 @@ class Save(Effect):
             raise TargetException("Tried to make a save without a target! Make sure all Save effects are inside "
                                   "of a Target effect.")
 
+        # ==== args ====
         save = autoctx.args.last('save') or self.stat
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
         hide = autoctx.args.last('h', type_=bool)
-        adv = autoctx.args.adv(custom={'adv': 'sadv', 'dis': 'sdis'})
 
+        # ==== dc ====
         dc_override = None
         if self.dc:
             try:
@@ -60,16 +61,31 @@ class Save(Effect):
             save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',
                                           'intelligenceSave', 'wisdomSave', 'charismaSave') if
                               save.lower() in s.lower())
+            stat = save_skill[:3]
         except StopIteration:
             raise InvalidSaveType()
 
+        # ==== ieffects ====
+        if autoctx.target.combatant:
+            # Combine args/ieffect advantages - adv/dis (#1552)
+            sadv_effects = autoctx.target.combatant.active_effects('sadv')
+            sdis_effects = autoctx.target.combatant.active_effects('sdis')
+            sadv = 'all' in sadv_effects or stat in sadv_effects
+            sdis = 'all' in sdis_effects or stat in sdis_effects
+            adv = reconcile_adv(
+                adv=autoctx.args.last('sadv', type_=bool, ephem=True) or sadv,
+                dis=autoctx.args.last('sdis', type_=bool, ephem=True) or sdis
+            )
+        else:
+            adv = autoctx.args.adv(custom={'adv': 'sadv', 'dis': 'sdis'})
+
+        # ==== execution ====
         save_roll = None
         autoctx.metavars['lastSaveRollTotal'] = 0
         autoctx.metavars['lastSaveNaturalRoll'] = 0  # 1495
         autoctx.metavars['lastSaveDC'] = dc
-
         autoctx.meta_queue(f"**DC**: {dc}")
-        stat = save_skill[:3]
+
         if not autoctx.target.is_simple:
             save_blurb = f'{stat.upper()} Save'
             if auto_pass:

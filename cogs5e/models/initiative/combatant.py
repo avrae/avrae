@@ -57,7 +57,7 @@ class Combatant(BaseCombatant, StatBlock):
         levels = Levels({"Monster": 0})
         id = create_combatant_id()
         return cls(ctx, combat, id, name, controller_id, private, init,
-                   levels=levels,  resistances=resists, skills=skills, max_hp=max_hp, ac=ac)
+                   levels=levels, resistances=resists, skills=skills, max_hp=max_hp, ac=ac)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):

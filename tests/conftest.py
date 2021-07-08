@@ -31,6 +31,7 @@ from utils.config import DEFAULT_PREFIX
 SENTINEL = object()
 
 log = logging.getLogger(__name__)
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 @pytest.fixture(scope="session")
@@ -302,7 +303,7 @@ async def avrae(dhttp):
                 params=["ara", "drakro"])
 def character(request, avrae):
     """Sets up an active character in the user's context, to be used in tests. Cleans up after itself."""
-    filename = os.path.join("tests", "static", f"char-{request.param}.json")
+    filename = os.path.join(dir_path, "static", f"char-{request.param}.json")
     with open(filename) as f:
         char = Character.from_dict(json.load(f))
     char.owner = DEFAULT_USER_ID

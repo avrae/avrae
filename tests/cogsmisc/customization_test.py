@@ -7,7 +7,7 @@ pytestmark = pytest.mark.asyncio
 
 async def test_snippet_before_edit(avrae, dhttp):
     dhttp.clear()
-    
+
     # Snippet tests
     avrae.message('!snippet test adv')
     await dhttp.receive_message("Snippet `test` added.```py\n!snippet test adv\n```", regex = False)
@@ -16,7 +16,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     await dhttp.receive_message('**Warning:** Creating a snippet named `2d6` might cause hidden problems if you try to use the same roll in other commands.\nAre you sure you want to create this snippet? (yes/no)', regex = False)
     avrae.message('no')
     await dhttp.receive_message('Ok, cancelling.', regex = False)
-    
+
     avrae.message('!snippet adv adv')
     await dhttp.receive_message("**Warning:** Creating a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)", regex = False)
     avrae.message('yes')
@@ -45,7 +45,7 @@ async def test_snippet_before_edit(avrae, dhttp):
 
     avrae.message('!serversnippet adv adv', as_owner=True)
     await dhttp.receive_message("**Warning:** Creating a snippet named `adv` will prevent you from using the built-in `adv` argument in Avrae commands.\nAre you sure you want to create this snippet? (yes/no)", regex = False)
-    avrae.message('yes')
+    avrae.message('yes', as_owner=True)
     await dhttp.receive_message("Server snippet `adv` added.```py\n!snippet adv adv\n```", regex = False)
 
     # alias tests
@@ -73,4 +73,3 @@ async def test_snippet_before_edit(avrae, dhttp):
     await dhttp.receive_message("Alias `tester` added.```py\n!alias tester echo not a test\n```", regex = False)
     avrae.message('!alias rename tester test')
     await dhttp.receive_message('`test` is already a builtin command. Try another name.', regex = False)
-    

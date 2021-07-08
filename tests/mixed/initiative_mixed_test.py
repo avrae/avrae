@@ -3,7 +3,7 @@ import pytest
 
 from gamedata.compendium import compendium
 from tests.conftest import end_init, start_init
-from tests.utils import ATTACK_PATTERN, DAMAGE_PATTERN, SAVE_PATTERN, active_character, active_combat
+from tests.utils import ATTACK_PATTERN, DAGGER_PATTER, DAMAGE_PATTERN, SAVE_PATTERN, active_character, active_combat
 
 pytestmark = pytest.mark.asyncio
 
@@ -91,7 +91,7 @@ class TestCharacterMixedInitiative:
 async def attack_X(dhttp, delete_first=False):
     if delete_first:
         await dhttp.receive_delete()
-    embed = discord.Embed(title=r".* attacks with a Dagger!")
+    embed = discord.Embed(title=rf".* attacks with a {DAGGER_PATTER}!")
     embed.add_field(name="someone", value=ATTACK_PATTERN, inline=False)
     await dhttp.receive_message(embed=embed)
     if not delete_first:
@@ -114,7 +114,7 @@ async def attack_I(avrae, dhttp, name='KO1', attack_command="!attack", delete_fi
 
     if delete_first:
         await dhttp.receive_delete()
-    embed = discord.Embed(title=r".* attacks with a Dagger!")
+    embed = discord.Embed(title=rf".* attacks with a {DAGGER_PATTER}!")
     embed.add_field(name=name, value=ATTACK_PATTERN, inline=False)
     embed.set_footer(text=rf"{name}: <-?\d+/\d+ HP>")
     await dhttp.receive_edit()
@@ -216,7 +216,7 @@ async def test_monster_cast_consumption_II(avrae, dhttp):
 async def _requires(avrae):
     character = await active_character(avrae)
     # character must have a dagger
-    if not "Dagger" in [atk.name for atk in character.attacks]:
+    if not [atk.name for atk in character.attacks if "Dagger" in atk.name]:
         pytest.skip("Character does not have a dagger")
 
     # and must be able to cast spells

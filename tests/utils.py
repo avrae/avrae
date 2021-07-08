@@ -28,7 +28,8 @@ ROLLED_DICE_PATTERN = r"\((~*(\**\d+\**( -> )?)+~*(, )?)+\)"
 D20_PATTERN = rf"\d?d20(\w+[lh<>]?\d+)? *{ROLLED_DICE_PATTERN}( *[+-] *\d+)?( *= *`\d+`)?"
 
 # dice: any combination of valid dice, rolled or unrolled
-DICE_PATTERN = rf"( *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+( *= *`\d+`)?"
+DICE_PATTERN = rf"((\()? *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+" \
+               rf"(\))?( *[\/\*] *\d)?( *= *`\d+`)?"
 
 # to hit: a to-hit section of an attack
 TO_HIT_PATTERN = rf"\*\*To Hit:?\*\*:? ((\d?d20\.\.\. = `(\d+|HIT|MISS)`)|({D20_PATTERN}{DICE_PATTERN} = `\d+`)|" \
@@ -39,6 +40,9 @@ DAMAGE_PATTERN = rf"((\*\*Damage( \(CRIT!\))?:?\*\*:? {DICE_PATTERN})|(\*\*Miss!
 
 # attack: to hit and damage on two lines
 ATTACK_PATTERN = rf"{TO_HIT_PATTERN}\n{DAMAGE_PATTERN}"
+
+# catches Dagger and Faithful Daggo' (Dagger)
+DAGGER_PATTER = r".*\(?Dagger\)?"
 
 # save: d20, success or failure
 SAVE_PATTERN = rf"\*\*\w+ Save:?\*\*:? {D20_PATTERN}; (Failure|Success)!"
@@ -69,7 +73,7 @@ def requires_data():
         compendium.load_common()
 
     if not compendium.spells:  # we have no data, then
-        return pytest.mark.skip(reason=f"Test requires data")
+        return pytest.mark.skip(reason="Test requires data")
 
     return lambda func: func
 

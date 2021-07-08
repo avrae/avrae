@@ -520,7 +520,7 @@ class GameTrack(commands.Cog):
 
         conflict = next((c for c in character.consumables if c.name.lower() == name.lower()), None)
         if conflict:
-            if await confirm(ctx, "Warning: This will overwrite an existing consumable. Continue?"):
+            if await confirm(ctx, "Warning: This will overwrite an existing consumable. Continue? (Reply with yes/no)"):
                 character.consumables.remove(conflict)
             else:
                 return await ctx.send("Overwrite unconfirmed. Aborting.")

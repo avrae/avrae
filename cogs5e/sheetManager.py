@@ -126,7 +126,7 @@ class SheetManager(commands.Cog):
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:
-            if await confirm(ctx, "This will overwrite an attack with the same name. Continue?"):
+            if await confirm(ctx, "This will overwrite an attack with the same name. Continue? (Reply with yes/no)"):
                 character.overrides.attacks.remove(conflict)
             else:
                 return await ctx.send("Okay, aborting.")
@@ -165,7 +165,7 @@ class SheetManager(commands.Cog):
         conflicts = [a for a in character.overrides.attacks if a.name.lower() in [new.name.lower() for new in attacks]]
         if conflicts:
             if await confirm(ctx, f"This will overwrite {len(conflicts)} attacks with the same name "
-                                  f"({', '.join(c.name for c in conflicts)}). Continue?"):
+                                  f"({', '.join(c.name for c in conflicts)}). Continue? (Reply with yes/no)"):
                 for conflict in conflicts:
                     character.overrides.attacks.remove(conflict)
             else:
@@ -184,7 +184,7 @@ class SheetManager(commands.Cog):
         """
         character: Character = await Character.from_ctx(ctx)
         attack = await search_and_select(ctx, character.overrides.attacks, name, lambda a: a.name)
-        if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}?")):
+        if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}? (Reply with yes/no)")):
             return await ctx.send("Okay, aborting delete.")
         character.overrides.attacks.remove(attack)
         await character.commit(ctx)
@@ -511,7 +511,7 @@ class SheetManager(commands.Cog):
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
             return await confirm(ctx,
-                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (Reply with yes/no)?\n"
                                  f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
 

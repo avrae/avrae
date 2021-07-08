@@ -1,7 +1,6 @@
 import discord  # noqa: F401 Is used in file
 import pytest
 
-
 pytestmark = pytest.mark.asyncio
 
 

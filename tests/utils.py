@@ -8,6 +8,8 @@ from cogs5e.models.character import Character
 from cogs5e.models.initiative import Combat
 from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
 # rolled dice: the individual results of dice
 # matches:
 # (5)
@@ -69,7 +71,7 @@ def requires_data():
     Spells: Fire Bolt, Fireball
     """
     if not compendium.spells:  # if spells have not loaded, no data has
-        compendium.load_all_json(base_path=os.path.relpath("tests/static/compendium"))
+        compendium.load_all_json(base_path=os.path.join(dir_path, "static", "compendium"))
         compendium.load_common()
 
     if not compendium.spells:  # we have no data, then

@@ -11,6 +11,7 @@ from utils.argparser import ParsedArguments
 class SimpleCombat:
     def __init__(self, combat, me):
         self._combat: Combat = combat
+        self.description = None
 
         self.combatants = [SimpleCombatant(c) for c in combat.get_combatants()]
         self.groups = [SimpleGroup(c) for c in combat.get_groups()]
@@ -52,6 +53,25 @@ class SimpleCombat:
         if combatant:
             return SimpleCombatant(combatant)
         return None
+
+    @property
+    def desc(self):
+        """
+        The description on the combatant. ``None`` if not set.
+
+        :rtype: str or None
+        """
+        return self.description
+
+    def set_desc(self, desc: str):
+        """
+        Sets the combat's description.
+
+        :param str note: The new description.
+        """
+        if desc is not None:
+            desc = str(desc)
+        self.description = desc
 
     def get_group(self, name):
         """
@@ -145,7 +165,7 @@ class SimpleCombatant(AliasStatBlock):
     def race(self):
         """
         The race of the combatant. Will return None for monsters or combatants with no race.
-        
+
         :rtype: str or None
         """
         return self._race
@@ -154,7 +174,7 @@ class SimpleCombatant(AliasStatBlock):
     def creature_type(self):
         """
         The creature type of the combatant. Will return None for players or combatants with no creature type.
-        
+
         :rtype: str or None
         """
         return self._creature_type
@@ -163,7 +183,7 @@ class SimpleCombatant(AliasStatBlock):
     def monster_name(self):
         """
         The monster name of the combatant. Will return None for players.
-        
+
         :rtype: str or None
         """
         return self._monster_name
@@ -176,7 +196,7 @@ class SimpleCombatant(AliasStatBlock):
         :param bool adv: Whether to roll the save with advantage. Rolls with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
         :returns: A SimpleRollResult describing the rolled save.
         :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
-        """
+        """  # noqa: E501
         try:
             save = self._combatant.saves.get(str(ability))
         except ValueError:
@@ -283,7 +303,7 @@ class SimpleCombatant(AliasStatBlock):
 
         :param str group: The name of the group. None to remove from group.
         :return: The combatant's new group, or None if the combatant was removed from a group.
-        :rtype: :class:`~aliasing.api.combat.SimpleGroup` or None   
+        :rtype: :class:`~aliasing.api.combat.SimpleGroup` or None
         """
         if group is not None:
             group = str(group)
@@ -331,7 +351,7 @@ class SimpleCombatant(AliasStatBlock):
         :type parent: :class:`~aliasing.api.combat.SimpleEffect`
         :param bool end: Whether the effect ticks on the end of turn.
         :param str desc: A description of the effect.
-        """
+        """  # noqa: E501
         name, args, duration = str(name), str(args), int(duration)
         if desc is not None:
             desc = str(desc)

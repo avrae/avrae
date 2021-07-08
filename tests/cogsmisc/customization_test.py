@@ -14,22 +14,22 @@ async def test_snippet_before_edit(avrae, dhttp):
 
     avrae.message("!snippet 2d6 adv")
     await dhttp.receive_message("**Warning:** Creating a snippet named `2d6` might cause hidden problems "
-                                "if you try to use the same roll in other commands.\nAre you sure you want "
-                                "to create this snippet? (Reply with yes/no)", regex=False)
+                                "if you try to use the same roll in other commands.\nAre you sure you want to "
+                                "create this snippet? (Reply with yes/no)", regex=False)
     avrae.message("no")
     await dhttp.receive_message("Ok, cancelling.", regex=False)
 
     avrae.message("!snippet adv adv")
     await dhttp.receive_message("**Warning:** Creating a snippet named `adv` will prevent you from using "
                                 "the built-in `adv` argument in Avrae commands.\nAre you sure you want to "
-                                " create this snippet? (Reply with yes/no)", regex=False)
+                                "create this snippet? (Reply with yes/no)", regex=False)
     avrae.message("yes")
     await dhttp.receive_message("Snippet `adv` added.```py\n!snippet adv adv\n```", regex=False)
 
     avrae.message("!snippet adv adv")
     await dhttp.receive_message("**Warning:** Creating a snippet named `adv` will prevent you from using "
                                 "the built-in `adv` argument in Avrae commands.\nAre you sure you want to "
-                                " create this snippet? (Reply with yes/no)", regex=False)
+                                "create this snippet? (Reply with yes/no)", regex=False)
     avrae.message("no")
     await dhttp.receive_message("Ok, cancelling.", regex=False)
 

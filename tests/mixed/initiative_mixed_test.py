@@ -3,7 +3,8 @@ import pytest
 
 from gamedata.compendium import compendium
 from tests.conftest import end_init, start_init
-from tests.utils import ATTACK_PATTERN, DAGGER_PATTER, DAMAGE_PATTERN, SAVE_PATTERN, active_character, active_combat
+from tests.utils import ATTACK_PATTERN, DAGGER_PATTER, DAMAGE_PATTERN, SAVE_PATTERN, active_character, active_combat, \
+    requires_data
 
 pytestmark = pytest.mark.asyncio
 
@@ -155,7 +156,8 @@ async def cast_I(avrae, dhttp, names=('KO2', 'KO3'), cast_command="!cast"):
         assert kobold.hp < hp_before[k]
 
 
-@pytest.mark.usefixtures("init_fixture", "character", "_requires")
+@pytest.mark.usefixtures("character", "init_fixture", "_requires")
+@requires_data()
 class TestSpellSlotConsumption:
     """
     3 cases:
@@ -192,6 +194,9 @@ class TestSpellSlotConsumption:
         avrae.message("!init join")
         await dhttp.drain()
         await self.cast_fireball(avrae, dhttp)
+
+    async def test_cast_II_to_XX(self, avrae, dhttp):  # end init to set up for more character params
+        await end_init(avrae, dhttp)
 
 
 @pytest.mark.usefixtures("init_fixture")

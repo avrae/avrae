@@ -560,8 +560,8 @@ class GameTrack(commands.Cog):
         embed = EmbedWithCharacter(character)
         # Check that we're not over the field limit
         total = len(character.consumables)
-        if total > 25:
-            page = max(0, page-1)
+        if total > 25:  # Discord Field limit
+            page = max(0, page-1)  # Humans count from 1
             maxpage = total // 25
             start = min(page*25, total-25)
             end = max(start+25, total)

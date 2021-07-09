@@ -21,7 +21,7 @@ class Combat:
 
     def __init__(self, channel_id, message_id, dm_id, options, ctx,
                  combatants=None, round_num=0, turn_num=0, current_index=None,
-                 notes=None):
+                 info=None):
         if combatants is None:
             combatants = []
         self._channel = str(channel_id)  # readonly
@@ -33,7 +33,7 @@ class Combat:
         self._turn = turn_num
         self._current_index = current_index
         self.ctx = ctx
-        self._notes = notes
+        self._info = info
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
@@ -60,7 +60,7 @@ class Combat:
     @classmethod
     async def from_dict(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'], raw.get('notes'))
+                   raw['turn'], raw['current'], raw.get('info'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -93,7 +93,7 @@ class Combat:
     @classmethod
     def from_dict_sync(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'], raw.get('notes'))
+                   raw['turn'], raw['current'], raw.get('info'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -111,7 +111,7 @@ class Combat:
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
                 'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-                'round': self.round_num, 'current': self._current_index, 'notes': self._notes}
+                'round': self.round_num, 'current': self._current_index, 'info': self._info}
 
     # members
     @property
@@ -159,12 +159,12 @@ class Combat:
         return {c.id: c for c in self.get_combatants(groups=True)}
 
     @property
-    def notes(self):
-        return self._notes
+    def info(self):
+        return self._info
 
-    @notes.setter
-    def notes(self, new_notes):
-        self._notes = new_notes
+    @info.setter
+    def info(self, new_info):
+        self._info = new_info
 
     # combatants
     @property

@@ -54,23 +54,23 @@ class SimpleCombat:
         return None
 
     @property
-    def note(self):
+    def info(self):
         """
-        The description on the combatant. ``None`` if not set.
+        Information about the combat. ``None`` if not set.
 
         :rtype: str or None
         """
-        return self._combat.notes
+        return self._combat.info
 
-    def set_note(self, note: str):
+    def set_info(self, info: str):
         """
-        Sets the combatant's note.
+        Sets the combat's information.
 
-        :param str note: The new note.
+        :param str note: The new info.
         """
-        if note is not None:
-            note = str(note)
-        self._combat.notes = note
+        if info is not None:
+            info = str(info)
+        self._combat.info = info
 
     def get_group(self, name):
         """

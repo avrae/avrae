@@ -569,12 +569,8 @@ class GameTrack(commands.Cog):
             start = min(page*25, total-25)
             end = max(start+25, total)
             # Build the current page
-            embed.description = f"""**Custom Counters**
-            There are too many counters to display.
-            Use `cc list <page #>` to display other pages.
-
-            Displaying page [{page+1}/{maxpage+1}]
-            """
+            embed.description = "**Custom Counters**"
+            embed.set_footer(text=f"Page [{page+1}/{maxpage+1}] | {ctx.prefix}cc list <page>")
             for counter in character.consumables[start:end]:
                 embed.add_field(name=counter.name, value=counter.full_str())
         else:

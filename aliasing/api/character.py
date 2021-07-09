@@ -250,32 +250,6 @@ class AliasCharacter(AliasStatBlock):
         if name in self._character.cvars:
             del self._character.cvars[name]
 
-    def cc_full_str(self, name: str, include_name: bool = False):
-        """
-        Returns a string representing a full custom counter.
-
-        :param str name: The name of the custom counter to get.
-        :param bool include_name: If the name of the counter should be included. Defaults to False.
-        :returns: A string representing all components of the counter.
-        :rtype: str
-        :raises: :exc:`ConsumableException` if the counter does not exist.
-
-        Example:
-
-        >>> cc_full_str('Bardic Inspiration')
-        ◉◉◉◉
-        Resets On: Long Rest
-        >>> cc_full_str('Bardic Inspiration', True)
-        Bardic Inspiration
-        ◉◉◉◉
-        Resets On: Long Rest
-        """
-        counter = self._get_consumable(name)
-        out = counter.full_str()
-        if include_name:
-            out = f'**{counter.name}**\n' + out
-        return out
-
     # --- other properties ---
     @property
     def owner(self):

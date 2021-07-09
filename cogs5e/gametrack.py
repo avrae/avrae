@@ -554,12 +554,29 @@ class GameTrack(commands.Cog):
         await ctx.send(f"Deleted counter {counter.name}.")
 
     @customcounter.command(name='summary', aliases=['list'])
-    async def customcounter_summary(self, ctx):
+    async def customcounter_summary(self, ctx, page: int = 0):
         """Prints a summary of all custom counters."""
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
-        for counter in character.consumables:
-            embed.add_field(name=counter.name, value=counter.full_str())
+        # Check that we're not over the field limit
+        total = len(character.consumables)
+        if total > 25:
+            page = max(0, page-1)
+            maxpage = total // 25
+            start = min(page*25, total-25)
+            end = max(start+25, total)
+            # Build the current page
+            embed.description = f"""**Custom Counters**
+            There are too many counters to display.
+            Use `cc list <page #>` to display other pages.
+            
+            Displaying page [{page+1}/{maxpage+1}]
+            """
+            for counter in character.consumables[start:end]:
+                embed.add_field(name=counter.name, value=counter.full_str())
+        else:
+            for counter in character.consumables:
+                embed.add_field(name=counter.name, value=counter.full_str())
         await ctx.send(embed=embed)
 
     @customcounter.command(name='reset')

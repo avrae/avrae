@@ -1,3 +1,4 @@
+from typing import Optional
 from d20 import roll
 
 from aliasing.api.functions import SimpleRollResult
@@ -6,6 +7,8 @@ from cogs5e.models.errors import InvalidSaveType
 from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, Effect, CombatantType
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
+
+MAX_METADATA_SIZE = 100000
 
 
 class SimpleCombat:
@@ -53,25 +56,6 @@ class SimpleCombat:
             return SimpleCombatant(combatant)
         return None
 
-    @property
-    def info(self):
-        """
-        Information about the combat. ``None`` if not set.
-
-        :rtype: str or None
-        """
-        return self._combat.info
-
-    def set_info(self, info: str):
-        """
-        Sets the combat's information.
-
-        :param str note: The new info.
-        """
-        if info is not None:
-            info = str(info)
-        self._combat.info = info
-
     def get_group(self, name):
         """
         Gets a :class:`~aliasing.api.combat.SimpleGroup`, fuzzy searching (partial match) on name.
@@ -85,6 +69,51 @@ class SimpleCombat:
         if group:
             return SimpleGroup(group)
         return None
+
+    def set_metadata(self, k: str, v: str):
+        """
+        Assigns a metadata key to the passed value.
+        Maximum size of the metadata is 100k characters, key and item inclusive.
+
+        :param str k: The metadata key to set
+        :param str v: The metadata value to set
+
+        Example:
+
+        >>> set_metadata("Test", dump_json({"Status": ["Mario", 1, 2]}))
+        """
+        if sum(len(k + v) for k, v in self._combat._metadata.items()) > MAX_METADATA_SIZE:
+            raise ValueError
+        self._combat._metadata[k] = v
+
+    def get_metadata(self, k: str, default=None) -> str:
+        """
+        Gets a metadata value for the passed key or returns *default* if the name is not set.
+
+        :param str k: The metadata key to get
+        :param default: What to return if the name is not set.
+
+        Example:
+
+        >>> get_metadata("Test")
+        "{"Status": ["Mario", 1, 2]}"
+        """
+        return self._combat._metadata.get(k, default)
+
+    def delete_metadata(self, k: str) -> Optional[str]:
+        """
+        Removes a key from the metadata.
+
+        :param str k: The metadata key to remove
+        :return: The removed value or ``None`` if the key is not found.
+        :rtype: str or None
+
+        Example:
+
+        >>> delete_metadata("Test")
+        "{"Status": ["Mario", 1, 2]}"
+        """
+        return self._combat._metadata.pop(k, None)
 
     # private functions
     def func_set_character(self, character):

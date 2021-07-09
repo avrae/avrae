@@ -21,7 +21,7 @@ class Combat:
 
     def __init__(self, channel_id, message_id, dm_id, options, ctx,
                  combatants=None, round_num=0, turn_num=0, current_index=None,
-                 info=None):
+                 metadata=None):
         if combatants is None:
             combatants = []
         self._channel = str(channel_id)  # readonly
@@ -33,7 +33,9 @@ class Combat:
         self._turn = turn_num
         self._current_index = current_index
         self.ctx = ctx
-        self._info = info
+        if metadata is None:
+            metadata = {}
+        self._metadata = metadata
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
@@ -60,7 +62,7 @@ class Combat:
     @classmethod
     async def from_dict(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'], raw.get('info'))
+                   raw['turn'], raw['current'], raw.get('metadata'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -93,7 +95,7 @@ class Combat:
     @classmethod
     def from_dict_sync(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'], raw.get('info'))
+                   raw['turn'], raw['current'], raw.get('metadata'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -111,7 +113,7 @@ class Combat:
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
                 'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-                'round': self.round_num, 'current': self._current_index, 'info': self._info}
+                'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata}
 
     # members
     @property
@@ -157,14 +159,6 @@ class Combat:
     @property
     def _combatant_id_map(self):
         return {c.id: c for c in self.get_combatants(groups=True)}
-
-    @property
-    def info(self):
-        return self._info
-
-    @info.setter
-    def info(self, new_info):
-        self._info = new_info
 
     # combatants
     @property

@@ -250,24 +250,31 @@ class AliasCharacter(AliasStatBlock):
         if name in self._character.cvars:
             del self._character.cvars[name]
 
-    def cc_full_str(self, name):
+    def cc_full_str(self, name: str, include_name: bool = False):
         """
         Returns a string representing a full custom counter.
 
         :param str name: The name of the custom counter to get.
+        :param bool include_name: If the name of the counter should be included. Defaults to False.
         :returns: A string representing all components of the counter.
         :rtype: str
         :raises: :exc:`ConsumableException` if the counter does not exist.
+        
+
+        :returns: A string representing all components of the counter.
+        :rtype: str
 
         Example:
 
-        >>> cc_full_str('Bardic Inspiration')
-        Bardic Inspiration
+        >>> full_str()
         ◉◉◉◉
         Resets On: Long Rest
         """
         counter = self._get_consumable(name)
-        return f"""**{counter.name}**\n{counter.full_str()}"""
+        out = counter.full_str()
+        if include_name:
+            out = f'**{counter.name}**\n' + out
+        return out
 
     # --- other properties ---
     @property
@@ -451,21 +458,24 @@ class AliasCustomCounter:
         """
         return self._cc.reset()
 
-    def full_str(self):
+    def full_str(self, include_name: bool = False):
         """
         Returns a string representing the full custom counter.
 
+        :param bool include_name: If the name of the counter should be included. Defaults to False.
         :returns: A string representing all components of the counter.
         :rtype: str
 
         Example:
 
         >>> full_str()
-        Bardic Inspiration
         ◉◉◉◉
         Resets On: Long Rest
         """
-        return f"""**{self.name}**\n{self._cc.full_str()}"""
+        out = self._cc.full_str()
+        if include_name:
+            out = f'**{self.name}**\n' + out
+        return out
 
     def __str__(self):
         return str(self._cc)

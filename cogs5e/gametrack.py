@@ -569,7 +569,7 @@ class GameTrack(commands.Cog):
             embed.description = f"""**Custom Counters**
             There are too many counters to display.
             Use `cc list <page #>` to display other pages.
-            
+
             Displaying page [{page+1}/{maxpage+1}]
             """
             for counter in character.consumables[start:end]:

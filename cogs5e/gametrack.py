@@ -558,8 +558,15 @@ class GameTrack(commands.Cog):
         """Prints a summary of all custom counters."""
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
-        for counter in character.consumables:
-            embed.add_field(name=counter.name, value=counter.full_str())
+        if len(character.consumables) > 23:
+            character.consumables.sort()
+            embed.description = f"""You currently have more counters than can be displayed
+            please use `cc <counter name>` to display information on a specific counter.
+            
+            **Counters**\n{', '.join([x.name for x in character.consumables])}"""
+        else:
+            for counter in character.consumables:
+                embed.add_field(name=counter.name, value=counter.full_str())
         await ctx.send(embed=embed)
 
     @customcounter.command(name='reset')

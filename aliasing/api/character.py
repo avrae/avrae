@@ -259,14 +259,14 @@ class AliasCharacter(AliasStatBlock):
         :returns: A string representing all components of the counter.
         :rtype: str
         :raises: :exc:`ConsumableException` if the counter does not exist.
-        
-
-        :returns: A string representing all components of the counter.
-        :rtype: str
 
         Example:
 
-        >>> full_str()
+        >>> cc_full_str('Bardic Inspiration')
+        ◉◉◉◉
+        Resets On: Long Rest
+        >>> cc_full_str('Bardic Inspiration', True)
+        Bardic Inspiration
         ◉◉◉◉
         Resets On: Long Rest
         """
@@ -468,7 +468,11 @@ class AliasCustomCounter:
 
         Example:
 
-        >>> full_str()
+        >>> full_str('Bardic Inspiration')
+        ◉◉◉◉
+        Resets On: Long Rest
+        >>> full_str('Bardic Inspiration', True)
+        Bardic Inspiration
         ◉◉◉◉
         Resets On: Long Rest
         """

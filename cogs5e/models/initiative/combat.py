@@ -20,7 +20,8 @@ class Combat:
     _cache = cachetools.TTLCache(maxsize=50, ttl=10)
 
     def __init__(self, channel_id, message_id, dm_id, options, ctx,
-                 combatants=None, round_num=0, turn_num=0, current_index=None):
+                 combatants=None, round_num=0, turn_num=0, current_index=None,
+                 notes=None):
         if combatants is None:
             combatants = []
         self._channel = str(channel_id)  # readonly
@@ -32,6 +33,7 @@ class Combat:
         self._turn = turn_num
         self._current_index = current_index
         self.ctx = ctx
+        self._notes = notes
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
@@ -58,7 +60,7 @@ class Combat:
     @classmethod
     async def from_dict(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'])
+                   raw['turn'], raw['current'], raw.get('notes'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -91,7 +93,7 @@ class Combat:
     @classmethod
     def from_dict_sync(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'])
+                   raw['turn'], raw['current'], raw.get('notes'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -109,7 +111,7 @@ class Combat:
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
                 'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-                'round': self.round_num, 'current': self._current_index}
+                'round': self.round_num, 'current': self._current_index, 'notes': self._notes}
 
     # members
     @property
@@ -155,6 +157,14 @@ class Combat:
     @property
     def _combatant_id_map(self):
         return {c.id: c for c in self.get_combatants(groups=True)}
+
+    @property
+    def notes(self):
+        return self._notes
+
+    @notes.setter
+    def notes(self, new_notes):
+        self._notes = new_notes
 
     # combatants
     @property

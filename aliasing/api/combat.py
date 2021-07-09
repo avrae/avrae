@@ -11,7 +11,6 @@ from utils.argparser import ParsedArguments
 class SimpleCombat:
     def __init__(self, combat, me):
         self._combat: Combat = combat
-        self.description = None
 
         self.combatants = [SimpleCombatant(c) for c in combat.get_combatants()]
         self.groups = [SimpleGroup(c) for c in combat.get_groups()]
@@ -55,23 +54,23 @@ class SimpleCombat:
         return None
 
     @property
-    def desc(self):
+    def note(self):
         """
         The description on the combatant. ``None`` if not set.
 
         :rtype: str or None
         """
-        return self.description
+        return self._combat.notes
 
-    def set_desc(self, desc: str):
+    def set_note(self, note: str):
         """
-        Sets the combat's description.
+        Sets the combatant's note.
 
-        :param str note: The new description.
+        :param str note: The new note.
         """
-        if desc is not None:
-            desc = str(desc)
-        self.description = desc
+        if note is not None:
+            note = str(note)
+        self._combat.notes = note
 
     def get_group(self, name):
         """

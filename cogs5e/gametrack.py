@@ -555,7 +555,7 @@ class GameTrack(commands.Cog):
 
     @customcounter.command(name='summary', aliases=['list'])
     async def customcounter_summary(self, ctx, page: int = 0):
-        """Prints a summary of all custom counters."""
+        """Prints a summary of all custom counters. Will use paging if more than 25."""
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         # Check that we're not over the field limit

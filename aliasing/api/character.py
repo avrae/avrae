@@ -252,14 +252,19 @@ class AliasCharacter(AliasStatBlock):
 
     def cc_full_str(self, name):
         """
-        Returns the full counter string in the following format:
-            Title
-            Current Value (bubble|numeric)
-            Reset On (long|short)
-            Resets To
-            On Reset
+        Returns a string representing a full custom counter.
 
-        :return str
+        :param str name: The name of the custom counter to get.
+        :returns: A string representing all components of the counter.
+        :rtype: str
+        :raises: :exc:`ConsumableException` if the counter does not exist.
+
+        Example:
+
+        >>> cc_full_str('Bardic Inspiration')
+        Bardic Inspiration
+        ◉◉◉◉
+        Resets On: Long Rest
         """
         counter = self._get_consumable(name)
         return f"""**{counter.name}**\n{counter.full_str()}"""
@@ -448,14 +453,17 @@ class AliasCustomCounter:
 
     def full_str(self):
         """
-        Returns the full counter string in the following format:
-            Title
-            Current Value (bubble|numeric)
-            Reset On (long|short)
-            Resets To
-            On Reset
+        Returns a string representing the full custom counter.
 
-        :return str
+        :returns: A string representing all components of the counter.
+        :rtype: str
+
+        Example:
+
+        >>> full_str()
+        Bardic Inspiration
+        ◉◉◉◉
+        Resets On: Long Rest
         """
         return f"""**{self.name}**\n{self._cc.full_str()}"""
 

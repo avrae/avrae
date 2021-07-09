@@ -250,7 +250,7 @@ class AliasCharacter(AliasStatBlock):
         if name in self._character.cvars:
             del self._character.cvars[name]
 
-    def full_str(self, name):
+    def cc_full_str(self, name):
         """
         Returns the full counter string in the following format:
             Title

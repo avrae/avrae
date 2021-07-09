@@ -250,6 +250,20 @@ class AliasCharacter(AliasStatBlock):
         if name in self._character.cvars:
             del self._character.cvars[name]
 
+    def full_str(self, name):
+        """
+        Returns the full counter string in the following format:
+            Title
+            Current Value (bubble|numeric)
+            Reset On (long|short)
+            Resets To
+            On Reset
+
+        :return str
+        """
+        counter = self._get_consumable(name)
+        return f"""**{counter.name}**\n{counter.full_str()}"""
+
     # --- other properties ---
     @property
     def owner(self):
@@ -431,6 +445,19 @@ class AliasCustomCounter:
         :return CustomCounterResetResult: (new_value: int, old_value: int, target_value: int, delta: str)
         """
         return self._cc.reset()
+
+    def full_str(self):
+        """
+        Returns the full counter string in the following format:
+            Title
+            Current Value (bubble|numeric)
+            Reset On (long|short)
+            Resets To
+            On Reset
+
+        :return str
+        """
+        return f"""**{self.name}**\n{self._cc.full_str()}"""
 
     def __str__(self):
         return str(self._cc)

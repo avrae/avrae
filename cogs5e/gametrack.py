@@ -434,7 +434,7 @@ class GameTrack(commands.Cog):
         `mod` - Add *modifier* counter value
         `set` - Sets the counter value to *modifier*
 
-        *Ex:* 
+        *Ex:*
         `!cc Test 1`
         `!cc Test -2*2d4`
         `!cc Test set 1d4`
@@ -462,21 +462,19 @@ class GameTrack(commands.Cog):
             m = modifier.split(' ')
             operator = m[0]
             modifier = m[-1]
-        
+
         roll_text = ''
         try:
             result = int(modifier)
         except ValueError:
-            try: # if we're not a number, are we dice
+            try:  # if we're not a number, are we dice
                 roll_result = d20.roll(str(modifier))
                 result = roll_result.total
                 roll_text = f"\nRoll: {roll_result}"
             except d20.RollSyntaxError:
                 raise InvalidArgument(f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string.")
 
-        change = ''
         old_value = counter.value
-        
         result_embed = EmbedWithCharacter(character)
         if not operator or operator == 'mod':
             new_value = counter.value + result
@@ -515,7 +513,7 @@ class GameTrack(commands.Cog):
         `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers.
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
         `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
-        """
+        """  # noqa: E501
         character: Character = await Character.from_ctx(ctx)
 
         conflict = next((c for c in character.consumables if c.name.lower() == name.lower()), None)
@@ -542,7 +540,7 @@ class GameTrack(commands.Cog):
         except InvalidArgument as e:
             return await ctx.send(f"Failed to create counter: {e}")
         else:
-            await ctx.send(f"Custom counter created.")
+            await ctx.send("Custom counter created.")
 
     @customcounter.command(name='delete', aliases=['remove'])
     async def customcounter_delete(self, ctx, name):
@@ -560,7 +558,7 @@ class GameTrack(commands.Cog):
         Use `!cc list <page>` to view pages if you have more than 25 counters.
         """
         character: Character = await Character.from_ctx(ctx)
-        embed = EmbedWithCharacter(character)
+        embed = EmbedWithCharacter(character, title="Custom Counters")
         # Check that we're not over the field limit
         total = len(character.consumables)
         if total > 25:  # Discord Field limit
@@ -569,7 +567,6 @@ class GameTrack(commands.Cog):
             start = min(page*25, total-25)
             end = max(start+25, total)
             # Build the current page
-            embed.description = "**Custom Counters**"
             embed.set_footer(text=f"Page [{page+1}/{maxpage+1}] | {ctx.prefix}cc list <page>")
             for counter in character.consumables[start:end]:
                 embed.add_field(name=counter.name, value=counter.full_str())
@@ -611,7 +608,7 @@ class GameTrack(commands.Cog):
     Casts a spell.
     __**Valid Arguments**__
     {VALID_SPELLCASTING_ARGS}
-    
+
     {VALID_AUTOMATION_ARGS}
     """)
     async def cast(self, ctx, spell_name, *, args=''):

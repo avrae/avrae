@@ -279,7 +279,7 @@ class Combat:
         :param strict: Whether group name must be a full case insensitive match.
         :return: The combatant group.
         """
-        if name: # catch no group without having to loop
+        if name:  # catch no group without having to loop
             if name in self._combatant_id_map and isinstance(self._combatant_id_map[name], CombatantGroup):
                 return self._combatant_id_map[name]
             if strict:

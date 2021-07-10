@@ -251,6 +251,9 @@ class Combatant(BaseCombatant, StatBlock):
                 self.combat.goto_turn(self, True)
             return c_group
 
+    def get_group_name(self):
+        return self.combat.get_group(self._group_id).name if self._group_id else None
+
     # effects
     def add_effect(self, effect):
         # handle name conflict

@@ -56,6 +56,8 @@ class StatBlock:
         self._saves = saves
         # defensive resistances
         self._resistances = resistances
+        # assigned by combatant type
+        self._creature_type = None
 
         # ===== dynamic =====
         # hp/ac

@@ -398,7 +398,7 @@ class GameTrack(commands.Cog):
         -dc <dc> - When cast, this spell always uses this DC.
         -b <sab> - When cast, this spell always uses this spell attack bonus.
         -mod <mod> - When cast, this spell always uses this as the value of its casting stat (usually for healing spells).
-        """
+        """  # noqa: E501
         spell = await select_spell_full(ctx, spell_name)
         character: Character = await Character.from_ctx(ctx)
         args = argparse(args)
@@ -417,8 +417,10 @@ class GameTrack(commands.Cog):
         """
         character: Character = await Character.from_ctx(ctx)
 
-        spell_to_remove = await search_and_select(ctx, character.overrides.spells, spell_name, lambda s: s.name,
-                                                  message="To remove a spell on your sheet, just delete it there and `!update`.")
+        spell_to_remove = await search_and_select(
+            ctx, character.overrides.spells, spell_name, lambda s: s.name,
+            message="To remove a spell on your sheet, just delete it there and `!update`."
+        )
         character.remove_known_spell(spell_to_remove)
 
         await character.commit(ctx)
@@ -472,7 +474,8 @@ class GameTrack(commands.Cog):
                 result = roll_result.total
                 roll_text = f"\nRoll: {roll_result}"
             except d20.RollSyntaxError:
-                raise InvalidArgument(f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string.")
+                raise InvalidArgument(
+                    f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string.")
 
         old_value = counter.value
         result_embed = EmbedWithCharacter(character)
@@ -562,12 +565,12 @@ class GameTrack(commands.Cog):
         # Check that we're not over the field limit
         total = len(character.consumables)
         if total > 25:  # Discord Field limit
-            page = max(0, page-1)  # Humans count from 1
+            page = max(0, page - 1)  # Humans count from 1
             maxpage = total // 25
-            start = min(page*25, total-25)
-            end = max(start+25, total)
+            start = min(page * 25, total - 25)
+            end = max(start + 25, total)
             # Build the current page
-            embed.set_footer(text=f"Page [{page+1}/{maxpage+1}] | {ctx.prefix}cc list <page>")
+            embed.set_footer(text=f"Page [{page + 1}/{maxpage + 1}] | {ctx.prefix}cc list <page>")
             for counter in character.consumables[start:end]:
                 embed.add_field(name=counter.name, value=counter.full_str())
         else:

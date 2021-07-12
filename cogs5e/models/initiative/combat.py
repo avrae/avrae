@@ -279,17 +279,16 @@ class Combat:
         :param strict: Whether group name must be a full case insensitive match.
         :return: The combatant group.
         """
-        if name:  # catch no group without having to loop
-            if name in self._combatant_id_map and isinstance(self._combatant_id_map[name], CombatantGroup):
-                return self._combatant_id_map[name]
-            if strict:
-                grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
-            else:
-                grp = next((g for g in self.get_groups() if name.lower() in g.name.lower()), None)
+        if name in self._combatant_id_map and isinstance(self._combatant_id_map[name], CombatantGroup):
+            return self._combatant_id_map[name]
+        if strict:
+            grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
+        else:
+            grp = next((g for g in self.get_groups() if name.lower() in g.name.lower()), None)
 
-            if grp is None and create is not None:
-                grp = CombatantGroup.new(self, name, init=create, ctx=self.ctx)
-                self.add_combatant(grp)
+        if grp is None and create is not None:
+            grp = CombatantGroup.new(self, name, init=create, ctx=self.ctx)
+            self.add_combatant(grp)
 
         return grp
 

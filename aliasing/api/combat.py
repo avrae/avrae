@@ -139,7 +139,8 @@ class SimpleCombatant(AliasStatBlock):
 
         :rtype: str or None
         """
-        return self._combatant.get_group_name()
+        group = self._combatant.get_group()
+        return group.name if group else None
 
     @property
     def race(self):

@@ -592,18 +592,6 @@ class InitTracker(commands.Cog):
             await ctx.send("Added note.")
         await combat.final()
 
-    @init.command()
-    async def info(self, ctx, *, info: str = ''):
-        """Attaches information to the combat."""
-        combat = await Combat.from_ctx(ctx)
-
-        combat.info = info
-        if info == '':
-            await ctx.send("Removed info.")
-        else:
-            await ctx.send("Added info.")
-        await combat.final()
-
     @init.command(aliases=['opts'])
     async def opt(self, ctx, name: str, *args):
         """Edits the options of a combatant.

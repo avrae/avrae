@@ -24,6 +24,8 @@ class Combat:
                  metadata=None):
         if combatants is None:
             combatants = []
+        if metadata is None:
+            metadata = {}
         self._channel = str(channel_id)  # readonly
         self._summary = int(message_id)  # readonly
         self._dm = str(dm_id)
@@ -33,8 +35,6 @@ class Combat:
         self._turn = turn_num
         self._current_index = current_index
         self.ctx = ctx
-        if metadata is None:
-            metadata = {}
         self._metadata = metadata
 
     @classmethod

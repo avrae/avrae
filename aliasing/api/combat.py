@@ -105,7 +105,7 @@ class SimpleCombatant(AliasStatBlock):
         self._monster_name = None
 
         if combatant.type == CombatantType.MONSTER:
-            AliasStatBlock._creature_type = combatant._creature_type
+            self._creature_type = combatant._creature_type
             self._monster_name = combatant.monster_name
         elif combatant.type == CombatantType.PLAYER:
             self._race = combatant.character.race

@@ -432,6 +432,29 @@ class AliasCustomCounter:
         """
         return self._cc.reset()
 
+    def full_str(self, include_name: bool = False):
+        """
+        Returns a string representing the full custom counter.
+
+        :param bool include_name: If the name of the counter should be included. Defaults to False.
+        :returns: A string representing all components of the counter.
+        :rtype: str
+
+        Example:
+
+        >>> full_str('Bardic Inspiration')
+        "◉◉◉◉\n"
+        "**Resets On**: Long Rest"
+        >>> full_str('Bardic Inspiration', True)
+        "**Bardic Inspiration**\n"
+        "◉◉◉◉\n"
+        "**Resets On**: Long Rest"
+        """
+        out = self._cc.full_str()
+        if include_name:
+            out = f'**{self.name}**\n' + out
+        return out
+
     def __str__(self):
         return str(self._cc)
 

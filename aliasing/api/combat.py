@@ -1,16 +1,18 @@
 from typing import Optional
+
 from d20 import roll
 
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
-from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, Effect, CombatantType
+from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, CombatantType, Effect
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
 
 MAX_METADATA_SIZE = 100000
 
 
+# noinspection PyProtectedMember
 class SimpleCombat:
     def __init__(self, combat, me):
         self._combat: Combat = combat
@@ -78,13 +80,15 @@ class SimpleCombat:
         :param str k: The metadata key to set
         :param str v: The metadata value to set
 
-        Example:
-
         >>> set_metadata("Test", dump_json({"Status": ["Mario", 1, 2]}))
         """
-        self._combat._metadata[str(k)] = str(v)
-        if sum(len(k + v) for k, v in self._combat._metadata.items()) > MAX_METADATA_SIZE:
+        key = str(k)
+        value = str(v)
+        previous_metadata_size = sum(len(ke) + len(va) for ke, va in self._combat._metadata.items() if ke != key)
+        new_metadata_size = len(key) + len(value)
+        if previous_metadata_size + new_metadata_size > MAX_METADATA_SIZE:
             raise ValueError("Combat metadata is too large")
+        self._combat._metadata[key] = value
 
     def get_metadata(self, k: str, default=None) -> str:
         """
@@ -92,8 +96,6 @@ class SimpleCombat:
 
         :param str k: The metadata key to get
         :param default: What to return if the name is not set.
-
-        Example:
 
         >>> get_metadata("Test")
         '{"Status": ["Mario", 1, 2]}'
@@ -107,8 +109,6 @@ class SimpleCombat:
         :param str k: The metadata key to remove
         :return: The removed value or ``None`` if the key is not found.
         :rtype: str or None
-
-        Example:
 
         >>> delete_metadata("Test")
         '{"Status": ["Mario", 1, 2]}'
@@ -134,6 +134,7 @@ class SimpleCombat:
         return f"<{self.__class__.__name__}>"
 
 
+# noinspection PyProtectedMember
 class SimpleCombatant(AliasStatBlock):
     """
     Represents a combatant in combat.

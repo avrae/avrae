@@ -106,14 +106,13 @@ DUMMY_READY = {
 }
 
 DUMMY_GUILD_CREATE = {
-    'afk_timeout': 300,
-    'description': None,
     'members': [
         {
             'user': ME_USER,
             'roles': [],
             'mute': False,
             'joined_at': NOW,
+            'hoisted_role': None,
             'deaf': False
         },
         {
@@ -121,6 +120,7 @@ DUMMY_GUILD_CREATE = {
             'roles': [],
             'mute': False,
             'joined_at': NOW,
+            'hoisted_role': None,
             'deaf': False
         },
         {
@@ -128,38 +128,23 @@ DUMMY_GUILD_CREATE = {
             'roles': [],
             'mute': False,
             'joined_at': NOW,
+            'hoisted_role': None,
             'deaf': False
         }
     ],
-    'roles': [
-        {
-            'position': 0,
-            'permissions': 104324681,
-            'name': '@everyone',
-            'mentionable': False,
-            'managed': False,
-            'id': str(TEST_GUILD_ID),
-            'hoist': False,
-            'color': 0
-        }
-    ],
-    'afk_channel_id': None,
-    'system_channel_flags': 0,
+    'icon': None,
+    'owner_id': OWNER_USER['id'],
     'emojis': [],
-    'voice_states': [],
-    'application_id': None,
-    'system_channel_id': str(TEST_CHANNEL_ID),
-    'name': 'Test Guild',
-    'premium_tier': 0,
-    'joined_at': NOW,
-    'banner': None,
-    'id': str(TEST_GUILD_ID),
-    'features': [],
-    'preferred_locale': 'en-US',
-    'region': 'us-west',
     'member_count': 3,
-    'premium_subscription_count': 0,
-    'default_message_notifications': 0,
+    'presences': [],
+    'splash': None,
+    'system_channel_flags': 0,
+    'nsfw': False,
+    'lazy': True,
+    'system_channel_id': str(TEST_CHANNEL_ID),
+    'application_id': None,
+    'unavailable': False,
+    'stickers': [],
     'channels': [
         {
             'type': 0,
@@ -173,17 +158,51 @@ DUMMY_GUILD_CREATE = {
             'id': str(TEST_CHANNEL_ID)
         }
     ],
-    'unavailable': False,
-    'icon': None,
-    'vanity_url_code': None,
-    'owner_id': OWNER_USER['id'],
-    'presences': [],
-    'splash': None,
-    'mfa_level': 0,
+    'name': 'Test Guild',
+    'nsfw_level': 0,
+    'rules_channel_id': None,
+    'voice_states': [],
+    'afk_timeout': 300,
+    'preferred_locale': 'en-US',
+    'max_members': 100000,
+    'guild_hashes': {
+        'version': 1,
+        'roles': {'omitted': True}, 'metadata': {'omitted': True}, 'channels': {'omitted': True}
+    },
+    'public_updates_channel_id': None,
     'explicit_content_filter': 0,
-    'lazy': True,
+    'banner': None,
+    'vanity_url_code': None,
+    'afk_channel_id': None,
+    'description': None,
+    'mfa_level': 0,
+    'verification_level': 0,
+    'premium_subscription_count': 0,
+    'default_message_notifications': 0,
+    'stage_instances': [],
     'large': False,
-    'verification_level': 0
+    'region': 'us-west',
+    'max_video_channel_users': 25,
+    'joined_at': NOW,
+    'roles': [
+        {
+            'position': 0,
+            'permissions_new': '6442451968',
+            'permissions': 1024,
+            'name': '@everyone',
+            'mentionable': False,
+            'managed': False,
+            'id': str(TEST_GUILD_ID),
+            'hoist': False,
+            'color': 0
+        }
+    ],
+    'premium_tier': 0,
+    'discovery_splash': None,
+    'threads': [],
+    'features': [],
+    'application_command_count': 0,
+    'id': str(TEST_GUILD_ID)
 }
 
 DUMMY_DMCHANNEL_CREATE = {

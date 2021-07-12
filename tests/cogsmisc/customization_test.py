@@ -1,7 +1,6 @@
 import discord  # noqa: F401 Is used in file
 import pytest
 
-
 pytestmark = pytest.mark.asyncio
 
 
@@ -53,11 +52,11 @@ async def test_snippet_before_edit(avrae, dhttp):
     avrae.message("!snippet remove adv")
     await dhttp.receive_message("Snippet adv removed.", regex=False)
 
-    avrae.message("!serversnippet adv adv")
+    avrae.message("!serversnippet adv adv", as_owner=True)
     await dhttp.receive_message("**Warning:** Creating a snippet named `adv` will prevent you from using "
                                 "the built-in `adv` argument in Avrae commands.\nAre you sure you want to "
                                 "create this snippet? (Reply with yes/no)", regex=False)
-    avrae.message("yes")
+    avrae.message("yes", as_owner=True)
     await dhttp.receive_message("Server snippet `adv` added.```py\n!snippet adv adv\n```", regex=False)
 
     # alias tests
@@ -67,10 +66,10 @@ async def test_snippet_before_edit(avrae, dhttp):
     avrae.message("!alias test echo test")
     await dhttp.receive_message("`test` is already a builtin command. Try another name.", regex=False)
 
-    avrae.message("!servalias tester echo test")
+    avrae.message("!servalias tester echo test", as_owner=True)
     await dhttp.receive_message("Server alias `tester` added.```py\n!alias tester echo test\n```", regex=False)
 
-    avrae.message("!servalias test echo test")
+    avrae.message("!servalias test echo test", as_owner=True)
     await dhttp.receive_message("`test` is already a builtin command. Try another name.", regex=False)
 
     # testing the bugfix for renaming

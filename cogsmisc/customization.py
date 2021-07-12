@@ -437,7 +437,8 @@ class Customization(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def prefix(self, ctx, prefix: str = None):
-        """Sets the bot's prefix for this server.
+        """
+        Sets the bot's prefix for this server.
 
         You must have Manage Server permissions or a role called "Bot Admin" to use this command. Due to a possible Discord conflict, a prefix beginning with `/` will require confirmation.
 
@@ -446,7 +447,8 @@ class Customization(commands.Cog):
         guild_id = str(ctx.guild.id)
         if prefix is None:
             current_prefix = await self.bot.get_server_prefix(ctx.message)
-            return await ctx.send(f"My current prefix is: `{current_prefix}`")
+            return await ctx.send(f"My current prefix is: `{current_prefix}`. You can run commands like "
+                                  f"`{current_prefix}roll 1d20` or by mentioning me!")
 
         if not checks._role_or_permissions(ctx, lambda r: r.name.lower() == 'bot admin', manage_guild=True):
             return await ctx.send("You do not have permissions to change the guild prefix.")
@@ -455,6 +457,10 @@ class Customization(commands.Cog):
         if prefix.startswith('/'):
             if not await confirm(ctx, "Setting a prefix that begins with / may cause issues. "
                                       "Are you sure you want to continue? (Reply with yes/no)"):
+                return await ctx.send("Ok, cancelling.")
+        else:
+            if not await confirm(ctx, f"Are you sure you want to set my prefix to `{prefix}`? This will affect "
+                                      f"everyone on this server! (Reply with yes/no)"):
                 return await ctx.send("Ok, cancelling.")
 
         # insert into cache
@@ -467,7 +473,7 @@ class Customization(commands.Cog):
             upsert=True
         )
 
-        await ctx.send("Prefix set to `{}` for this server.".format(prefix))
+        await ctx.send(f"Prefix set to `{prefix}` for this server. Use commands like `{prefix}roll` now!")
 
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)

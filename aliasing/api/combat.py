@@ -82,9 +82,9 @@ class SimpleCombat:
 
         >>> set_metadata("Test", dump_json({"Status": ["Mario", 1, 2]}))
         """
+        self._combat._metadata[str(k)] = str(v)
         if sum(len(k + v) for k, v in self._combat._metadata.items()) > MAX_METADATA_SIZE:
-            raise ValueError
-        self._combat._metadata[k] = v
+            raise ValueError("Combat metadata is too large")
 
     def get_metadata(self, k: str, default=None) -> str:
         """
@@ -96,9 +96,9 @@ class SimpleCombat:
         Example:
 
         >>> get_metadata("Test")
-        "{"Status": ["Mario", 1, 2]}"
+        '{"Status": ["Mario", 1, 2]}'
         """
-        return self._combat._metadata.get(k, default)
+        return self._combat._metadata.get(str(k), default)
 
     def delete_metadata(self, k: str) -> Optional[str]:
         """
@@ -111,9 +111,9 @@ class SimpleCombat:
         Example:
 
         >>> delete_metadata("Test")
-        "{"Status": ["Mario", 1, 2]}"
+        '{"Status": ["Mario", 1, 2]}'
         """
-        return self._combat._metadata.pop(k, None)
+        return self._combat._metadata.pop(str(k), None)
 
     # private functions
     def func_set_character(self, character):

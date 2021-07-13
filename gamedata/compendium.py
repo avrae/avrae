@@ -4,8 +4,6 @@ import json
 import logging
 import os
 
-import newrelic.agent
-
 import gamedata.spell
 from gamedata.background import Background
 from gamedata.book import Book
@@ -75,7 +73,6 @@ class Compendium:
                 await asyncio.sleep(wait_for)
                 await self.reload(mdb)
 
-    @newrelic.agent.function_trace()
     async def reload(self, mdb=None):
         log.info("Reloading data")
 

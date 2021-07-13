@@ -6,7 +6,7 @@ import traceback
 
 # this hooks a lot of weird things and needs to be imported early
 import utils.newrelic
-utils.newrelic.hook_all()
+# utils.newrelic.hook_all()
 from utils import clustering, config, context
 
 import aioredis

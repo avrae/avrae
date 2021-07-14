@@ -1,0 +1,12 @@
+PlayerCombatant   ctx, combat, controller, private, init, char, ac, hp, max_hp
+MonsterCombatant  ctx, combat, controller, private, init, name, monster, ac, hp, max_hp
+Combatant         ctx, combat, controller, private, init, name, init_skill, ac, hp, max_hp
+
+Generic     cls, ctx, combat, controller_id: str, private: bool, init: int, name: str, init_skill: Skill,
+            ac: int = None, curr_hp: int = None, max_hp: int = None, temp_hp: int = 0, resists: Resistances = None
+
+Monster     cls, ctx, combat, controller_id: str, private: bool, init: int, name: str,
+            monster, ac: int = None, curr_hp: int = None, max_hp: int = None, temp_hp: int = 0
+
+Player      cls, ctx, combat, controller_id: str, private: bool, init: int, character,
+            ac: int = None, curr_hp: int = None, max_hp: int = None, temp_hp: int = 0

@@ -206,7 +206,7 @@ class SimpleCombatant(AliasStatBlock):
 
         :rtype: str or None
         """
-        return AliasStatBlock._creature_type
+        return self._creature_type
 
     @property
     def monster_name(self):

@@ -380,6 +380,7 @@ def maybe_mod(val: str, base=0):
     If *val* starts with + or -, it returns *base + val*.
     Otherwise, it returns *val*.
     """
+    # This is done to handle GenericCombatants who might not have an hp/ac/etc
     base = base or 0
 
     try:
@@ -392,15 +393,16 @@ def maybe_mod(val: str, base=0):
     return base
 
 
-def combine_maybe_mods(vals: list, base: int = 0):
+def combine_maybe_mods(vals: list, base=0):
     """
     Takes a list of arguments, which are strings that may start with + or -, and combines them to calculate a value.
-    If *val* starts with + or -, add it to sums.
-    Otherwise, add it to bases.
-    Give back the maximum base + sum of sums
+    If *val* starts with + or -, add it to sums. Otherwise, add it to sets.
+    Give back the maximum set or base + sum of sums
     """
     sums = []
     sets = []
+    # This is done to handle GenericCombatants who might not have an hp/ac/etc
+    base = base or 0
 
     for val in vals:
         try:

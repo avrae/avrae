@@ -310,10 +310,10 @@ SPECIAL_ARGS = {  # 2-tuple of effect, str
     'sdis': (parse_stat_choice, parse_stat_str)
 }
 VALID_ARGS = {
-    'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
-    'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus',
-    'cb': 'Check Bonus',
-    'magical': 'Magical Damage', 'silvered': 'Silvered Damage', 'adv': 'Attack Advantage',
-    'dis': 'Attack Disadvantage',
-    'sadv': 'Save Advantage', 'sdis': 'Save Disadvantage'
+    'd': 'Damage Bonus', 'ac': 'AC', 'cb': 'Check Bonus', 'attack': 'Attack',
+    'maxhp': 'Maximum Hitpoints',
+    'magical': 'Magical Damage', 'silvered': 'Silvered Damage',
+    'b': 'Attack Bonus', 'adv': 'Attack Advantage', 'dis': 'Attack Disadvantage',
+    'sb': 'Save Bonus', 'sadv': 'Save Advantage', 'sdis': 'Save Disadvantage',
+    'resist': 'Resistance', 'immune': 'Immunity', 'vuln': 'Vulnerability', 'neutral': 'Neutral',
 }

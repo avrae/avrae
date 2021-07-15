@@ -1,5 +1,6 @@
 import json
 import logging
+import textwrap
 
 import pytest
 
@@ -65,9 +66,9 @@ class TestIEffect:
         result = automation.IEffect.from_data(data)
         assert result
         assert result.name == 'Sleepy'
-        assert result.duration == '5'
+        assert result.duration == 5
         assert result.effects == '-ac -1'
-        assert result.end is False
+        assert result.tick_on_end is False
         assert result.concentration is False
         assert result.desc == "I'm just really sleepy"
 
@@ -76,7 +77,7 @@ class TestIEffect:
         assert json.dumps(result)
 
     async def test_stacking_e2e(self, character, avrae, dhttp):
-        avrae.message('''
+        avrae.message(textwrap.dedent('''
         !a import {
           "name": "Stacking IEffect Test",
           "_v": 2,
@@ -98,7 +99,7 @@ class TestIEffect:
             }
           ]
         }
-        ''')
+        ''').strip())
         await dhttp.drain()
 
         avrae.message('!a "Stacking IEffect Test"')

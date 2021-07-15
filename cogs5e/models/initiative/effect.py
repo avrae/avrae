@@ -287,7 +287,9 @@ def parse_resist_str(resist_list):
 
 # ---- sadv/sdis ieffect ----
 def parse_stat_choice(args, _):
-    for arg in args:
+    for i, arg in enumerate(args):
+        if arg == 'True':  # hack: sadv/sdis on their own should be equivalent to -sadv/sdis all
+            args[i] = arg = 'all'
         if arg not in STAT_ABBREVIATIONS and arg != 'all':
             raise InvalidArgument(f"{arg} is not a valid stat")
     return args

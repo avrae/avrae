@@ -66,10 +66,6 @@ class Combatant(BaseCombatant, StatBlock):
                 raw[key] = klass.from_dict(raw[key])
         del raw['type']
         effects = raw.pop('effects')
-
-        if 'id' not in raw:  # fixme id translator, remove apr 2021
-            raw['id'] = create_combatant_id()
-
         inst = cls(ctx, combat, **raw)
         inst._effects = [Effect.from_dict(e, combat, inst) for e in effects]
         return inst

@@ -8,7 +8,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
-from utils.functions import get_guild_member, maybe_mod, search_and_select
+from utils.functions import get_guild_member, search_and_select, combine_maybe_mods
 from .effect import Effect
 from .errors import CombatException, RequiresContext
 from .types import BaseCombatant
@@ -113,7 +113,9 @@ class Combatant(BaseCombatant, StatBlock):
 
     @property
     def max_hp(self):
-        return self._max_hp
+        _maxhp = self._max_hp
+        _maxhp = combine_maybe_mods(self.active_effects('maxhp'), base=_maxhp)
+        return _maxhp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):
@@ -159,8 +161,7 @@ class Combatant(BaseCombatant, StatBlock):
     @property
     def ac(self):
         _ac = self._ac
-        for e in self.active_effects('ac'):
-            _ac = maybe_mod(e, base=_ac)
+        _ac = combine_maybe_mods(self.active_effects('ac'), base=_ac)
         return _ac
 
     @ac.setter
@@ -621,8 +622,7 @@ class PlayerCombatant(Combatant):
     @property
     def ac(self):
         _ac = self._ac or self.character.ac
-        for e in self.active_effects('ac'):
-            _ac = maybe_mod(e, base=_ac)
+        _ac = combine_maybe_mods(self.active_effects('ac'), base=_ac)
         return _ac
 
     @ac.setter
@@ -638,7 +638,9 @@ class PlayerCombatant(Combatant):
 
     @property
     def max_hp(self):
-        return self._max_hp or self.character.max_hp
+        _maxhp = self._max_hp or self.character.max_hp
+        _maxhp = combine_maybe_mods(self.active_effects('maxhp'), base=_maxhp)
+        return _maxhp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):

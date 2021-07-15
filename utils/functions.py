@@ -392,6 +392,27 @@ def maybe_mod(val: str, base=0):
     return base
 
 
+def combine_maybe_mods(vals: list, base: int = 0):
+    """
+    Takes a list of arguments, which are strings that may start with + or -, and combines them to calculate a value.
+    If *val* starts with + or -, add it to sums.
+    Otherwise, add it to bases.
+    Give back the maximum base + sum of sums
+    """
+    sums = []
+    sets = []
+
+    for val in vals:
+        try:
+            if val.startswith(('+', '-')):
+                sums.append(int(val))
+            else:
+                sets.append(int(val))
+        except (ValueError, TypeError):
+            continue
+    return (max(sets) if sets else base) + sum(sums)
+
+
 # ==== user stuff ====
 async def user_from_id(ctx, the_id):
     """

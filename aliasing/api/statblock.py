@@ -145,7 +145,7 @@ class AliasStatBlock:
     @property
     def creature_type(self):
         """
-        The creature type of the combatant. Will return None for players or combatants with no creature type.
+        The creature type of the creature. Will return None for players or creatures with no creature type.
 
         :rtype: str or None
         """

@@ -17,11 +17,6 @@ class EffectReference:
 
     @classmethod
     def from_dict(cls, d):
-        if 'combatant_id' not in d:
-            # fall back to combatant/effect name :(
-            # should only happen once per combat, and it should correct to the right ids
-            # fixme delete later once this is unnecessary (apr 2021) - added jan 2021 for future me changelog
-            return cls(d['combatant'], d['effect'])
         return cls(d['combatant_id'], d['effect_id'])
 
     def to_dict(self):
@@ -37,11 +32,11 @@ class Effect:
         self.combat = combat
         self.combatant = combatant
         self.id = id
-        self._name = name
-        self._duration = duration
-        self._remaining = remaining
+        self.name = name
+        self.duration = duration
+        self.remaining = remaining
         self._effect = effect
-        self._concentration = concentration
+        self.concentration = concentration
         self.children = children
         self.parent = parent
         self.ticks_on_end = tonend
@@ -81,9 +76,6 @@ class Effect:
 
     @classmethod
     def from_dict(cls, raw, combat, combatant):
-        # fixme remove apr 2021
-        if 'id' not in raw:
-            raw['id'] = create_effect_id()
         children = [EffectReference.from_dict(r) for r in raw.pop('children')]
         parent = raw.pop('parent')
         if parent:
@@ -107,24 +99,8 @@ class Effect:
         return self
 
     @property
-    def name(self):
-        return self._name
-
-    @property
-    def duration(self):
-        return self._duration
-
-    @property
-    def remaining(self):
-        return self._remaining
-
-    @property
     def effect(self):
         return self._effect
-
-    @property
-    def concentration(self):
-        return self._concentration
 
     # --- stringification ---
     def __str__(self):
@@ -206,7 +182,7 @@ class Effect:
         if self.remaining >= 0 and not self.ticks_on_end:
             if self.remaining - num_turns <= 0:
                 self.remove()
-            self._remaining -= num_turns
+            self.remaining -= num_turns
 
     def on_turn_end(self, num_turns=1):
         """
@@ -215,7 +191,7 @@ class Effect:
         if self.remaining >= 0 and self.ticks_on_end:
             if self.remaining - num_turns <= 0:
                 self.remove()
-            self._remaining -= num_turns
+            self.remaining -= num_turns
 
     # parenting
     def get_parent_effect(self):
@@ -234,20 +210,11 @@ class Effect:
 
     def _effect_from_reference(self, e: EffectReference):
         combatant = self.combat.combatant_by_id(e.combatant_id)
-        if not combatant:
-            # fall back to getting by name and see if we can update the combatant id
-            # fixme this can be removed after some time (let's say apr 2021)
-            combatant = self.combat.get_combatant(e.combatant_id, strict=True)
-            if combatant is None:
-                return None
-            e.combatant_id = combatant.id
+        if combatant is None:
+            return None
         effect = combatant.effect_by_id(e.effect_id)
         if effect is None:
-            # fall back to getting by name and see if we can update the effect id
-            effect = combatant.get_effect(e.effect_id, strict=True)
-            if effect is None:
-                return None
-            e.effect_id = effect.id
+            return None
         return effect
 
     # misc

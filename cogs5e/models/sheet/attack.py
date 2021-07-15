@@ -117,6 +117,9 @@ class AttackList:
     def __len__(self):
         return len(self.attacks)
 
+    def __bool__(self):
+        return bool(self.attacks)
+
 
 def old_to_automation(bonus=None, damage=None, details=None):
     """Returns an Automation instance representing an old attack."""

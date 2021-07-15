@@ -1,10 +1,12 @@
 import asyncio
+import collections
 import copy
 import json
 import logging
 import os
 
 import gamedata.spell
+from gamedata.action import Action
 from gamedata.background import Background
 from gamedata.book import Book
 from gamedata.feat import Feat
@@ -33,6 +35,7 @@ class Compendium:
         self.raw_subraces = []  # type: list[dict]
         self.raw_spells = []  # type: list[dict]
         self.raw_books = []  # type: list[dict]
+        self.raw_actions = []  # type: list[dict]
 
         # models
         self.backgrounds = []  # type: list[Background]
@@ -53,6 +56,7 @@ class Compendium:
         self.monsters = []  # type: list[Monster]
         self.spells = []  # type: list[gamedata.spell.Spell]
         self.books = []  # type: list[Book]
+        self.actions = []  # type: list[Action]
 
         # blobs
         self.names = []
@@ -61,6 +65,8 @@ class Compendium:
         # lookup helpers
         self._entity_lookup = {}
         self._book_lookup = {}
+        self._actions_by_uid = {}  # {uuid: Action}
+        self._actions_by_eid = collections.defaultdict(lambda: [])  # {(tid, eid): [Action]}
 
         self._base_path = os.path.relpath('res')
 
@@ -99,6 +105,7 @@ class Compendium:
         self.raw_subraces = self.read_json('subraces.json', [])
         self.raw_spells = self.read_json('spells.json', [])
         self.raw_books = self.read_json('books.json', [])
+        self.raw_actions = self.read_json('actions.json', [])
 
         self.names = self.read_json('names.json', [])
         self.rule_references = self.read_json('srd-references.json', [])
@@ -115,6 +122,7 @@ class Compendium:
         self.raw_subraces = lookup.get('subraces', [])
         self.raw_spells = lookup.get('spells', [])
         self.raw_books = lookup.get('books', [])
+        self.raw_actions = lookup.get('actions', [])
 
         self.names = lookup.get('names', [])
         self.rule_references = lookup.get('srd-references', [])
@@ -146,6 +154,7 @@ class Compendium:
         self._load_classfeats()
         self._load_subclasses()
         self._load_racefeats()
+        self._load_actions()  # actions don't register as DDB entities, they're their own thing
         self._register_book_lookups()
 
     def _load_subclasses(self):
@@ -216,6 +225,16 @@ class Compendium:
         for subrace in self.subraces:
             self.subrfeats.extend(handle_race(subrace))
 
+    def _load_actions(self):
+        self.actions = []
+        self._actions_by_eid.clear()
+        self._actions_by_uid.clear()
+        for action_data in self.raw_actions:
+            action = Action.from_data(action_data)
+            self.actions.append(action)
+            self._actions_by_uid[action.uid] = action
+            self._actions_by_eid[(action.type_id, action.id)].append(action)
+
     def _register_entity_lookup(self, entity: Sourced):
         k = (entity.entity_type, entity.entity_id)
         if k in self._entity_lookup:
@@ -267,6 +286,23 @@ class Compendium:
         :rtype: Book
         """
         return self._book_lookup.get(short_source)
+
+    def lookup_action(self, uid):
+        """
+        Gets an action by its unique ID.
+
+        :type uid: str
+        :rtype: Action or None
+        """
+        return self._actions_by_uid.get(uid)
+
+    def lookup_actions_for_entity(self, tid, eid):
+        """
+        Returns the list of actions (possibly empty) granted by an entity with the given type id/id.
+
+        :rtype: list of Action
+        """
+        return self._actions_by_eid[(tid, eid)]
 
 
 compendium = Compendium()

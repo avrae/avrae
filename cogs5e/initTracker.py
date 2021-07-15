@@ -1,5 +1,6 @@
 import collections
 import functools
+import itertools
 import logging
 import traceback
 
@@ -16,7 +17,7 @@ from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, 
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
-from cogs5e.utils import attackutils, checkutils, targetutils
+from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
@@ -237,9 +238,9 @@ class InitTracker(commands.Cog):
         out = ''
         to_pm = ''
 
-        try: # Attempt to get the add as a number
+        try:  # Attempt to get the add as a number
             n_result = int(n)
-        except ValueError: # if we're not a number, are we dice
+        except ValueError:  # if we're not a number, are we dice
             roll_result = roll(str(n))
             n_result = roll_result.total
             out += f"Rolling random number of combatants: {roll_result}\n"
@@ -1011,35 +1012,30 @@ class InitTracker(commands.Cog):
         await ctx.send(out)
         await combat.final()
 
-    @init.group(aliases=['a'], invoke_without_command=True, help=f"""
+    @init.group(aliases=['a', 'action'], invoke_without_command=True, help=f"""
     Rolls an attack against another combatant.
     __**Valid Arguments**__
     {VALID_AUTOMATION_ARGS}
     -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
     """)
-    async def attack(self, ctx, atk_name, *, args=''):
-        return await self._attack(ctx, None, atk_name, args)
-
-    @attack.command(name="list")
-    async def attack_list(self, ctx):
-        """Lists the active combatant's attacks."""
-        combat = await Combat.from_ctx(ctx)
+    async def attack(self, ctx, atk_name=None, *, args=''):
+        combat = await ctx.get_combat()
         combatant = combat.current_combatant
         if combatant is None:
             return await ctx.send(f"You must start combat with `{ctx.prefix}init next` first.")
 
-        if combatant.is_private and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
-            return await ctx.send("You do not have permission to view this combatant's attacks.")
+        if atk_name is None:
+            return await self.attack_list(ctx, combatant)
+        return await self._attack(ctx, combatant, atk_name, args)
 
-        atk_str = combatant.attacks.build_str(combatant)
-        if len(atk_str) > 1000:
-            atk_str = f"{atk_str[:1000]}\n[...]"
-
-        if not combatant.is_private:
-            destination = ctx.message.channel
-        else:
-            destination = ctx.message.author
-        return await destination.send("{}'s attacks:\n{}".format(combatant.name, atk_str))
+    @attack.command(name="list")
+    async def attack_list(self, ctx, *args):
+        """Lists the active combatant's attacks."""
+        combat = await ctx.get_combat()
+        combatant = combat.current_combatant
+        if combatant is None:
+            return await ctx.send(f"You must start combat with `{ctx.prefix}init next` first.")
+        return await self._attack_list(ctx, combatant, *args)
 
     @init.command(help=f"""
     Rolls an attack against another combatant.
@@ -1047,23 +1043,38 @@ class InitTracker(commands.Cog):
     {VALID_AUTOMATION_ARGS}
     -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
     """)
-    async def aoo(self, ctx, combatant_name, atk_name, *, args=''):
-        return await self._attack(ctx, combatant_name, atk_name, args)
+    async def aoo(self, ctx, combatant_name, atk_name=None, *, args=''):
+        combat = await ctx.get_combat()
+        try:
+            combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
+        except SelectionException:
+            return await ctx.send("Combatant not found.")
 
-    async def _attack(self, ctx, combatant_name, atk_name, unparsed_args):
-        args = await helpers.parse_snippets(unparsed_args, ctx)
-        combat = await Combat.from_ctx(ctx)
+        if atk_name is None or atk_name == 'list':
+            return await self._attack_list(ctx, combatant)
+        return await self._attack(ctx, combatant, atk_name, args)
 
-        # attacker handling
-        if combatant_name is None:
-            combatant = combat.current_combatant
-            if combatant is None:
-                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` first.")
+    @staticmethod
+    async def _attack_list(ctx, combatant, *args):
+        combat = await ctx.get_combat()
+
+        if combatant.is_private and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
+            return await ctx.send("You do not have permission to view this combatant's attacks.")
+
+        if not combatant.is_private:
+            destination = ctx.message.channel
         else:
-            try:
-                combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
-            except SelectionException:
-                return await ctx.send("Combatant not found.")
+            destination = ctx.message.author
+
+        if isinstance(combatant, PlayerCombatant):
+            await actionutils.send_action_list(destination, caster=combatant, attacks=combatant.attacks,
+                                               actions=combatant.character.actions, args=args)
+        else:
+            await actionutils.send_action_list(destination, caster=combatant, attacks=combatant.attacks, args=args)
+
+    async def _attack(self, ctx, combatant, atk_name, unparsed_args):
+        args = await helpers.parse_snippets(unparsed_args, ctx)
+        combat = await ctx.get_combat()
 
         # argument parsing
         is_player = isinstance(combatant, PlayerCombatant)
@@ -1091,6 +1102,10 @@ class InitTracker(commands.Cog):
                 caster = combatant
                 if 'custom' in args:  # single, custom
                     attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                elif is_player:  # single, noncustom, action?
+                    attack = await search_and_select(
+                        ctx, list(itertools.chain(combatant.attacks, combatant.character.actions)), atk_name,
+                        lambda a: a.name, message="Select your action.")
                 else:  # single, noncustom
                     attack = await search_and_select(ctx, combatant.attacks, atk_name, lambda a: a.name,
                                                      message="Select your attack.")
@@ -1104,9 +1119,13 @@ class InitTracker(commands.Cog):
         embed = discord.Embed(color=combatant.get_color())
 
         # run
-        result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        if isinstance(attack, Attack):
+            result = await actionutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        else:
+            result = await actionutils.run_action(ctx, embed, args, caster, attack, targets, combat)
+
         await ctx.send(embed=embed)
-        if (gamelog := self.bot.get_cog('GameLog')) and is_player:
+        if (gamelog := self.bot.get_cog('GameLog')) and is_player and result is not None:
             await gamelog.send_automation(ctx, combatant.character, attack.name, result)
 
     @init.command(aliases=['c'], help=f"""
@@ -1128,7 +1147,8 @@ class InitTracker(commands.Cog):
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
-                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` to make a check as the current combatant.")
+                return await ctx.send(
+                    f"You must start combat with `{ctx.prefix}init next` to make a check as the current combatant.")
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the check.")
@@ -1170,7 +1190,8 @@ class InitTracker(commands.Cog):
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
-                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` to make a save as the current combatant.")
+                return await ctx.send(
+                    f"You must start combat with `{ctx.prefix}init next` to make a save as the current combatant.")
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the save.")

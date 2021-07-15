@@ -1,5 +1,6 @@
 import json
 import logging
+import textwrap
 
 import pytest
 
@@ -7,7 +8,8 @@ from aliasing.evaluators import SpellEvaluator
 from cogs5e.models import automation
 from cogs5e.models.sheet.statblock import StatBlock
 from gamedata.compendium import compendium
-from tests.utils import active_character
+from tests.conftest import end_init, start_init
+from tests.utils import active_character, active_combat
 
 log = logging.getLogger(__name__)
 pytestmark = pytest.mark.asyncio
@@ -41,6 +43,78 @@ async def test_save_strs(dc):
     result = save.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
     log.info(f"Save str: ({dc=!r}) -> {result}")
     assert result
+
+
+# ==== IEffect ====
+@pytest.mark.usefixtures("character", "init_fixture")
+class TestIEffect:
+    async def test_ieffect_setup(self, avrae, dhttp):
+        await start_init(avrae, dhttp)
+        avrae.message("!init join")
+        await dhttp.drain()
+
+    async def test_deserialize(self):
+        data = {
+            "type": "ieffect",
+            "name": "Sleepy",
+            "duration": 5,
+            "effects": "-ac -1",
+            "conc": False,
+            "desc": "I'm just really sleepy",
+            "stacking": True
+        }
+        result = automation.IEffect.from_data(data)
+        assert result
+        assert result.name == 'Sleepy'
+        assert result.duration == 5
+        assert result.effects == '-ac -1'
+        assert result.tick_on_end is False
+        assert result.concentration is False
+        assert result.desc == "I'm just really sleepy"
+
+    async def test_serialize(self):
+        result = automation.IEffect('Sleepy', 5, '-ac -1').to_dict()
+        assert json.dumps(result)
+
+    async def test_stacking_e2e(self, character, avrae, dhttp):
+        avrae.message(textwrap.dedent('''
+        !a import {
+          "name": "Stacking IEffect Test",
+          "_v": 2,
+          "automation": [
+            {
+              "type": "target",
+              "target": "self",
+              "effects": [
+                {
+                  "type": "ieffect",
+                  "name": "Sleepy",
+                  "duration": 5,
+                  "effects": "-ac -1",
+                  "conc": true,
+                  "desc": "I'm just really sleepy",
+                  "stacking": true
+                }
+              ]
+            }
+          ]
+        }
+        ''').strip())
+        await dhttp.drain()
+
+        avrae.message('!a "Stacking IEffect Test"')
+        await dhttp.drain()
+        avrae.message('!a "Stacking IEffect Test"')
+        await dhttp.drain()
+
+        char = await active_character(avrae)
+        combat = await active_combat(avrae)
+        combatant = combat.get_combatant(char.name, strict=True)
+        assert combatant.get_effect('Sleepy', strict=True)
+        assert combatant.get_effect('Sleepy x2', strict=True)
+
+    async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
+        await end_init(avrae, dhttp)
 
 
 # ==== Text ====

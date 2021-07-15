@@ -1,13 +1,18 @@
+from typing import Optional
+
 from d20 import roll
 
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
-from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, Effect, CombatantType
+from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, CombatantType, Effect
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
 
+MAX_METADATA_SIZE = 100000
 
+
+# noinspection PyProtectedMember
 class SimpleCombat:
     def __init__(self, combat, me):
         self._combat: Combat = combat
@@ -67,6 +72,49 @@ class SimpleCombat:
             return SimpleGroup(group)
         return None
 
+    def set_metadata(self, k: str, v: str):
+        """
+        Assigns a metadata key to the passed value.
+        Maximum size of the metadata is 100k characters, key and item inclusive.
+
+        :param str k: The metadata key to set
+        :param str v: The metadata value to set
+
+        >>> set_metadata("Test", dump_json({"Status": ["Mario", 1, 2]}))
+        """
+        key = str(k)
+        value = str(v)
+        previous_metadata_size = sum(len(ke) + len(va) for ke, va in self._combat._metadata.items() if ke != key)
+        new_metadata_size = len(key) + len(value)
+        if previous_metadata_size + new_metadata_size > MAX_METADATA_SIZE:
+            raise ValueError("Combat metadata is too large")
+        self._combat._metadata[key] = value
+
+    def get_metadata(self, k: str, default=None) -> str:
+        """
+        Gets a metadata value for the passed key or returns *default* if the name is not set.
+
+        :param str k: The metadata key to get
+        :param default: What to return if the name is not set.
+
+        >>> get_metadata("Test")
+        '{"Status": ["Mario", 1, 2]}'
+        """
+        return self._combat._metadata.get(str(k), default)
+
+    def delete_metadata(self, k: str) -> Optional[str]:
+        """
+        Removes a key from the metadata.
+
+        :param str k: The metadata key to remove
+        :return: The removed value or ``None`` if the key is not found.
+        :rtype: str or None
+
+        >>> delete_metadata("Test")
+        '{"Status": ["Mario", 1, 2]}'
+        """
+        return self._combat._metadata.pop(str(k), None)
+
     # private functions
     def func_set_character(self, character):
         me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
@@ -86,6 +134,7 @@ class SimpleCombat:
         return f"<{self.__class__.__name__}>"
 
 
+# noinspection PyProtectedMember
 class SimpleCombatant(AliasStatBlock):
     """
     Represents a combatant in combat.
@@ -139,13 +188,14 @@ class SimpleCombatant(AliasStatBlock):
 
         :rtype: str or None
         """
-        return self._combatant.group
+        group = self._combatant.get_group()
+        return group.name if group else None
 
     @property
     def race(self):
         """
         The race of the combatant. Will return None for monsters or combatants with no race.
-        
+
         :rtype: str or None
         """
         return self._race
@@ -154,7 +204,7 @@ class SimpleCombatant(AliasStatBlock):
     def creature_type(self):
         """
         The creature type of the combatant. Will return None for players or combatants with no creature type.
-        
+
         :rtype: str or None
         """
         return self._creature_type
@@ -163,7 +213,7 @@ class SimpleCombatant(AliasStatBlock):
     def monster_name(self):
         """
         The monster name of the combatant. Will return None for players.
-        
+
         :rtype: str or None
         """
         return self._monster_name
@@ -176,7 +226,7 @@ class SimpleCombatant(AliasStatBlock):
         :param bool adv: Whether to roll the save with advantage. Rolls with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
         :returns: A SimpleRollResult describing the rolled save.
         :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
-        """
+        """  # noqa: E501
         try:
             save = self._combatant.saves.get(str(ability))
         except ValueError:
@@ -283,7 +333,7 @@ class SimpleCombatant(AliasStatBlock):
 
         :param str group: The name of the group. None to remove from group.
         :return: The combatant's new group, or None if the combatant was removed from a group.
-        :rtype: :class:`~aliasing.api.combat.SimpleGroup` or None   
+        :rtype: :class:`~aliasing.api.combat.SimpleGroup` or None
         """
         if group is not None:
             group = str(group)
@@ -331,7 +381,7 @@ class SimpleCombatant(AliasStatBlock):
         :type parent: :class:`~aliasing.api.combat.SimpleEffect`
         :param bool end: Whether the effect ticks on the end of turn.
         :param str desc: A description of the effect.
-        """
+        """  # noqa: E501
         name, args, duration = str(name), str(args), int(duration)
         if desc is not None:
             desc = str(desc)

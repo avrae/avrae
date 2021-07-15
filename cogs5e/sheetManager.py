@@ -4,6 +4,7 @@ Created on Jan 19, 2017
 @author: andrew
 """
 import asyncio
+import itertools
 import logging
 import time
 import traceback
@@ -14,14 +15,14 @@ from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
 from aliasing import helpers
+from cogs5e.models import embeds
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DICECLOUD_URL_RE, DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
-from cogs5e.utils import attackutils, checkutils, targetutils
+from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
@@ -66,41 +67,56 @@ class SheetManager(commands.Cog):
         args = argparse(args)
         return args
 
-    @commands.group(aliases=['a'], invoke_without_command=True, help=f"""
-    Rolls an attack for the current active character.
+    @commands.group(aliases=['a', 'attack'], invoke_without_command=True, help=f"""
+    Performs an action (attack or ability) for the current active character.
     __**Valid Arguments**__
     {VALID_AUTOMATION_ARGS}
     """)
-    async def attack(self, ctx, atk_name=None, *, args: str = ''):
+    async def action(self, ctx, atk_name=None, *, args: str = ''):
         if atk_name is None:
-            return await self.attack_list(ctx)
+            return await self.action_list(ctx)
 
         char: Character = await Character.from_ctx(ctx)
         args = await self.new_arg_stuff(args, ctx, char)
+        hide = args.last('h', type_=bool)
+        embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
-        attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
+        # we select from caster attacks b/c a combat effect could add some
+        attack_or_action = await search_and_select(
+            ctx, list(itertools.chain(caster.attacks, char.actions)), atk_name, lambda a: a.name)
 
-        hide = args.last('h', type_=bool)
-
-        embed = EmbedWithCharacter(char, name=False, image=not hide)
-        result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        if isinstance(attack_or_action, Attack):
+            result = await actionutils.run_attack(ctx, embed, args, caster, attack_or_action, targets, combat)
+        else:
+            result = await actionutils.run_action(ctx, embed, args, caster, attack_or_action, targets, combat)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
-        if gamelog := self.bot.get_cog('GameLog'):
-            await gamelog.send_automation(ctx, char, attack.name, result)
+        if (gamelog := self.bot.get_cog('GameLog')) and result is not None:
+            await gamelog.send_automation(ctx, char, attack_or_action.name, result)
 
-    @attack.command(name="list")
-    async def attack_list(self, ctx):
-        """Lists the active character's attacks."""
+    @action.command(name="list")
+    async def action_list(self, ctx, *args):
+        """
+        Lists the active character's actions.
+        __Valid Arguments__
+        -v - Verbose: Displays each action's character sheet description rather than the effect summary.
+        attacks - Only displays the available attacks.
+        actions - Only displays the available actions.
+        bonus - Only displays the available bonus actions.
+        reactions - Only displays the available reactions.
+        other - Only displays the available actions that have another activation time.
+        """
         char: Character = await Character.from_ctx(ctx)
-        atk_str = char.attacks.build_str(char)
-        if len(atk_str) > 1000:
-            atk_str = f"{atk_str[:1000]}\n[...]"
-        return await ctx.send(f"{char.name}'s attacks:\n{atk_str}")
+        embed = embeds.EmbedWithCharacter(char, name=False)
+        embed.title = f"{char.name}'s Actions"
 
-    @attack.command(name="add", aliases=['create'])
+        await actionutils.send_action_list(
+            ctx, caster=char, attacks=char.attacks, actions=char.actions, embed=embed, args=args)
+
+    # ---- attack management commands ----
+    @action.command(name="add", aliases=['create'])
     async def attack_add(self, ctx, name, *args):
         """
         Adds an attack to the active character.
@@ -126,7 +142,7 @@ class SheetManager(commands.Cog):
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:
-            if await confirm(ctx, "This will overwrite an attack with the same name. Continue?"):
+            if await confirm(ctx, "This will overwrite an attack with the same name. Continue? (Reply with yes/no)"):
                 character.overrides.attacks.remove(conflict)
             else:
                 return await ctx.send("Okay, aborting.")
@@ -138,7 +154,7 @@ class SheetManager(commands.Cog):
             out += f" Removed a duplicate attack."
         await ctx.send(out)
 
-    @attack.command(name="import")
+    @action.command(name="import")
     async def attack_import(self, ctx, *, data: str):
         """
         Imports an attack from JSON or YAML exported from the Avrae Dashboard.
@@ -165,7 +181,7 @@ class SheetManager(commands.Cog):
         conflicts = [a for a in character.overrides.attacks if a.name.lower() in [new.name.lower() for new in attacks]]
         if conflicts:
             if await confirm(ctx, f"This will overwrite {len(conflicts)} attacks with the same name "
-                                  f"({', '.join(c.name for c in conflicts)}). Continue?"):
+                                  f"({', '.join(c.name for c in conflicts)}). Continue? (Reply with yes/no)"):
                 for conflict in conflicts:
                     character.overrides.attacks.remove(conflict)
             else:
@@ -177,14 +193,14 @@ class SheetManager(commands.Cog):
         out = f"Imported {len(attacks)} attacks:\n{attacks.build_str(character)}"
         await ctx.send(out)
 
-    @attack.command(name="delete", aliases=['remove'])
+    @action.command(name="delete", aliases=['remove'])
     async def attack_delete(self, ctx, name):
         """
         Deletes an attack override.
         """
         character: Character = await Character.from_ctx(ctx)
         attack = await search_and_select(ctx, character.overrides.attacks, name, lambda a: a.name)
-        if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}?")):
+        if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}? (Reply with yes/no)")):
             return await ctx.send("Okay, aborting delete.")
         character.overrides.attacks.remove(attack)
         await character.commit(ctx)
@@ -207,7 +223,7 @@ class SheetManager(commands.Cog):
 
         hide = args.last('h', type_=bool)
 
-        embed = EmbedWithCharacter(char, name=False, image=not hide)
+        embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
         checkutils.update_csetting_args(char, args)
         caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
@@ -231,7 +247,7 @@ class SheetManager(commands.Cog):
 
         hide = args.last('h', type_=bool)
 
-        embed = EmbedWithCharacter(char, name=False, image=not hide)
+        embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
         skill = char.skills[skill_key]
 
         checkutils.update_csetting_args(char, args, skill)
@@ -258,7 +274,7 @@ class SheetManager(commands.Cog):
         elif len(desc) < 2:
             desc = 'No description available.'
 
-        embed = EmbedWithCharacter(char, name=False)
+        embed = embeds.EmbedWithCharacter(char, name=False)
         embed.title = char.name
         embed.description = desc
 
@@ -335,7 +351,7 @@ class SheetManager(commands.Cog):
             return await ctx.send(f"Error generating token: {e}")
 
         file = discord.File(processed, filename="image.png")
-        embed = EmbedWithCharacter(char, image=False)
+        embed = embeds.EmbedWithCharacter(char, image=False)
         embed.set_image(url="attachment://image.png")
         await ctx.send(file=file, embed=embed)
         processed.close()
@@ -514,7 +530,7 @@ class SheetManager(commands.Cog):
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
             return await confirm(ctx,
-                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (Reply with yes/no)?\n"
                                  f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
 
@@ -682,7 +698,7 @@ async def send_ddb_ctas(ctx, character):
     if await ctx.bot.rdb.get(f"cog.sheetmanager.cta.seen.{ctx.author.id}"):
         return
 
-    embed = EmbedWithCharacter(character)
+    embed = embeds.EmbedWithCharacter(character)
     embed.title = "Heads up!"
     embed.description = "There's a couple of things you can do to make your experience even better!"
     embed.set_footer(text="You won't see this message again this week.")

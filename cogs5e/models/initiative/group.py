@@ -21,9 +21,6 @@ class CombatantGroup(Combatant):
 
     @classmethod
     async def from_dict(cls, raw, ctx, combat):
-        if 'id' not in raw:  # fixme id translation, remove apr 2021
-            raw['id'] = create_combatant_id()
-
         combatants = []
         for c in raw.pop('combatants'):
             ctype = CombatantType(c['type'])
@@ -35,16 +32,12 @@ class CombatantGroup(Combatant):
                 combatant = await PlayerCombatant.from_dict(c, ctx, combat)
             else:
                 raise CombatException(f"Unknown combatant type when deserializing group: {c['type']}")
-            combatant.group = raw['id']  # fixme id translation, remove apr 2021
             combatants.append(combatant)
 
         return cls(ctx, combat, combatants=combatants, **raw)
 
     @classmethod
     def from_dict_sync(cls, raw, ctx, combat):
-        if 'id' not in raw:  # fixme id translation, remove apr 2021
-            raw['id'] = create_combatant_id()
-
         combatants = []
         for c in raw.pop('combatants'):
             ctype = CombatantType(c['type'])
@@ -56,7 +49,6 @@ class CombatantGroup(Combatant):
                 combatant = PlayerCombatant.from_dict_sync(c, ctx, combat)
             else:
                 raise CombatException(f"Unknown combatant type when deserializing group: {c['type']}")
-            combatant.group = raw['id']  # fixme id translation, remove apr 2021
             combatants.append(combatant)
 
         return cls(ctx, combat, combatants=combatants, **raw)

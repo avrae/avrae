@@ -53,7 +53,7 @@
       "bonus_calc": "strengthMod + proficiencyBonus"
     },
     {
-      "name": "Faithful Daggo'",
+      "name": "Faithful Daggo' (Dagger)",
       "bonus": 8,
       "damage": "1d4 + 5 [piercing]",
       "details": "finesse, thrown 20/60, light",

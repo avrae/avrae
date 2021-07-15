@@ -66,10 +66,6 @@ class Combatant(BaseCombatant, StatBlock):
                 raw[key] = klass.from_dict(raw[key])
         del raw['type']
         effects = raw.pop('effects')
-
-        if 'id' not in raw:  # fixme id translator, remove apr 2021
-            raw['id'] = create_combatant_id()
-
         inst = cls(ctx, combat, **raw)
         inst._effects = [Effect.from_dict(e, combat, inst) for e in effects]
         return inst
@@ -250,6 +246,9 @@ class Combatant(BaseCombatant, StatBlock):
             if was_current:
                 self.combat.goto_turn(self, True)
             return c_group
+
+    def get_group(self):
+        return self.combat.get_group(self._group_id) if self._group_id else None
 
     # effects
     def add_effect(self, effect):

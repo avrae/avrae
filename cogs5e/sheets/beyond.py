@@ -12,6 +12,7 @@ import html2text
 from cogs5e.models import automation
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
+from cogs5e.models.sheet.action import Action, Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.player import CustomCounter
@@ -19,7 +20,7 @@ from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from gamedata.compendium import compendium
-from utils import config, constants
+from utils import config, constants, enums
 
 log = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ class BeyondSheetParser(SheetLoaderABC):
         live = 'beyond' if self._is_live else None
         race = self._get_race()
         background = self._get_background()
+        actions = self._get_actions()
 
         # ddb campaign
         campaign = self.character_data.get('campaign')
@@ -96,7 +98,7 @@ class BeyondSheetParser(SheetLoaderABC):
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
             skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
             spellbook, live, race, background,
-            ddb_campaign_id=campaign_id
+            ddb_campaign_id=campaign_id, actions=actions
         )
         return character
 
@@ -302,10 +304,46 @@ class BeyondSheetParser(SheetLoaderABC):
     def _get_background(self):
         return self.character_data['background']
 
+    def _get_actions(self):
+        character_actions = self.character_data['actions']
+        character_features = self.character_data['features']
+        actions = []
+
+        # actions: save all, regardless of gamedata presence
+        for d_action in character_actions:
+            if d_action['typeId'] == '1120657896' and d_action['id'] == '1':  # Unarmed Strike - already in attacks
+                continue
+            g_actions = compendium.lookup_actions_for_entity(int(d_action['typeId']), int(d_action['id']))
+            if g_actions:  # save a reference to each gamedata action by UID
+                for g_action in g_actions:
+                    actions.append(Action(
+                        name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                        activation_type=g_action.activation_type, snippet=html_to_md(d_action['snippet'])
+                    ))
+            else:  # just save the action w/ its snippet
+                activation_type = enums.ActivationType(d_action['activationType']) \
+                    if d_action['activationType'] is not None \
+                    else None
+                actions.append(Action(
+                    name=d_action['name'], uid=None, id=int(d_action['id']), type_id=int(d_action['typeId']),
+                    activation_type=activation_type, snippet=html_to_md(d_action['snippet'])
+                ))
+
+        # features: save only if gamedata references them
+        for d_feature in character_features:
+            g_actions = compendium.lookup_actions_for_entity(int(d_feature['typeId']), int(d_feature['id']))
+            for g_action in g_actions:
+                actions.append(Action(
+                    name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                    activation_type=g_action.activation_type, snippet=d_feature['snippet']
+                ))
+
+        return Actions(actions)
+
     # ==== helpers ====
     @staticmethod
     def _transform_attack(attack) -> Attack:
-        desc = attack['desc'] and html2text.html2text(attack['desc'], bodywidth=0).strip()
+        desc = html_to_md(attack['desc'])
 
         if attack['saveDc'] is not None and attack['saveStat'] is not None:
             stat = constants.STAT_ABBREVIATIONS[attack['saveStat'] - 1]
@@ -333,3 +371,9 @@ class BeyondSheetParser(SheetLoaderABC):
             return Attack(attack['name'], automation.Automation(effects))
         else:
             return Attack.new(attack['name'], attack['toHit'], attack['damage'] or '0', desc)
+
+
+def html_to_md(text):
+    if not text:
+        return text
+    return html2text.html2text(text, bodywidth=0).strip()

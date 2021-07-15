@@ -37,11 +37,11 @@ class Effect:
         self.combat = combat
         self.combatant = combatant
         self.id = id
-        self._name = name
-        self._duration = duration
-        self._remaining = remaining
+        self.name = name
+        self.duration = duration
+        self.remaining = remaining
         self._effect = effect
-        self._concentration = concentration
+        self.concentration = concentration
         self.children = children
         self.parent = parent
         self.ticks_on_end = tonend
@@ -107,24 +107,8 @@ class Effect:
         return self
 
     @property
-    def name(self):
-        return self._name
-
-    @property
-    def duration(self):
-        return self._duration
-
-    @property
-    def remaining(self):
-        return self._remaining
-
-    @property
     def effect(self):
         return self._effect
-
-    @property
-    def concentration(self):
-        return self._concentration
 
     # --- stringification ---
     def __str__(self):
@@ -206,7 +190,7 @@ class Effect:
         if self.remaining >= 0 and not self.ticks_on_end:
             if self.remaining - num_turns <= 0:
                 self.remove()
-            self._remaining -= num_turns
+            self.remaining -= num_turns
 
     def on_turn_end(self, num_turns=1):
         """
@@ -215,7 +199,7 @@ class Effect:
         if self.remaining >= 0 and self.ticks_on_end:
             if self.remaining - num_turns <= 0:
                 self.remove()
-            self._remaining -= num_turns
+            self.remaining -= num_turns
 
     # parenting
     def get_parent_effect(self):

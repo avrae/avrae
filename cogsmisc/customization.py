@@ -22,26 +22,22 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
-from utils.constants import DAMAGE_TYPES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
+from utils.constants import DAMAGE_TYPES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES, SAVE_NAMES
 from utils.functions import confirm, get_selection, search_and_select, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
-STAT_VAR_NAMES = (
-    "charisma", "charismaMod", "charismaSave",
-    "constitution", "constitutionMod", "constitutionSave",
-    "dexterity", "dexterityMod", "dexteritySave",
-    "intelligence", "intelligenceMod", "intelligenceSave",
-    "strength", "strengthMod", "strengthSave",
-    "wisdom", "wisdomMod", "wisdomSave",
-    "armor", "description", "hp", "image", "level", "name", "proficiencyBonus",
-)
 
-SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical',
-                'strengthsave', 'dexteritysave', 'constitutionsave', 'intelligencesave', 'wisdomsave', 'charismasave'}
+STAT_MOD_NAMES = ('strengthMod', 'dexterityMod', 'constitutionMod', 'intelligenceMod', 'wisdomMod', 'charismaMod')
+
+STAT_VAR_NAMES = STAT_NAMES + SAVE_NAMES + STAT_MOD_NAMES + (
+    "armor", "color", "description", "hp", "image",
+    "level", "name", "proficiencyBonus", "spell",)
+
+SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical'}
 
 # Don't use any iterables with a string as only element. It will add all the chars instead of the string
-SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES)
+SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES, SAVE_NAMES)
 
 
 class CollectableManagementGroup(commands.Group):
@@ -437,7 +433,8 @@ class Customization(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def prefix(self, ctx, prefix: str = None):
-        """Sets the bot's prefix for this server.
+        """
+        Sets the bot's prefix for this server.
 
         You must have Manage Server permissions or a role called "Bot Admin" to use this command. Due to a possible Discord conflict, a prefix beginning with `/` will require confirmation.
 
@@ -446,7 +443,8 @@ class Customization(commands.Cog):
         guild_id = str(ctx.guild.id)
         if prefix is None:
             current_prefix = await self.bot.get_server_prefix(ctx.message)
-            return await ctx.send(f"My current prefix is: `{current_prefix}`")
+            return await ctx.send(f"My current prefix is: `{current_prefix}`. You can run commands like "
+                                  f"`{current_prefix}roll 1d20` or by mentioning me!")
 
         if not checks._role_or_permissions(ctx, lambda r: r.name.lower() == 'bot admin', manage_guild=True):
             return await ctx.send("You do not have permissions to change the guild prefix.")
@@ -455,6 +453,10 @@ class Customization(commands.Cog):
         if prefix.startswith('/'):
             if not await confirm(ctx, "Setting a prefix that begins with / may cause issues. "
                                       "Are you sure you want to continue? (Reply with yes/no)"):
+                return await ctx.send("Ok, cancelling.")
+        else:
+            if not await confirm(ctx, f"Are you sure you want to set my prefix to `{prefix}`? This will affect "
+                                      f"everyone on this server! (Reply with yes/no)"):
                 return await ctx.send("Ok, cancelling.")
 
         # insert into cache
@@ -467,7 +469,7 @@ class Customization(commands.Cog):
             upsert=True
         )
 
-        await ctx.send("Prefix set to `{}` for this server.".format(prefix))
+        await ctx.send(f"Prefix set to `{prefix}` for this server. Use commands like `{prefix}roll` now!")
 
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)

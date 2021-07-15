@@ -47,7 +47,7 @@ class Damage(Effect):
         silvered_arg = args.last('silvered', None, bool, ephem=True)
         mi_arg = args.last('mi', None, int)
         dtype_args = args.get('dtype', [], ephem=True)
-        critdice = args.last('critdice', 0, int)
+        critdice = sum(args.get('critdice', type_=int))
         hide = args.last('h', type_=bool)
 
         # character-specific arguments

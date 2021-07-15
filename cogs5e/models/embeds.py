@@ -11,7 +11,7 @@ class EmbedWithAuthor(discord.Embed):
     """An embed with author image and nickname set."""
 
     def __init__(self, ctx, **kwargs):
-        super(EmbedWithAuthor, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         self.colour = random.randint(0, 0xffffff)
 
@@ -20,7 +20,7 @@ class HomebrewEmbedWithAuthor(EmbedWithAuthor):
     """An embed with author image, nickname, and homebrew footer set."""
 
     def __init__(self, ctx, **kwargs):
-        super(HomebrewEmbedWithAuthor, self).__init__(ctx, **kwargs)
+        super().__init__(ctx, **kwargs)
         self.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
 
@@ -30,11 +30,145 @@ class EmbedWithCharacter(discord.Embed):
     def __init__(self, character, name=True, image=True, **kwargs):
         """:param name: bool - If True, sets author name to character name.
         :param image: bool - If True, shows character image as thumb if embedimage setting is true."""
-        super(EmbedWithCharacter, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if name: self.set_author(name=character.name)
         if character.get_setting('embedimage', True) and image:
             self.set_thumbnail(url=character.image)
         self.colour = character.get_color()
+
+
+class EmbedPaginator:
+    EMBED_MAX = 6000
+    EMBED_FIELD_MAX = 1024
+    EMBED_DESC_MAX = 2048
+    EMBED_TITLE_MAX = 256
+    CONTINUATION_FIELD_TITLE = '** **'
+
+    def __init__(self, first_embed=None, copy_kwargs=('colour',), **embed_options):
+        self._current_field_name = ''
+        self._current_field_inline = False
+        self._current_field = []
+        self._field_count = 0
+        self._embed_count = 0
+
+        self._footer_url = None
+        self._footer_text = None
+
+        if first_embed is None:
+            first_embed = discord.Embed(**embed_options)
+        self._default_embed_options = {c: getattr(first_embed, c) for c in copy_kwargs if hasattr(first_embed, c)}
+        self._default_embed_options.update(embed_options)
+        self._embeds = [first_embed]
+
+    def add_title(self, value):
+        """
+        Adds a title to the embed. This appears before any fields, and will raise a ValueError if the current
+        embed can't fit the value. Note that this adds the title to the current embed, so you should call this
+        first to add it to the first embed.
+        """
+        if len(value) > self.EMBED_TITLE_MAX or len(value) + self._embed_count > self.EMBED_MAX:
+            raise ValueError("The current embed cannot fit this title.")
+
+        self._embeds[-1].title = value
+        self._embed_count += len(value)
+
+    def add_description(self, value):
+        """
+        Adds a description to the embed. This appears before any fields, and will raise a ValueError if the current
+        embed can't fit the value. Note that this adds the description to the current embed, so you should call this
+        first to add it to the first embed.
+        """
+        if len(value) > self.EMBED_DESC_MAX or len(value) + self._embed_count > self.EMBED_MAX:
+            raise ValueError("The current embed cannot fit this description.")
+
+        self._embeds[-1].description = value
+        self._embed_count += len(value)
+
+    def add_field(self, name='', value='', inline=False):
+        """Add a new field to the help embed."""
+        if len(name) > self.EMBED_TITLE_MAX:
+            raise ValueError("This value is too large to store in an embed field.")
+
+        if self._current_field:
+            self.close_field()
+
+        self._current_field_name = name
+
+        chunks = chunk_text(value, max_chunk_size=self.EMBED_FIELD_MAX)
+        for chunk in chunks:
+            self._field_count += len(value) + 1
+            self._current_field_inline = inline
+            self._current_field.append(chunk)
+            self.close_field()
+            self._current_field_name = self.CONTINUATION_FIELD_TITLE
+
+    def extend_field(self, value):
+        """Add a line of text to the last field in the help embed."""
+        if self._field_count + len(value) + 1 > self.EMBED_FIELD_MAX:
+            self.close_field()
+            self.add_field(self.CONTINUATION_FIELD_TITLE, value)
+        else:
+            self._field_count += len(value) + 1
+            self._current_field.append(value)
+
+    def close_field(self):
+        """Terminate the current field and write it to the last embed."""
+        value = "\n".join(self._current_field)
+
+        if self._embed_count + len(value) + len(self._current_field_name) > self.EMBED_MAX:
+            self.close_embed()
+
+        self._embeds[-1].add_field(name=self._current_field_name, value=value, inline=self._current_field_inline)
+        self._embed_count += len(value) + len(self._current_field_name)
+
+        self._current_field_name = ''
+        self._current_field_inline = False
+        self._current_field = []
+        self._field_count = 0
+
+    def set_footer(self, icon_url=None, value=None):
+        """Sets the footer on the final embed."""
+        self._footer_url = icon_url
+        self._footer_text = value
+
+    def close_footer(self):
+        """Write the footer to the last embed."""
+        current_count = self._embed_count
+        kwargs = {}
+        if self._footer_url:
+            current_count += len(self._footer_url)
+            kwargs['icon_url'] = self._footer_url
+        if self._footer_text:
+            current_count += len(self._footer_text)
+            kwargs['text'] = self._footer_text
+        if current_count > self.EMBED_MAX:
+            self.close_embed()
+        self._embeds[-1].set_footer(**kwargs)
+
+    def close_embed(self):
+        """Terminate the current embed and create a new one."""
+        self._embeds.append(discord.Embed(**self._default_embed_options))
+        self._embed_count = 0
+
+    def __len__(self):
+        total = sum(len(e) for e in self._embeds)
+        return total + self._embed_count
+
+    @property
+    def embeds(self):
+        """Returns the rendered list of embeds."""
+        if self._field_count:
+            self.close_field()
+        self.close_footer()
+        return self._embeds
+
+    async def send_to(self, destination, **kwargs):
+        for embed in self.embeds:
+            await destination.send(embed=embed, **kwargs)
+
+    def __repr__(self):
+        return f'<EmbedPaginator _current_field_name={self._current_field_name} _field_count={self._field_count} ' \
+               f'_embed_count={self._embed_count}>'
 
 
 def add_fields_from_args(embed, _fields):

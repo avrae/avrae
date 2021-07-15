@@ -6,6 +6,7 @@ import aliasing.evaluators
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharacter, NoReset
+from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
 from cogs5e.models.sheet.player import CharOptions, CustomCounter, DeathSaves, ManualOverrides
@@ -33,10 +34,12 @@ class Character(StatBlock):
                  cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
                  spellbook: Spellbook,
                  live, race: str, background: str,
-                 ddb_campaign_id: str = None,
+                 ddb_campaign_id: str = None, actions: Actions = None,
                  **kwargs):
         if kwargs:
             log.warning(f"Unused kwargs: {kwargs}")
+        if actions is None:
+            actions = Actions()
         # sheet metadata
         self._owner = owner
         self._upstream = upstream
@@ -45,7 +48,7 @@ class Character(StatBlock):
         self._import_version = import_version
 
         # StatBlock super call
-        super(Character, self).__init__(
+        super().__init__(
             name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
             spellbook=spellbook,
             ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp
@@ -78,6 +81,8 @@ class Character(StatBlock):
 
         # ddb live sync
         self.ddb_campaign_id = ddb_campaign_id
+        # action automation
+        self.actions = actions
 
     # ---------- Deserialization ----------
     @classmethod
@@ -137,14 +142,14 @@ class Character(StatBlock):
 
     # ---------- Serialization ----------
     def to_dict(self):
-        d = super(Character, self).to_dict()
+        d = super().to_dict()
         d.update({
             "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
             "import_version": self._import_version, "description": self._description,
             "image": self._image, "cvars": self.cvars, "options": self.options.to_dict(),
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
-            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id
+            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict()
         })
         return d
 
@@ -229,7 +234,7 @@ class Character(StatBlock):
         self.cvars[name] = str(val)
 
     def get_scope_locals(self, no_cvars=False):
-        out = super(Character, self).get_scope_locals()
+        out = super().get_scope_locals()
         if not no_cvars:
             out.update(self.cvars.copy())
         out.update({
@@ -475,4 +480,4 @@ class CharacterSpellbook(Spellbook):
 
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
-DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook}
+DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions}

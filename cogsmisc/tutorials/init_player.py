@@ -149,7 +149,7 @@ class PlayerInitiative(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Attacks in Initiative"
             embed.description = f"""
-            Now even though all those villagers -- and your DM -- warned you not to, let’s pick a fight with this tarrasque anyway.  For that, you’ll need the command `{ctx.prefix}[attack|a] [atk_name] [args]`.
+            Now even though all those villagers -- and your DM -- warned you not to, let’s pick a fight with this tarrasque anyway.  For that, you’ll need the command `{ctx.prefix}[action|attack|a] [action_name] [args]`.
             
             We’ll use the `{ctx.prefix}a` shortcut for this tutorial.  After that, we need the attack name.  You can use `{ctx.prefix}a list` to see your available options.  If you pick a name that contains more than one word, be sure to add quotes around it, too, like `"unarmed strike"`.
             
@@ -185,7 +185,7 @@ class PlayerInitiative(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Attacks in Initiative II"
             embed.description = f"""
-            You always attack with your own character using `{ctx.prefix}attack`.  However, initiative has a matching command, `{ctx.prefix}init attack` (`{ctx.prefix}i a` for short), that uses the current combatant instead.  Since it’s currently your turn, right now that’s you.  On the tarrasque’s turn, `{ctx.prefix}init attack` can therefore be used to attack as the tarrasque.
+            You always attack with your own character using `{ctx.prefix}action`.  However, initiative has a matching command, `{ctx.prefix}init attack` (`{ctx.prefix}i a` for short), that uses the current combatant instead.  Since it’s currently your turn, right now that’s you.  On the tarrasque’s turn, `{ctx.prefix}init attack` can therefore be used to attack as the tarrasque.
             
             Whichever version you use, there are plenty of other arguments you can add to attacks, too.  If your first attack didn't land, try adding `hit` this time.  If you hurt the tarrasque already, you can have some other fun here.  You might try attacking with advantage (`adv`) or changing the damage type (`-dtype fire`) instead.
             ```
@@ -203,7 +203,7 @@ class PlayerInitiative(Tutorial):
         async def transition(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
-            That’s it!  You can use `!help attack` for the full list of available arguments.
+            That’s it!  You can use `!help action` for the full list of available arguments.
             """
             await ctx.send(embed=embed)
             await ctx.trigger_typing()

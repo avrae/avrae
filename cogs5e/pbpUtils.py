@@ -26,8 +26,7 @@ class PBPUtils(commands.Cog):
 
     @commands.command()
     async def techo(self, ctx, seconds: int, *, msg):
-        """Echos a message, and deletes it after a number of seconds.
-        Timeout: 0-600 seconds. Default: 0"""
+        """Echos a message, and deletes it after a number of seconds (0-600)."""
         await try_delete(ctx.message)
 
         seconds = min(max(0, seconds), 600)

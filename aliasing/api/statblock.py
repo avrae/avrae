@@ -149,7 +149,7 @@ class AliasStatBlock:
 
         :rtype: str or None
         """
-        return self._statblock._creature_type
+        return self._statblock.creature_type
 
     # ---- hp ----
     def set_hp(self, new_hp):

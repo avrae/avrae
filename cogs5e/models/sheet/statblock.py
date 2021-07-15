@@ -24,7 +24,8 @@ class StatBlock:
     def __init__(self, name: str, stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
                  skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
                  spellbook: Spellbook = None,
-                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0):
+                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+                 creature_type: str = None):
         if stats is None:
             stats = BaseStats.default()
         if levels is None:
@@ -57,7 +58,7 @@ class StatBlock:
         # defensive resistances
         self._resistances = resistances
         # assigned by combatant type
-        self._creature_type = None
+        self._creature_type = creature_type
 
         # ===== dynamic =====
         # hp/ac
@@ -125,6 +126,10 @@ class StatBlock:
     @property
     def spellbook(self):
         return self._spellbook
+
+    @property
+    def creature_type(self):
+        return self._creature_type
 
     # ===== UTILS =====
     # ----- Display -----
@@ -199,5 +204,6 @@ class StatBlock:
             "name": self._name, "stats": self._stats.to_dict(), "levels": self._levels.to_dict(),
             "attacks": self._attacks.to_dict(), "skills": self._skills.to_dict(),
             "resistances": self._resistances.to_dict(), "saves": self._saves.to_dict(), "ac": self._ac,
-            "max_hp": self._max_hp, "hp": self._hp, "temp_hp": self._temp_hp, "spellbook": self._spellbook.to_dict()
+            "max_hp": self._max_hp, "hp": self._hp, "temp_hp": self._temp_hp, "spellbook": self._spellbook.to_dict(),
+            "creature_type": self._creature_type
         }

@@ -152,9 +152,9 @@ class SimpleCombatant(AliasStatBlock):
         # Type-specific Properties
         self._race = None
         self._monster_name = None
+        self._creature_type = combatant._creature_type
 
         if combatant.type == CombatantType.MONSTER:
-            self._creature_type = combatant._creature_type
             self._monster_name = combatant.monster_name
         elif combatant.type == CombatantType.PLAYER:
             self._race = combatant.character.race

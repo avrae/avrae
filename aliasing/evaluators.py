@@ -486,7 +486,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         yaml.SafeDumper.add_representer(self._list, safe_list_representer)
         yaml.SafeDumper.add_representer(self._str, safe_str_representer)
         yaml.SafeDumper.add_representer(self._set, safe_set_representer)
-        return yaml.safe_dump(obj, None)
+        return yaml.safe_dump(obj, default_flow_style=False, line_break=True,
+                              indent=1)
 
     # ==== json ====
     def _json_decoder(self):

@@ -19,6 +19,7 @@ psutil==5.8.0
 pyjwt==2.0.1
 python-meteor==0.1.6
 sentry-sdk==1.0.0
+PyYAML~=5.4.1
 
 # deps installed by top-level deps that are referenced
 aiohttp==3.7.4.post0

@@ -1,4 +1,5 @@
 import json
+import yaml
 import re
 import textwrap
 import time
@@ -90,6 +91,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             uvar_exists=self.uvar_exists,
             chanid=self.chanid, servid=self.servid,  # fixme deprecated - use ctx instead
             load_json=self.load_json, dump_json=self.dump_json,
+            load_yaml=self.load_yaml, dump_yaml=self.dump_yaml,
             argparse=argparse, ctx=AliasContext(ctx)
         )
 
@@ -444,6 +446,47 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         if name in self.names:
             return self.names[name]
         return default
+
+    # ==== YAML ====
+    def load_yaml(self, yamlstr):
+        """
+        Loads an safe object from a YAML string. See :func:`yaml.safe_load`.
+        """
+
+        object_pairs_hook = self._dict
+
+        def construct_mapping(loader, node):
+            loader.flatten_mapping(node)
+            return object_pairs_hook(loader.construct_pairs(node))
+
+        yaml.SafeLoader.add_constructor(
+            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+            construct_mapping)
+
+        return yaml.safe_load(yamlstr) or {}
+
+    def dump_yaml(self, obj):
+        """
+        Serializes an object to a safe YAML string. See :func:`yaml.safe_dump`.
+        """
+
+        def safe_dict_representer(dumper, data):
+            return dumper.represent_dict(data)
+
+        def safe_list_representer(dumper, data):
+            return dumper.represent_sequence(dumper.DEFAULT_SEQUENCE_TAG, data)
+
+        def safe_str_representer(dumper, data):
+            return dumper.represent_str(data)
+
+        def safe_set_representer(dumper, data):
+            return dumper.represent_sequence(dumper.DEFAULT_SEQUENCE_TAG, data)
+
+        yaml.SafeDumper.add_representer(self._dict, safe_dict_representer)
+        yaml.SafeDumper.add_representer(self._list, safe_list_representer)
+        yaml.SafeDumper.add_representer(self._str, safe_str_representer)
+        yaml.SafeDumper.add_representer(self._set, safe_set_representer)
+        return yaml.safe_dump(obj, None)
 
     # ==== json ====
     def _json_decoder(self):

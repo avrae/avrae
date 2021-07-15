@@ -450,3 +450,23 @@ async def get_guild_member(guild, member_id):
     if result:
         return result[0]
     return None
+
+
+def reconcile_adv(adv=False, dis=False, ea=False):
+    """
+    Reconciles sets of advantage passed in
+
+    :param adv: Combined advantage
+    :param dis: Combined disadvantage
+    :param ea:  Combined elven accuracy
+    :rtype: int
+    :return: The combined advantage result
+    """
+    result = 0
+    if adv:
+        result += 1
+    if dis:
+        result += -1
+    if ea and not dis:
+        return 2
+    return result

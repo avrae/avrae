@@ -4,12 +4,12 @@ Created on Jan 19, 2017
 @author: andrew
 """
 import asyncio
-import json
 import logging
 import time
 import traceback
 
 import discord
+import yaml
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
@@ -45,7 +45,9 @@ CHARACTER_SETTINGS = {
                            display_func=lambda val: 'enabled' if val else 'disabled'),
     "critdice": CSetting("critdice", "number", description="extra crit dice", default=0),
     "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
-                       display_func=lambda val: 'enabled' if val else 'disabled')
+                       display_func=lambda val: 'enabled' if val else 'disabled'),
+    "ignorecrit": CSetting("ignorecrit", "boolean", description="ignore crits", default='disabled',
+                           display_func=lambda val: 'enabled' if val else 'disabled')
 }
 
 
@@ -124,7 +126,7 @@ class SheetManager(commands.Cog):
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:
-            if await confirm(ctx, "This will overwrite an attack with the same name. Continue?"):
+            if await confirm(ctx, "This will overwrite an attack with the same name. Continue? (Reply with yes/no)"):
                 character.overrides.attacks.remove(conflict)
             else:
                 return await ctx.send("Okay, aborting.")
@@ -137,15 +139,19 @@ class SheetManager(commands.Cog):
         await ctx.send(out)
 
     @attack.command(name="import")
-    async def attack_import(self, ctx, *, data):
+    async def attack_import(self, ctx, *, data: str):
         """
-        Imports an attack from JSON exported from the Avrae Dashboard.
+        Imports an attack from JSON or YAML exported from the Avrae Dashboard.
         """
+        # strip any code blocks
+        if data.startswith(('```\n', '```json\n', '```yaml\n', '```yml\n', '```py\n')) and data.endswith('```'):
+            data = '\n'.join(data.split('\n')[1:]).rstrip('`\n')
+
         character: Character = await Character.from_ctx(ctx)
 
         try:
-            attack_json = json.loads(data)
-        except json.decoder.JSONDecodeError:
+            attack_json = yaml.safe_load(data)
+        except yaml.YAMLError:
             return await ctx.send("This is not a valid attack.")
 
         if not isinstance(attack_json, list):
@@ -159,7 +165,7 @@ class SheetManager(commands.Cog):
         conflicts = [a for a in character.overrides.attacks if a.name.lower() in [new.name.lower() for new in attacks]]
         if conflicts:
             if await confirm(ctx, f"This will overwrite {len(conflicts)} attacks with the same name "
-                                  f"({', '.join(c.name for c in conflicts)}). Continue?"):
+                                  f"({', '.join(c.name for c in conflicts)}). Continue? (Reply with yes/no)"):
                 for conflict in conflicts:
                     character.overrides.attacks.remove(conflict)
             else:
@@ -178,7 +184,7 @@ class SheetManager(commands.Cog):
         """
         character: Character = await Character.from_ctx(ctx)
         attack = await search_and_select(ctx, character.overrides.attacks, name, lambda a: a.name)
-        if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}?")):
+        if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}? (Reply with yes/no)")):
             return await ctx.send("Okay, aborting delete.")
         character.overrides.attacks.remove(attack)
         await character.commit(ctx)
@@ -229,7 +235,9 @@ class SheetManager(commands.Cog):
         skill = char.skills[skill_key]
 
         checkutils.update_csetting_args(char, args, skill)
-        result = checkutils.run_check(skill_key, char, args, embed)
+        caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
+
+        result = checkutils.run_check(skill_key, caster, args, embed)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -467,14 +475,18 @@ class SheetManager(commands.Cog):
     @commands.command()
     async def csettings(self, ctx, *args):
         """Updates personalization settings for the currently active character.
-        Valid Arguments:
-        `color <hex color>` - Colors all embeds this color.
+
+        __**Valid Arguments**__
+        Use `<setting> reset` to reset a setting to the default.
+
+        `color <hex color>` - Colors all character-based built-in embeds this color. Accessible as the cvar `color`
         `criton <number>` - Makes attacks crit on something other than a 20.
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
         `critdice <number>` - Adds additional dice for to critical attacks.
-        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with."""
+        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with.
+        `ignorecrit true/false` - Prevents critical hits from applying, for example with adamantine armor."""
         char = await Character.from_ctx(ctx)
 
         out = []
@@ -499,7 +511,7 @@ class SheetManager(commands.Cog):
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
             return await confirm(ctx,
-                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (Reply with yes/no)?\n"
                                  f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
 

@@ -4,6 +4,10 @@ from dataclasses import dataclass, field
 
 import d20
 
+import cogs5e.models.initiative
+import cogs5e.models.sheet.statblock
+import gamedata
+
 __all__ = (
     'EffectResult', 'AutomationResult',
     'TargetResult', 'AttackResult', 'SaveResult', 'DamageResult', 'TempHPResult', 'IEffectResult', 'RollResult',

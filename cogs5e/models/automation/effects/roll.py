@@ -72,6 +72,9 @@ class Roll(Effect):
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)
-        evaluator.builtins[self.name] = self.dice
+        try:
+            evaluator.builtins[self.name] = evaluator.transformed_str(self.dice)
+        except Exception:
+            evaluator.builtins[self.name] = self.dice
         evaluator.builtins['lastRoll'] = 0
         return ""

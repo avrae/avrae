@@ -20,9 +20,12 @@ class Combat:
     _cache = cachetools.TTLCache(maxsize=50, ttl=10)
 
     def __init__(self, channel_id, message_id, dm_id, options, ctx,
-                 combatants=None, round_num=0, turn_num=0, current_index=None):
+                 combatants=None, round_num=0, turn_num=0, current_index=None,
+                 metadata=None):
         if combatants is None:
             combatants = []
+        if metadata is None:
+            metadata = {}
         self._channel = str(channel_id)  # readonly
         self._summary = int(message_id)  # readonly
         self._dm = str(dm_id)
@@ -32,6 +35,7 @@ class Combat:
         self._turn = turn_num
         self._current_index = current_index
         self.ctx = ctx
+        self._metadata = metadata
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
@@ -58,7 +62,7 @@ class Combat:
     @classmethod
     async def from_dict(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'])
+                   raw['turn'], raw['current'], raw.get('metadata'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -91,7 +95,7 @@ class Combat:
     @classmethod
     def from_dict_sync(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'])
+                   raw['turn'], raw['current'], raw.get('metadata'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -109,7 +113,7 @@ class Combat:
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
                 'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-                'round': self.round_num, 'current': self._current_index}
+                'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata}
 
     # members
     @property
@@ -253,6 +257,8 @@ class Combat:
         if current is not None:
             self._current_index = current.index
             self._turn = current.init
+        else:
+            self._current_index = None
 
     def combatant_by_id(self, combatant_id):
         """Gets a combatant by their ID."""

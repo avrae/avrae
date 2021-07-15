@@ -43,7 +43,8 @@ async def run_attack(ctx, embed, args, caster, attack, targets, combat):
     result = await attack.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
     if combat:
         await combat.final()
-    elif result.caster_needs_commit and hasattr(caster, 'commit'):  # commit character only
+    # commit character only if we have not already committed it via combat final
+    if result.caster_needs_commit and hasattr(caster, 'commit') and not (combat and caster in combat.get_combatants()):
         await caster.commit(ctx)
 
     embeds.add_fields_from_args(embed, args.get('f'))

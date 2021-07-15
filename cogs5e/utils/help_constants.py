@@ -80,6 +80,7 @@ sadv/sdis - Gives the target advantage/disadvantage on the saving throw.
 
 __Damage Types__
 *magical* - Makes the damage type of the attack magical.
+*silvered* - Makes the damage type of the attack silvered.
 *-dtype <new type>* - Changes all damage types to a new damage type.
 *-dtype "old>new"* - Changes all parts of the damage roll that do "old" damage type to deal "new" damage type (e.g. `-dtype fire>cold`)
 *-resist <damage type>* - Gives the target resistance to the given damage type.

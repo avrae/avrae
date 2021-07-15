@@ -1,6 +1,7 @@
 import discord
 import pytest
 
+from cogs5e.models.sheet.resistance import Resistance
 from gamedata.compendium import compendium
 from tests.conftest import end_init, start_init
 from tests.utils import D20_PATTERN, active_character, active_combat
@@ -120,6 +121,25 @@ class TestYourStandardInitiative:
             resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
             assert 'foobar' not in [r.dtype for r in resistances.vuln]
 
+    async def test_complex_resistances(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1"):
+            avrae.message(f"!i opt \"{combatant}\" -resist \"magical foobar\"")
+            await dhttp.drain()
+            resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
+            assert Resistance('foobar', only=['magical']) in resistances.resist
+
+            avrae.message(f"!i opt \"{combatant}\" -vuln \"magical foobar\"")
+            await dhttp.drain()
+            resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
+            assert Resistance('foobar', only=['magical']) not in resistances.resist
+            assert Resistance('foobar', only=['magical']) in resistances.vuln
+
+            avrae.message(f"!i opt \"{combatant}\" -neutral \"magical foobar\"")
+            await dhttp.drain()
+            resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
+            assert Resistance('foobar', only=['magical']) not in resistances.vuln
+
     async def test_resistance_effects(self, avrae, dhttp):
         character = await active_character(avrae)
         for combatant in (character.name, "KO1", "TEST1"):
@@ -138,6 +158,34 @@ class TestYourStandardInitiative:
             resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
             assert 'foobar' in [r.dtype for r in resistances.vuln]
             assert 'foobar' in [r.dtype for r in resistances.resist]
+
+    async def test_silver_resists(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1", "TEST2"):
+            avrae.message(f'!i opt "{combatant}" -resist "nonsilvered foo"')  # make sure silvered will work
+            await dhttp.drain()
+
+            avrae.message(f'!i hp "{combatant}" set 100')
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foo] silvered')
+            await dhttp.drain()
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foo]')
+            await dhttp.drain()
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
+
+    async def test_magical_resists(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1"):
+            avrae.message(f'!i opt "{combatant}" -resist "nonmagical bar"')  # since a change was made to magical
+            await dhttp.drain()
+
+            avrae.message(f'!i hp "{combatant}" set 100')
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[bar] magical')
+            await dhttp.drain()
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
+            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[bar]')
+            await dhttp.drain()
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
 
     async def test_effect_durations(self, avrae, dhttp):
         avrae.message(f"!i next")
@@ -247,6 +295,7 @@ async def test_commands_no_error(avrae, dhttp):
     for command in commands:
         avrae.message(command)
         await dhttp.drain()
+
 
 @pytest.mark.usefixtures("init_fixture")
 async def test_assign_groups(avrae, dhttp):

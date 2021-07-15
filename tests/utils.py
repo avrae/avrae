@@ -8,6 +8,8 @@ from cogs5e.models.character import Character
 from cogs5e.models.initiative import Combat
 from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
 # rolled dice: the individual results of dice
 # matches:
 # (5)
@@ -28,7 +30,8 @@ ROLLED_DICE_PATTERN = r"\((~*(\**\d+\**( -> )?)+~*(, )?)+\)"
 D20_PATTERN = rf"\d?d20(\w+[lh<>]?\d+)? *{ROLLED_DICE_PATTERN}( *[+-] *\d+)?( *= *`\d+`)?"
 
 # dice: any combination of valid dice, rolled or unrolled
-DICE_PATTERN = rf"( *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+( *= *`\d+`)?"
+DICE_PATTERN = rf"((\()? *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+" \
+               rf"(\))?( *[\/\*] *\d)?( *= *`\d+`)?"
 
 # to hit: a to-hit section of an attack
 TO_HIT_PATTERN = rf"\*\*To Hit:?\*\*:? ((\d?d20\.\.\. = `(\d+|HIT|MISS)`)|({D20_PATTERN}{DICE_PATTERN} = `\d+`)|" \
@@ -39,6 +42,9 @@ DAMAGE_PATTERN = rf"((\*\*Damage( \(CRIT!\))?:?\*\*:? {DICE_PATTERN})|(\*\*Miss!
 
 # attack: to hit and damage on two lines
 ATTACK_PATTERN = rf"{TO_HIT_PATTERN}\n{DAMAGE_PATTERN}"
+
+# catches Dagger and Faithful Daggo' (Dagger)
+DAGGER_PATTER = r".*\(?Dagger\)?"
 
 # save: d20, success or failure
 SAVE_PATTERN = rf"\*\*\w+ Save:?\*\*:? {D20_PATTERN}; (Failure|Success)!"
@@ -65,11 +71,11 @@ def requires_data():
     Spells: Fire Bolt, Fireball
     """
     if not compendium.spells:  # if spells have not loaded, no data has
-        compendium.load_all_json(base_path=os.path.relpath("tests/static/compendium"))
+        compendium.load_all_json(base_path=os.path.join(dir_path, "static", "compendium"))
         compendium.load_common()
 
     if not compendium.spells:  # we have no data, then
-        return pytest.mark.skip(reason=f"Test requires data")
+        return pytest.mark.skip(reason="Test requires data")
 
     return lambda func: func
 

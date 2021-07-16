@@ -17,7 +17,7 @@ from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, 
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
-from cogs5e.utils import actionutils, checkutils, targetutils
+from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
@@ -88,7 +88,7 @@ class InitTracker(commands.Cog):
 
         try:
             await temp_summary_msg.pin()
-        except:
+        except discord.HTTPException:
             pass
         await ctx.send(
             f"Everyone roll for initiative!\n"
@@ -379,7 +379,7 @@ class InitTracker(commands.Cog):
             await gamelog.send_check(ctx, me.character, check_result.skill_name, check_result.rolls)
 
     @init.command(name="next", aliases=['n'])
-    async def nextInit(self, ctx):
+    async def init_next(self, ctx):
         """
         Moves to the next turn in initiative order.
         It must be your turn or you must be a DM to use this command.
@@ -392,9 +392,9 @@ class InitTracker(commands.Cog):
             return
 
         # check: is the user allowed to move combat on
-        allowed_to_pass = (combat.index is None) \
-                          or (str(ctx.author.id) in (combat.current_combatant.controller, combat.dm)) \
-                          or DM_ROLES.intersection({r.name.lower() for r in ctx.author.roles})
+        allowed_to_pass = ((combat.index is None)
+                           or (str(ctx.author.id) in (combat.current_combatant.controller, combat.dm))
+                           or DM_ROLES.intersection({r.name.lower() for r in ctx.author.roles}))
         if not allowed_to_pass:
             await ctx.send("It is not your turn.")
             return
@@ -437,7 +437,7 @@ class InitTracker(commands.Cog):
         await combat.final()
 
     @init.command(name="prev", aliases=['previous', 'rewind'])
-    async def prevInit(self, ctx):
+    async def init_prev(self, ctx):
         """Moves to the previous turn in initiative order."""
 
         combat = await Combat.from_ctx(ctx)
@@ -452,7 +452,7 @@ class InitTracker(commands.Cog):
         await combat.final()
 
     @init.command(name="move", aliases=['goto'])
-    async def moveInit(self, ctx, target=None):
+    async def init_move(self, ctx, target=None):
         """Moves to a certain initiative.
         `target` can be either a number, to go to that initiative, or a name.
         If not supplied, goes to the first combatant that the user controls."""
@@ -483,10 +483,10 @@ class InitTracker(commands.Cog):
         """Skips one or more rounds of initiative."""
         combat = await Combat.from_ctx(ctx)
 
-        toRemove = []
+        to_remove = []
         for co in combat.get_combatants():
             if isinstance(co, MonsterCombatant) and co.hp <= 0 and co is not combat.current_combatant:
-                toRemove.append(co)
+                to_remove.append(co)
 
         messages = combat.skip_rounds(numrounds)
         out = messages
@@ -496,7 +496,7 @@ class InitTracker(commands.Cog):
         else:
             out.append(combat.get_summary())
 
-        for co in toRemove:
+        for co in to_remove:
             combat.remove_combatant(co)
             out.append("{} automatically removed from combat.".format(co.name))
 
@@ -527,7 +527,7 @@ class InitTracker(commands.Cog):
         try:
             await new_summary.pin()
             await old_summary.unpin()
-        except:
+        except discord.HTTPException:
             pass
 
         await combat.final()
@@ -564,7 +564,7 @@ class InitTracker(commands.Cog):
         await ctx.send(out)
 
     @init.command(name="list", aliases=['summary'])
-    async def listInits(self, ctx, *args):
+    async def init_list(self, ctx, *args):
         """Lists the combatants.
         __Valid Arguments__
         private - Sends the list in a private message."""
@@ -595,7 +595,8 @@ class InitTracker(commands.Cog):
 
     @init.command(aliases=['opts'])
     async def opt(self, ctx, name: str, *args):
-        """Edits the options of a combatant.
+        """
+        Edits the options of a combatant.
         __Valid Arguments__
         -h - Hides HP, AC, Resists, etc.
         -p <value> - Changes the combatants' placement in the Initiative. Adds if starts with +/- or sets otherwise.
@@ -608,7 +609,8 @@ class InitTracker(commands.Cog):
         -neutral <damage type> - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
         -group <group> - Adds the combatant to a group. To remove them from group, use -group None.
         -max <maxhp> - Modifies the combatants' Max HP. Adds if starts with +/- or sets otherwise.
-        -hp <hp> - Modifies current HP. Adds if starts with +/- or sets otherwise."""
+        -hp <hp> - Modifies current HP. Adds if starts with +/- or sets otherwise.
+        """  # noqa: E501
         combat = await Combat.from_ctx(ctx)
 
         comb = await combat.select_combatant(name, select_group=True)
@@ -900,7 +902,8 @@ class InitTracker(commands.Cog):
 
     @init.command()
     async def effect(self, ctx, target_name: str, effect_name: str, *args):
-        """Attaches a status effect to a combatant.
+        """
+        Attaches a status effect to a combatant.
         [args] is a set of args that affects a combatant in combat.
         See `!help init re` to remove effects.
         __**Valid Arguments**__
@@ -927,7 +930,8 @@ class InitTracker(commands.Cog):
         -cb <check bonus> - Adds a bonus to all ability checks.
         -sadv/sdis <ability> - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
         -maxhp <hp> - modifies maximum hp temporarily; adds if starts with +/- or sets otherwise.
-        -desc <description> - Adds a description of the effect."""  # noqa: E501
+        -desc <description> - Adds a description of the effect.
+        """  # noqa: E501
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
 
@@ -1314,7 +1318,7 @@ class InitTracker(commands.Cog):
                 summary = combat.get_summary_msg()
                 await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
                 await summary.unpin()
-            except:
+            except discord.HTTPException:
                 pass
 
             await combat.end()

@@ -226,7 +226,7 @@ class SheetManager(commands.Cog):
         embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
         checkutils.update_csetting_args(char, args)
-        caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
+        caster = await targetutils.maybe_combat_caster(ctx, char)
 
         result = checkutils.run_save(skill, caster, args, embed)
 
@@ -251,7 +251,7 @@ class SheetManager(commands.Cog):
         skill = char.skills[skill_key]
 
         checkutils.update_csetting_args(char, args, skill)
-        caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
+        caster = await targetutils.maybe_combat_caster(ctx, char)
 
         result = checkutils.run_check(skill_key, caster, args, embed)
 

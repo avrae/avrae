@@ -152,7 +152,6 @@ class SimpleCombatant(AliasStatBlock):
         # Type-specific Properties
         self._race = None
         self._monster_name = None
-        self._creature_type = combatant._creature_type
 
         if combatant.type == CombatantType.MONSTER:
             self._monster_name = combatant.monster_name
@@ -198,15 +197,6 @@ class SimpleCombatant(AliasStatBlock):
         :rtype: str or None
         """
         return self._race
-
-    @property
-    def creature_type(self):
-        """
-        The creature type of the combatant. Will return None for players or combatants with no creature type.
-
-        :rtype: str or None
-        """
-        return self._creature_type
 
     @property
     def monster_name(self):

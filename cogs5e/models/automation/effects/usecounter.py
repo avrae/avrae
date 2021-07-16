@@ -73,21 +73,17 @@ class UseCounter(Effect):
         autoctx.metavars['lastCounterUsedAmount'] = result.used_amount
         return result
 
-    def get_and_use_counter(self, autoctx, amount, ignore_resources: bool = False):  # this is not in run() because indentation
-        if ignore_resources:
+    def get_and_use_counter(self, autoctx, amount, ignore_resources: bool = False):
+        if ignore_resources:  # handled here to return counter name (#1582)
             if isinstance(self.counter, AbilityReference):
                 name = self.counter.entity.name if self.counter.entity is not None else "Unknown Ability"
             else:
                 name = self.counter
-
-            return UseCounterResult(counter_name=name,
-                                    requested_amount=amount,
-                                    skipped=True)
+            return UseCounterResult(counter_name=name, requested_amount=amount, skipped=True)
 
         if autoctx.character is None:
             raise NoCounterFound("The caster does not have custom counters.")
 
-        autoctx.caster_needs_commit = True
         if isinstance(self.counter, AbilityReference):
             counter = abilityreference_counter_discovery(self.counter, autoctx.character)
         else:  # str - get counter by match
@@ -99,10 +95,8 @@ class UseCounter(Effect):
 
     def use_spell_slot(self, autoctx, amount, ignore_resources: bool = False):
         level = autoctx.args.last('l', self.counter.slot, int)
-        if ignore_resources:
-            return UseCounterResult(counter_name=str(level),
-                                    requested_amount=amount,
-                                    skipped=True)
+        if ignore_resources:  # handled here to return counter name (#1582)
+            return UseCounterResult(counter_name=str(level), requested_amount=amount, skipped=True)
 
         autoctx.caster_needs_commit = True
         old_value = autoctx.caster.spellbook.get_slots(level)
@@ -131,6 +125,7 @@ class UseCounter(Effect):
                                 requested_amount=amount)
 
     def use_custom_counter(self, autoctx, counter, amount):
+        autoctx.caster_needs_commit = True
         old_value = counter.value
         target_value = old_value - amount
 

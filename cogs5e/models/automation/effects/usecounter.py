@@ -75,13 +75,20 @@ class UseCounter(Effect):
 
     def get_and_use_counter(self, autoctx, amount, ignore_resources: bool = False):  # this is not in run() because indentation
         if ignore_resources:
-            return UseCounterResult(counter_name=self.counter.name,
-                                    requested_amount=amount,
-                                    skipped=True)
+            if ignore_resources:
+                if isinstance(self.counter, AbilityReference):
+                    name = self.counter.entity.name if self.counter.entity is not None else "Unknown Ability"
+                else:
+                    name = self.counter
+
+                return UseCounterResult(counter_name=name,
+                                        requested_amount=amount,
+                                        skipped=True)
 
         if autoctx.character is None:
             raise NoCounterFound("The caster does not have custom counters.")
 
+        autoctx.caster_needs_commit = True
         if isinstance(self.counter, AbilityReference):
             counter = abilityreference_counter_discovery(self.counter, autoctx.character)
         else:  # str - get counter by match

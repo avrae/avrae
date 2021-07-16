@@ -584,76 +584,17 @@ class SheetManager(commands.Cog):
             return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         # Load the parsed sheet
-        await self._load_sheet(ctx, parser, args, loading)
+        character = await self._load_sheet(ctx, parser, args, loading)
+        if character and beyond_match:
+            await send_ddb_ctas(ctx, character)
 
-    @commands.command()
-    @commands.max_concurrency(1, BucketType.user)
-    async def dicecloud(self, ctx, url: str, *args):
-        """
-        Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
-        Share your character with `avrae` on Dicecloud (edit perms) for live updates.
-        __Valid Arguments__
-        `-nocc` - Do not automatically create custom counters for class resources and features.
-        """
-        url = await self._check_url(ctx, url)
-        if 'dicecloud.com' in url:
-            url = url.split('/character/')[-1].split('/')[0]
-
-        override = await self._confirm_overwrite(ctx, f"dicecloud-{url}")
-        if not override:
-            return await ctx.send("Character overwrite unconfirmed. Aborting.")
-
-        loading = await ctx.send('Loading character data from Dicecloud...')
-        parser = DicecloudParser(url)
-        await self._load_sheet(ctx, parser, args, loading)
-
-    @commands.command()
-    @commands.max_concurrency(1, BucketType.user)
-    async def gsheet(self, ctx, url: str, *args):
-        """
-        Loads a character sheet from [GSheet v2.1](https://gsheet2.avrae.io) (auto) or [GSheet v1.4](https://gsheet.avrae.io) (manual), resetting all settings.
-        The sheet must be shared with Avrae for this to work.
-        Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
-        """  # noqa: E501
-
-        url = await self._check_url(ctx, url)
-        loading = await ctx.send('Loading character data from Google... (This usually takes ~30 sec)')
-        try:
-            url = extract_gsheet_id_from_url(url)
-        except ExternalImportError:
-            return await loading.edit(content="This is not a Google Sheets link.")
-
-        override = await self._confirm_overwrite(ctx, f"google-{url}")
-        if not override:
-            return await ctx.send("Character overwrite unconfirmed. Aborting.")
-
-        parser = GoogleSheet(url)
-        await self._load_sheet(ctx, parser, args, loading)
-
-    @commands.command()
+    @commands.command(hidden=True, aliases=['gsheet', 'dicecloud'])
     @commands.max_concurrency(1, BucketType.user)
     async def beyond(self, ctx, url: str, *args):
         """
-        Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings.
-        __Valid Arguments__
-        `-nocc` - Do not automatically create custom counters for limited use features.
+        This is an old command and has been replaced. Use `!import` instead!
         """
-
-        url = await self._check_url(ctx, url)
-        loading = await ctx.send('Loading character data from Beyond...')
-        url = DDB_URL_RE.match(url)
-        if url is None:
-            return await loading.edit(content="This is not a D&D Beyond link.")
-        url = url.group(1)
-
-        override = await self._confirm_overwrite(ctx, f"beyond-{url}")
-        if not override:
-            return await ctx.send("Character overwrite unconfirmed. Aborting.")
-
-        parser = BeyondSheetParser(url)
-        character = await self._load_sheet(ctx, parser, args, loading)
-        if character:
-            await send_ddb_ctas(ctx, character)
+        await self.import_sheet(ctx, url, *args)
 
     @staticmethod
     async def _load_sheet(ctx, parser, args, loading):

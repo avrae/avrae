@@ -240,7 +240,7 @@ async def test_usecounter_deserialize():
     assert result
     assert result.counter == 'Bardic Inspiration'
     assert result.amount == '5'
-    assert result.allow_overflow == True
+    assert result.allow_overflow is True
     assert result.error_behaviour is None
 
     data = {
@@ -250,7 +250,7 @@ async def test_usecounter_deserialize():
     }
     result = automation.UseCounter.from_data(data)
     assert result
-    assert result.allow_overflow == False
+    assert result.allow_overflow is False
     assert result.error_behaviour == 'warn'
 
     data = {

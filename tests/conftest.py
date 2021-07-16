@@ -313,7 +313,8 @@ def character(request, avrae):
         {"$set": char.to_dict()},
         upsert=True
     )
-    request.cls.character = char
+    if request.cls is not None:
+        request.cls.character = char
     yield char
     avrae.mdb.characters.delegate.delete_one(
         {"owner": char.owner, "upstream": char.upstream}

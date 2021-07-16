@@ -938,7 +938,8 @@ class InitTracker(commands.Cog):
         -sb <save bonus> - Adds a bonus to all saving throws.
         -cb <check bonus> - Adds a bonus to all ability checks.
         -sadv/sdis <ability> - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
-        -desc <description> - Adds a description of the effect."""
+        -maxhp <hp> - modifies maximum hp temporarily; adds if starts with +/- or sets otherwise.
+        -desc <description> - Adds a description of the effect."""  # noqa: E501
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
 

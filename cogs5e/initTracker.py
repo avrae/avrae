@@ -795,16 +795,6 @@ class InitTracker(commands.Cog):
         else:
             await ctx.send("```markdown\n" + status + "```")
 
-    @staticmethod
-    async def _send_hp_result(ctx, combatant, delta=None):
-        deltaend = f" ({delta})" if delta else ""
-
-        if combatant.is_private:
-            await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
-            await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)}{deltaend}")
-        else:
-            await ctx.send(f"{combatant.name}: {combatant.hp_str()}{deltaend}")
-
     @init.group(invoke_without_command=True)
     async def hp(self, ctx, name: str, *, hp: str = None):
         """Modifies the HP of a combatant."""
@@ -837,7 +827,7 @@ class InitTracker(commands.Cog):
         else:
             delta = f"{hp_roll.total:+}"
 
-        await self._send_hp_result(ctx, combatant, delta)
+        await gameutils.send_hp_result(ctx, combatant, delta)
 
     @hp.command(name='max')
     async def init_hp_max(self, ctx, name, *, hp: str = None):
@@ -859,7 +849,7 @@ class InitTracker(commands.Cog):
             combatant.max_hp = hp_roll.total
 
         await combat.final()
-        await self._send_hp_result(ctx, combatant, delta)
+        await gameutils.send_hp_result(ctx, combatant, delta)
 
     @hp.command(name='mod', hidden=True)
     async def init_hp_mod(self, ctx, name, *, hp):
@@ -878,13 +868,15 @@ class InitTracker(commands.Cog):
         hp_roll = roll(hp)
         combatant.set_hp(hp_roll.total)
         await combat.final()
-        await self._send_hp_result(ctx, combatant, f"{combatant.hp - before:+}")
+        await gameutils.send_hp_result(ctx, combatant, f"{combatant.hp - before:+}")
 
     @init.command()
     async def thp(self, ctx, name: str, *, thp: str):
-        """Modifies the temporary HP of a combatant.
+        """
+        Modifies the temporary HP of a combatant.
         Usage: !init thp <NAME> <HP>
-        Sets the combatants' THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP)."""
+        Sets the combatants' THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP).
+        """  # noqa: E501
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
@@ -903,12 +895,8 @@ class InitTracker(commands.Cog):
         if 'd' in thp:
             delta = f"({thp_roll.result})"
 
-        if combatant.is_private:
-            await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
-            await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)} {delta}")
-        else:
-            await ctx.send(f"{combatant.name}: {combatant.hp_str()} {delta}")
         await combat.final()
+        await gameutils.send_hp_result(ctx, combatant, delta)
 
     @init.command()
     async def effect(self, ctx, target_name: str, effect_name: str, *args):

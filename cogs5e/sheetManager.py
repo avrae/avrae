@@ -109,11 +109,12 @@ class SheetManager(commands.Cog):
         other - Only displays the available actions that have another activation time.
         """
         char: Character = await Character.from_ctx(ctx)
+        caster = await targetutils.maybe_combat_caster(ctx, char)
         embed = embeds.EmbedWithCharacter(char, name=False)
         embed.title = f"{char.name}'s Actions"
 
         await actionutils.send_action_list(
-            ctx, caster=char, attacks=char.attacks, actions=char.actions, embed=embed, args=args)
+            ctx, caster=caster, attacks=caster.attacks, actions=char.actions, embed=embed, args=args)
 
     # ---- attack management commands ----
     @action.command(name="add", aliases=['create'])

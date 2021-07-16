@@ -46,7 +46,7 @@ class UseCounter(Effect):
 
         # handle -amt, -l, -i
         amt = autoctx.args.last('amt', None, int, ephem=True)
-        i = autoctx.args.last('i')
+        ignore = autoctx.args.last('i')
         # -l handled in use_spell_slot
 
         try:
@@ -56,15 +56,11 @@ class UseCounter(Effect):
 
         autoctx.metavars['lastCounterRequestedAmount'] = amount  # 1491
 
-        if i:
-            return UseCounterResult(skipped=True, requested_amount=amount)  # skipped
-
         try:
             if isinstance(self.counter, SpellSlotReference):  # spell slot
-                result = self.use_spell_slot(autoctx, amount)
+                result = self.use_spell_slot(autoctx, amount, ignore)
             else:
-                result = self.get_and_use_counter(autoctx, amount)
-            autoctx.caster_needs_commit = True
+                result = self.get_and_use_counter(autoctx, amount, ignore)
         except Exception as e:
             result = UseCounterResult(skipped=True, requested_amount=amount)
             if self.error_behaviour == 'warn':
@@ -77,7 +73,12 @@ class UseCounter(Effect):
         autoctx.metavars['lastCounterUsedAmount'] = result.used_amount
         return result
 
-    def get_and_use_counter(self, autoctx, amount):  # this is not in run() because indentation
+    def get_and_use_counter(self, autoctx, amount, ignore_resources: bool = False):  # this is not in run() because indentation
+        if ignore_resources:
+            return UseCounterResult(counter_name=self.counter.name,
+                                    requested_amount=amount,
+                                    skipped=True)
+
         if autoctx.character is None:
             raise NoCounterFound("The caster does not have custom counters.")
 
@@ -90,9 +91,14 @@ class UseCounter(Effect):
 
         return self.use_custom_counter(autoctx, counter, amount)
 
-    def use_spell_slot(self, autoctx, amount):
+    def use_spell_slot(self, autoctx, amount, ignore_resources: bool = False):
         level = autoctx.args.last('l', self.counter.slot, int)
+        if ignore_resources:
+            return UseCounterResult(counter_name=str(level),
+                                    requested_amount=amount,
+                                    skipped=True)
 
+        autoctx.caster_needs_commit = True
         old_value = autoctx.caster.spellbook.get_slots(level)
         target_value = new_value = old_value - amount
 

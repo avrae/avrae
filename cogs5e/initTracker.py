@@ -17,12 +17,13 @@ from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, 
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
+from cogs5e.models.sheet.statblock import StatBlock
 from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import constants
-from utils.argparser import argparse
+from utils.argparser import argparse, ParsedArguments
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
@@ -1335,6 +1336,45 @@ class InitTracker(commands.Cog):
 
         await msg.edit(content="Combat ended.")
 
+    @init.command()
+    async def damage(self, ctx, name: str, *, dice: str):
+        """
+        Does damage to a combatant, accounting for resistances.
+
+        Uses standard damage dice format (e.g. `1d6[acid] + 2d4 [fire]`).
+        """
+        combat = await Combat.from_ctx(ctx)
+        combatant = await combat.select_combatant(name)
+
+        if combatant is None:
+            await ctx.send("Combatant or group not found.")
+            return
+
+        from cogs5e.models.automation import AutomationContext, AutomationTarget, \
+            Damage  # this has to be here to avoid circular imports
+
+        class _SimpleAutomationContext(AutomationContext):
+            def __init__(self, caster, target, args, combat, crit=False):
+                super(_SimpleAutomationContext, self).__init__(None, None, caster, [target], args, combat)
+                self.in_crit = crit
+                self.target = AutomationTarget(target)
+
+        args = ParsedArguments.from_dict({
+            'resist': combatant.resistances['resist'],
+            'immune': combatant.resistances['immune'],
+            'vuln': combatant.resistances['vuln']
+        })
+        damage = Damage(dice)
+        autoctx = _SimpleAutomationContext(StatBlock("generic"), combatant, args, combat)
+        result = damage.run(autoctx)
+
+        if combatant.is_private:
+            await ctx.send(f"{combatant.name}: {result.damage_roll} {combatant.hp_str()}")
+            await combatant.message_controller(ctx, f"{combatant.name}'s HP: "
+                                                    f"{combatant.hp_str(True)} {result.damage_roll}")
+        else:
+            await ctx.send(f"{combatant.name}: {result.damage_roll} {combatant.hp_str()}")
+        await combat.final()
 
 def setup(bot):
     bot.add_cog(InitTracker(bot))

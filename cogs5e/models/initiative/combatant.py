@@ -175,7 +175,7 @@ class Combatant(BaseCombatant, StatBlock):
     @property
     def resistances(self):
         out = self._resistances.copy()
-        out.update(Resistances.from_dict({k: self.active_effects(k) for k in RESIST_TYPES}), overwrite=False)
+        out.update(Resistances.from_dict({k: self.active_effects(k) for k in RESIST_TYPES}), overwrite=True)
         return out
 
     def set_resist(self, damage_type: str, resist_type: str):

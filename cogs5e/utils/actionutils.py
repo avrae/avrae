@@ -34,7 +34,8 @@ async def run_attack(ctx, embed, args, caster, attack, targets, combat):
     if args.last('title') is not None:
         embed.title = args.last('title') \
             .replace('[name]', name) \
-            .replace('[aname]', attack_name)
+            .replace('[aname]', attack_name) \
+            .replace('[verb]', verb)
     else:
         embed.title = f'{name} {verb} {attack_name}!'
 

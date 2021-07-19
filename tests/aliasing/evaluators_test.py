@@ -1,58 +1,52 @@
-from aliasing.evaluators import ScriptingEvaluator
+import pytest
+
+pytestmark = pytest.mark.asyncio
 
 
-def test_yaml_loading_and_dumping():
-    yaml_string = """
-    key1:
-       nested_key1: 06-08-2012
-       nested_key2: value2
-       nested_key3: value3
-    thing1: one
-    thing2: two
-    thing3:
-     - 1
-     - 2
-     - 3
-    """
-    # TODO write more and better tests
-    # setup since importing is hard, I know it's... something but it works?
+async def test_yaml_loading(avrae, dhttp):
+    yaml_string = """key1:\n nested_key1: 06-08-2012\n nested_key2: value2\n nested_key3: value3\nthing1: """ \
+                  """one\nthing2: two\nthing3:\n - 1\n - 2\n - 3 """
 
-    class ChannelOrAuthorThing:
-        def __init__(self):
-            self.id = 123
-            self.name = 'Dice'
-            self.discriminator = '6153'
-            self.display_name = 'Dice{They/Them}'
-            self.topic = ''
+    dhttp.clear()
+    avrae.message(f'''!test <drac2>\nyaml_string = """{yaml_string}"""\nloaded = load_yaml(yaml_string)\nreturn '''
+                  '''loaded['thing1']\n</drac2>''')
+    await dhttp.receive_message(r".*: one", regex=True)
 
-        def __str__(self):
-            return '123'
+    await dhttp.drain()
+    avrae.message(f'''!test <drac2>\nyaml_string = """{yaml_string}"""\nloaded = load_yaml(yaml_string)\nreturn '''
+                  '''loaded['thing3']\n</drac2>''')
+    await dhttp.receive_message(r'.*: \[1, 2, 3\]', regex=True)
 
-    class ContextWithStuff:
-        def __init__(self):
-            self.guild = None
-            self.channel = ChannelOrAuthorThing()
-            self.author = ChannelOrAuthorThing()
-            self.prefix = '!'
-            self.invoked_with = 'Me'
 
-    e = ScriptingEvaluator(ContextWithStuff())
-    _safe_dict = e._dict
-    _safe_list = e._list
-    _safe_str = e._str
+async def yaml_test_types(avrae, dhttp):
+    avrae.message(f'''!test <drac2>\nyaml_string = """{yaml_string}"""\nloaded = load_yaml(yaml_string)\nreturn '''
+                  '''typeof(loaded)\n</drac2>''')
+    await dhttp.receive_message(r'.*: SafeDict', regex=True)
 
-    # ==== Loading ====
-    loaded_yaml = e.eval(f'''load_yaml("""{yaml_string}""")''')
+    avrae.message(f'''!test <drac2>\nyaml_string = """{yaml_string}"""\nloaded = load_yaml(yaml_string)\nreturn '''
+                  '''typeof(loaded['thing3'])\n</drac2>''')
+    await dhttp.receive_message(r'.*: SafeList', regex=True)
 
-    # First we check if it's the right type
-    assert isinstance(loaded_yaml, _safe_dict)
+    avrae.message(f'''!test <drac2>\nyaml_string = """{yaml_string}"""\nloaded = load_yaml(yaml_string)\nreturn '''
+                  '''typeof(loaded['key1'])\n</drac2>''')
+    await dhttp.receive_message(r'.*: SafeDict', regex=True)
 
-    # ==== Dumping ====
-    dumped_again = e.eval(f'''dump_yaml("""{loaded_yaml}""")''')
-    assert isinstance(dumped_again, _safe_str)
+    avrae.message(f'''!test <drac2>\nyaml_string = """{yaml_string}"""\nloaded = load_yaml(yaml_string)\nreturn '''
+                  '''typeof(loaded['thing3'][1])\n</drac2>''')
+    await dhttp.receive_message(r'.*: int', regex=True)
 
-    reloaded = e.eval(f"""load_yaml('''{dumped_again}''')""")
-    assert isinstance(reloaded, _safe_dict)
 
-    redumped = e.eval(f'''dump_yaml("""{reloaded}""")''')
-    assert isinstance(redumped, _safe_str)
+async def yaml_test_errors(avrae, dhttp):
+    avrae.message('!test {{load_yaml(4)}}')
+    await dhttp.receive_message("Error evaluating expression: 'int' object has no attribute 'read'", regex=False)
+
+    avrae.message('!test {{load_yaml("key1: key2: key3")}}')
+    await dhttp.receive_message('Error evaluating expression: maximum recursion depth exceeded in comparison',
+                                regex=False)
+
+
+async def yaml_test_dumping(avrae, dhttp):
+    avrae.message("""!test <drac2>\ndata = {"name": "Dice", "age": "old", "languages": 3, "drinks": ["beer","""
+                  """ "wine", "apple juice"]}\nreturn dump_yaml(data)\n</drac2>""")
+    await dhttp.recieve_message("age: old\ndrinks:\n - beer\n - wine\n - apple juice\nlanguages: 3\nname: Dice",
+                                regex=False)

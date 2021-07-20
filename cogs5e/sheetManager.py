@@ -500,7 +500,7 @@ class SheetManager(commands.Cog):
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
-        `critdice <number>` - Adds additional dice for to critical attacks.
+        `critdice <number>` - Adds additional damage dice on a critical hit. 
         `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with.
         `ignorecrit true/false` - Prevents critical hits from applying, for example with adamantine armor."""
         char = await Character.from_ctx(ctx)

@@ -526,8 +526,12 @@ class InitTracker(commands.Cog):
         try:
             await new_summary.pin()
             await old_summary.unpin()
-        except:
+        except discord.Forbidden:
             pass
+        except discord.NotFound:
+            pass
+        except discord.HTTPException:
+            pass  # might want to log this but it is probably mundane.
 
         await combat.final()
 

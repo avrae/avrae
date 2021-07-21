@@ -56,7 +56,7 @@ class Character(StatBlock):
 
         # main character info
         self._description = description
-        self._image = image
+        self._image = image or ''
 
         # customization
         self.cvars = cvars

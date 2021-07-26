@@ -380,7 +380,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         name = str(name)
         value = str(value)
         if not name.isidentifier():
-            raise InvalidArgument("Cvar contains invalid character.")
+            raise InvalidArgument("Uvar contains invalid character.")
         self._cache['uvars'][name] = value
         self._names[name] = value
         self.uvars_changed.add(name)

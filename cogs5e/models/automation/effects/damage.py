@@ -1,6 +1,7 @@
 import copy
 
 import d20
+import draconic
 
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from . import Effect
@@ -166,7 +167,7 @@ class Damage(Effect):
         try:
             damage = evaluator.transformed_str(self.damage)
             evaluator.builtins['lastDamage'] = damage
-        except Exception:
+        except draconic.DraconicException:
             damage = self.damage
             evaluator.builtins['lastDamage'] = 0
         return f"{damage} damage"

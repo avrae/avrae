@@ -4,11 +4,12 @@ from utils.functions import reconcile_adv
 from . import Effect
 from ..errors import AutomationException, NoAttackBonus, TargetException
 from ..results import AttackResult
+from ..utils import stringify_intexpr
 
 
 class Attack(Effect):
     def __init__(self, hit: list, miss: list, attackBonus: str = None, **kwargs):
-        super(Attack, self).__init__("attack", **kwargs)
+        super().__init__("attack", **kwargs)
         self.hit = hit
         self.miss = miss
         self.bonus = attackBonus
@@ -20,7 +21,7 @@ class Attack(Effect):
         return super(Attack, cls).from_data(data)
 
     def to_dict(self):
-        out = super(Attack, self).to_dict()
+        out = super().to_dict()
         hit = Effect.serialize(self.hit)
         miss = Effect.serialize(self.miss)
         out.update({"hit": hit, "miss": miss})
@@ -29,7 +30,7 @@ class Attack(Effect):
         return out
 
     def run(self, autoctx):
-        super(Attack, self).run(autoctx)
+        super().run(autoctx)
         if autoctx.target is None:
             raise TargetException("Tried to make an attack without a target! Make sure all Attack effects are inside "
                                   "of a Target effect.")
@@ -216,14 +217,10 @@ class Attack(Effect):
         return self.run_children(self.miss, autoctx)
 
     def build_str(self, caster, evaluator):
-        super(Attack, self).build_str(caster, evaluator)
+        super().build_str(caster, evaluator)
         attack_bonus = caster.spellbook.sab if caster.spellbook.sab is not None else float('nan')
         if self.bonus:
-            try:
-                explicit_bonus = evaluator.eval(self.bonus)
-                attack_bonus = int(explicit_bonus)
-            except Exception:
-                attack_bonus = float('nan')
+            attack_bonus = stringify_intexpr(evaluator, self.bonus)
 
         out = f"Attack: {attack_bonus:+} to hit"
         if self.hit:

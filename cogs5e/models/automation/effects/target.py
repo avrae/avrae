@@ -6,7 +6,7 @@ from ..runtime import AutomationTarget
 
 class Target(Effect):
     def __init__(self, target, effects: list, **kwargs):
-        super(Target, self).__init__("target", **kwargs)
+        super().__init__("target", **kwargs)
         self.target = target
         self.effects = effects
 
@@ -16,13 +16,13 @@ class Target(Effect):
         return super(Target, cls).from_data(data)
 
     def to_dict(self):
-        out = super(Target, self).to_dict()
+        out = super().to_dict()
         effects = [e.to_dict() for e in self.effects]
         out.update({"type": "target", "target": self.target, "effects": effects})
         return out
 
     def run(self, autoctx):
-        super(Target, self).run(autoctx)
+        super().run(autoctx)
         # WEB-038 (.io #121) - this will semantically work correctly, but will make the display really weird
         previous_target = autoctx.target
         result_pairs = []
@@ -110,7 +110,7 @@ class Target(Effect):
         return results
 
     def build_str(self, caster, evaluator):
-        super(Target, self).build_str(caster, evaluator)
+        super().build_str(caster, evaluator)
         return self.build_child_str(self.effects, caster, evaluator)
 
     @property

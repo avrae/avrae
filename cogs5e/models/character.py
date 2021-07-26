@@ -56,7 +56,7 @@ class Character(StatBlock):
 
         # main character info
         self._description = description
-        self._image = image or ''
+        self._image = image
 
         # customization
         self.cvars = cvars
@@ -194,7 +194,7 @@ class Character(StatBlock):
 
     @property
     def image(self):
-        return self.overrides.image or self._image
+        return self.overrides.image or self._image or ''
 
     # ---------- CSETTINGS ----------
     def get_setting(self, setting, default=None):

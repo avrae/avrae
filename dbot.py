@@ -4,11 +4,6 @@ import logging
 import sys
 import traceback
 
-# this hooks a lot of weird things and needs to be imported early
-import utils.newrelic
-# utils.newrelic.hook_all()
-from utils import clustering, config, context
-
 import aioredis
 import d20
 import discord
@@ -26,6 +21,7 @@ from ddb import BeyondClient, BeyondClientBase
 from ddb.gamelog import GameLogClient
 from gamedata.compendium import compendium
 from gamedata.lookuputils import handle_required_license
+from utils import clustering, config, context
 from utils.aldclient import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO

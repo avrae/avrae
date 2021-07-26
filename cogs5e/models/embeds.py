@@ -95,12 +95,13 @@ class EmbedPaginator:
         self._current_field_name = name
 
         chunks = chunk_text(value, max_chunk_size=self.EMBED_FIELD_MAX)
-        for chunk in chunks:
+        for i, chunk in enumerate(chunks):
             self._field_count += len(value) + 1
             self._current_field_inline = inline
             self._current_field.append(chunk)
-            self.close_field()
-            self._current_field_name = self.CONTINUATION_FIELD_TITLE
+            if i < len(chunks) - 1:  # if not last chunk, add the chunk in a new field
+                self.close_field()
+                self._current_field_name = self.CONTINUATION_FIELD_TITLE
 
     def extend_field(self, value):
         """Add a line of text to the last field in the help embed."""

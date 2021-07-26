@@ -94,7 +94,8 @@ class UseCounter(Effect):
         return self.use_custom_counter(autoctx, counter, amount)
 
     def use_spell_slot(self, autoctx, amount, ignore_resources: bool = False):
-        level = autoctx.args.last('l', self.counter.slot, int)
+        spellref_level = autoctx.parse_intexpression(self.counter.slot)
+        level = autoctx.args.last('l', spellref_level, int)
         if ignore_resources:  # handled here to return counter name (#1582)
             return UseCounterResult(counter_name=str(level), requested_amount=amount, skipped=True)
 

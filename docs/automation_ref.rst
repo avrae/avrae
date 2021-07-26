@@ -418,7 +418,7 @@ SpellSlotReference
 .. code-block:: typescript
 
     {
-        slot: number;
+        slot: number | IntExpression;
     }
 
 .. attribute:: slot

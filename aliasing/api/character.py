@@ -443,11 +443,11 @@ class AliasCustomCounter:
         Example:
 
         >>> full_str('Bardic Inspiration')
-        "◉◉◉◉\n"
+        "◉◉◉◉\\n"
         "**Resets On**: Long Rest"
         >>> full_str('Bardic Inspiration', True)
-        "**Bardic Inspiration**\n"
-        "◉◉◉◉\n"
+        "**Bardic Inspiration**\\n"
+        "◉◉◉◉\\n"
         "**Resets On**: Long Rest"
         """
         out = self._cc.full_str()

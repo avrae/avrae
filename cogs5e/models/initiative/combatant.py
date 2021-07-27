@@ -1,5 +1,6 @@
 import discord
 
+import cogs5e.models.character
 from cogs5e.models.errors import NoCharacter
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
@@ -8,7 +9,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
-from utils.functions import get_guild_member, search_and_select, combine_maybe_mods
+from utils.functions import combine_maybe_mods, get_guild_member, search_and_select
 from .effect import Effect
 from .errors import CombatException, RequiresContext
 from .types import BaseCombatant
@@ -553,8 +554,8 @@ class PlayerCombatant(Combatant):
         inst.character_owner = raw['character_owner']
 
         try:
-            from cogs5e.models.character import Character
-            inst._character = await Character.from_bot_and_ids(ctx.bot, inst.character_owner, inst.character_id)
+            inst._character = await cogs5e.models.character.Character.from_bot_and_ids(
+                ctx.bot, inst.character_owner, inst.character_id)
         except NoCharacter:
             raise CombatException(f"A character in combat was deleted. "
                                   f"Please run `{ctx.prefix}init end -force` to end combat.")
@@ -568,8 +569,8 @@ class PlayerCombatant(Combatant):
         inst.character_owner = raw['character_owner']
 
         try:
-            from cogs5e.models.character import Character
-            inst._character = Character.from_bot_and_ids_sync(ctx.bot, inst.character_owner, inst.character_id)
+            inst._character = cogs5e.models.character.Character.from_bot_and_ids_sync(
+                ctx.bot, inst.character_owner, inst.character_id)
         except NoCharacter:
             raise CombatException(f"A character in combat was deleted. "
                                   f"Please run `{ctx.prefix}init end -force` to end combat.")
@@ -585,7 +586,25 @@ class PlayerCombatant(Combatant):
         })
         return raw
 
-    # members
+    # ==== helpers ====
+    async def update_character_ref(self, ctx, inst=None):
+        """
+        Updates the character reference in self._character to ensure that it references the cached Character instance
+        if one is cached (since Combat cache TTL > Character cache TTL), preventing instance divergence.
+
+        If ``inst`` is passed, sets the character to reference the given instance, otherwise retrieves it via the normal
+        Character init flow (from cache or db). ``inst`` should be a Character instance with the same character ID and
+        owner as ``self._character``.
+        """
+        if inst is not None:
+            self._character = inst
+            return
+
+        # retrieve from character constructor
+        self._character = await cogs5e.models.character.Character.from_bot_and_ids(
+            ctx.bot, self.character_owner, self.character_id)
+
+    # ==== members ====
     @property
     def character(self):
         return self._character

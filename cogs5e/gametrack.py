@@ -228,9 +228,9 @@ class GameTrack(commands.Cog):
         value = thp_roll.total
 
         if value >= 0:
-            character.temp_hp = value
+            caster.temp_hp = value
         else:
-            character.temp_hp += value
+            caster.temp_hp += value
 
         await character.commit(ctx)
 

@@ -231,9 +231,11 @@ class Combatant(BaseCombatant, StatBlock):
 
     def set_group(self, group_name):
         current = self.combat.current_combatant
-        was_current = current is not None and \
-                      (self is current
-                       or (current.type == CombatantType.GROUP and self in current and len(current) == 1))
+        was_current = (current is not None
+                       and (self is current
+                            or (current.type == CombatantType.GROUP
+                                and self in current
+                                and len(current) == 1)))
         self.combat.remove_combatant(self, ignore_remove_hook=True)
         if isinstance(group_name, str) and group_name.lower() == 'none':
             group_name = None
@@ -303,8 +305,9 @@ class Combatant(BaseCombatant, StatBlock):
 
     def remove_all_effects(self, _filter=None):
         if _filter is None:
-            _filter = lambda _: True
-        to_remove = list(filter(_filter, self._effects))
+            to_remove = self._effects.copy()
+        else:
+            to_remove = list(filter(_filter, self._effects))
         for e in to_remove:
             e.remove()
         return to_remove
@@ -379,11 +382,11 @@ class Combatant(BaseCombatant, StatBlock):
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        hpStr = f"{self.hp_str(private)} " if self.hp_str(private) else ''
+        hp_str = f"{self.hp_str(private)} " if self.hp_str(private) else ''
         if not no_notes:
-            return f"{self.init:>2}: {self.name} {hpStr}{self._get_effects_and_notes()}"
+            return f"{self.init:>2}: {self.name} {hp_str}{self._get_effects_and_notes()}"
         else:
-            return f"{self.init:>2}: {self.name} {hpStr}"
+            return f"{self.init:>2}: {self.name} {hp_str}"
 
     def get_status(self, private=False):
         """
@@ -577,9 +580,9 @@ class PlayerCombatant(Combatant):
         return inst
 
     def to_dict(self):
-        IGNORED_ATTRIBUTES = ("stats", "levels", "skills", "saves", "spellbook", "hp", "temp_hp")
+        ignored_attributes = ("stats", "levels", "skills", "saves", "spellbook", "hp", "temp_hp")
         raw = super().to_dict()
-        for attr in IGNORED_ATTRIBUTES:
+        for attr in ignored_attributes:
             del raw[attr]
         raw.update({
             'character_id': self.character_id, 'character_owner': self.character_owner

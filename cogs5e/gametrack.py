@@ -352,17 +352,24 @@ class GameTrack(commands.Cog):
 
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
-        embed.description = f"{character.name} knows {len(character.spellbook.spells)} spells."
         embed.add_field(name="DC", value=str(character.spellbook.dc))
         embed.add_field(name="Spell Attack Bonus", value=str(character.spellbook.sab))
         embed.add_field(name="Spell Slots", value=character.spellbook.slots_str() or "None")
 
         show_unprepared = 'all' in args
+        known_count = len(character.spellbook.spells)
+        prepared_count = sum(1 for spell in character.spellbook.spells if spell.prepared)
+
+        if known_count == prepared_count:
+            embed.description = f"{character.name} knows {known_count} spells."
+        else:
+            embed.description = f"{character.name} has {prepared_count} spells prepared and knows {known_count} spells."
 
         # dynamic help flags
         flag_show_multiple_source_help = False
         flag_show_homebrew_help = False
         flag_show_prepared_help = False
+        flag_show_prepared_underline_help = False
 
         spells_known = collections.defaultdict(lambda: [])
         choices = await get_spell_choices(ctx)
@@ -371,29 +378,38 @@ class GameTrack(commands.Cog):
                 flag_show_prepared_help = True
                 continue
 
+            # homebrew / multisource formatting
             results, strict = search(choices, sb_spell.name, lambda sp: sp.name, strict=True)
             if not strict:
+                known_level = 'unknown'
                 if len(results) > 1:
-                    spells_known['unknown'].append(f"*{sb_spell.name} ({'*' * len(results)})*")
+                    formatted = f"*{sb_spell.name} ({'*' * len(results)})*"
                     flag_show_multiple_source_help = True
                 else:
-                    spells_known['unknown'].append(f"*{sb_spell.name}*")
+                    formatted = f"*{sb_spell.name}*"
                 flag_show_homebrew_help = True
             else:
                 spell = results
+                known_level = str(spell.level)
                 if spell.homebrew:
                     formatted = f"*{spell.name}*"
                     flag_show_homebrew_help = True
                 else:
                     formatted = spell.name
-                spells_known[str(spell.level)].append(formatted)
+
+            # prepared formatting
+            if show_unprepared and sb_spell.prepared:
+                formatted = f"__{formatted}__"
+                flag_show_prepared_underline_help = True
+
+            spells_known[known_level].append(formatted)
 
         level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
                       '4': '4th Level', '5': '5th Level', '6': '6th Level',
                       '7': '7th Level', '8': '8th Level', '9': '9th Level'}
         for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
             if spells:
-                spells.sort()
+                spells.sort(key=lambda s: s.lstrip('*_'))
                 embed.add_field(name=level_name.get(level, "Unknown"), value=', '.join(spells), inline=False)
 
         # dynamic help
@@ -404,6 +420,8 @@ class GameTrack(commands.Cog):
             footer_out.append("Asterisks after a spell indicates that the spell is being provided by multiple sources.")
         if flag_show_prepared_help:
             footer_out.append(f"Unprepared spells were not shown. Use \"{ctx.prefix}spellbook all\" to view them!")
+        if flag_show_prepared_underline_help:
+            footer_out.append(f"Prepared spells are marked with an underline.")
 
         if footer_out:
             embed.set_footer(text=' '.join(footer_out))

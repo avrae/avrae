@@ -430,9 +430,12 @@ class Character(StatBlock):
         self._hp = old_character._hp
         self._temp_hp = old_character._temp_hp
         # ensure new slots are within bounds (#1453)
-        self.spellbook.slots = {l: min(v, self.spellbook.get_max_slots(l))
-                                for l, v in old_character.spellbook.slots.items()}
-        self.spellbook.num_pact_slots = min(self.spellbook.max_pact_slots, old_character.spellbook.num_pact_slots)
+        self.spellbook.slots = {
+            level: min(v, self.spellbook.get_max_slots(level))
+            for level, v in old_character.spellbook.slots.items()
+        }
+        if old_character.spellbook.num_pact_slots is not None:
+            self.spellbook.num_pact_slots = min(self.spellbook.max_pact_slots, old_character.spellbook.num_pact_slots)
 
         if (self.owner, self.upstream) in Character._cache:
             Character._cache[self.owner, self.upstream] = self

@@ -37,7 +37,7 @@ class Spellbook:
         }
 
     def __contains__(self, spell_name: str):
-        return spell_name.lower() in {s.name.lower() for s in self.spells}
+        return any(spell_name.lower() == s.name.lower() for s in self.spells)
 
     # ===== display helpers =====
     def slots_str(self, level: int = None):
@@ -98,6 +98,8 @@ class Spellbook:
         if is_short_rest and self.pact_slot_level is not None:
             # add number of used pact slots to current value
             new_value = (self.max_pact_slots - self.num_pact_slots) + self.get_slots(self.pact_slot_level)
+            # overflow sanity check (usually for first rest after v17 to v18 update)
+            new_value = min(new_value, self.get_max_slots(self.pact_slot_level))
             self.set_slots(self.pact_slot_level, new_value)
             self.num_pact_slots = self.max_pact_slots
         else:

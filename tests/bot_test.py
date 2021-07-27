@@ -18,6 +18,7 @@ async def test_basic_commands(avrae, dhttp):
     await dhttp.receive_delete(dm=True)
     await dhttp.receive_message(embed=discord.Embed(title=r"Hello \w+"), regex=True, dm=True)
 
+
 async def test_nonexistant_commands(avrae, dhttp):
     dhttp.clear()
     avrae.message("!this_command_does_not_exist_and_is_not_an_alias")
@@ -25,3 +26,11 @@ async def test_nonexistant_commands(avrae, dhttp):
     avrae.message("hello world")
     avrae.message("spam spam spam!roll 1d20")
     assert dhttp.queue_empty()  # avrae has not responded to anything
+
+
+async def test_help(avrae, dhttp):  # simple test just to make sure help works
+    avrae.message("!help")
+    await dhttp.drain()
+
+    avrae.message("!help -here")
+    await dhttp.receive_message(embed=discord.Embed())

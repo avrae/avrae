@@ -72,8 +72,6 @@ class Quickstart(Tutorial):
             except NoCharacter:
                 return
             if ctx.command in (ctx.bot.get_command('beyond'),
-                               ctx.bot.get_command('dicecloud'),
-                               ctx.bot.get_command('gsheet'),
                                ctx.bot.get_command('import'),
                                ctx.bot.get_command('update'),
                                ctx.bot.get_command('char')) \

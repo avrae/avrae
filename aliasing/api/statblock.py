@@ -142,6 +142,15 @@ class AliasStatBlock:
             self._spellbook = AliasSpellbook(self._statblock.spellbook)
         return self._spellbook
 
+    @property
+    def creature_type(self):
+        """
+        The creature type of the creature. Will return None for players or creatures with no creature type.
+
+        :rtype: str or None
+        """
+        return self._statblock.creature_type
+
     # ---- hp ----
     def set_hp(self, new_hp):
         """

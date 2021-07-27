@@ -15,7 +15,7 @@ from aliasing import helpers
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument, NoSelectionElements
-from cogs5e.utils import checkutils, targetutils
+from cogs5e.utils import checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
 from utils.argparser import argparse
@@ -176,27 +176,30 @@ class GameTrack(commands.Cog):
     async def game_hp(self, ctx, *, hp: str = None):
         """Modifies the HP of a the current active character."""
         character: Character = await Character.from_ctx(ctx)
+        caster = await targetutils.maybe_combat_caster(ctx, character)
 
         if hp is None:
-            return await ctx.send(f"{character.name}: {character.hp_str()}")
+            return await gameutils.send_hp_result(ctx, caster)
 
         hp_roll = d20.roll(hp)
-        character.modify_hp(hp_roll.total)
+        caster.modify_hp(hp_roll.total)
         await character.commit(ctx)
         if 'd' in hp:
             delta = hp_roll.result
         else:
             delta = f"{hp_roll.total:+}"
-        await ctx.send(f"{character.name}: {character.hp_str()} ({delta})")
+        await gameutils.send_hp_result(ctx, caster, delta)
 
     @game_hp.command(name='max')
     async def game_hp_max(self, ctx):
         """Sets the character's HP to their maximum."""
         character: Character = await Character.from_ctx(ctx)
-        before = character.hp
-        character.hp = character.max_hp
+        caster = await targetutils.maybe_combat_caster(ctx, character)
+
+        before = caster.hp
+        caster.hp = caster.max_hp
         await character.commit(ctx)
-        await ctx.send(f"{character.name}: {character.hp_str()} ({character.hp - before:+})")
+        await gameutils.send_hp_result(ctx, caster, f"{caster.hp - before:+}")
 
     @game_hp.command(name='mod', hidden=True)
     async def game_hp_mod(self, ctx, *, hp):
@@ -207,36 +210,38 @@ class GameTrack(commands.Cog):
     async def game_hp_set(self, ctx, *, hp):
         """Sets the character's HP to a certain value."""
         character: Character = await Character.from_ctx(ctx)
-        before = character.hp
+        caster = await targetutils.maybe_combat_caster(ctx, character)
+
+        before = caster.hp
         hp_roll = d20.roll(hp)
-        character.hp = hp_roll.total
+        caster.hp = hp_roll.total
         await character.commit(ctx)
-        await ctx.send(f"{character.name}: {character.hp_str()} ({character.hp - before:+})")
+        await gameutils.send_hp_result(ctx, caster, f"{caster.hp - before:+}")
 
     @game.command(name='thp')
     async def game_thp(self, ctx, *, thp: str = None):
         """Modifies the temp HP of a the current active character.
         If positive, assumes set; if negative, assumes mod."""
         character: Character = await Character.from_ctx(ctx)
+        caster = await targetutils.maybe_combat_caster(ctx, character)
 
-        if thp is not None:
-            thp_roll = d20.roll(thp)
-            value = thp_roll.total
+        if thp is None:
+            return await gameutils.send_hp_result(ctx, caster)
 
-            if value >= 0:
-                character.temp_hp = value
-            else:
-                character.temp_hp += value
+        thp_roll = d20.roll(thp)
+        value = thp_roll.total
 
-            await character.commit(ctx)
-
-            delta = ""
-            if 'd' in thp:
-                delta = f"({thp_roll.result})"
-            out = f"{character.name}: {character.hp_str()} {delta}"
+        if value >= 0:
+            character.temp_hp = value
         else:
-            out = f"{character.name}: {character.hp_str()}"
-        await ctx.send(out)
+            character.temp_hp += value
+
+        await character.commit(ctx)
+
+        delta = ""
+        if 'd' in thp:
+            delta = f"({thp_roll.result})"
+        await gameutils.send_hp_result(ctx, caster, delta)
 
     @game.group(name='deathsave', aliases=['ds'], invoke_without_command=True)
     async def game_deathsave(self, ctx, *args):

@@ -5,8 +5,6 @@ import json
 import logging
 import os
 
-import newrelic.agent
-
 import gamedata.spell
 from gamedata.action import Action
 from gamedata.background import Background
@@ -81,7 +79,6 @@ class Compendium:
                 await asyncio.sleep(wait_for)
                 await self.reload(mdb)
 
-    @newrelic.agent.function_trace()
     async def reload(self, mdb=None):
         log.info("Reloading data")
 
@@ -99,14 +96,14 @@ class Compendium:
         if base_path is not None:
             self._base_path = base_path
 
-        self.raw_classes = self.read_json('srd-classes.json', [])
-        self.raw_feats = self.read_json('srd-feats.json', [])
-        self.raw_monsters = self.read_json('srd-bestiary.json', [])
-        self.raw_backgrounds = self.read_json('srd-backgrounds.json', [])
-        self.raw_items = self.read_json('srd-items.json', [])
-        self.raw_races = self.read_json('srd-races.json', [])
-        self.raw_subraces = self.read_json('srd-subraces.json', [])
-        self.raw_spells = self.read_json('srd-spells.json', [])
+        self.raw_classes = self.read_json('classes.json', [])
+        self.raw_feats = self.read_json('feats.json', [])
+        self.raw_monsters = self.read_json('monsters.json', [])
+        self.raw_backgrounds = self.read_json('backgrounds.json', [])
+        self.raw_items = self.read_json('items.json', [])
+        self.raw_races = self.read_json('races.json', [])
+        self.raw_subraces = self.read_json('subraces.json', [])
+        self.raw_spells = self.read_json('spells.json', [])
         self.raw_books = self.read_json('books.json', [])
         self.raw_actions = self.read_json('actions.json', [])
 

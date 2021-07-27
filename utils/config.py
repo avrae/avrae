@@ -24,7 +24,6 @@ DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 
 # ---- monitoring ----
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
-# NEW_RELIC_LICENSE_KEY = os.getenv('NEW_RELIC_LICENSE_KEY')  # commented - set in newrelic.py because of import order
 
 # ---- character sheets ---
 NO_DICECLOUD = os.environ.get('NO_DICECLOUD', 'DICECLOUD_USER' not in os.environ)

@@ -35,7 +35,7 @@ class Character(StatBlock):
                  skills: Skills, resistances: Resistances, saves: Saves, ac: int, max_hp: int, hp: int, temp_hp: int,
                  cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
                  spellbook: Spellbook,
-                 live, race: str, background: str,
+                 live, race: str, background: str, creature_type: str = None,
                  ddb_campaign_id: str = None, actions: Actions = None,
                  **kwargs):
         if kwargs:
@@ -53,7 +53,7 @@ class Character(StatBlock):
         super().__init__(
             name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
             spellbook=spellbook,
-            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp
+            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
         )
 
         # main character info

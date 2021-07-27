@@ -8,7 +8,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
-from utils.functions import get_guild_member, maybe_mod, search_and_select
+from utils.functions import get_guild_member, search_and_select, combine_maybe_mods
 from .effect import Effect
 from .errors import CombatException, RequiresContext
 from .types import BaseCombatant
@@ -27,11 +27,11 @@ class Combatant(BaseCombatant, StatBlock):
                  stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
                  skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
                  spellbook: Spellbook = None, ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+                 creature_type: str = None,
                  **_):
         super().__init__(
             name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellbook,
-            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp
+            spellbook=spellbook, ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
         )
         if effects is None:
             effects = []
@@ -109,7 +109,9 @@ class Combatant(BaseCombatant, StatBlock):
 
     @property
     def max_hp(self):
-        return self._max_hp
+        _maxhp = self._max_hp
+        _maxhp = combine_maybe_mods(self.active_effects('maxhp'), base=_maxhp)
+        return _maxhp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):
@@ -155,8 +157,7 @@ class Combatant(BaseCombatant, StatBlock):
     @property
     def ac(self):
         _ac = self._ac
-        for e in self.active_effects('ac'):
-            _ac = maybe_mod(e, base=_ac)
+        _ac = combine_maybe_mods(self.active_effects('ac'), base=_ac)
         return _ac
 
     @ac.setter
@@ -455,10 +456,10 @@ class MonsterCombatant(Combatant):
                  **_):
         super(MonsterCombatant, self).__init__(
             ctx, combat, id, name, controller_id, private, init, index, notes, effects, group_id,
-            stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp)
+            stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp,
+            creature_type=creature_type)
         self._monster_name = monster_name
         self._monster_id = monster_id
-        self._creature_type = creature_type
 
     @classmethod
     def from_monster(cls, monster, ctx, combat, name, controller_id, init, private, hp=None, ac=None):
@@ -490,13 +491,12 @@ class MonsterCombatant(Combatant):
         inst = super().from_dict(raw, ctx, combat)
         inst._monster_name = raw['monster_name']
         inst._monster_id = raw.get('monster_id')
-        inst._creature_type = raw.get('creature_type')
         return inst
 
     def to_dict(self):
         raw = super().to_dict()
         raw.update({
-            'monster_name': self._monster_name, 'monster_id': self._monster_id, 'creature_type': self._creature_type
+            'monster_name': self._monster_name, 'monster_id': self._monster_id
         })
         return raw
 
@@ -508,10 +508,6 @@ class MonsterCombatant(Combatant):
     @property
     def monster_id(self):
         return self._monster_id
-
-    @property
-    def creature_type(self):
-        return self._creature_type
 
 
 class PlayerCombatant(Combatant):
@@ -617,8 +613,7 @@ class PlayerCombatant(Combatant):
     @property
     def ac(self):
         _ac = self._ac or self.character.ac
-        for e in self.active_effects('ac'):
-            _ac = maybe_mod(e, base=_ac)
+        _ac = combine_maybe_mods(self.active_effects('ac'), base=_ac)
         return _ac
 
     @ac.setter
@@ -634,7 +629,9 @@ class PlayerCombatant(Combatant):
 
     @property
     def max_hp(self):
-        return self._max_hp or self.character.max_hp
+        _maxhp = self._max_hp or self.character.max_hp
+        _maxhp = combine_maybe_mods(self.active_effects('maxhp'), base=_maxhp)
+        return _maxhp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):

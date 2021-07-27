@@ -55,7 +55,7 @@ CHARACTER_SETTINGS = {
 class SheetManager(commands.Cog):
     """
     Commands to load a character sheet into Avrae, and supporting commands to modify the character, as well as basic macros.
-    """
+    """  # noqa: E501
 
     def __init__(self, bot):
         self.bot = bot
@@ -109,11 +109,12 @@ class SheetManager(commands.Cog):
         other - Only displays the available actions that have another activation time.
         """
         char: Character = await Character.from_ctx(ctx)
+        caster = await targetutils.maybe_combat_caster(ctx, char)
         embed = embeds.EmbedWithCharacter(char, name=False)
         embed.title = f"{char.name}'s Actions"
 
         await actionutils.send_action_list(
-            ctx, caster=char, attacks=char.attacks, actions=char.actions, embed=embed, args=args)
+            ctx, caster=caster, attacks=caster.attacks, actions=char.actions, embed=embed, args=args)
 
     # ---- attack management commands ----
     @action.command(name="add", aliases=['create'])
@@ -175,7 +176,7 @@ class SheetManager(commands.Cog):
 
         try:
             attacks = AttackList.from_dict(attack_json)
-        except:
+        except Exception:
             return await ctx.send("This is not a valid attack.")
 
         conflicts = [a for a in character.overrides.attacks if a.name.lower() in [new.name.lower() for new in attacks]]
@@ -226,7 +227,7 @@ class SheetManager(commands.Cog):
         embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
         checkutils.update_csetting_args(char, args)
-        caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
+        caster = await targetutils.maybe_combat_caster(ctx, char)
 
         result = checkutils.run_save(skill, caster, args, embed)
 
@@ -251,7 +252,7 @@ class SheetManager(commands.Cog):
         skill = char.skills[skill_key]
 
         checkutils.update_csetting_args(char, args, skill)
-        caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
+        caster = await targetutils.maybe_combat_caster(ctx, char)
 
         result = checkutils.run_check(skill_key, caster, args, embed)
 
@@ -479,13 +480,14 @@ class SheetManager(commands.Cog):
                        allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         try:
             m = await self.bot.wait_for('message', timeout=300,
-                                        check=lambda msg: msg.author == user
-                                                          and msg.channel == ctx.channel
-                                                          and get_positivity(msg.content) is not None)
+                                        check=lambda msg: (msg.author == user
+                                                           and msg.channel == ctx.channel
+                                                           and get_positivity(msg.content) is not None))
         except asyncio.TimeoutError:
             m = None
 
-        if m is None or not get_positivity(m.content): return await ctx.send("Transfer not confirmed, aborting.")
+        if m is None or not get_positivity(m.content):
+            return await ctx.send("Transfer not confirmed, aborting.")
 
         character.owner = str(user.id)
         await character.commit(ctx)
@@ -503,9 +505,9 @@ class SheetManager(commands.Cog):
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
-        `critdice <number>` - Adds additional dice for to critical attacks.
+        `critdice <number>` - Adds additional damage dice on a critical hit. 
         `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with.
-        `ignorecrit true/false` - Prevents critical hits from applying, for example with adamantine armor."""
+        `ignorecrit true/false` - Prevents critical hits from applying, for example with adamantine armor."""  # noqa: E501
         char = await Character.from_ctx(ctx)
 
         out = []
@@ -529,34 +531,38 @@ class SheetManager(commands.Cog):
         Returns True to overwrite, False or None otherwise."""
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
-            return await confirm(ctx,
-                                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue (Reply with yes/no)?\n"
-                                 f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
+            return await confirm(
+                ctx,
+                f"Warning: This will overwrite a character with the same ID. Do you wish to continue "
+                f"(Reply with yes/no)?\n"
+                f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
         return True
 
     @commands.command(name='import')
     @commands.max_concurrency(1, BucketType.user)
     async def import_sheet(self, ctx, url: str, *args):
         """
-        Loads a character sheet in one of the accepted formats:
-            [Dicecloud](https://dicecloud.com/)
-            [GSheet v2.1](http://gsheet2.avrae.io) (auto)
-            [GSheet v1.4](http://gsheet.avrae.io) (manual)
+        Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
+            [Dicecloud](https://dicecloud.com/)
+            [GSheet v2.1](https://gsheet2.avrae.io) (auto)
+            [GSheet v1.4](https://gsheet.avrae.io) (manual)
         
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for class resources and features.
+        `-noprep` - Import all known spells as prepared.
 
         __Sheet-specific Notes__
         D&D Beyond:
             Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
+        
         Gsheet:
             The sheet must be shared with Avrae for this to work.
             Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
 
         Dicecloud:
             Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
-        """
+        """  # noqa: E501
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet
         if beyond_match := DDB_URL_RE.match(url):
@@ -583,77 +589,17 @@ class SheetManager(commands.Cog):
             return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         # Load the parsed sheet
-        await self._load_sheet(ctx, parser, args, loading)
+        character = await self._load_sheet(ctx, parser, args, loading)
+        if character and beyond_match:
+            await send_ddb_ctas(ctx, character)
 
-    @commands.command()
-    @commands.max_concurrency(1, BucketType.user)
-    async def dicecloud(self, ctx, url: str, *args):
-        """
-        Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
-        Share your character with `avrae` on Dicecloud (edit perms) for live updates.
-        __Valid Arguments__
-        `-nocc` - Do not automatically create custom counters for class resources and features.
-        `-noprep` - Import all known spells as prepared.
-        """
-        url = await self._check_url(ctx, url)
-        if 'dicecloud.com' in url:
-            url = url.split('/character/')[-1].split('/')[0]
-
-        override = await self._confirm_overwrite(ctx, f"dicecloud-{url}")
-        if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
-
-        loading = await ctx.send('Loading character data from Dicecloud...')
-        parser = DicecloudParser(url)
-        await self._load_sheet(ctx, parser, args, loading)
-
-    @commands.command()
-    @commands.max_concurrency(1, BucketType.user)
-    async def gsheet(self, ctx, url: str, *args):
-        """
-        Loads a character sheet from [GSheet v2.1](http://gsheet2.avrae.io) (auto) or [GSheet v1.4](http://gsheet.avrae.io) (manual), resetting all settings.
-        The sheet must be shared with Avrae for this to work.
-        Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
-        __Valid Arguments__
-        `-noprep` - Import all known spells as prepared.
-        """
-
-        url = await self._check_url(ctx, url)
-        loading = await ctx.send('Loading character data from Google... (This usually takes ~30 sec)')
-        try:
-            url = extract_gsheet_id_from_url(url)
-        except ExternalImportError:
-            return await loading.edit(content="This is not a Google Sheets link.")
-
-        override = await self._confirm_overwrite(ctx, f"google-{url}")
-        if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
-
-        parser = GoogleSheet(url)
-        await self._load_sheet(ctx, parser, args, loading)
-
-    @commands.command()
+    @commands.command(hidden=True, aliases=['gsheet', 'dicecloud'])
     @commands.max_concurrency(1, BucketType.user)
     async def beyond(self, ctx, url: str, *args):
         """
-        Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings.
-        __Valid Arguments__
-        `-nocc` - Do not automatically create custom counters for limited use features.
-        `-noprep` - Import all known spells as prepared.
+        This is an old command and has been replaced. Use `!import` instead!
         """
-
-        url = await self._check_url(ctx, url)
-        loading = await ctx.send('Loading character data from Beyond...')
-        url = DDB_URL_RE.match(url)
-        if url is None:
-            return await loading.edit(content="This is not a D&D Beyond link.")
-        url = url.group(1)
-
-        override = await self._confirm_overwrite(ctx, f"beyond-{url}")
-        if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
-
-        parser = BeyondSheetParser(url)
-        character = await self._load_sheet(ctx, parser, args, loading)
-        if character:
-            await send_ddb_ctas(ctx, character)
+        await self.import_sheet(ctx, url, *args)
 
     @staticmethod
     async def _load_sheet(ctx, parser, args, loading):
@@ -680,8 +626,9 @@ class SheetManager(commands.Cog):
         if url.startswith('<') and url.endswith('>'):
             url = url.strip('<>')
             await ctx.send(
-                "Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to include those for other arguments!"
-                f"\nUse `{ctx.prefix}help` for more details")
+                "Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to "
+                "include those for other arguments!"
+                f"\nUse `{ctx.prefix}help` for more details.")
         return url
 
 

@@ -21,10 +21,11 @@ async def maybe_combat_caster(ctx, caster, combat=None):
             (c for c in combat.get_combatants()
              if getattr(c, 'character_id', None) == caster.upstream
              and getattr(c, 'character_owner', None) == caster.owner),
-            caster
+            None
         )
-        await combatant.update_character_ref(ctx, inst=caster)
-        return combatant
+        if combatant is not None:
+            await combatant.update_character_ref(ctx, inst=caster)
+            return combatant
     return caster
 
 

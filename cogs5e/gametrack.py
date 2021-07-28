@@ -421,7 +421,7 @@ class GameTrack(commands.Cog):
         if flag_show_prepared_help:
             footer_out.append(f"Unprepared spells were not shown. Use \"{ctx.prefix}spellbook all\" to view them!")
         if flag_show_prepared_underline_help:
-            footer_out.append(f"Prepared spells are marked with an underline.")
+            footer_out.append("Prepared spells are marked with an underline.")
 
         if footer_out:
             embed.set_footer(text=' '.join(footer_out))

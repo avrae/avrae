@@ -24,6 +24,7 @@ class Dice(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    # ==== commands ====
     @commands.command(name='2', hidden=True)
     async def quick_roll(self, ctx, *, mod: str = '0'):
         """Quickly rolls a d20."""
@@ -90,7 +91,7 @@ class Dice(commands.Cog):
         if rollStr == '0/0':  # easter eggs
             return await ctx.send("What do you expect me to do, destroy the universe?")
 
-        rollStr, adv = self._string_search_adv(rollStr)
+        rollStr, adv = _string_search_adv(rollStr)
 
         res = d20.roll(rollStr, advantage=adv, allow_comments=True, stringifier=VerboseMDStringifier())
         out = f"{ctx.author.mention}  :game_die:\n" \
@@ -110,14 +111,14 @@ class Dice(commands.Cog):
     async def rr(self, ctx, iterations: int, *, rollStr):
         """Rolls dice in xdy format a given number of times.
         Usage: !rr <iterations> <dice>"""
-        rollStr, adv = self._string_search_adv(rollStr)
+        rollStr, adv = _string_search_adv(rollStr)
         await self._roll_many(ctx, iterations, rollStr, adv=adv)
 
     @commands.command(name='iterroll', aliases=['rrr'])
     async def rrr(self, ctx, iterations: int, rollStr, dc: int = None, *, args=''):
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
-        _, adv = self._string_search_adv(args)
+        _, adv = _string_search_adv(args)
         await self._roll_many(ctx, iterations, rollStr, dc, adv)
 
     async def _roll_many(self, ctx, iterations, roll_str, dc=None, adv=None):
@@ -288,14 +289,97 @@ class Dice(commands.Cog):
             await combat.final()
         await ctx.send(embed=embed)
 
+    # ==== inline rolling ====
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        await self.handle_inline_rolls(message)
+
     @staticmethod
-    def _string_search_adv(rollstr):
-        adv = d20.AdvType.NONE
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollstr) is not None:
-            adv = d20.AdvType.ADV if re.search('(^|\s+)adv(\s+|$)', rollstr) is not None else d20.AdvType.DIS
-            rollstr = re.sub('(adv|dis)(\s+|$)', '', rollstr)
-        return rollstr, adv
+    async def handle_inline_rolls(message):
+        out = []
+        for expr, context_before, context_after in _find_inline_exprs(message.content):
+            try:
+                result = d20.roll(expr, allow_comments=True)
+            except d20.RollError:
+                continue
+            context_before = context_before.replace('\n', ' ')
+            context_after = context_after.replace('\n', ' ')
+            out.append(f"{context_before}({result.result}){context_after}")
+
+        if not out:
+            return
+
+        await message.reply('\n'.join(out))
 
 
+# ==== helpers ====
+def _string_search_adv(rollstr):
+    adv = d20.AdvType.NONE
+    if re.search(r'(^|\s+)(adv|dis)(\s+|$)', rollstr) is not None:
+        adv = d20.AdvType.ADV if re.search(r'(^|\s+)adv(\s+|$)', rollstr) is not None else d20.AdvType.DIS
+        rollstr = re.sub(r'(adv|dis)(\s+|$)', '', rollstr)
+    return rollstr, adv
+
+
+def _find_inline_exprs(content, context_before=5, context_after=2, max_context_len=128):
+    """Returns an iterator of tuples (expr, context_before, context_after)."""
+    content_len = len(content)
+
+    # all content indexes
+    idxs = []
+    for start, expr_start, expr_end, end in _find_roll_expr_indices(content):
+        before_idx = max(0, start - max_context_len)
+        before_fragment = content[before_idx:start]
+        before_bits = before_fragment.rsplit(maxsplit=context_before)
+        if len(before_bits) > context_before:
+            before_idx += len(before_bits[0])
+
+        after_idx = min(content_len, end + max_context_len)
+        after_fragment = content[end:after_idx]
+        after_bits = after_fragment.split(maxsplit=context_after)
+        if len(after_bits) > context_after:
+            after_idx -= len(after_bits[-1])
+
+        idxs.append(((before_idx, start), (expr_start, expr_end), (end, after_idx)))
+
+    # start boundaries
+    for i, ((before_idx, start), (expr_start, expr_end), (end, after_idx)) in enumerate(idxs[1:], start=1):
+        clamped_before_idx = max(before_idx, idxs[i - 1][2][0])
+        idxs[i] = (clamped_before_idx, start), (expr_start, expr_end), (end, after_idx)
+
+    # end boundaries
+    for i, ((before_idx, start), (expr_start, expr_end), (end, after_idx)) in enumerate(idxs[:-1]):
+        clamped_after_idx = min(after_idx, idxs[i + 1][0][0])
+        idxs[i] = (before_idx, start), (expr_start, expr_end), (end, clamped_after_idx)
+
+    # turn into the exprs
+    for ((before_idx, start), (expr_start, expr_end), (end, after_idx)) in idxs:
+        context_before = content[before_idx:start].lstrip()
+        expr = content[expr_start:expr_end].strip()
+        context_after = content[end:after_idx].rstrip()
+
+        # ellipsis handling
+        if before_idx > 0:
+            context_before = f"...{context_before}"
+        if after_idx < content_len:
+            context_after = f"{context_after}..."
+
+        yield expr, context_before, context_after
+
+
+def _find_roll_expr_indices(content):
+    """
+    Returns an iterator of tuples (start, expr_start, expr_end, end) representing the indices of the roll exprs found
+    (outside and inside the braces).
+    """
+    end = 0
+    while (start := content.find('[[', end)) != -1:
+        end = content.find(']]', start)
+        if end == -1:
+            break
+        yield start, start + 2, end, end + 2
+
+
+# ==== d.py ====
 def setup(bot):
     bot.add_cog(Dice(bot))

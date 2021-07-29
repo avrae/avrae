@@ -55,7 +55,7 @@ class PBPUtils(commands.Cog):
         embed.title = args.last('title')
         embed.description = args.last('desc')
         embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
-        embed.set_image(url=args.last('image', '') if 'http' in str(args.last('image')) else '')
+        embed.set_image(url=maybe_http_url(args.last('image', '')))
         embed.set_footer(text=args.last('footer', ''))
         try:
             embed.colour = int(args.last('color').strip('#'), base=16)

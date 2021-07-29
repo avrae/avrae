@@ -292,6 +292,8 @@ class Dice(commands.Cog):
     # ==== inline rolling ====
     @commands.Cog.listener()
     async def on_message(self, message):
+        if message.author.bot:
+            return
         await self.handle_inline_rolls(message)
 
     @staticmethod

@@ -220,7 +220,8 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         if title:
             embed.title = title.replace('[name]', caster.name) \
                 .replace('[aname]', self.name) \
-                .replace('[sname]', self.name)  # #1514, [aname] is action name now
+                .replace('[sname]', self.name) \
+                .replace('[verb]', 'cast')   # #1514, [aname] is action name now, #1587, add verb to action/cast
         else:
             embed.title = f"{caster.get_title_name()} casts {self.name}{stat_override}!"
         if targets is None:

@@ -297,14 +297,17 @@ class Dice(commands.Cog):
     @staticmethod
     async def handle_inline_rolls(message):
         out = []
+        roller = d20.Roller(context=PersistentRollContext())
         for expr, context_before, context_after in _find_inline_exprs(message.content):
-            try:
-                result = d20.roll(expr, allow_comments=True)
-            except d20.RollError:
-                continue
             context_before = context_before.replace('\n', ' ')
             context_after = context_after.replace('\n', ' ')
-            out.append(f"{context_before}({result.result}){context_after}")
+
+            try:
+                result = roller.roll(expr, allow_comments=True)
+            except d20.RollError as e:
+                out.append(f"{context_before}({e!s}){context_after}")
+            else:
+                out.append(f"{context_before}({result.result}){context_after}")
 
         if not out:
             return

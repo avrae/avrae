@@ -7,7 +7,7 @@ from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.base import Skill
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS
-from utils.functions import a_or_an, camel_to_title, verbose_stat
+from utils.functions import a_or_an, camel_to_title, verbose_stat, maybe_http_url
 
 
 def update_csetting_args(char, args, skill=None):
@@ -182,7 +182,7 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
     embed.description = '\n'.join(desc_out)
     embeds.add_fields_from_args(embed, args.get('f'))
     if 'thumb' in args:
-        embed.set_thumbnail(url=args.last('thumb'))
+        embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
 
     return SkillRollResult(rolls=results, iterations=iterations, dc=dc, successes=num_successes)
 

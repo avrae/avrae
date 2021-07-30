@@ -9,7 +9,7 @@ from discord.ext import commands
 
 from cogs5e.models import embeds
 from utils.argparser import argparse
-from utils.functions import try_delete
+from utils.functions import try_delete, maybe_http_url
 
 
 class PBPUtils(commands.Cog):
@@ -54,8 +54,8 @@ class PBPUtils(commands.Cog):
         args = argparse(args)
         embed.title = args.last('title')
         embed.description = args.last('desc')
-        embed.set_thumbnail(url=args.last('thumb', '') if 'http' in str(args.last('thumb')) else '')
-        embed.set_image(url=args.last('image', '') if 'http' in str(args.last('image')) else '')
+        embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
+        embed.set_image(url=maybe_http_url(args.last('image', '')))
         embed.set_footer(text=args.last('footer', ''))
         try:
             embed.colour = int(args.last('color').strip('#'), base=16)

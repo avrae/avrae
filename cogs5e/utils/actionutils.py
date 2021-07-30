@@ -3,7 +3,7 @@ import itertools
 import discord
 
 from cogs5e.models import embeds
-from utils.functions import a_or_an, natural_join
+from utils.functions import a_or_an, natural_join, maybe_http_url
 
 
 async def run_attack(ctx, embed, args, caster, attack, targets, combat):
@@ -106,7 +106,7 @@ async def _run_common(ctx, embed, args, caster, action, targets, combat):
 
     embeds.add_fields_from_args(embed, args.get('f'))
     if 'thumb' in args:
-        embed.set_thumbnail(url=args.last('thumb'))
+        embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
 
     return result
 

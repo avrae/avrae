@@ -10,7 +10,7 @@ from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException, InvalidArgument
 from cogs5e.models.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
-from utils.functions import smart_trim, verbose_stat
+from utils.functions import smart_trim, verbose_stat, maybe_http_url
 from .mixins import AutomatibleMixin, DescribableMixin
 from .shared import Sourced
 
@@ -262,7 +262,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
                             value=f"Dropped {conflicts} due to concentration.")
 
         if 'thumb' in args:
-            embed.set_thumbnail(url=args.last('thumb'))
+            embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
         elif self.image:
             embed.set_thumbnail(url=self.image)
 

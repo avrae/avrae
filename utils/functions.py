@@ -493,3 +493,9 @@ def reconcile_adv(adv=False, dis=False, ea=False):
     if ea and not dis:
         return 2
     return result
+
+
+def maybe_http_url(url: str):
+    """Returns a url if one found, otherwise blank string."""
+    # Mainly used for embed.set_thumbnail(url=url)
+    return url if 'http' in url else ''

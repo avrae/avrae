@@ -8,6 +8,7 @@ import aioredis
 import d20
 import discord
 import motor.motor_asyncio
+import psutil
 import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
@@ -127,16 +128,36 @@ class Avrae(commands.AutoShardedBot):
             await clustering.coordinate_shards(self)
             if self.shard_ids is not None:
                 log.info(f"Launching {len(self.shard_ids)} shards! ({self.shard_ids})")
-            await super().launch_shards()
-            log.info(f"Launched {len(self.shards)} shards!")
+
+        # release lock and launch
+        await super().launch_shards()
+        log.info(f"Launched {len(self.shards)} shards!")
 
         if self.is_cluster_0:
             await self.rdb.incr('build_num')
 
     async def before_identify_hook(self, shard_id, *, initial=False):
         bucket_id = shard_id % self.launch_max_concurrency
+        # dummy call to initialize monitoring - see note on returning 0.0 at
+        # https://psutil.readthedocs.io/en/latest/index.html#psutil.cpu_percent
+        psutil.cpu_percent()
+
+        async def pre_lock_check(first=False):
+            """
+            Before attempting a lock, CPU utilization should be <75% to prevent a huge spike in CPU when connecting
+            up to 16 shards at once. This also allows multiple clusters to startup concurrently.
+            """
+            if not first:
+                await asyncio.sleep(0.2)
+            i = 0
+            while psutil.cpu_percent() > 75:
+                i += 1
+                await asyncio.sleep(0.2)
+                if i > 150:  # liveness property: will eventually stop waiting (30s in this case)
+                    break
+
         # wait until the bucket is available and try to acquire the lock
-        await clustering.wait_bucket_available(shard_id, bucket_id, self.rdb)
+        await clustering.wait_bucket_available(shard_id, bucket_id, self.rdb, pre_lock_hook=pre_lock_check)
 
     async def get_context(self, *args, **kwargs):
         return await super().get_context(*args, cls=context.AvraeContext, **kwargs)

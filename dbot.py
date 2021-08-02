@@ -163,8 +163,21 @@ class Avrae(commands.AutoShardedBot):
         return await super().get_context(*args, cls=context.AvraeContext, **kwargs)
 
     async def close(self):
+        # note: when closing the bot 3 errors are emitted:
+        #
+        # ERROR:asyncio: An open stream object is being garbage collected; call "stream.close()" explicitly.
+        # ERROR:asyncio: An open stream object is being garbage collected; call "stream.close()" explicitly.
+        # ERROR:asyncio: Unclosed client session
+        # client_session: <aiohttp.client.ClientSession object at 0xblahblah>
+        #
+        # The first two are caused by aioredis streams being GC'ed when discord.py cancels the tasks that create them
+        # (because of course d.py decides it wants to cancel *all* tasks on its loop...)
+        # The second seems like it's related to a background task in a cog, but it occurs even without cogs loaded
+        # bonus points if you find where it's coming from!
         await super().close()
         await self.ddb.close()
+        await self.rdb.close()
+        self.mclient.close()
         self.ldclient.close()
 
 

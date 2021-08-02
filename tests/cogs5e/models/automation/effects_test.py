@@ -181,6 +181,17 @@ async def import_usecounter_actions(avrae, dhttp):
         "_v": 2
     }
     ''').strip())
+    avrae.message(textwrap.dedent('''
+    !a import {
+        "name": "UseCounter Test4",
+        "automation": [{
+            "type": "counter",
+            "counter": {"slot": "3 if True else 0"},
+            "amount": "1"
+        }],
+        "_v": 2
+    }
+    ''').strip())
     await dhttp.drain()
 
 
@@ -205,6 +216,11 @@ async def test_usecounter_e2e(character, avrae, dhttp):
     char = await active_character(avrae)
     if bi := char.get_consumable("Bardic Inspiration"):
         assert bi.value < bi.get_max()
+
+    avrae.message('!a "UseCounter Test4"')
+    await dhttp.drain()
+    char = await active_character(avrae)
+    assert char.spellbook.get_slots(3) == 0 or char.spellbook.get_slots(3) < char.spellbook.get_max_slots(3)
 
 
 async def test_usecounter_e2e_ignore(character, avrae, dhttp):
@@ -290,6 +306,7 @@ async def test_usecounter_serialize():
     "counter", "other counter name",
     # spell slot
     automation.effects.usecounter.SpellSlotReference(1), automation.effects.usecounter.SpellSlotReference(9),
+    automation.effects.usecounter.SpellSlotReference("3 if True else 0"),
     # ability reference
     automation.effects.usecounter.AbilityReference(12168134, 75),
     automation.effects.usecounter.AbilityReference(-1, -1)

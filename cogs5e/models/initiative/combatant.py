@@ -1,5 +1,6 @@
 import discord
 
+import cogs5e.models.character
 from cogs5e.models.errors import NoCharacter
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
@@ -8,7 +9,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
-from utils.functions import get_guild_member, search_and_select, combine_maybe_mods
+from utils.functions import combine_maybe_mods, get_guild_member, search_and_select
 from .effect import Effect
 from .errors import CombatException, RequiresContext
 from .types import BaseCombatant
@@ -230,9 +231,11 @@ class Combatant(BaseCombatant, StatBlock):
 
     def set_group(self, group_name):
         current = self.combat.current_combatant
-        was_current = current is not None and \
-                      (self is current
-                       or (current.type == CombatantType.GROUP and self in current and len(current) == 1))
+        was_current = (current is not None
+                       and (self is current
+                            or (current.type == CombatantType.GROUP
+                                and self in current
+                                and len(current) == 1)))
         self.combat.remove_combatant(self, ignore_remove_hook=True)
         if isinstance(group_name, str) and group_name.lower() == 'none':
             group_name = None
@@ -302,8 +305,9 @@ class Combatant(BaseCombatant, StatBlock):
 
     def remove_all_effects(self, _filter=None):
         if _filter is None:
-            _filter = lambda _: True
-        to_remove = list(filter(_filter, self._effects))
+            to_remove = self._effects.copy()
+        else:
+            to_remove = list(filter(_filter, self._effects))
         for e in to_remove:
             e.remove()
         return to_remove
@@ -378,11 +382,11 @@ class Combatant(BaseCombatant, StatBlock):
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        hpStr = f"{self.hp_str(private)} " if self.hp_str(private) else ''
+        hp_str = f"{self.hp_str(private)} " if self.hp_str(private) else ''
         if not no_notes:
-            return f"{self.init:>2}: {self.name} {hpStr}{self._get_effects_and_notes()}"
+            return f"{self.init:>2}: {self.name} {hp_str}{self._get_effects_and_notes()}"
         else:
-            return f"{self.init:>2}: {self.name} {hpStr}"
+            return f"{self.init:>2}: {self.name} {hp_str}"
 
     def get_status(self, private=False):
         """
@@ -553,8 +557,8 @@ class PlayerCombatant(Combatant):
         inst.character_owner = raw['character_owner']
 
         try:
-            from cogs5e.models.character import Character
-            inst._character = await Character.from_bot_and_ids(ctx.bot, inst.character_owner, inst.character_id)
+            inst._character = await cogs5e.models.character.Character.from_bot_and_ids(
+                ctx.bot, inst.character_owner, inst.character_id)
         except NoCharacter:
             raise CombatException(f"A character in combat was deleted. "
                                   f"Please run `{ctx.prefix}init end -force` to end combat.")
@@ -568,24 +572,42 @@ class PlayerCombatant(Combatant):
         inst.character_owner = raw['character_owner']
 
         try:
-            from cogs5e.models.character import Character
-            inst._character = Character.from_bot_and_ids_sync(ctx.bot, inst.character_owner, inst.character_id)
+            inst._character = cogs5e.models.character.Character.from_bot_and_ids_sync(
+                ctx.bot, inst.character_owner, inst.character_id)
         except NoCharacter:
             raise CombatException(f"A character in combat was deleted. "
                                   f"Please run `{ctx.prefix}init end -force` to end combat.")
         return inst
 
     def to_dict(self):
-        IGNORED_ATTRIBUTES = ("stats", "levels", "skills", "saves", "spellbook", "hp", "temp_hp")
+        ignored_attributes = ("stats", "levels", "skills", "saves", "spellbook", "hp", "temp_hp")
         raw = super().to_dict()
-        for attr in IGNORED_ATTRIBUTES:
+        for attr in ignored_attributes:
             del raw[attr]
         raw.update({
             'character_id': self.character_id, 'character_owner': self.character_owner
         })
         return raw
 
-    # members
+    # ==== helpers ====
+    async def update_character_ref(self, ctx, inst=None):
+        """
+        Updates the character reference in self._character to ensure that it references the cached Character instance
+        if one is cached (since Combat cache TTL > Character cache TTL), preventing instance divergence.
+
+        If ``inst`` is passed, sets the character to reference the given instance, otherwise retrieves it via the normal
+        Character init flow (from cache or db). ``inst`` should be a Character instance with the same character ID and
+        owner as ``self._character``.
+        """
+        if inst is not None:
+            self._character = inst
+            return
+
+        # retrieve from character constructor
+        self._character = await cogs5e.models.character.Character.from_bot_and_ids(
+            ctx.bot, self.character_owner, self.character_id)
+
+    # ==== members ====
     @property
     def character(self):
         return self._character

@@ -103,11 +103,11 @@ class Character(StatBlock):
         if active_character is None:
             raise NoCharacter()
 
-        if (owner_id, active_character['upstream']) in cls._cache:
-            # return from cache
+        try:
+            # return from cache if available
             return cls._cache[owner_id, active_character['upstream']]
-        else:
-            # write to cache
+        except KeyError:
+            # otherwise deserialize and write to cache
             inst = cls.from_dict(active_character)
             cls._cache[owner_id, active_character['upstream']] = inst
             return inst
@@ -115,9 +115,13 @@ class Character(StatBlock):
     @classmethod
     async def from_bot_and_ids(cls, bot, owner_id: str, character_id: str):
         owner_id = str(owner_id)
-        if (owner_id, character_id) in cls._cache:
-            # read from cache
+
+        try:
+            # read from cache if available
             return cls._cache[owner_id, character_id]
+        except KeyError:
+            pass
+
         character = await bot.mdb.characters.find_one({"owner": owner_id, "upstream": character_id})
         if character is None:
             raise NoCharacter()
@@ -129,9 +133,13 @@ class Character(StatBlock):
     @classmethod
     def from_bot_and_ids_sync(cls, bot, owner_id: str, character_id: str):
         owner_id = str(owner_id)
-        if (owner_id, character_id) in cls._cache:
-            # read from cache
+
+        try:
+            # read from cache if available
             return cls._cache[owner_id, character_id]
+        except KeyError:
+            pass
+
         character = bot.mdb.characters.delegate.find_one({"owner": owner_id, "upstream": character_id})
         if character is None:
             raise NoCharacter()
@@ -156,8 +164,10 @@ class Character(StatBlock):
     @staticmethod
     async def delete(ctx, owner_id, upstream):
         await ctx.bot.mdb.characters.delete_one({"owner": owner_id, "upstream": upstream})
-        if (owner_id, upstream) in Character._cache:
+        try:
             del Character._cache[owner_id, upstream]
+        except KeyError:
+            pass
 
     # ---------- Basic CRUD ----------
     def get_color(self):

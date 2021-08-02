@@ -5,6 +5,7 @@ import gamedata
 from . import Effect
 from ..errors import AutomationException, NoCounterFound, StopExecution
 from ..results import UseCounterResult
+from ..utils import stringify_intexpr
 
 
 class UseCounter(Effect):
@@ -94,7 +95,8 @@ class UseCounter(Effect):
         return self.use_custom_counter(autoctx, counter, amount)
 
     def use_spell_slot(self, autoctx, amount, ignore_resources: bool = False):
-        level = autoctx.args.last('l', self.counter.slot, int)
+        spellref_level = autoctx.parse_intexpression(self.counter.slot)
+        level = autoctx.args.last('l', spellref_level, int)
         if ignore_resources:  # handled here to return counter name (#1582)
             return UseCounterResult(counter_name=str(level), requested_amount=amount, skipped=True)
 
@@ -146,17 +148,14 @@ class UseCounter(Effect):
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
         # amount
-        try:
-            amount = int(evaluator.eval(self.amount))
-        except Exception:
-            amount = float('nan')
+        amount = stringify_intexpr(evaluator, self.amount)
 
         # counter name
         if isinstance(self.counter, str):
             charges = 'charge' if amount == 1 else 'charges'
             counter_name = f"{charges} of {self.counter}"
         else:
-            counter_name = self.counter.build_str(plural=amount != 1)
+            counter_name = self.counter.build_str(caster, evaluator, plural=amount != 1)
         return f"uses {amount} {counter_name}"
 
 
@@ -185,7 +184,7 @@ class _UseCounterTarget(abc.ABC):  # this is just here for type niceness because
     def to_dict(self):
         raise NotImplementedError
 
-    def build_str(self, plural):
+    def build_str(self, caster, evaluator, plural):
         raise NotImplementedError
 
     def __repr__(self):
@@ -193,16 +192,17 @@ class _UseCounterTarget(abc.ABC):  # this is just here for type niceness because
 
 
 class SpellSlotReference(_UseCounterTarget):
-    def __init__(self, slot: int, **kwargs):
+    def __init__(self, slot, **kwargs):
         super().__init__(**kwargs)
         self.slot = slot
 
     def to_dict(self):
         return {'slot': self.slot}
 
-    def build_str(self, plural):
+    def build_str(self, caster, evaluator, plural):
+        level = stringify_intexpr(evaluator, self.slot)
         slots = 'slots' if plural else 'slot'
-        return f"level {self.slot} spell {slots}"
+        return f"level {level} spell {slots}"
 
     def __str__(self):
         return str(self.slot)
@@ -228,7 +228,7 @@ class AbilityReference(_UseCounterTarget):
     def to_dict(self):
         return {'id': self.id, 'typeId': self.type_id}
 
-    def build_str(self, plural):
+    def build_str(self, caster, evaluator, plural):
         charges = 'charges' if plural else 'charge'
         entity_name = self.entity.name if self.entity is not None else "Unknown Ability"
         return f"{charges} of {entity_name}"

@@ -5,11 +5,12 @@ from utils.functions import maybe_mod, reconcile_adv
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
 from ..results import SaveResult
+from ..utils import stringify_intexpr
 
 
 class Save(Effect):
     def __init__(self, stat: str, fail: list, success: list, dc: str = None, **kwargs):
-        super(Save, self).__init__("save", **kwargs)
+        super().__init__("save", **kwargs)
         self.stat = stat
         self.fail = fail
         self.success = success
@@ -22,7 +23,7 @@ class Save(Effect):
         return super(Save, cls).from_data(data)
 
     def to_dict(self):
-        out = super(Save, self).to_dict()
+        out = super().to_dict()
         fail = Effect.serialize(self.fail)
         success = Effect.serialize(self.success)
         out.update({"stat": self.stat, "fail": fail, "success": success})
@@ -31,7 +32,7 @@ class Save(Effect):
         return out
 
     def run(self, autoctx):
-        super(Save, self).run(autoctx)
+        super().run(autoctx)
         if autoctx.target is None:
             raise TargetException("Tried to make a save without a target! Make sure all Save effects are inside "
                                   "of a Target effect.")
@@ -139,14 +140,10 @@ class Save(Effect):
         return self.run_children(self.fail, autoctx)
 
     def build_str(self, caster, evaluator):
-        super(Save, self).build_str(caster, evaluator)
+        super().build_str(caster, evaluator)
         dc = caster.spellbook.dc
         if self.dc:
-            try:
-                dc_override = evaluator.eval(self.dc)
-                dc = int(dc_override)
-            except Exception:
-                dc = float('nan')
+            dc = stringify_intexpr(evaluator, self.dc)
 
         out = f"DC {dc} {self.stat[:3].upper()} Save"
         if self.fail:

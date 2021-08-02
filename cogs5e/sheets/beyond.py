@@ -170,27 +170,17 @@ class BeyondSheetParser(SheetLoaderABC):
     def _get_skills(self) -> Skills:
         out = {}
 
-        def derive_adv(skl):
-            advs = set()
-            for adv in skl['adv']:
-                if not adv['restriction']:
-                    advs.add(True)
-            for adv in skl['dis']:
-                if not adv['restriction']:
-                    advs.add(False)
-
-            if len(advs) == 1:
-                return advs.pop()
-            return None
-
+        # main skills
         for skill_id, skill in self.character_data['skills'].items():
             prof_type = {1: 0, 2: 0.5, 3: 1, 4: 2}.get(skill['prof'], 0)
-            adv_type = derive_adv(skill)
+            adv_type = derive_adv(skill['adv'], skill['dis'])
             out[SKILL_MAP[skill_id]] = Skill(skill['modifier'], prof_type, skill['bonus'], adv_type)
 
+        # initiative
         out['initiative'] = Skill(self.character_data['initiative']['modifier'],
                                   adv=self.character_data['initiative']['adv'] or None)
 
+        # ability skills (base strength, dex, etc checks)
         for stat_key, skill in zip(constants.STAT_ABBREVIATIONS, constants.STAT_NAMES):
             out[skill] = Skill(self.character_data['stats'][stat_key]['modifier'])
 
@@ -199,8 +189,13 @@ class BeyondSheetParser(SheetLoaderABC):
     def _get_saves(self) -> Saves:
         out = {}
         for stat_key, save_key in zip(constants.STAT_ABBREVIATIONS, constants.SAVE_NAMES):
-            out[save_key] = Skill(self.character_data['stats'][stat_key]['save'],
-                                  prof=1 if self.character_data['stats'][stat_key]['saveProficiency'] else 0)
+            stat_data = self.character_data['stats'][stat_key]
+            adv_type = derive_adv(stat_data['saveAdv'], stat_data['saveDis'])
+            out[save_key] = Skill(
+                stat_data['save'],
+                prof=1 if stat_data['saveProficiency'] else 0,
+                adv=adv_type
+            )
 
         return Saves(out)
 
@@ -353,6 +348,20 @@ class BeyondSheetParser(SheetLoaderABC):
             return Attack(attack['name'], automation.Automation(effects))
         else:
             return Attack.new(attack['name'], attack['toHit'], attack['damage'] or '0', desc)
+
+
+def derive_adv(advs, dises):
+    seen = set()
+    for adv in advs:
+        if not adv['restriction']:
+            seen.add(True)
+    for dis in dises:
+        if not dis['restriction']:
+            seen.add(False)
+
+    if len(seen) == 1:
+        return seen.pop()
+    return None
 
 
 def html_to_md(text):

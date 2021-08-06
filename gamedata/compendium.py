@@ -213,11 +213,10 @@ class Compendium:
                 copied.name = f"{race.name}: {feature.name}"
                 yield copied
 
-                if not feature.inherited:
-                    self._register_entity_lookup(feature)
-                    # race feature options (e.g. breath weapon, silver dragon) are registered here as well
-                    for rfo in feature.options:
-                        self._register_entity_lookup(rfo)
+                self._register_entity_lookup(feature, allow_overwrite=not feature.inherited)
+                # race feature options (e.g. breath weapon, silver dragon) are registered here as well
+                for rfo in feature.options:
+                    self._register_entity_lookup(rfo, allow_overwrite=not feature.inherited)
 
         for base_race in self.races:
             self.rfeats.extend(handle_race(base_race))
@@ -235,15 +234,19 @@ class Compendium:
             self._actions_by_uid[action.uid] = action
             self._actions_by_eid[(action.type_id, action.id)].append(action)
 
-    def _register_entity_lookup(self, entity: Sourced):
+    def _register_entity_lookup(self, entity: Sourced, allow_overwrite=True):
         k = (entity.entity_type, entity.entity_id)
         if k in self._entity_lookup:
-            if entity.name != self._entity_lookup[k].name:
-                log.info(f"Overwriting existing entity lookup key: {k} "
-                         f"({self._entity_lookup[k].name} -> {entity.name})")
+            if not allow_overwrite:
+                log.debug(f"Entity was not registered due to overwrite rules: {k} "
+                          f"({self._entity_lookup[k].name} -> {entity.name})")
+                return
+            elif entity.name != self._entity_lookup[k].name:
+                log.debug(f"Overwriting existing entity lookup key: {k} "
+                          f"({self._entity_lookup[k].name} -> {entity.name})")
             else:
-                log.info(f"Entity lookup key {k} is registered multiple times: "
-                         f"({self._entity_lookup[k].name}, {entity.name})")
+                log.debug(f"Entity lookup key {k} is registered multiple times: "
+                          f"({self._entity_lookup[k].name}, {entity.name})")
         log.debug(f"Registered entity {k}: {entity!r}")
         self._entity_lookup[k] = entity
         kt = (entity.type_id, entity.entity_id)

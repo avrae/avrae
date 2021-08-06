@@ -124,6 +124,11 @@ class RedisIO:
     async def publish(self, channel, data):
         return await self._db.publish(channel, data)
 
+    # ==== misc ====
+    async def close(self):
+        self._db.close()
+        await self._db.wait_closed()
+
 
 class _PubSubMessageBase(abc.ABC):
     def __init__(self, type, id, sender):

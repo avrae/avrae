@@ -188,6 +188,8 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
             # count these for extra display
             if action.uid is None:
                 non_automated_count += 1
+        if not action_texts:
+            return
         action_text = '\n'.join(action_texts)
         embeds.add_fields_from_long_text(embed, field_name=title, text=action_text)
 

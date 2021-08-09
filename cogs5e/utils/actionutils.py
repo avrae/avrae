@@ -3,7 +3,7 @@ import itertools
 import discord
 
 from cogs5e.models import embeds
-from utils.functions import a_or_an, natural_join, maybe_http_url
+from utils.functions import a_or_an, natural_join, maybe_http_url, search_and_select
 
 
 async def run_attack(ctx, embed, args, caster, attack, targets, combat):
@@ -112,6 +112,33 @@ async def _run_common(ctx, embed, args, caster, action, targets, combat):
     return result
 
 
+async def select_action(ctx, name, attacks, actions=None, allow_no_automation=False, **kwargs):
+    """
+    Prompts the user to select an action from the caster's valid list of runnable actions, or returns a single
+    unambiguous action.
+
+    :type ctx: discord.ext.commands.Context
+    :type name: str
+    :type attacks: cogs5e.models.sheet.attack.AttackList
+    :type actions: cogs5e.models.sheet.action.Actions
+    :param bool allow_no_automation:
+        When selecting from a player's action list, whether to allow returning an action that has no action gamedata.
+    :rtype: cogs5e.models.sheet.attack.Attack or cogs5e.models.sheet.action.Action
+    """
+    if actions is None:
+        actions = []
+    elif not allow_no_automation:
+        actions = filter(lambda action: action.uid is not None, actions)
+
+    return await search_and_select(
+        ctx,
+        list_to_search=list(itertools.chain(attacks, actions)),
+        query=name,
+        key=lambda a: a.name,
+        **kwargs
+    )
+
+
 # ==== action display ====
 async def send_action_list(destination, caster, attacks=None, actions=None, embed=None, args=None):
     """
@@ -141,6 +168,7 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
         ('attacks', 'actions', 'bonus actions', 'reactions', 'other actions'),
         (display_attacks, display_actions, display_bonus, display_reactions, display_other)
     ))
+    non_automated_count = 0
 
     # action display
     if attacks and (display_attacks or not is_display_filtered):
@@ -149,9 +177,17 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
 
     # since the sheet displays the description regardless of entitlements, we do here too
     def add_action_field(title, action_source):
-        action_texts = (f"**{action.name}**: {action.build_str(caster=caster, automation_only=not verbose)}"
-                        for action
-                        in sorted(action_source, key=lambda action: action.name))
+        nonlocal non_automated_count  # eh
+        action_texts = []
+        for action in sorted(action_source, key=lambda a: a.name):
+            if verbose:
+                name = f"**{action.name}**" if action.uid is not None else f"***{action.name}***"
+                action_texts.append(f"{name}: {action.build_str(caster=caster, automation_only=False)}")
+            elif action.uid is not None:
+                action_texts.append(f"**{action.name}**: {action.build_str(caster=caster, automation_only=True)}")
+            # count these for extra display
+            if action.uid is None:
+                non_automated_count += 1
         action_text = '\n'.join(action_texts)
         embeds.add_fields_from_long_text(embed, field_name=title, text=action_text)
 
@@ -175,6 +211,12 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
         embed.description = f"Only displaying {natural_join(filtered_action_type_strs, 'and')}."
 
     if not verbose and actions:
-        embed.set_footer(text="Use the -v argument to view each action's full description.")
+        if non_automated_count:
+            embed.set_footer(text=f"Use the -v argument to view each action's full description "
+                                  f"and {non_automated_count} display-only actions.")
+        else:
+            embed.set_footer(text="Use the -v argument to view each action's full description.")
+    elif verbose and non_automated_count:
+        embed.set_footer(text="Italicized actions are for display only and cannot be run.")
 
     await destination.send(embed=embed)

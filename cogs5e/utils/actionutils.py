@@ -150,7 +150,8 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
     # since the sheet displays the description regardless of entitlements, we do here too
     def add_action_field(title, action_source):
         action_texts = (f"**{action.name}**: {action.build_str(caster=caster, automation_only=not verbose)}"
-                        for action in action_source)
+                        for action
+                        in sorted(action_source, key=lambda action: action.name))
         action_text = '\n'.join(action_texts)
         embeds.add_fields_from_long_text(embed, field_name=title, text=action_text)
 

@@ -290,7 +290,10 @@ class BeyondSheetParser(SheetLoaderABC):
         for d_action in character_actions:
             if d_action['typeId'] == '1120657896' and d_action['id'] == '1':  # Unarmed Strike - already in attacks
                 continue
-            g_actions = compendium.lookup_actions_for_entity(int(d_action['typeId']), int(d_action['id']))
+            try:
+                g_actions = compendium.lookup_actions_for_entity(int(d_action['typeId']), int(d_action['id']))
+            except (TypeError, ValueError):  # weird null typeid/uuid id action, maybe artificer infused item?
+                continue
             if g_actions:  # save a reference to each gamedata action by UID
                 for g_action in g_actions:
                     actions.append(Action(

@@ -540,10 +540,10 @@ class SheetManager(commands.Cog):
     async def import_sheet(self, ctx, url: str, *args):
         """
         Loads a character sheet in one of the accepted formats:
+            [D&D Beyond](https://www.dndbeyond.com/)
             [Dicecloud](https://dicecloud.com/)
             [GSheet v2.1](https://gsheet2.avrae.io) (auto)
             [GSheet v1.4](https://gsheet.avrae.io) (manual)
-            [D&D Beyond](https://www.dndbeyond.com/)
         
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for class resources and features.
@@ -551,12 +551,13 @@ class SheetManager(commands.Cog):
         __Sheet-specific Notes__
         D&D Beyond:
             Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
-        Gsheet:
-            The sheet must be shared with Avrae for this to work.
-            Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
-
         Dicecloud:
             Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
+        Gsheet:
+            The sheet must be shared with directly with Avrae or be publicly viewable to anyone with the link.
+            Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
+
+
         """  # noqa: E501
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet

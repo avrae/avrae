@@ -442,10 +442,10 @@ class AliasCustomCounter:
 
         Example:
 
-        >>> full_str('Bardic Inspiration')
+        >>> full_str()
         "◉◉◉◉\\n"
         "**Resets On**: Long Rest"
-        >>> full_str('Bardic Inspiration', True)
+        >>> full_str(True)
         "**Bardic Inspiration**\\n"
         "◉◉◉◉\\n"
         "**Resets On**: Long Rest"

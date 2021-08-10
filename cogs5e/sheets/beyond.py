@@ -299,6 +299,9 @@ class BeyondSheetParser(SheetLoaderABC):
             # Unarmed Strike - already in attacks
             if d_action['typeId'] == '1120657896' and d_action['id'] == '1':
                 continue
+            # display as attack override - fall back to attack system
+            if d_action['isCustomized'] and d_action['displayAsAttack']:
+                continue
 
             # gamedata for limiteduse
             try:

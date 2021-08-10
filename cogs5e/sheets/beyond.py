@@ -3,6 +3,7 @@ Created on May 26, 2020
 
 @author: andrew
 """
+import itertools
 import logging
 import re
 
@@ -285,25 +286,44 @@ class BeyondSheetParser(SheetLoaderABC):
         character_actions = self.character_data['actions']
         character_features = self.character_data['features']
         actions = []
+        seen_feature_ids = set()  # set of tuples (typeid, id)
+
+        def add_action_from_gamedata(d_action, g_action):
+            actions.append(Action(
+                name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                activation_type=g_action.activation_type, snippet=html_to_md(d_action['snippet'])
+            ))
 
         # actions: save all, regardless of gamedata presence
         for d_action in character_actions:
-            if d_action['typeId'] == '1120657896' and d_action['id'] == '1':  # Unarmed Strike - already in attacks
+            # Unarmed Strike - already in attacks
+            if d_action['typeId'] == '1120657896' and d_action['id'] == '1':
                 continue
+
+            # gamedata for limiteduse
             try:
                 g_actions = compendium.lookup_actions_for_entity(int(d_action['typeId']), int(d_action['id']))
             except (TypeError, ValueError):  # weird null typeid/uuid id action, maybe artificer infused item?
                 continue
-            if g_actions:  # save a reference to each gamedata action by UID
-                for g_action in g_actions:
-                    actions.append(Action(
-                        name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                        activation_type=g_action.activation_type, snippet=html_to_md(d_action['snippet'])
-                    ))
-            else:  # just save the action w/ its snippet
-                activation_type = enums.ActivationType(d_action['activationType']) \
-                    if d_action['activationType'] is not None \
-                    else None
+
+            # gamedata for component (parent feature)
+            # data might have been entered for the parent feature instead
+            try:
+                parent_type_id, parent_id = int(d_action['componentTypeId']), int(d_action['componentId'])
+                parent_g_actions = compendium.lookup_actions_for_entity(parent_type_id, parent_id)
+                seen_feature_ids.add((parent_type_id, parent_id))
+            except (TypeError, ValueError):
+                parent_g_actions = []
+
+            # if the lu itself has action data, save a reference to each gamedata action by UID
+            for g_action in itertools.chain(g_actions, parent_g_actions):
+                add_action_from_gamedata(d_action, g_action)
+
+            # just save the action w/ its snippet if there is no gamedata
+            if not (g_actions or parent_g_actions):
+                activation_type = (enums.ActivationType(d_action['activationType'])
+                                   if d_action['activationType'] is not None
+                                   else None)
                 actions.append(Action(
                     name=d_action['name'], uid=None, id=int(d_action['id']), type_id=int(d_action['typeId']),
                     activation_type=activation_type, snippet=html_to_md(d_action['snippet'])
@@ -311,12 +331,12 @@ class BeyondSheetParser(SheetLoaderABC):
 
         # features: save only if gamedata references them
         for d_feature in character_features:
-            g_actions = compendium.lookup_actions_for_entity(int(d_feature['typeId']), int(d_feature['id']))
+            d_type_id, d_id = int(d_feature['typeId']), int(d_feature['id'])
+            if (d_type_id, d_id) in seen_feature_ids:
+                continue
+            g_actions = compendium.lookup_actions_for_entity(d_type_id, d_id)
             for g_action in g_actions:
-                actions.append(Action(
-                    name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                    activation_type=g_action.activation_type, snippet=d_feature['snippet']
-                ))
+                add_action_from_gamedata(d_feature, g_action)
 
         return Actions(actions)
 

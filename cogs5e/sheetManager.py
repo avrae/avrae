@@ -83,8 +83,7 @@ class SheetManager(commands.Cog):
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         # we select from caster attacks b/c a combat effect could add some
-        attack_or_action = await search_and_select(
-            ctx, list(itertools.chain(caster.attacks, char.actions)), atk_name, lambda a: a.name)
+        attack_or_action = await actionutils.select_action(ctx, atk_name, attacks=caster.attacks, actions=char.actions)
 
         if isinstance(attack_or_action, Attack):
             result = await actionutils.run_attack(ctx, embed, args, caster, attack_or_action, targets, combat)

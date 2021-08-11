@@ -26,11 +26,3 @@ async def test_nonexistant_commands(avrae, dhttp):
     avrae.message("hello world")
     avrae.message("spam spam spam!roll 1d20")
     assert dhttp.queue_empty()  # avrae has not responded to anything
-
-
-async def test_help(avrae, dhttp):  # simple test just to make sure help works
-    avrae.message("!help")
-    await dhttp.drain()
-
-    avrae.message("!help -here")
-    await dhttp.receive_message(embed=discord.Embed())

@@ -14,12 +14,12 @@ from discord.ext import commands
 from aliasing import helpers
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument, NoSelectionElements
+from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelectionElements
 from cogs5e.utils import checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
 from utils.argparser import argparse
-from utils.functions import confirm, search, search_and_select, try_delete
+from utils.functions import confirm, maybe_mod, search, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
 
@@ -74,17 +74,7 @@ class GameTrack(commands.Cog):
                                 f"{character.spellbook.slots_str(level)}"
         else:
             old_slots = character.spellbook.get_slots(level)
-            try:
-                if value.startswith(('+', '-')):
-                    value = old_slots + int(value)
-                else:
-                    value = int(value)
-            except ValueError:
-                return await ctx.send(f"{value} is not a valid integer.")
-            try:
-                assert 0 <= value <= character.spellbook.get_max_slots(level)
-            except AssertionError:
-                raise CounterOutOfBounds()
+            value = maybe_mod(value, old_slots)
             character.spellbook.set_slots(level, value)
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \

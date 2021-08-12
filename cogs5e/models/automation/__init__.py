@@ -1,3 +1,4 @@
+import aliasing.api.statblock
 import aliasing.evaluators
 from utils.functions import get_guild_member
 from .effects import *
@@ -92,7 +93,8 @@ class Automation:
         """
         :type caster: :class:`~cogs5e.models.sheet.statblock.StatBlock
         """
-        evaluator = aliasing.evaluators.SpellEvaluator.with_caster(caster)
+        evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster)
+        evaluator.builtins['caster'] = aliasing.api.statblock.AliasStatBlock(caster)
         return f"{Effect.build_child_str(self.effects, caster, evaluator)}."
 
     def __str__(self):

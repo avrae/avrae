@@ -67,7 +67,7 @@ class UseCounter(Effect):
             if self.error_behaviour == 'warn':
                 autoctx.meta_queue(f"**Warning**: Could not use counter - {e}")
             elif self.error_behaviour == 'raise':
-                raise StopExecution(f"Could not use counter: {e}")
+                raise StopExecution(f"Could not use counter: {e}") from e
 
         autoctx.metavars['lastCounterName'] = result.counter_name
         autoctx.metavars['lastCounterRemaining'] = result.counter_remaining
@@ -149,6 +149,11 @@ class UseCounter(Effect):
         super().build_str(caster, evaluator)
         # amount
         amount = stringify_intexpr(evaluator, self.amount)
+
+        # guaranteed metavars
+        evaluator.builtins['lastCounterName'] = str(self.counter)
+        evaluator.builtins['lastCounterRequestedAmount'] = amount
+        evaluator.builtins['lastCounterUsedAmount'] = amount
 
         # counter name
         if isinstance(self.counter, str):
@@ -232,6 +237,9 @@ class AbilityReference(_UseCounterTarget):
         charges = 'charges' if plural else 'charge'
         entity_name = self.entity.name if self.entity is not None else "Unknown Ability"
         return f"{charges} of {entity_name}"
+
+    def __str__(self):
+        return self.entity.name if self.entity is not None else "Unknown Ability"
 
     def __repr__(self):
         return f"<AbilityReference id={self.id!r} type_id={self.type_id!r} entity={self.entity!r}>"

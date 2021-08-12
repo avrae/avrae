@@ -156,12 +156,18 @@ class UseCounter(Effect):
         evaluator.builtins['lastCounterUsedAmount'] = amount
 
         # counter name
+        plural = abs(amount) != 1
         if isinstance(self.counter, str):
-            charges = 'charge' if amount == 1 else 'charges'
+            charges = 'charges' if plural else 'charge'
             counter_name = f"{charges} of {self.counter}"
         else:
-            counter_name = self.counter.build_str(caster, evaluator, plural=amount != 1)
-        return f"uses {amount} {counter_name}"
+            counter_name = self.counter.build_str(caster, evaluator, plural=plural)
+
+        # uses/restores
+        if amount < 0:
+            return f"restores {-amount} {counter_name}"
+        else:
+            return f"uses {amount} {counter_name}"
 
 
 # ==== helpers ====

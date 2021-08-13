@@ -158,10 +158,10 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
 
     # arg setup
     verbose = '-v' in args
-    display_attacks = 'attacks' in args
-    display_actions = 'actions' in args
+    display_attacks = 'attack' in args
+    display_actions = 'action' in args
     display_bonus = 'bonus' in args
-    display_reactions = 'reactions' in args
+    display_reactions = 'reaction' in args
     display_other = 'other' in args
     is_display_filtered = any((display_attacks, display_actions, display_bonus, display_reactions, display_other))
     filtered_action_type_strs = list(itertools.compress(

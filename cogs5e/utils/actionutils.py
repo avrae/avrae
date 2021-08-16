@@ -182,9 +182,9 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
         for action in sorted(action_source, key=lambda a: a.name):
             if verbose:
                 name = f"**{action.name}**" if action.uid is not None else f"***{action.name}***"
-                action_texts.append(f"{name}: {action.build_str(caster=caster, automation_only=False)}")
+                action_texts.append(f"{name}: {action.build_str(caster=caster, snippet=True)}")
             elif action.uid is not None:
-                action_texts.append(f"**{action.name}**: {action.build_str(caster=caster, automation_only=True)}")
+                action_texts.append(f"**{action.name}**: {action.build_str(caster=caster, snippet=False)}")
             # count these for extra display
             if action.uid is None:
                 non_automated_count += 1

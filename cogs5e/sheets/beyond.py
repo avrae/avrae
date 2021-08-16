@@ -63,9 +63,10 @@ class BeyondSheetParser(SheetLoaderABC):
 
         stats = self._get_stats()
         levels = self._get_levels()
-        attacks = self._get_attacks()
         skills = self._get_skills()
         saves = self._get_saves()
+        # we do this to handle the attack/action overlap (e.g. actions with displayAsAttack)
+        attacks, actions = self._get_attacks_and_actions()
 
         resistances = self._get_resistances()
         ac = self._get_ac()
@@ -84,7 +85,6 @@ class BeyondSheetParser(SheetLoaderABC):
         live = None  # todo
         race = self._get_race()
         background = self._get_background()
-        actions = self._get_actions()
 
         # ddb campaign
         campaign = self.character_data.get('campaign')
@@ -148,25 +148,6 @@ class BeyondSheetParser(SheetLoaderABC):
             out[cleaned_name] = klass['level']
 
         return Levels(out)
-
-    def _get_attacks(self):
-        """Returns an attacklist"""
-        attacks = AttackList()
-        used_names = set()
-
-        def append(atk):
-            if atk.name in used_names:
-                num = 2
-                while f"{atk.name}{num}" in used_names:
-                    num += 1
-                atk.name = f"{atk.name}{num}"
-            attacks.append(atk)
-            used_names.add(atk.name)
-
-        for attack in self.character_data['attacks']:
-            append(self._transform_attack(attack))
-
-        return attacks
 
     def _get_skills(self) -> Skills:
         out = {}
@@ -282,11 +263,49 @@ class BeyondSheetParser(SheetLoaderABC):
     def _get_background(self):
         return self.character_data['background']
 
-    def _get_actions(self):
+    def _get_attacks_and_actions(self):
+        """
+        :rtype: tuple[AttackList, Actions]
+        """
+        attacks = self._process_attacks()  # this returns all attacks regardless of their status
+        actions, action_grantor_ids = self._process_actions()  # this skips customized actions with displayAsAttack
+
+        filtered_attacks = [attack for ((id, type_id), attack) in attacks if (id, type_id) not in action_grantor_ids]
+
+        return AttackList(filtered_attacks), actions
+
+    def _process_attacks(self):
+        """
+        :return: list of pairs ((id, typeId), attack)
+        :rtype: list[tuple[tuple[str, str], Attack]]
+        """
+        attacks = []
+        used_names = set()
+
+        def append(processed_attack, attack_data):
+            if processed_attack.name in used_names:
+                num = 2
+                while f"{processed_attack.name}{num}" in used_names:
+                    num += 1
+                processed_attack.name = f"{processed_attack.name}{num}"
+            attacks.append(((str(attack_data['id']), str(attack_data['typeId'])), processed_attack))
+            used_names.add(processed_attack.name)
+
+        for attack in self.character_data['attacks']:
+            append(self._transform_attack(attack), attack)
+
+        return attacks
+
+    def _process_actions(self):
+        """
+        :return: a pair (actions, action ids that granted valid actions (id, typeid))
+        :rtype: tuple[Actions, set[tuple[str, str]]]
+        """
         character_actions = self.character_data['actions']
         character_features = self.character_data['features']
         actions = []
         seen_feature_ids = set()  # set of tuples (typeid, id)
+        action_ids_with_valid_actions = set()  # set of tuples (id, typeid)
 
         def add_action_from_gamedata(d_action, g_action):
             actions.append(Action(
@@ -331,6 +350,10 @@ class BeyondSheetParser(SheetLoaderABC):
                     name=d_action['name'], uid=None, id=int(d_action['id']), type_id=int(d_action['typeId']),
                     activation_type=activation_type, snippet=html_to_md(d_action['snippet'])
                 ))
+            else:
+                # otherwise, either it or its parent successfully added something, so we can save its id
+                # for attack filtering
+                action_ids_with_valid_actions.add((str(d_action['id']), str(d_action['typeId'])))
 
         # features: save only if gamedata references them
         for d_feature in character_features:
@@ -341,7 +364,7 @@ class BeyondSheetParser(SheetLoaderABC):
             for g_action in g_actions:
                 add_action_from_gamedata(d_feature, g_action)
 
-        return Actions(actions)
+        return Actions(actions), action_ids_with_valid_actions
 
     # ==== helpers ====
     @staticmethod

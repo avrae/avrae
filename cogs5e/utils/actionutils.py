@@ -3,7 +3,7 @@ import itertools
 import discord
 
 from cogs5e.models import embeds
-from utils.functions import a_or_an, natural_join, maybe_http_url, search_and_select
+from utils.functions import a_or_an, maybe_http_url, natural_join, search_and_select
 
 
 async def run_attack(ctx, embed, args, caster, attack, targets, combat):
@@ -156,6 +156,10 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
     if args is None:
         args = ()
 
+    # long embed builder
+    ep = embeds.EmbedPaginator(embed)
+    fields = []
+
     # arg setup
     verbose = '-v' in args
     display_attacks = 'attack' in args
@@ -173,7 +177,7 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
     # action display
     if attacks and (display_attacks or not is_display_filtered):
         atk_str = attacks.build_str(caster)
-        embeds.add_fields_from_long_text(embed, field_name="Attacks", text=atk_str)
+        fields.append({'name': 'Attacks', 'value': atk_str})
 
     # since the sheet displays the description regardless of entitlements, we do here too
     def add_action_field(title, action_source):
@@ -191,7 +195,7 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
         if not action_texts:
             return
         action_text = '\n'.join(action_texts)
-        embeds.add_fields_from_long_text(embed, field_name=title, text=action_text)
+        fields.append({'name': title, 'value': action_text})
 
     if actions is not None:
         if actions.full_actions and (display_actions or not is_display_filtered):
@@ -203,22 +207,29 @@ async def send_action_list(destination, caster, attacks=None, actions=None, embe
         if actions.other_actions and (display_other or not is_display_filtered):
             add_action_field("Other", actions.other_actions)
 
-    # misc helper displays
-    if not embed.fields:
-        if is_display_filtered:
-            embed.description = f"{caster.get_title_name()} has no {natural_join(filtered_action_type_strs, 'or')}."
-        else:
-            embed.description = f"{caster.get_title_name()} has no actions."
-    elif is_display_filtered:
-        embed.description = f"Only displaying {natural_join(filtered_action_type_strs, 'and')}."
+    # build embed
 
+    # description
+    if not fields:
+        if is_display_filtered:
+            ep.add_description(f"{caster.get_title_name()} has no {natural_join(filtered_action_type_strs, 'or')}.")
+        else:
+            ep.add_description(f"{caster.get_title_name()} has no actions.")
+    elif is_display_filtered:
+        ep.add_description(f"Only displaying {natural_join(filtered_action_type_strs, 'and')}.")
+
+    # fields
+    for field in fields:
+        ep.add_field(**field)
+
+    # footer
     if not verbose and actions:
         if non_automated_count:
-            embed.set_footer(text=f"Use the -v argument to view each action's full description "
-                                  f"and {non_automated_count} display-only actions.")
+            ep.set_footer(value=f"Use the -v argument to view each action's full description "
+                                f"and {non_automated_count} display-only actions.")
         else:
-            embed.set_footer(text="Use the -v argument to view each action's full description.")
+            ep.set_footer(value="Use the -v argument to view each action's full description.")
     elif verbose and non_automated_count:
-        embed.set_footer(text="Italicized actions are for display only and cannot be run.")
+        ep.set_footer(value="Italicized actions are for display only and cannot be run.")
 
-    await destination.send(embed=embed)
+    await ep.send_to(destination)

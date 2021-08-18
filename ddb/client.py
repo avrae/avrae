@@ -153,15 +153,18 @@ class BeyondClient(BeyondClientBase):
             async with self.http.get(f"{WATERDEEP_BASE}/api/campaign/stt/active-campaigns",
                                      headers={"Authorization": f"Bearer {user.token}"}) as resp:
                 if not 199 < resp.status < 300:
-                    raise WaterdeepException(f"Waterdeep returned {resp.status}: {await resp.text()}")
+                    log.warning(f"Bad Waterdeep response: {resp.status}\n{await resp.text()}")
+                    raise WaterdeepException(f"D&D Beyond returned an error: {resp.status} {resp.reason}")
                 try:
                     data = await resp.json()
                 except (aiohttp.ContentTypeError, ValueError, TypeError):
-                    raise WaterdeepException(f"Could not deserialize Waterdeep response: {await resp.text()}")
+                    log.warning(f"Bad Waterdeep response (deserialize): {resp.status}\n{await resp.text()}")
+                    raise WaterdeepException(f"Could not deserialize D&D Beyond response.")
         except aiohttp.ServerTimeoutError:
-            raise WaterdeepException("Timed out connecting to Waterdeep")
+            raise WaterdeepException("Timed out connecting to D&D Beyond.")
         if not data.get('status') == 'success':
-            raise WaterdeepException(f"Waterdeep returned an error: {data}")
+            log.warning(f"Bad Waterdeep response (data): {resp.status}\n{data}")
+            raise WaterdeepException(f"D&D Beyond returned an error: {data}")
         return [campaign.ActiveCampaign.from_json(j) for j in data['data']]
 
     # ==== entitlement helpers ====
@@ -232,13 +235,15 @@ class BeyondClient(BeyondClientBase):
         try:
             async with self.http.post(AUTH_DISCORD, json=body) as resp:
                 if not 199 < resp.status < 300:
-                    raise AuthException(f"Auth Service returned {resp.status}: {await resp.text()}")
+                    log.warning(f"Auth Service returned {resp.status}: {await resp.text()}")
+                    raise AuthException(f"D&D Beyond returned an error: {resp.status} {resp.reason}")
                 try:
                     data = await resp.json()
                 except (aiohttp.ContentTypeError, ValueError, TypeError):
-                    raise AuthException(f"Could not deserialize Auth Service response: {await resp.text()}")
+                    log.warning(f"Cannot deserialize Auth Service response: {resp.status}: {await resp.text()}")
+                    raise AuthException(f"Could not deserialize D&D Beyond response.")
         except aiohttp.ServerTimeoutError:
-            raise AuthException("Timed out connecting to Auth Service")
+            raise AuthException("Timed out connecting to D&D Beyond. Please try again in a few minutes.")
         return data['token'], data.get('ttl')
 
     async def _fetch_user_entitlements(self, ddb_id: int):

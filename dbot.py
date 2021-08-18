@@ -19,6 +19,7 @@ from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
 from cogs5e.models.errors import AvraeException, RequiresLicense
 from ddb import BeyondClient, BeyondClientBase
+from ddb.errors import DDBException
 from ddb.gamelog import GameLogClient
 from gamedata.compendium import compendium
 from gamedata.lookuputils import handle_required_license

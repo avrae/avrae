@@ -150,7 +150,11 @@ class EmbedPaginator:
             kwargs['text'] = self._footer_text
         if current_count > self.EMBED_MAX:
             self.close_embed()
-        self._current.set_footer(**kwargs)
+
+        # this check is here because of a bug in discord.py 1.7.3 that causes a KeyError in len(embed) if set_footer()
+        # is called without a text kwarg (we use len() to run assertions in tests)
+        if kwargs:
+            self._current.set_footer(**kwargs)
 
     def close_embed(self):
         """Terminate the current embed and create a new one."""

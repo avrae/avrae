@@ -35,4 +35,5 @@ class SheetLoaderABC:
 # all
 # v16: explicit spellcasting mod import
 # v17: refactor to use StatBlock, AttackList
-SHEET_VERSION = 17
+# v18: action list
+SHEET_VERSION = 18

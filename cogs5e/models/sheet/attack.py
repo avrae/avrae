@@ -90,7 +90,7 @@ class AttackList:
 
     # utils
     def build_str(self, caster):
-        return '\n'.join(atk.build_str(caster) for atk in self.attacks)
+        return '\n'.join(atk.build_str(caster) for atk in sorted(self.attacks, key=lambda atk: atk.name))
 
     def __str__(self):
         return '\n'.join(str(atk) for atk in self.attacks)
@@ -116,6 +116,9 @@ class AttackList:
 
     def __len__(self):
         return len(self.attacks)
+
+    def __bool__(self):
+        return bool(self.attacks)
 
 
 def old_to_automation(bonus=None, damage=None, details=None):

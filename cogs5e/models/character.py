@@ -6,6 +6,7 @@ import aliasing.evaluators
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharacter, NoReset
+from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
 from cogs5e.models.sheet.player import CharOptions, CustomCounter, DeathSaves, ManualOverrides
@@ -32,11 +33,13 @@ class Character(StatBlock):
                  skills: Skills, resistances: Resistances, saves: Saves, ac: int, max_hp: int, hp: int, temp_hp: int,
                  cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
                  spellbook: Spellbook,
-                 live, race: str, background: str,
-                 ddb_campaign_id: str = None,
+                 live, race: str, background: str, creature_type: str = None,
+                 ddb_campaign_id: str = None, actions: Actions = None,
                  **kwargs):
         if kwargs:
             log.warning(f"Unused kwargs: {kwargs}")
+        if actions is None:
+            actions = Actions()
         # sheet metadata
         self._owner = owner
         self._upstream = upstream
@@ -45,10 +48,10 @@ class Character(StatBlock):
         self._import_version = import_version
 
         # StatBlock super call
-        super(Character, self).__init__(
+        super().__init__(
             name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
             spellbook=spellbook,
-            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp
+            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
         )
 
         # main character info
@@ -78,6 +81,8 @@ class Character(StatBlock):
 
         # ddb live sync
         self.ddb_campaign_id = ddb_campaign_id
+        # action automation
+        self.actions = actions
 
     # ---------- Deserialization ----------
     @classmethod
@@ -98,11 +103,11 @@ class Character(StatBlock):
         if active_character is None:
             raise NoCharacter()
 
-        if (owner_id, active_character['upstream']) in cls._cache:
-            # return from cache
+        try:
+            # return from cache if available
             return cls._cache[owner_id, active_character['upstream']]
-        else:
-            # write to cache
+        except KeyError:
+            # otherwise deserialize and write to cache
             inst = cls.from_dict(active_character)
             cls._cache[owner_id, active_character['upstream']] = inst
             return inst
@@ -110,9 +115,13 @@ class Character(StatBlock):
     @classmethod
     async def from_bot_and_ids(cls, bot, owner_id: str, character_id: str):
         owner_id = str(owner_id)
-        if (owner_id, character_id) in cls._cache:
-            # read from cache
+
+        try:
+            # read from cache if available
             return cls._cache[owner_id, character_id]
+        except KeyError:
+            pass
+
         character = await bot.mdb.characters.find_one({"owner": owner_id, "upstream": character_id})
         if character is None:
             raise NoCharacter()
@@ -124,9 +133,13 @@ class Character(StatBlock):
     @classmethod
     def from_bot_and_ids_sync(cls, bot, owner_id: str, character_id: str):
         owner_id = str(owner_id)
-        if (owner_id, character_id) in cls._cache:
-            # read from cache
+
+        try:
+            # read from cache if available
             return cls._cache[owner_id, character_id]
+        except KeyError:
+            pass
+
         character = bot.mdb.characters.delegate.find_one({"owner": owner_id, "upstream": character_id})
         if character is None:
             raise NoCharacter()
@@ -137,22 +150,24 @@ class Character(StatBlock):
 
     # ---------- Serialization ----------
     def to_dict(self):
-        d = super(Character, self).to_dict()
+        d = super().to_dict()
         d.update({
             "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
             "import_version": self._import_version, "description": self._description,
             "image": self._image, "cvars": self.cvars, "options": self.options.to_dict(),
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
-            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id
+            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict()
         })
         return d
 
     @staticmethod
     async def delete(ctx, owner_id, upstream):
         await ctx.bot.mdb.characters.delete_one({"owner": owner_id, "upstream": upstream})
-        if (owner_id, upstream) in Character._cache:
+        try:
             del Character._cache[owner_id, upstream]
+        except KeyError:
+            pass
 
     # ---------- Basic CRUD ----------
     def get_color(self):
@@ -189,7 +204,7 @@ class Character(StatBlock):
 
     @property
     def image(self):
-        return self.overrides.image or self._image
+        return self.overrides.image or self._image or ''
 
     # ---------- CSETTINGS ----------
     def get_setting(self, setting, default=None):
@@ -229,7 +244,7 @@ class Character(StatBlock):
         self.cvars[name] = str(val)
 
     def get_scope_locals(self, no_cvars=False):
-        out = super(Character, self).get_scope_locals()
+        out = super().get_scope_locals()
         if not no_cvars:
             out.update(self.cvars.copy())
         out.update({
@@ -475,4 +490,4 @@ class CharacterSpellbook(Spellbook):
 
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
-DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook}
+DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions}

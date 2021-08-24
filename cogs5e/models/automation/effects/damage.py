@@ -1,6 +1,7 @@
 import copy
 
 import d20
+import draconic
 
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from . import Effect
@@ -11,7 +12,7 @@ from ..results import DamageResult
 
 class Damage(Effect):
     def __init__(self, damage: str, overheal: bool = False, higher: dict = None, cantripScale: bool = None, **kwargs):
-        super(Damage, self).__init__("damage", **kwargs)
+        super().__init__("damage", **kwargs)
         self.damage = damage
         self.overheal = overheal
         # common
@@ -19,7 +20,7 @@ class Damage(Effect):
         self.cantripScale = cantripScale
 
     def to_dict(self):
-        out = super(Damage, self).to_dict()
+        out = super().to_dict()
         out.update({
             "damage": self.damage, "overheal": self.overheal
         })
@@ -30,7 +31,7 @@ class Damage(Effect):
         return out
 
     def run(self, autoctx):
-        super(Damage, self).run(autoctx)
+        super().run(autoctx)
         if autoctx.target is None:
             raise TargetException("Tried to do damage without a target! Make sure all Damage effects are inside "
                                   "of a Target effect.")
@@ -47,7 +48,7 @@ class Damage(Effect):
         silvered_arg = args.last('silvered', None, bool, ephem=True)
         mi_arg = args.last('mi', None, int)
         dtype_args = args.get('dtype', [], ephem=True)
-        critdice = args.last('critdice', 0, int)
+        critdice = sum(args.get('critdice', type_=int))
         hide = args.last('h', type_=bool)
 
         # character-specific arguments
@@ -162,11 +163,11 @@ class Damage(Effect):
         return any(f"{{{v}}}" == self.damage for v in autoctx.metavars)
 
     def build_str(self, caster, evaluator):
-        super(Damage, self).build_str(caster, evaluator)
+        super().build_str(caster, evaluator)
         try:
             damage = evaluator.transformed_str(self.damage)
             evaluator.builtins['lastDamage'] = damage
-        except Exception:
+        except draconic.DraconicException:
             damage = self.damage
             evaluator.builtins['lastDamage'] = 0
         return f"{damage} damage"

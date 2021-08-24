@@ -16,6 +16,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import DicecloudClient
 from cogs5e.models.dicecloud.errors import DicecloudException
 from cogs5e.models.errors import ExternalImportError
+from cogs5e.models.sheet.action import Action, Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
@@ -89,11 +90,12 @@ class DicecloudParser(SheetLoaderABC):
         live = self.is_live()
         race = self.character_data['characters'][0]['race'].strip()
         background = self.character_data['characters'][0]['backstory'].strip()
+        actions = self.get_actions()
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
             skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
-            spellbook, live, race, background
+            spellbook, live, race, background, actions=actions
         )
         return character
 
@@ -337,6 +339,27 @@ class DicecloudParser(SheetLoaderABC):
             counters.append(co)
 
         return counters
+
+    def get_actions(self):
+        # iterate over features and look for actions with the same name, snippet is the feature description?
+        actions = []
+        g_actions_by_name = {a.name: a for a in compendium.actions}
+
+        for f in self.character_data.get('features', []):
+            if not f.get('enabled'):
+                continue
+            if f.get('removed'):
+                continue
+            name = f.get('name')
+            if name not in g_actions_by_name:
+                continue
+            g_action = g_actions_by_name[name]
+            actions.append(Action(
+                name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                activation_type=g_action.activation_type, snippet=f.get('description')
+            ))
+
+        return Actions(actions)
 
     # helper funcs
     def calculate_stat(self, stat, base=0):

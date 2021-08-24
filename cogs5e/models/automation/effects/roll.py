@@ -1,6 +1,7 @@
 import copy
 
 import d20
+import draconic
 
 from utils.dice import RerollableStringifier
 from . import Effect
@@ -11,7 +12,7 @@ from ..results import RollResult
 class Roll(Effect):
     def __init__(self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, hidden: bool = False,
                  **kwargs):
-        super(Roll, self).__init__("roll", **kwargs)
+        super().__init__("roll", **kwargs)
         self.dice = dice
         self.name = name
         self.higher = higher
@@ -19,7 +20,7 @@ class Roll(Effect):
         self.hidden = hidden
 
     def to_dict(self):
-        out = super(Roll, self).to_dict()
+        out = super().to_dict()
         out.update({
             "dice": self.dice, "name": self.name, "hidden": self.hidden
         })
@@ -30,7 +31,7 @@ class Roll(Effect):
         return out
 
     def run(self, autoctx):
-        super(Roll, self).run(autoctx)
+        super().run(autoctx)
         d = autoctx.args.join('d', '+', ephem=True)
         maxdmg = autoctx.args.last('max', None, bool, ephem=True)
         mi = autoctx.args.last('mi', None, int)
@@ -71,10 +72,10 @@ class Roll(Effect):
         return RollResult(result=rolled.total, roll=rolled, simplified=simplified, hidden=self.hidden)
 
     def build_str(self, caster, evaluator):
-        super(Roll, self).build_str(caster, evaluator)
+        super().build_str(caster, evaluator)
         try:
             evaluator.builtins[self.name] = evaluator.transformed_str(self.dice)
-        except Exception:
+        except draconic.DraconicException:
             evaluator.builtins[self.name] = self.dice
         evaluator.builtins['lastRoll'] = 0
         return ""

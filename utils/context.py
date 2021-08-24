@@ -30,7 +30,7 @@ class AvraeContext(Context):
         """
         Gets the combat active in this context.
 
-        :raises CombatNotFound: If the context has no character (author has none active).
+        :raises CombatNotFound: If the context has no combat (author has none active).
         :rtype: Combat
         """
         if self._combat is not _sentinel:

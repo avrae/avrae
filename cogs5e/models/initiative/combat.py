@@ -20,9 +20,12 @@ class Combat:
     _cache = cachetools.TTLCache(maxsize=50, ttl=10)
 
     def __init__(self, channel_id, message_id, dm_id, options, ctx,
-                 combatants=None, round_num=0, turn_num=0, current_index=None):
+                 combatants=None, round_num=0, turn_num=0, current_index=None,
+                 metadata=None):
         if combatants is None:
             combatants = []
+        if metadata is None:
+            metadata = {}
         self._channel = str(channel_id)  # readonly
         self._summary = int(message_id)  # readonly
         self._dm = str(dm_id)
@@ -32,6 +35,7 @@ class Combat:
         self._turn = turn_num
         self._current_index = current_index
         self.ctx = ctx
+        self._metadata = metadata
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
@@ -44,21 +48,22 @@ class Combat:
         return await cls.from_id(channel_id, ctx)
 
     @classmethod
-    async def from_id(cls, channel_id, ctx):  # cached
-        if channel_id in cls._cache:
+    async def from_id(cls, channel_id, ctx):
+        try:
             return cls._cache[channel_id]
-        raw = await ctx.bot.mdb.combats.find_one({"channel": channel_id})
-        if raw is None:
-            raise CombatNotFound()
-        # write to cache
-        inst = await cls.from_dict(raw, ctx)
-        cls._cache[channel_id] = inst
-        return inst
+        except KeyError:
+            raw = await ctx.bot.mdb.combats.find_one({"channel": channel_id})
+            if raw is None:
+                raise CombatNotFound()
+            # write to cache
+            inst = await cls.from_dict(raw, ctx)
+            cls._cache[channel_id] = inst
+            return inst
 
     @classmethod
     async def from_dict(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'])
+                   raw['turn'], raw['current'], raw.get('metadata'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -77,9 +82,9 @@ class Combat:
     @classmethod
     def from_ctx_sync(cls, ctx):  # cached
         channel_id = str(ctx.channel.id)
-        if channel_id in cls._cache:
+        try:
             return cls._cache[channel_id]
-        else:
+        except KeyError:
             raw = ctx.bot.mdb.combats.delegate.find_one({"channel": channel_id})
             if raw is None:
                 raise CombatNotFound
@@ -91,7 +96,7 @@ class Combat:
     @classmethod
     def from_dict_sync(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'])
+                   raw['turn'], raw['current'], raw.get('metadata'))
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -109,7 +114,7 @@ class Combat:
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
                 'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-                'round': self.round_num, 'current': self._current_index}
+                'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata}
 
     # members
     @property
@@ -420,8 +425,10 @@ class Combat:
         for c in self._combatants:
             c.on_remove()
         await self.ctx.bot.mdb.combats.delete_one({"channel": self.channel})
-        if self.channel in Combat._cache:
+        try:
             del Combat._cache[self.channel]
+        except KeyError:
+            pass
 
     # stringification
     def get_turn_str(self):

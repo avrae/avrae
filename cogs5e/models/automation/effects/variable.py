@@ -1,3 +1,5 @@
+import draconic
+
 from . import Effect
 from ..errors import AutomationEvaluationException, AutomationException, StopExecution
 from ..results import SetVariableResult
@@ -56,10 +58,10 @@ class SetVariable(Effect):
         super().build_str(caster, evaluator)
         try:
             value = evaluator.eval(self.value)
-        except Exception:
+        except draconic.DraconicException:
             try:
                 value = evaluator.eval(self.on_error)
-            except Exception:
+            except draconic.DraconicException:
                 value = self.value
         evaluator.builtins[self.name] = value
         return ""

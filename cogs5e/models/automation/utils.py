@@ -1,4 +1,5 @@
 import d20
+import draconic
 
 import aliasing.api.statblock
 from cogs5e.models.sheet.statblock import StatBlock
@@ -66,3 +67,19 @@ def crit_mapper(node):
     if isinstance(node, d20.ast.Dice):
         return d20.ast.Dice(node.num * 2, node.size)
     return node
+
+
+def stringify_intexpr(evaluator, expr):
+    """
+    For use in str builders - use the given evaluator to return the result of the intexpr, or nan if any exception is
+    caught
+
+    :rtype: int or float
+    """
+    if isinstance(expr, (int, float)):
+        return expr
+
+    try:
+        return int(evaluator.eval(str(expr)))
+    except (TypeError, ValueError, draconic.DraconicException):
+        return float('nan')

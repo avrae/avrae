@@ -78,10 +78,9 @@ class Monster(StatBlock, Sourced):
         StatBlock.__init__(
             self,
             name=name, stats=ability_scores, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels
+            spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels, creature_type=race
         )
         self.size = size
-        self.creature_type = race
         self.alignment = alignment
         self.armortype = armortype
         self.hitdice = hitdice
@@ -157,8 +156,8 @@ class Monster(StatBlock, Sourced):
 
     def to_dict(self):
         return {
-            'name': self.name, 'size': self.size, 'race': self.creature_type, 'alignment': self.alignment, 'ac': self.ac,
-            'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
+            'name': self.name, 'size': self.size, 'race': self.creature_type, 'alignment': self.alignment,
+            'ac': self.ac, 'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
             'ability_scores': self.stats.to_dict(),
             'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
             'resistances': self.resistances.to_dict(),
@@ -447,6 +446,6 @@ class MonsterCastableSpellbook(MonsterSpellbook):
             if self.daily[daily_key] > 0:
                 self.daily[daily_key] -= 1
             else:
-                raise CounterOutOfBounds("You do not have any remaining casts of this spell.")
+                raise CounterOutOfBounds(f"You do not have any remaining casts of {spell.name}.")
         else:
             self.use_slot(level)

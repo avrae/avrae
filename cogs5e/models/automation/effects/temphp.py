@@ -1,6 +1,7 @@
 import copy
 
 import d20
+import draconic
 
 from . import Effect
 from .. import utils
@@ -10,13 +11,13 @@ from ..results import TempHPResult
 
 class TempHP(Effect):
     def __init__(self, amount: str, higher: dict = None, cantripScale: bool = None, **kwargs):
-        super(TempHP, self).__init__("temphp", **kwargs)
+        super().__init__("temphp", **kwargs)
         self.amount = amount
         self.higher = higher
         self.cantripScale = cantripScale
 
     def to_dict(self):
-        out = super(TempHP, self).to_dict()
+        out = super().to_dict()
         out.update({"amount": self.amount})
         if self.higher is not None:
             out['higher'] = self.higher
@@ -25,7 +26,7 @@ class TempHP(Effect):
         return out
 
     def run(self, autoctx):
-        super(TempHP, self).run(autoctx)
+        super().run(autoctx)
         if autoctx.target is None:
             raise TargetException("Tried to add temp HP without a target! Make sure all TempHP effects are inside "
                                   "of a Target effect.")
@@ -66,11 +67,11 @@ class TempHP(Effect):
         return any(f"{{{v}}}" == self.amount for v in autoctx.metavars)
 
     def build_str(self, caster, evaluator):
-        super(TempHP, self).build_str(caster, evaluator)
+        super().build_str(caster, evaluator)
         try:
             amount = evaluator.transformed_str(self.amount)
             evaluator.builtins['lastTempHp'] = amount
-        except Exception:
+        except draconic.DraconicException:
             amount = self.amount
             evaluator.builtins['lastTempHp'] = 0
         return f"{amount} temp HP"

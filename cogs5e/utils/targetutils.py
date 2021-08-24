@@ -1,9 +1,32 @@
 from cogs5e.models.character import Character
 from cogs5e.models.errors import InvalidArgument, SelectionException
-from cogs5e.models.initiative.combat import Combat
 from cogs5e.models.initiative.errors import CombatNotFound
 from cogs5e.models.initiative.group import CombatantGroup
 from utils.argparser import argparse
+
+
+async def maybe_combat_caster(ctx, caster, combat=None):
+    """
+    Given a character caster, return the character's PlayerCombatant if they are in a combat in the given combat
+    or current channel if combat is not passed.
+    """
+    if combat is None:
+        try:
+            combat = await ctx.get_combat()
+        except CombatNotFound:
+            return caster
+
+    if isinstance(caster, Character):
+        combatant = next(
+            (c for c in combat.get_combatants()
+             if getattr(c, 'character_id', None) == caster.upstream
+             and getattr(c, 'character_owner', None) == caster.owner),
+            None
+        )
+        if combatant is not None:
+            await combatant.update_character_ref(ctx, inst=caster)
+            return combatant
+    return caster
 
 
 async def maybe_combat(ctx, caster, args, allow_groups=True):
@@ -16,7 +39,7 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
     targets = []
 
     try:
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
     except CombatNotFound:
         for i, target in enumerate(target_args):
             if '|' in target:
@@ -29,12 +52,7 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
     targets = await definitely_combat(combat, args, allow_groups)
 
     # get caster as Combatant if caster in combat
-    if isinstance(caster, Character):
-        caster = next(
-            (c for c in combat.get_combatants() if getattr(c, 'character_id', None) == caster.upstream
-             and getattr(c, 'character_owner', None) == caster.owner),
-            caster
-        )
+    caster = await maybe_combat_caster(ctx, caster, combat=combat)
     return caster, targets, combat
 
 

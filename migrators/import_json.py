@@ -19,6 +19,7 @@ LOAD_FILES = {
     'subraces': [],
     'books': [],
     'limiteduse': [],
+    'actions': [],
 
     'srd-references': []
 }

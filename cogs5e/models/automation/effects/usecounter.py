@@ -5,6 +5,7 @@ import gamedata
 from . import Effect
 from ..errors import AutomationException, NoCounterFound, StopExecution
 from ..results import UseCounterResult
+from ..utils import stringify_intexpr
 
 
 class UseCounter(Effect):
@@ -46,7 +47,7 @@ class UseCounter(Effect):
 
         # handle -amt, -l, -i
         amt = autoctx.args.last('amt', None, int, ephem=True)
-        i = autoctx.args.last('i')
+        ignore = autoctx.args.last('i')
         # -l handled in use_spell_slot
 
         try:
@@ -56,15 +57,11 @@ class UseCounter(Effect):
 
         autoctx.metavars['lastCounterRequestedAmount'] = amount  # 1491
 
-        if i:
-            return UseCounterResult(skipped=True, requested_amount=amount)  # skipped
-
         try:
             if isinstance(self.counter, SpellSlotReference):  # spell slot
-                result = self.use_spell_slot(autoctx, amount)
+                result = self.use_spell_slot(autoctx, amount, ignore)
             else:
-                result = self.get_and_use_counter(autoctx, amount)
-            autoctx.caster_needs_commit = True
+                result = self.get_and_use_counter(autoctx, amount, ignore)
         except Exception as e:
             result = UseCounterResult(skipped=True, requested_amount=amount)
             if self.error_behaviour == 'warn':
@@ -77,7 +74,14 @@ class UseCounter(Effect):
         autoctx.metavars['lastCounterUsedAmount'] = result.used_amount
         return result
 
-    def get_and_use_counter(self, autoctx, amount):  # this is not in run() because indentation
+    def get_and_use_counter(self, autoctx, amount, ignore_resources: bool = False):
+        if ignore_resources:  # handled here to return counter name (#1582)
+            if isinstance(self.counter, AbilityReference):
+                name = self.counter.entity.name if self.counter.entity is not None else "Unknown Ability"
+            else:
+                name = self.counter
+            return UseCounterResult(counter_name=name, requested_amount=amount, skipped=True)
+
         if autoctx.character is None:
             raise NoCounterFound("The caster does not have custom counters.")
 
@@ -90,9 +94,13 @@ class UseCounter(Effect):
 
         return self.use_custom_counter(autoctx, counter, amount)
 
-    def use_spell_slot(self, autoctx, amount):
-        level = autoctx.args.last('l', self.counter.slot, int)
+    def use_spell_slot(self, autoctx, amount, ignore_resources: bool = False):
+        spellref_level = autoctx.parse_intexpression(self.counter.slot)
+        level = autoctx.args.last('l', spellref_level, int)
+        if ignore_resources:  # handled here to return counter name (#1582)
+            return UseCounterResult(counter_name=str(level), requested_amount=amount, skipped=True)
 
+        autoctx.caster_needs_commit = True
         old_value = autoctx.caster.spellbook.get_slots(level)
         target_value = new_value = old_value - amount
 
@@ -119,6 +127,7 @@ class UseCounter(Effect):
                                 requested_amount=amount)
 
     def use_custom_counter(self, autoctx, counter, amount):
+        autoctx.caster_needs_commit = True
         old_value = counter.value
         target_value = old_value - amount
 
@@ -139,17 +148,14 @@ class UseCounter(Effect):
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
         # amount
-        try:
-            amount = int(evaluator.eval(self.amount))
-        except Exception:
-            amount = float('nan')
+        amount = stringify_intexpr(evaluator, self.amount)
 
         # counter name
         if isinstance(self.counter, str):
             charges = 'charge' if amount == 1 else 'charges'
             counter_name = f"{charges} of {self.counter}"
         else:
-            counter_name = self.counter.build_str(plural=amount != 1)
+            counter_name = self.counter.build_str(caster, evaluator, plural=amount != 1)
         return f"uses {amount} {counter_name}"
 
 
@@ -178,7 +184,7 @@ class _UseCounterTarget(abc.ABC):  # this is just here for type niceness because
     def to_dict(self):
         raise NotImplementedError
 
-    def build_str(self, plural):
+    def build_str(self, caster, evaluator, plural):
         raise NotImplementedError
 
     def __repr__(self):
@@ -186,16 +192,17 @@ class _UseCounterTarget(abc.ABC):  # this is just here for type niceness because
 
 
 class SpellSlotReference(_UseCounterTarget):
-    def __init__(self, slot: int, **kwargs):
+    def __init__(self, slot, **kwargs):
         super().__init__(**kwargs)
         self.slot = slot
 
     def to_dict(self):
         return {'slot': self.slot}
 
-    def build_str(self, plural):
+    def build_str(self, caster, evaluator, plural):
+        level = stringify_intexpr(evaluator, self.slot)
         slots = 'slots' if plural else 'slot'
-        return f"level {self.slot} spell {slots}"
+        return f"level {level} spell {slots}"
 
     def __str__(self):
         return str(self.slot)
@@ -221,7 +228,7 @@ class AbilityReference(_UseCounterTarget):
     def to_dict(self):
         return {'id': self.id, 'typeId': self.type_id}
 
-    def build_str(self, plural):
+    def build_str(self, caster, evaluator, plural):
         charges = 'charges' if plural else 'charge'
         entity_name = self.entity.name if self.entity is not None else "Unknown Ability"
         return f"{charges} of {entity_name}"

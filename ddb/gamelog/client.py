@@ -130,6 +130,11 @@ class GameLogClient:
         if event.source == AVRAE_EVENT_SOURCE:
             return
 
+        # check: do we have a callback for this event?
+        if event.event_type not in self._event_handlers:
+            log.debug(f"No callback registered for event {event.event_type!r} - discarding event")
+            return
+
         # check: is this campaign linked to a channel?
         try:
             campaign = await CampaignLink.from_id(self.bot.mdb, event.game_id)
@@ -143,18 +148,13 @@ class GameLogClient:
 
         # check: is the channel still there?
         if (channel := guild.get_channel(campaign.channel_id)) is None:
-            log.info(f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event")
-            return
-
-        # check: do we have a callback for this event?
-        if event.event_type not in self._event_handlers:
-            log.info(f"No callback registered for event {event.event_type!r} - discarding event")
+            log.debug(f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event")
             return
 
         # set up the event context
         discord_user_id = await ddb_id_to_discord_id(self.bot.mdb, event.user_id)
         if discord_user_id is None:
-            log.info(f"No discord user associated with event {event.event_type!r} - discarding event")
+            log.debug(f"No discord user associated with event {event.event_type!r} - discarding event")
             return
         gctx = GameLogEventContext(self.bot, event, campaign, guild, channel, discord_user_id)
 

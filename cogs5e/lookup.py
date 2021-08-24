@@ -58,10 +58,14 @@ class Lookup(commands.Cog):
         await destination.send(embed=embed)
 
     @commands.command(aliases=['status'])
-    async def condition(self, ctx, *, name: str):
+    async def condition(self, ctx, *, name: str = None):
         """Looks up a condition."""
+        if not name:
+            name = 'condition'
+        else:
+            name = f"Condition: {name}"
         # this is an invoke instead of an alias to make more sense in docs
-        await self.rule(ctx, name=f"Condition: {name}")
+        await self.rule(ctx, name=name)
 
     @commands.command(aliases=['reference'])
     async def rule(self, ctx, *, name: str = None):

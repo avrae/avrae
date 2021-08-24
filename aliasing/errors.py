@@ -1,7 +1,9 @@
+import draconic.exceptions
+
 from cogs5e.models.errors import AvraeException
 
 
-class EvaluationError(AvraeException):
+class EvaluationError(AvraeException, draconic.exceptions.DraconicException):
     """Raised when a cvar evaluation causes an error."""
 
     def __init__(self, original, expression=None):

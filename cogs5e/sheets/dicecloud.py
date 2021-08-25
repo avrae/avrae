@@ -21,6 +21,7 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
+from cogs5e.sheets.utils import get_actions_for_name
 from gamedata.compendium import compendium
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
@@ -341,9 +342,7 @@ class DicecloudParser(SheetLoaderABC):
         return counters
 
     def get_actions(self):
-        # iterate over features and look for actions with the same name, snippet is the feature description?
         actions = []
-        g_actions_by_name = {a.name: a for a in compendium.actions}
 
         for f in self.character_data.get('features', []):
             if not f.get('enabled'):
@@ -351,13 +350,12 @@ class DicecloudParser(SheetLoaderABC):
             if f.get('removed'):
                 continue
             name = f.get('name')
-            if name not in g_actions_by_name:
-                continue
-            g_action = g_actions_by_name[name]
-            actions.append(Action(
-                name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                activation_type=g_action.activation_type, snippet=f.get('description')
-            ))
+            g_actions = get_actions_for_name(name)
+            for g_action in g_actions:
+                actions.append(Action(
+                    name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                    activation_type=g_action.activation_type
+                ))
 
         return Actions(actions)
 

@@ -28,6 +28,7 @@ from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute
+from cogs5e.sheets.utils import get_actions_for_name
 from gamedata.compendium import compendium
 from utils import config
 from utils.constants import DAMAGE_TYPES
@@ -545,9 +546,7 @@ class GoogleSheet(SheetLoaderABC):
         return spellbook
 
     def get_actions(self):
-        # iterate over features and look for actions with the same name
         actions = []
-        g_actions_by_name = {a.name: a for a in compendium.actions}
 
         # v1: Z45:AH56
         # v2: C59:AC84
@@ -557,13 +556,12 @@ class GoogleSheet(SheetLoaderABC):
             feature_names = self.character_data.value_range("Z45:AH56")
 
         for name in feature_names:
-            if name not in g_actions_by_name:
-                continue
-            g_action = g_actions_by_name[name]
-            actions.append(Action(
-                name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                activation_type=g_action.activation_type
-            ))
+            g_actions = get_actions_for_name(name)
+            for g_action in g_actions:
+                actions.append(Action(
+                    name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                    activation_type=g_action.activation_type
+                ))
 
         return Actions(actions)
 

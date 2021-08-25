@@ -308,8 +308,16 @@ class BeyondSheetParser(SheetLoaderABC):
         action_ids_with_valid_actions = set()  # set of tuples (id, typeid)
 
         def add_action_from_gamedata(d_action, g_action):
+            name = g_action.name
+            if d_action.get('isCustomized') and d_action['name'] != g_action.name:
+                # custom name handler: steal any parenthetical from the canonical name and tack it on to the custom name
+                name = d_action['name']
+                g_name_parenthetical = re.search(r'\(.+\)$', g_action.name)
+                if g_name_parenthetical:
+                    name = f"{name} {g_name_parenthetical.group(0)}"
+
             actions.append(Action(
-                name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                name=name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
                 activation_type=g_action.activation_type, snippet=html_to_md(d_action['snippet'])
             ))
 

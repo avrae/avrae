@@ -149,7 +149,7 @@ class Quickstart(Tutorial):
             embed.description = f"""
             Actions are how you can use the rest of your character's abilities. In Avrae, most abilities can be run automatically with just one command: `{ctx.prefix}action`. These abilities include not just attacks, but any features your character has from their race, class, or feats!
 
-            Let's try using an action. List the actions you have available with `{ctx.prefix}action list`, and then use one with `{ctx.prefix}action <action>`!
+            Let's try using an action. List the actions you have available with `{ctx.prefix}action list`, and then use one with `{ctx.prefix}action <action>`! Don't forget to use quotes around the action name if it has multiple words! You can choose to only use part of the full name, too, if it's very long.
             ```
             {ctx.prefix}action list
             {ctx.prefix}action <action>

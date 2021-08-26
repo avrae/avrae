@@ -461,31 +461,12 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         def construct_mapping(loader, node):
             loader.flatten_mapping(node)
             return object_pairs_hook(loader.construct_pairs(node))
-        #
-        # def construct_list(loader, node):
-        #     loader.flatten_mapping(node)
-        #     return object_list_hooks(loader.construct_pairs(node))
-        #
-        # def construct_set(loader, node):
-        #     loader.flatten_mapping(node)
-        #     return object_set_hooks(loader.construct_pairs(node))
-        #
-        # def construct_str(loader, node):
-        #     loader.flatten_mapping(node)
-        #     return object_scalar_hooks(loader.construct_pairs(node))
+
 
         yaml.SafeLoader.add_constructor(
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
             construct_mapping)
-        # yaml.SafeLoader.add_constructor(
-        #     yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG,
-        #     construct_list)
-        # yaml.SafeLoader.add_constructor(
-        #     yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG,
-        #     construct_set)
-        # yaml.SafeLoader.add_constructor(
-        #     yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG,
-        #     construct_str)
+
 
         return yaml.safe_load(str(yamlstr)) or {}
 

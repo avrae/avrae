@@ -454,19 +454,14 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
 
         object_pairs_hook = self._dict
-        # object_list_hooks = self._list
-        # object_set_hooks = self._set
-        # object_scalar_hooks = self._str
 
         def construct_mapping(loader, node):
             loader.flatten_mapping(node)
             return object_pairs_hook(loader.construct_pairs(node))
 
-
         yaml.SafeLoader.add_constructor(
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
             construct_mapping)
-
 
         return yaml.safe_load(str(yamlstr)) or {}
 

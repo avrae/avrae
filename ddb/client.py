@@ -159,7 +159,7 @@ class BeyondClient(BeyondClientBase):
                     data = await resp.json()
                 except (aiohttp.ContentTypeError, ValueError, TypeError):
                     log.warning(f"Bad Waterdeep response (deserialize): {resp.status}\n{await resp.text()}")
-                    raise WaterdeepException(f"Could not deserialize D&D Beyond response.")
+                    raise WaterdeepException("Could not deserialize D&D Beyond response.")
         except aiohttp.ServerTimeoutError:
             raise WaterdeepException("Timed out connecting to D&D Beyond.")
         if not data.get('status') == 'success':
@@ -241,7 +241,7 @@ class BeyondClient(BeyondClientBase):
                     data = await resp.json()
                 except (aiohttp.ContentTypeError, ValueError, TypeError):
                     log.warning(f"Cannot deserialize Auth Service response: {resp.status}: {await resp.text()}")
-                    raise AuthException(f"Could not deserialize D&D Beyond response.")
+                    raise AuthException("Could not deserialize D&D Beyond response.")
         except aiohttp.ServerTimeoutError:
             raise AuthException("Timed out connecting to D&D Beyond. Please try again in a few minutes.")
         return data['token'], data.get('ttl')

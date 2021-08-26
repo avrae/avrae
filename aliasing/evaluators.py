@@ -14,7 +14,7 @@ import aliasing.api.combat as combat_api
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.context import AliasContext
-from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll, randchoice
+from aliasing.api.functions import _roll, _vroll, err, rand, randchoice, randint, roll, safe_range, typeof, vroll
 from aliasing.api.legacy import LegacyRawCharacter
 from aliasing.errors import EvaluationError, FunctionRequiresCharacter
 from cogs5e.models.errors import ConsumableException, InvalidArgument
@@ -54,6 +54,11 @@ class MathEvaluator(draconic.SimpleInterpreter):
     # also disable per-eval limits, limit should be global
     def _preflight(self):
         pass
+
+    def eval(self, expr):
+        if expr is None:
+            return None
+        return super().eval(expr)
 
     def transformed_str(self, string):
         """Transforms a dicecloud-formatted string (evaluating text in {})."""
@@ -382,7 +387,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         name = str(name)
         value = str(value)
         if not name.isidentifier():
-            raise InvalidArgument("Cvar contains invalid character.")
+            raise InvalidArgument("Uvar contains invalid character.")
         self._cache['uvars'][name] = value
         self._names[name] = value
         self.uvars_changed.add(name)

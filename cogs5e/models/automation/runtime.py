@@ -176,6 +176,12 @@ class AutomationContext:
         :param intexpression: The string to parse.
         :rtype: int
         """
+        # optimization: our str can be directly cast to int, or is already an int/float
+        try:
+            return int(intexpression)
+        except (TypeError, ValueError):
+            pass
+
         eval_result = self.parse_annostr(intexpression, is_full_expression=True)
         try:
             return int(eval_result)

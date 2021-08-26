@@ -7,7 +7,7 @@ from discord.ext import commands
 
 from aliasing import helpers
 from cogs5e.models.errors import NoSelectionElements
-from cogs5e.utils import attackutils, checkutils, targetutils
+from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata import Monster
@@ -183,7 +183,7 @@ class Dice(commands.Cog):
             embed.set_thumbnail(url=monster.get_image_url())
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args)
-        await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        await actionutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         embed.colour = random.randint(0, 0xffffff)
         handle_source_footer(embed, monster, add_source_str=False)
@@ -194,10 +194,8 @@ class Dice(commands.Cog):
     async def monster_atk_list(self, ctx, monster_name):
         """Lists a monster's attacks."""
         await try_delete(ctx.message)
-
         monster = await select_monster_full(ctx, monster_name)
-        monster_name = monster.get_title_name()
-        return await ctx.send(f"{monster_name}'s attacks:\n{monster.attacks.build_str(monster)}")
+        await actionutils.send_action_list(ctx, caster=monster, attacks=monster.attacks)
 
     @commands.command(name='moncheck', aliases=['mc', 'monster_check'], help=f"""
     Rolls a check for a monster.

@@ -68,8 +68,10 @@ class Spellbook:
         """
         if not 0 < level < 10:
             raise InvalidSpellLevel()
-        if not 0 <= value <= self.get_max_slots(level):
-            raise CounterOutOfBounds()
+        if value < 0:
+            raise CounterOutOfBounds(f"You do not have enough remaining level {level} spell slots.")
+        elif value > (maxv := self.get_max_slots(level)):
+            raise CounterOutOfBounds(f"You may not have this many level {level} spell slots (max {maxv}).")
         self.slots[str(level)] = value
 
     def reset_slots(self):
@@ -98,7 +100,7 @@ class Spellbook:
 
         val = self.get_slots(level) - 1
         if val < 0:
-            raise CounterOutOfBounds("You do not have any spell slots of this level remaining.")
+            raise CounterOutOfBounds(f"You do not have any level {level} spell slots remaining.")
 
         self.set_slots(level, val)
 

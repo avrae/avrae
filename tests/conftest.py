@@ -12,6 +12,7 @@ import re
 from fnmatch import fnmatchcase
 from queue import Queue
 
+import discord
 import pytest
 from discord import DiscordException, Embed
 from discord.ext import commands
@@ -72,6 +73,21 @@ def compare_embeds(request_embed, embed, *, regex: bool = True):
         assert request_embed == embed
 
 
+def embed_assertations(embed):
+    """Checks to ensure that the embed is valid."""
+    assert len(embed) <= 6000
+    assert len(embed.title) <= 256
+    assert len(embed.description) <= 4096
+    assert len(embed.fields) <= 25
+    for field in embed.fields:
+        assert 0 < len(field.name) <= 256
+        assert 0 < len(field.value) <= 1024
+    if embed.footer:
+        assert len(embed.footer.text) <= 2048
+    if embed.author:
+        assert len(embed.author.name) <= 256
+
+
 def message_content_check(request: Request, content: str = None, *, regex: bool = True, embed: Embed = None):
     match = None
     if content:
@@ -81,7 +97,10 @@ def message_content_check(request: Request, content: str = None, *, regex: bool 
         else:
             assert request.data.get('content') == content
     if embed:
-        compare_embeds(request.data.get('embed'), embed.to_dict(), regex=regex)
+        embed_data = request.data.get('embed')
+        assert embed_data is not None
+        embed_assertations(discord.Embed.from_dict(embed_data))
+        compare_embeds(embed_data, embed.to_dict(), regex=regex)
     return match
 
 
@@ -313,7 +332,8 @@ def character(request, avrae):
         {"$set": char.to_dict()},
         upsert=True
     )
-    request.cls.character = char
+    if request.cls is not None:
+        request.cls.character = char
     yield char
     avrae.mdb.characters.delegate.delete_one(
         {"owner": char.owner, "upstream": char.upstream}

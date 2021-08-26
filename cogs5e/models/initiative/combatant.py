@@ -1,5 +1,6 @@
 import discord
 
+import cogs5e.models.character
 from cogs5e.models.errors import NoCharacter
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
@@ -8,7 +9,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
-from utils.functions import get_guild_member, maybe_mod, search_and_select
+from utils.functions import combine_maybe_mods, get_guild_member, search_and_select
 from .effect import Effect
 from .errors import CombatException, RequiresContext
 from .types import BaseCombatant
@@ -27,11 +28,11 @@ class Combatant(BaseCombatant, StatBlock):
                  stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
                  skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
                  spellbook: Spellbook = None, ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+                 creature_type: str = None,
                  **_):
         super().__init__(
             name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellbook,
-            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp
+            spellbook=spellbook, ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
         )
         if effects is None:
             effects = []
@@ -66,10 +67,6 @@ class Combatant(BaseCombatant, StatBlock):
                 raw[key] = klass.from_dict(raw[key])
         del raw['type']
         effects = raw.pop('effects')
-
-        if 'id' not in raw:  # fixme id translator, remove apr 2021
-            raw['id'] = create_combatant_id()
-
         inst = cls(ctx, combat, **raw)
         inst._effects = [Effect.from_dict(e, combat, inst) for e in effects]
         return inst
@@ -113,7 +110,9 @@ class Combatant(BaseCombatant, StatBlock):
 
     @property
     def max_hp(self):
-        return self._max_hp
+        _maxhp = self._max_hp
+        _maxhp = combine_maybe_mods(self.active_effects('maxhp'), base=_maxhp)
+        return _maxhp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):
@@ -159,8 +158,7 @@ class Combatant(BaseCombatant, StatBlock):
     @property
     def ac(self):
         _ac = self._ac
-        for e in self.active_effects('ac'):
-            _ac = maybe_mod(e, base=_ac)
+        _ac = combine_maybe_mods(self.active_effects('ac'), base=_ac)
         return _ac
 
     @ac.setter
@@ -233,9 +231,11 @@ class Combatant(BaseCombatant, StatBlock):
 
     def set_group(self, group_name):
         current = self.combat.current_combatant
-        was_current = current is not None and \
-                      (self is current
-                       or (current.type == CombatantType.GROUP and self in current and len(current) == 1))
+        was_current = (current is not None
+                       and (self is current
+                            or (current.type == CombatantType.GROUP
+                                and self in current
+                                and len(current) == 1)))
         self.combat.remove_combatant(self, ignore_remove_hook=True)
         if isinstance(group_name, str) and group_name.lower() == 'none':
             group_name = None
@@ -305,8 +305,9 @@ class Combatant(BaseCombatant, StatBlock):
 
     def remove_all_effects(self, _filter=None):
         if _filter is None:
-            _filter = lambda _: True
-        to_remove = list(filter(_filter, self._effects))
+            to_remove = self._effects.copy()
+        else:
+            to_remove = list(filter(_filter, self._effects))
         for e in to_remove:
             e.remove()
         return to_remove
@@ -381,11 +382,11 @@ class Combatant(BaseCombatant, StatBlock):
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        hpStr = f"{self.hp_str(private)} " if self.hp_str(private) else ''
+        hp_str = f"{self.hp_str(private)} " if self.hp_str(private) else ''
         if not no_notes:
-            return f"{self.init:>2}: {self.name} {hpStr}{self._get_effects_and_notes()}"
+            return f"{self.init:>2}: {self.name} {hp_str}{self._get_effects_and_notes()}"
         else:
-            return f"{self.init:>2}: {self.name} {hpStr}"
+            return f"{self.init:>2}: {self.name} {hp_str}"
 
     def get_status(self, private=False):
         """
@@ -459,10 +460,10 @@ class MonsterCombatant(Combatant):
                  **_):
         super(MonsterCombatant, self).__init__(
             ctx, combat, id, name, controller_id, private, init, index, notes, effects, group_id,
-            stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp)
+            stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp,
+            creature_type=creature_type)
         self._monster_name = monster_name
         self._monster_id = monster_id
-        self._creature_type = creature_type
 
     @classmethod
     def from_monster(cls, monster, ctx, combat, name, controller_id, init, private, hp=None, ac=None):
@@ -494,13 +495,12 @@ class MonsterCombatant(Combatant):
         inst = super().from_dict(raw, ctx, combat)
         inst._monster_name = raw['monster_name']
         inst._monster_id = raw.get('monster_id')
-        inst._creature_type = raw.get('creature_type')
         return inst
 
     def to_dict(self):
         raw = super().to_dict()
         raw.update({
-            'monster_name': self._monster_name, 'monster_id': self._monster_id, 'creature_type': self._creature_type
+            'monster_name': self._monster_name, 'monster_id': self._monster_id
         })
         return raw
 
@@ -512,10 +512,6 @@ class MonsterCombatant(Combatant):
     @property
     def monster_id(self):
         return self._monster_id
-
-    @property
-    def creature_type(self):
-        return self._creature_type
 
 
 class PlayerCombatant(Combatant):
@@ -561,8 +557,8 @@ class PlayerCombatant(Combatant):
         inst.character_owner = raw['character_owner']
 
         try:
-            from cogs5e.models.character import Character
-            inst._character = await Character.from_bot_and_ids(ctx.bot, inst.character_owner, inst.character_id)
+            inst._character = await cogs5e.models.character.Character.from_bot_and_ids(
+                ctx.bot, inst.character_owner, inst.character_id)
         except NoCharacter:
             raise CombatException(f"A character in combat was deleted. "
                                   f"Please run `{ctx.prefix}init end -force` to end combat.")
@@ -576,24 +572,42 @@ class PlayerCombatant(Combatant):
         inst.character_owner = raw['character_owner']
 
         try:
-            from cogs5e.models.character import Character
-            inst._character = Character.from_bot_and_ids_sync(ctx.bot, inst.character_owner, inst.character_id)
+            inst._character = cogs5e.models.character.Character.from_bot_and_ids_sync(
+                ctx.bot, inst.character_owner, inst.character_id)
         except NoCharacter:
             raise CombatException(f"A character in combat was deleted. "
                                   f"Please run `{ctx.prefix}init end -force` to end combat.")
         return inst
 
     def to_dict(self):
-        IGNORED_ATTRIBUTES = ("stats", "levels", "skills", "saves", "spellbook", "hp", "temp_hp")
+        ignored_attributes = ("stats", "levels", "skills", "saves", "spellbook", "hp", "temp_hp")
         raw = super().to_dict()
-        for attr in IGNORED_ATTRIBUTES:
+        for attr in ignored_attributes:
             del raw[attr]
         raw.update({
             'character_id': self.character_id, 'character_owner': self.character_owner
         })
         return raw
 
-    # members
+    # ==== helpers ====
+    async def update_character_ref(self, ctx, inst=None):
+        """
+        Updates the character reference in self._character to ensure that it references the cached Character instance
+        if one is cached (since Combat cache TTL > Character cache TTL), preventing instance divergence.
+
+        If ``inst`` is passed, sets the character to reference the given instance, otherwise retrieves it via the normal
+        Character init flow (from cache or db). ``inst`` should be a Character instance with the same character ID and
+        owner as ``self._character``.
+        """
+        if inst is not None:
+            self._character = inst
+            return
+
+        # retrieve from character constructor
+        self._character = await cogs5e.models.character.Character.from_bot_and_ids(
+            ctx.bot, self.character_owner, self.character_id)
+
+    # ==== members ====
     @property
     def character(self):
         return self._character
@@ -621,8 +635,7 @@ class PlayerCombatant(Combatant):
     @property
     def ac(self):
         _ac = self._ac or self.character.ac
-        for e in self.active_effects('ac'):
-            _ac = maybe_mod(e, base=_ac)
+        _ac = combine_maybe_mods(self.active_effects('ac'), base=_ac)
         return _ac
 
     @ac.setter
@@ -638,7 +651,9 @@ class PlayerCombatant(Combatant):
 
     @property
     def max_hp(self):
-        return self._max_hp or self.character.max_hp
+        _maxhp = self._max_hp or self.character.max_hp
+        _maxhp = combine_maybe_mods(self.active_effects('maxhp'), base=_maxhp)
+        return _maxhp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):

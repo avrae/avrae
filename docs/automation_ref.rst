@@ -191,6 +191,7 @@ IEffect
         end?: boolean;
         conc?: boolean;
         desc?: AnnotatedString;
+        stacking?: boolean;
     }
 
 Adds an InitTracker Effect to a targeted creature, if the automation target is in combat.
@@ -211,15 +212,20 @@ It must be inside a Target effect.
 
 .. attribute:: end
 
-     *optional* - Whether the effect timer should tick on the end of the turn, rather than start.
+     *optional, default false* - Whether the effect timer should tick on the end of the turn, rather than start.
 
 .. attribute:: conc
 
-     *optional* - Whether the effect requires concentration.
+     *optional, default false* - Whether the effect requires concentration.
 
 .. attribute:: desc
 
      *optional* - The description of the effect (displays on combatant's turn).
+
+.. attribute:: stacking
+
+     *optional, default false* - If true, if another effect with the same name is found on the target, instead of
+     overwriting, add a child effect with name ``{name} x{count}`` and no description, duration, or concentration.
 
 Roll
 ----
@@ -412,7 +418,7 @@ SpellSlotReference
 .. code-block:: typescript
 
     {
-        slot: number;
+        slot: number | IntExpression;
     }
 
 .. attribute:: slot

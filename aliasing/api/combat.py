@@ -2,10 +2,10 @@ from typing import Optional
 
 from d20 import roll
 
+import cogs5e.models.initiative as init
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
-from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, CombatantType, Effect
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
 
@@ -15,7 +15,7 @@ MAX_METADATA_SIZE = 100000
 # noinspection PyProtectedMember
 class SimpleCombat:
     def __init__(self, combat, me):
-        self._combat: Combat = combat
+        self._combat = combat
 
         self.combatants = [SimpleCombatant(c) for c in combat.get_combatants()]
         self.groups = [SimpleGroup(c) for c in combat.get_groups()]
@@ -27,7 +27,7 @@ class SimpleCombat:
         self.turn_num = self._combat.turn_num
         current = self._combat.current_combatant
         if current:
-            if isinstance(current, CombatantGroup):
+            if current.type == init.CombatantType.GROUP:  # isinstance(current, init.CombatantGroup):
                 self.current = SimpleGroup(current)
             else:
                 self.current = SimpleCombatant(current)
@@ -38,8 +38,8 @@ class SimpleCombat:
     @classmethod
     def from_ctx(cls, ctx):
         try:
-            combat = Combat.from_ctx_sync(ctx)
-        except CombatNotFound:
+            combat = init.Combat.from_ctx_sync(ctx)
+        except init.CombatNotFound:
             return None
         return cls(combat, None)
 
@@ -140,7 +140,7 @@ class SimpleCombatant(AliasStatBlock):
     Represents a combatant in combat.
     """
 
-    def __init__(self, combatant: Combatant, hidestats=True):
+    def __init__(self, combatant, hidestats=True):
         super().__init__(combatant)
         self._combatant = combatant
         self._hidden = hidestats and self._combatant.is_private
@@ -151,13 +151,11 @@ class SimpleCombatant(AliasStatBlock):
         self._update_effects()
         # Type-specific Properties
         self._race = None
-        self._creature_type = None
         self._monster_name = None
 
-        if combatant.type == CombatantType.MONSTER:
-            self._creature_type = combatant._creature_type
+        if combatant.type == init.CombatantType.MONSTER:
             self._monster_name = combatant.monster_name
-        elif combatant.type == CombatantType.PLAYER:
+        elif combatant.type == init.CombatantType.PLAYER:
             self._race = combatant.character.race
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
@@ -199,15 +197,6 @@ class SimpleCombatant(AliasStatBlock):
         :rtype: str or None
         """
         return self._race
-
-    @property
-    def creature_type(self):
-        """
-        The creature type of the combatant. Will return None for players or combatants with no creature type.
-
-        :rtype: str or None
-        """
-        return self._creature_type
 
     @property
     def monster_name(self):
@@ -389,8 +378,9 @@ class SimpleCombatant(AliasStatBlock):
         existing = self._combatant.get_effect(name, True)
         if existing:
             existing.remove()
-        effectObj = Effect.new(self._combatant.combat, self._combatant, duration=duration, name=name, effect_args=args,
-                               concentration=concentration, tick_on_end=end, desc=desc)
+        effectObj = init.Effect.new(
+            self._combatant.combat, self._combatant, duration=duration, name=name,
+            effect_args=args, concentration=concentration, tick_on_end=end, desc=desc)
         if parent:
             effectObj.set_parent(parent._effect)
         self._combatant.add_effect(effectObj)
@@ -480,7 +470,7 @@ class SimpleCombatant(AliasStatBlock):
 
 
 class SimpleGroup:
-    def __init__(self, group: CombatantGroup):
+    def __init__(self, group):
         self._group = group
         self.type = "group"
         self.combatants = [SimpleCombatant(c) for c in self._group.get_combatants()]
@@ -516,7 +506,7 @@ class SimpleGroup:
 
 
 class SimpleEffect:
-    def __init__(self, effect: Effect):
+    def __init__(self, effect):
         self._effect = effect
 
         self.name = self._effect.name

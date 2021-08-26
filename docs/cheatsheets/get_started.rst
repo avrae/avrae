@@ -41,7 +41,7 @@ D&D Beyond
 ^^^^^^^^^^
 To add a character from D&D Beyond, use the following command::
 
-  !beyond https://ddb.ac/characters/...
+  !import https://ddb.ac/characters/...
 
 .. note::
     If you link your D&D Beyond and Discord accounts and your DM links your campaign to a channel, your character's
@@ -51,7 +51,7 @@ Dicecloud
 ^^^^^^^^^
 To add a character from Dicecloud, use the following command::
 
-  !dicecloud https://dicecloud.com/character/...
+  !import https://dicecloud.com/character/...
 
 .. note::
     Avrae can update your HP and consumables live on Dicecloud - share the sheet with edit permissions with ``avrae``.
@@ -60,7 +60,7 @@ Google Sheets
 ^^^^^^^^^^^^^
 To add a character from GSheet, use the following command::
 
-  !gsheet https://docs.google.com/spreadsheets/d/...
+  !import https://docs.google.com/spreadsheets/d/...
 
 .. note::
     You will need to share your sheet with ``avrae-320@avrae-bot.iam.gserviceaccount.com``.

@@ -48,16 +48,17 @@ class Combat:
         return await cls.from_id(channel_id, ctx)
 
     @classmethod
-    async def from_id(cls, channel_id, ctx):  # cached
-        if channel_id in cls._cache:
+    async def from_id(cls, channel_id, ctx):
+        try:
             return cls._cache[channel_id]
-        raw = await ctx.bot.mdb.combats.find_one({"channel": channel_id})
-        if raw is None:
-            raise CombatNotFound()
-        # write to cache
-        inst = await cls.from_dict(raw, ctx)
-        cls._cache[channel_id] = inst
-        return inst
+        except KeyError:
+            raw = await ctx.bot.mdb.combats.find_one({"channel": channel_id})
+            if raw is None:
+                raise CombatNotFound()
+            # write to cache
+            inst = await cls.from_dict(raw, ctx)
+            cls._cache[channel_id] = inst
+            return inst
 
     @classmethod
     async def from_dict(cls, raw, ctx):
@@ -81,9 +82,9 @@ class Combat:
     @classmethod
     def from_ctx_sync(cls, ctx):  # cached
         channel_id = str(ctx.channel.id)
-        if channel_id in cls._cache:
+        try:
             return cls._cache[channel_id]
-        else:
+        except KeyError:
             raw = ctx.bot.mdb.combats.delegate.find_one({"channel": channel_id})
             if raw is None:
                 raise CombatNotFound
@@ -428,8 +429,10 @@ class Combat:
         for c in self._combatants:
             c.on_remove()
         await self.ctx.bot.mdb.combats.delete_one({"channel": self.channel})
-        if self.channel in Combat._cache:
+        try:
             del Combat._cache[self.channel]
+        except KeyError:
+            pass
 
     # stringification
     def get_turn_str(self):

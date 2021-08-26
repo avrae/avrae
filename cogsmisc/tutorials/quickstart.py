@@ -58,9 +58,9 @@ class Quickstart(Tutorial):
             embed.description = f"""
             Now, let's import a character and get started with Avrae's automated attacks, skill checks, and ability saves! First, go ahead and make a character on [D&D Beyond](https://www.dndbeyond.com/?utm_source=avrae&utm_medium=tutorial).
             
-            Once you're ready, import the character into Avrae with the command `{ctx.prefix}beyond <url>`, using either the "Sharable Link" on your character sheet or the URL in the address bar of your browser.
+            Once you're ready, import the character into Avrae with the command `{ctx.prefix}import <url>`, using either the "Sharable Link" on your character sheet or the URL in the address bar of your browser.
             ```
-            {ctx.prefix}beyond <url>
+            {ctx.prefix}import <url>
             ```
             Or, if you've already imported a character, switch to them now using `{ctx.prefix}character <name>`!
             """
@@ -72,8 +72,7 @@ class Quickstart(Tutorial):
             except NoCharacter:
                 return
             if ctx.command in (ctx.bot.get_command('beyond'),
-                               ctx.bot.get_command('dicecloud'),
-                               ctx.bot.get_command('gsheet'),
+                               ctx.bot.get_command('import'),
                                ctx.bot.get_command('update'),
                                ctx.bot.get_command('char')) \
                     and character is not None:
@@ -97,13 +96,13 @@ class Quickstart(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Checks, Saves, and Attacks"
             embed.description = f"""
-            Let's go over the three most important rolls in D&D: skill checks, saving throws, and attacks. Now that your character is saved in Avrae, you can easily make these three rolls with simple commands: `{ctx.prefix}check <skill>`, `{ctx.prefix}save <ability>`, and `{ctx.prefix}attack <action>`. 
+            Let's go over the three most important rolls in D&D: skill checks, saving throws, and attacks. Now that your character is saved in Avrae, you can easily make these three rolls with simple commands: `{ctx.prefix}check <skill>`, `{ctx.prefix}save <ability>`, and `{ctx.prefix}action <action>`. 
 
-            For example, you can make a Stealth check with `{ctx.prefix}check stealth`, a Dexterity save with `{ctx.prefix}save dex`, and an unarmed attack with `{ctx.prefix}attack "Unarmed Strike"`. Try these now!
+            For example, you can make a Stealth check with `{ctx.prefix}check stealth`, a Dexterity save with `{ctx.prefix}save dex`, and an unarmed attack with `{ctx.prefix}action "Unarmed Strike"`. Try these now!
             ```
             {ctx.prefix}check <skill>
             {ctx.prefix}save <ability>
-            {ctx.prefix}attack <action>
+            {ctx.prefix}action <action>
             ```
             """
             await ctx.send(embed=embed)
@@ -111,7 +110,7 @@ class Quickstart(Tutorial):
         async def listener(self, ctx, state_map):
             check = ctx.bot.get_command('check')
             save = ctx.bot.get_command('save')
-            attack = ctx.bot.get_command('attack')
+            attack = ctx.bot.get_command('action')
             if ctx.command in (check, save, attack):
                 if ctx.command is check:
                     state_map.data['has_check'] = True
@@ -125,7 +124,7 @@ class Quickstart(Tutorial):
                 embed.description = checklist([
                     (f"Make a skill check with `{ctx.prefix}check <skill>`.", state_map.data.get('has_check')),
                     (f"Make an ability save with `{ctx.prefix}save <ability>`.", state_map.data.get('has_save')),
-                    (f"Make an attack with `{ctx.prefix}attack <action>`.", state_map.data.get('has_attack'))
+                    (f"Make an attack with `{ctx.prefix}action <action>`.", state_map.data.get('has_attack'))
                 ])
                 await ctx.send(embed=embed)
 

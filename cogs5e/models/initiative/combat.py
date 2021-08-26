@@ -313,11 +313,7 @@ class Combat:
         """
         rolls = {}
         for c in self._combatants:
-            if isinstance(c, CombatantGroup):
-                lowest_init = min(c.get_combatants(), key=lambda comb: comb.init)
-                init_roll = roll(lowest_init.init_skill.d20())
-            else:
-                init_roll = roll(c.init_skill.d20())
+            init_roll = roll(c.init_skill.d20())
             c.init = init_roll.total
             rolls[c] = init_roll
         self.sort_combatants()

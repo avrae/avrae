@@ -16,12 +16,12 @@ from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import DicecloudClient
 from cogs5e.models.dicecloud.errors import DicecloudException
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet.action import Action, Actions
+from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
-from cogs5e.sheets.utils import get_actions_for_name
+from cogs5e.sheets.utils import get_actions_for_names
 from gamedata.compendium import compendium
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
@@ -342,21 +342,12 @@ class DicecloudParser(SheetLoaderABC):
         return counters
 
     def get_actions(self):
-        actions = []
-
-        for f in self.character_data.get('features', []):
-            if not f.get('enabled'):
-                continue
-            if f.get('removed'):
-                continue
-            name = f.get('name')
-            g_actions = get_actions_for_name(name)
-            for g_action in g_actions:
-                actions.append(Action(
-                    name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                    activation_type=g_action.activation_type
-                ))
-
+        feature_names = [
+            f.get('name')
+            for f in self.character_data.get('features', [])
+            if f.get('enabled') and not f.get('removed')
+        ]
+        actions = get_actions_for_names(feature_names)
         return Actions(actions)
 
     # helper funcs

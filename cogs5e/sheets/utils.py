@@ -1,8 +1,10 @@
 import collections
 
+from cogs5e.models.sheet.action import Action
 from gamedata import compendium
 
 
+# ==== Name => Action Discovery ====
 class ActionDiscoverer:
     """Used to discover appropriate actions from a given name quickly, caching gamedata and updating when necessary."""
 
@@ -50,3 +52,22 @@ def get_actions_for_name(name):
     Generally pretty quick except the first run after a compendium reload.
     """
     return discoverer.discover(name)
+
+
+def get_actions_for_names(names):
+    """Returns a list of actions granted by the list of feature names. Will filter out any duplicates."""
+    actions = []
+    seen_action_names = set()
+
+    for name in names:
+        g_actions = get_actions_for_name(name)
+        for g_action in g_actions:
+            if g_action.name in seen_action_names:
+                continue
+            seen_action_names.add(g_action.name)
+            actions.append(Action(
+                name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                activation_type=g_action.activation_type
+            ))
+
+    return actions

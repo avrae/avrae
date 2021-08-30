@@ -484,14 +484,14 @@ async def handle_alias_required_licenses(ctx, err):
     else:
         missing_source_ids = {e.source for e in err.entities}
         if len(err.entities) == 1:  # 1 entity, display entity piecemeal
-            embed.title = f"Purchase {err.entities[0].name} on D&D Beyond to use this customization!"
+            embed.title = f"Unlock {err.entities[0].name} on D&D Beyond to use this customization!"
             marketplace_url = err.entities[0].marketplace_url
         elif len(missing_source_ids) == 1:  # 1 source, recommend purchasing source
             missing_source = next(iter(missing_source_ids))
-            embed.title = f"Purchase {long_source_name(missing_source)} on D&D Beyond to use this customization!"
+            embed.title = f"Unlock {long_source_name(missing_source)} on D&D Beyond to use this customization!"
             marketplace_url = f"https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
         else:  # more than 1 source
-            embed.title = f"Purchase {len(missing_source_ids)} sources on D&D Beyond to use this customization!"
+            embed.title = f"Unlock {len(missing_source_ids)} sources on D&D Beyond to use this customization!"
             marketplace_url = "https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
 
         missing = natural_join([f"[{e.name}]({e.marketplace_url})" for e in err.entities], "and")
@@ -505,6 +505,6 @@ async def handle_alias_required_licenses(ctx, err):
             f"[Go to Marketplace]({marketplace_url})"
         embed.url = marketplace_url
 
-        embed.set_footer(text="Already purchased? It may take up to a minute for Avrae to recognize the "
+        embed.set_footer(text="Already unlocked? It may take up to a minute for Avrae to recognize the "
                               "purchase.")
     await ctx.send(embed=embed)

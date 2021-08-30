@@ -25,6 +25,7 @@ USER_ENTITLEMENT_TTL = 1 * 60
 ENTITY_ENTITLEMENT_TTL = 15 * 60
 USER_ENTITLEMENT_CACHE = cachetools.TTLCache(128, USER_ENTITLEMENT_TTL)
 ENTITY_ENTITLEMENT_CACHE = cachetools.TTLCache(64, ENTITY_ENTITLEMENT_TTL)
+USER_ENTITLEMENTS_NONE_SENTINEL = object()
 
 log = logging.getLogger(__name__)
 
@@ -187,7 +188,7 @@ class BeyondClient(BeyondClientBase):
         l1_user_entitlements = USER_ENTITLEMENT_CACHE.get(user_id)
         if l1_user_entitlements is not None:
             log.debug("found user entitlements in l1 (memory) cache")
-            return l1_user_entitlements
+            return l1_user_entitlements if l1_user_entitlements is not USER_ENTITLEMENTS_NONE_SENTINEL else None
 
         # L2: Redis
         user_entitlement_cache_key = f"entitlements.user.{user_id}"
@@ -200,6 +201,7 @@ class BeyondClient(BeyondClientBase):
         user = await self.get_ddb_user(ctx, user_id)
 
         if user is None:
+            USER_ENTITLEMENT_CACHE[user_id] = USER_ENTITLEMENTS_NONE_SENTINEL
             return None
 
         # feature flag: is this user allowed to use entitlements?

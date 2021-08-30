@@ -3,6 +3,8 @@ import itertools
 import discord
 
 from cogs5e.models import embeds
+from cogs5e.models.errors import RequiresLicense
+from gamedata import lookuputils
 from utils.functions import a_or_an, maybe_http_url, natural_join, search_and_select
 
 
@@ -61,6 +63,12 @@ async def run_action(ctx, embed, args, caster, action, targets, combat):
     :type combat: None or cogs5e.models.initiative.Combat
     :rtype: cogs5e.models.automation.AutomationResult or None
     """
+    # entitlements: ensure runner has access to grantor entity
+    source_feature = action.gamedata.source_feature
+    available_entity_e10s = await ctx.bot.ddb.get_accessible_entities(ctx, ctx.author.id, source_feature.entity_type)
+    if not lookuputils.can_access(source_feature, available_entity_e10s):
+        raise RequiresLicense(source_feature, available_entity_e10s is not None)
+
     if not args.last('h', type_=bool):
         name = caster.get_title_name()
     else:
@@ -140,17 +148,20 @@ async def select_action(ctx, name, attacks, actions=None, allow_no_automation=Fa
 
 
 # ==== action display ====
-async def send_action_list(destination, caster, attacks=None, actions=None, embed=None, args=None):
+async def send_action_list(ctx, caster, destination=None, attacks=None, actions=None, embed=None, args=None):
     """
     Sends the list of actions and attacks given to the given destination.
 
-    :type destination: discord.abc.Messageable
+    :type ctx: discord.ext.commands.Context
     :type caster: cogs5e.models.sheet.statblock.StatBlock
+    :type destination: discord.abc.Messageable
     :type attacks: cogs5e.models.sheet.attack.AttackList
     :type actions: cogs5e.models.sheet.action.Actions
     :type embed: discord.Embed
     :type args: Iterable[str]
     """
+    if destination is None:
+        destination = ctx
     if embed is None:
         embed = discord.Embed(color=caster.get_color(), title=f"{caster.get_title_name()}'s Actions")
     if args is None:

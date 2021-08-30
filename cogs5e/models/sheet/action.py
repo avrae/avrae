@@ -87,14 +87,20 @@ class Action:
             return None
         return gamedata.automation
 
-    def build_str(self, caster=None, automation_only=False):
-        if not automation_only and self.snippet:
+    def build_str(self, caster=None, snippet=True):
+        # ddb snippet if available and allowed
+        if snippet and self.snippet:
             return self.snippet
-        if self.automation:
+        # avrae-augmentation display override (templating)
+        elif self.gamedata and self.gamedata.list_display_override:
+            return self.gamedata.list_display_override
+        # automatically-generated automation description
+        elif self.automation:
             if caster is None:
                 return str(self.automation)
             return self.automation.build_str(caster)
-        elif automation_only:
+        # default fallbacks
+        elif not snippet:
             return "No automation."
         return "Unknown action."
 

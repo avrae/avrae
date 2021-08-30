@@ -2,6 +2,8 @@
 import discord
 import pytest
 
+from tests.utils import active_character
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -10,9 +12,11 @@ class TestBasicSheetCommands:
     async def test_attack(self, avrae, dhttp):
         avrae.message("!a dag")
 
-    async def test_attack_list(self, avrae, dhttp):
-        avrae.message("!a list")
-        avrae.message("!a")
+    async def test_action(self, avrae, dhttp):
+        character = await active_character(avrae)
+        if not any(1 for action in character.actions if "Bardic" in action.name):
+            pytest.skip("Character does not have bardic inspiration")
+        avrae.message("!a bardic")
 
     async def test_attack_add(self, avrae, dhttp):
         avrae.message("!a add TESTATTACKFOOBAR -b 5 -d 1d6")
@@ -21,6 +25,10 @@ class TestBasicSheetCommands:
         avrae.message("!a delete TESTATTACKFOOBAR")
         await dhttp.receive_message()
         avrae.message("y")
+
+    async def test_action_list(self, avrae, dhttp):
+        avrae.message("!a list")
+        avrae.message("!a")
 
     async def test_save(self, avrae, dhttp):
         avrae.message("!s con")

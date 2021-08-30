@@ -40,7 +40,7 @@ class EmbedWithCharacter(discord.Embed):
 class EmbedPaginator:
     EMBED_MAX = 6000
     EMBED_FIELD_MAX = 1024
-    EMBED_DESC_MAX = 2048
+    EMBED_DESC_MAX = 4096
     EMBED_TITLE_MAX = 256
     CONTINUATION_FIELD_TITLE = '** **'
 
@@ -49,16 +49,21 @@ class EmbedPaginator:
         self._current_field_inline = False
         self._current_field = []
         self._field_count = 0
-        self._embed_count = 0
 
         self._footer_url = None
         self._footer_text = None
 
         if first_embed is None:
             first_embed = discord.Embed(**embed_options)
+
+        self._embed_count = len(first_embed)
         self._default_embed_options = {c: getattr(first_embed, c) for c in copy_kwargs if hasattr(first_embed, c)}
         self._default_embed_options.update(embed_options)
         self._embeds = [first_embed]
+
+    @property
+    def _current(self):
+        return self._embeds[-1]
 
     def add_title(self, value):
         """
@@ -69,7 +74,7 @@ class EmbedPaginator:
         if len(value) > self.EMBED_TITLE_MAX or len(value) + self._embed_count > self.EMBED_MAX:
             raise ValueError("The current embed cannot fit this title.")
 
-        self._embeds[-1].title = value
+        self._current.title = value
         self._embed_count += len(value)
 
     def add_description(self, value):
@@ -81,11 +86,11 @@ class EmbedPaginator:
         if len(value) > self.EMBED_DESC_MAX or len(value) + self._embed_count > self.EMBED_MAX:
             raise ValueError("The current embed cannot fit this description.")
 
-        self._embeds[-1].description = value
+        self._current.description = value
         self._embed_count += len(value)
 
     def add_field(self, name='', value='', inline=False):
-        """Add a new field to the help embed."""
+        """Add a new field to the current embed."""
         if len(name) > self.EMBED_TITLE_MAX:
             raise ValueError("This value is too large to store in an embed field.")
 
@@ -97,7 +102,7 @@ class EmbedPaginator:
         self.extend_field(value)
 
     def extend_field(self, value):
-        """Add a line of text to the last field in the help embed."""
+        """Add a line of text to the last field in the current embed."""
         if not value:
             return
         chunks = chunk_text(value, max_chunk_size=self.EMBED_FIELD_MAX)
@@ -120,7 +125,7 @@ class EmbedPaginator:
         if self._embed_count + len(value) + len(self._current_field_name) > self.EMBED_MAX:
             self.close_embed()
 
-        self._embeds[-1].add_field(name=self._current_field_name, value=value, inline=self._current_field_inline)
+        self._current.add_field(name=self._current_field_name, value=value, inline=self._current_field_inline)
         self._embed_count += len(value) + len(self._current_field_name)
 
         self._current_field_name = ''
@@ -145,7 +150,11 @@ class EmbedPaginator:
             kwargs['text'] = self._footer_text
         if current_count > self.EMBED_MAX:
             self.close_embed()
-        self._embeds[-1].set_footer(**kwargs)
+
+        # this check is here because of a bug in discord.py 1.7.3 that causes a KeyError in len(embed) if set_footer()
+        # is called without a text kwarg (we use len() to run assertions in tests)
+        if kwargs:
+            self._current.set_footer(**kwargs)
 
     def close_embed(self):
         """Terminate the current embed and create a new one."""

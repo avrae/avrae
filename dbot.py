@@ -1,7 +1,9 @@
 import asyncio
 import faulthandler
 import logging
+import random
 import sys
+import time
 import traceback
 
 import aioredis
@@ -149,11 +151,12 @@ class Avrae(commands.AutoShardedBot):
             """
             if not first:
                 await asyncio.sleep(0.2)
-            i = 0
+            wait_start = time.monotonic()
             while psutil.cpu_percent() > 75:
-                i += 1
-                await asyncio.sleep(0.2)
-                if i > 150:  # liveness property: will eventually stop waiting (30s in this case)
+                t = random.uniform(5, 15)
+                log.info(f"[C{self.cluster_id}] CPU usage is high, waiting {t:.2f}s!")
+                await asyncio.sleep(t)
+                if time.monotonic() - wait_start > 300:  # liveness: wait no more than 5 minutes
                     break
 
         # wait until the bucket is available and try to acquire the lock

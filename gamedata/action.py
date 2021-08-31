@@ -47,6 +47,8 @@ class Action(AutomatibleMixin):
     def source_feature(self):
         """
         Returns the root feature granting this action. Usually this is a class/race/feat feature.
+
+        :rtype: gamedata.shared.Sourced
         """
         from . import compendium
         return compendium.lookup_entity(self.source_feature_type_id, self.source_feature_id)

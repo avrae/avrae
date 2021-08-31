@@ -151,6 +151,11 @@ class GameLogClient:
             log.debug(f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event")
             return
 
+        # check: do I have permissions to send messages to the channel?
+        if not channel.permissions_for(guild.me).send_messages:
+            log.debug(f"No permissions to send messages in channel {campaign.channel_id} - discarding event")
+            return
+
         # set up the event context
         discord_user_id = await ddb_id_to_discord_id(self.bot.mdb, event.user_id)
         if discord_user_id is None:

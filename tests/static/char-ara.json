@@ -26,221 +26,207 @@
   "attacks": [
     {
       "name": "Rapier",
-      "bonus": 7,
-      "damage": "1d8 + 3 [piercing]",
-      "details": "Finesse",
-      "bonus_calc": "max(strengthMod, dexterityMod) + proficiencyBonus"
+      "automation": [
+        {
+          "type": "target",
+          "meta": [],
+          "target": "each",
+          "effects": [
+            {
+              "type": "attack",
+              "meta": [],
+              "hit": [
+                {
+                  "type": "damage",
+                  "meta": [],
+                  "damage": "1d8 + 3 [piercing]",
+                  "overheal": false
+                }
+              ],
+              "miss": [],
+              "attackBonus": "9"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "meta": [],
+          "text": "Finesse"
+        }
+      ],
+      "_v": 2
     },
     {
       "name": "Dagger",
-      "bonus": 7,
-      "damage": "1d4 + 3 [piercing]",
-      "details": "Finesse, light, thrown (range 20/60)",
-      "bonus_calc": "max(strengthMod, dexterityMod) + proficiencyBonus"
+      "automation": [
+        {
+          "type": "target",
+          "meta": [],
+          "target": "each",
+          "effects": [
+            {
+              "type": "attack",
+              "meta": [],
+              "hit": [
+                {
+                  "type": "damage",
+                  "meta": [],
+                  "damage": "1d4 + 3 [piercing]",
+                  "overheal": false
+                }
+              ],
+              "miss": [],
+              "attackBonus": "9"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "meta": [],
+          "text": "Finesse, light, thrown (range 20/60)"
+        }
+      ],
+      "_v": 2
     }
   ],
   "skills": {
     "acrobatics": {
-      "value": 7,
-      "prof": 1,
-      "bonus": 0,
-      "adv": null
+      "value": 15,
+      "prof": 2
     },
     "animalHandling": {
-      "value": 4,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 5,
+      "prof": 0.5
     },
     "arcana": {
-      "value": 5,
-      "prof": 1,
-      "bonus": 0,
-      "adv": null
+      "value": 7,
+      "prof": 1
     },
     "athletics": {
-      "value": 3,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 4,
+      "prof": 0.5
     },
     "deception": {
-      "value": 7,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 9,
+      "prof": 0.5
     },
     "history": {
-      "value": 3,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 4,
+      "prof": 0.5
     },
     "initiative": {
-      "value": 5,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 6,
+      "prof": 0.5
     },
     "insight": {
-      "value": 10,
-      "prof": 2,
-      "bonus": 0,
-      "adv": null
+      "value": 14,
+      "prof": 2
     },
     "intimidation": {
-      "value": 7,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 9,
+      "prof": 0.5
     },
     "investigation": {
-      "value": 3,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 4,
+      "prof": 0.5
     },
     "medicine": {
-      "value": 4,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 5,
+      "prof": 0.5
     },
     "nature": {
-      "value": 3,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 4,
+      "prof": 0.5
     },
     "perception": {
-      "value": 6,
-      "prof": 1,
-      "bonus": 0,
-      "adv": null
+      "value": 14,
+      "prof": 2
     },
     "performance": {
-      "value": 13,
-      "prof": 2,
-      "bonus": 0,
-      "adv": null
+      "value": 18,
+      "prof": 2
     },
     "persuasion": {
-      "value": 7,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 9,
+      "prof": 0.5
     },
     "religion": {
-      "value": 3,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 4,
+      "prof": 0.5
     },
     "sleightOfHand": {
-      "value": 5,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 6,
+      "prof": 0.5
     },
     "stealth": {
-      "value": 5,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 6,
+      "prof": 0.5
     },
     "survival": {
-      "value": 4,
-      "prof": 0.5,
-      "bonus": 0,
-      "adv": null
+      "value": 5,
+      "prof": 0.5
     },
     "strength": {
-      "value": 1,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 1
     },
     "dexterity": {
-      "value": 3,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 3
     },
     "constitution": {
-      "value": 1,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 2
     },
     "intelligence": {
-      "value": 1,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 1
     },
     "wisdom": {
-      "value": 2,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 2
     },
     "charisma": {
-      "value": 5,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 6
     }
   },
   "resistances": {
     "resist": [
-      "cold",
-      "fire",
-      "poison"
+      {
+        "dtype": "cold"
+      },
+      {
+        "dtype": "fire"
+      },
+      {
+        "dtype": "poison"
+      }
     ],
     "immune": [],
-    "vuln": []
+    "vuln": [],
+    "neutral": []
   },
   "saves": {
     "strengthSave": {
-      "value": 1,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 1
     },
     "dexteritySave": {
-      "value": 7,
-      "prof": 1,
-      "bonus": 0,
-      "adv": null
+      "value": 9,
+      "prof": 1
     },
     "constitutionSave": {
-      "value": 1,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 8,
+      "prof": 1
     },
     "intelligenceSave": {
-      "value": 1,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 1
     },
     "wisdomSave": {
-      "value": 2,
-      "prof": 0,
-      "bonus": 0,
-      "adv": null
+      "value": 2
     },
     "charismaSave": {
-      "value": 9,
-      "prof": 1,
-      "bonus": 0,
-      "adv": null
+      "value": 12,
+      "prof": 1
     }
   },
-  "ac": 15,
-  "max_hp": 63,
-  "hp": 63,
+  "ac": 20,
+  "max_hp": 143,
+  "hp": 143,
   "temp_hp": 0,
   "cvars": {},
   "options": {
@@ -255,57 +241,48 @@
   "consumables": [
     {
       "name": "Bardic Inspiration",
-      "value": 5,
+      "value": 6,
       "minv": "0",
-      "maxv": "charismaMod",
+      "maxv": "6",
       "reset": "short",
       "display_type": "bubble",
-      "live_id": null
+      "live_id": null,
+      "reset_to": null,
+      "reset_by": null,
+      "title": null,
+      "desc": null,
+      "ddb_source_feature_type": null,
+      "ddb_source_feature_id": null
     },
     {
-      "name": "Infernal Legacy - Hellish Rebuke",
+      "name": "Infernal Legacy: Hellish Rebuke",
       "value": 1,
       "minv": "0",
       "maxv": "1",
       "reset": "long",
       "display_type": "bubble",
-      "live_id": null
+      "live_id": null,
+      "reset_to": null,
+      "reset_by": null,
+      "title": null,
+      "desc": null,
+      "ddb_source_feature_type": null,
+      "ddb_source_feature_id": null
     },
     {
-      "name": "Enthralling Performance",
-      "value": 1,
-      "minv": "0",
-      "maxv": "1",
-      "reset": "short",
-      "display_type": "bubble",
-      "live_id": null
-    },
-    {
-      "name": "Mantle of Majesty",
-      "value": 1,
-      "minv": "0",
-      "maxv": "1",
-      "reset": "long",
-      "display_type": "bubble",
-      "live_id": null
-    },
-    {
-      "name": "Infernal Legacy - Darkness",
+      "name": "Infernal Legacy: Darkness",
       "value": 1,
       "minv": "0",
       "maxv": "1",
       "reset": "long",
       "display_type": "bubble",
-      "live_id": null
-    },
-    {
-      "name": "Fey Presence",
-      "value": 1,
-      "minv": "0",
-      "maxv": "1",
-      "reset": "short",
-      "display_type": "bubble",
-      "live_id": null
+      "live_id": null,
+      "reset_to": null,
+      "reset_by": null,
+      "title": null,
+      "desc": null,
+      "ddb_source_feature_type": null,
+      "ddb_source_feature_id": null
     }
   ],
   "death_saves": {
@@ -532,5 +509,15 @@
   },
   "live": null,
   "race": "Tiefling",
-  "background": "Entertainer"
+  "background": "Entertainer",
+  "actions": [
+    {
+      "name": "Bardic Inspiration",
+      "uid": "221cc80c-37b9-4e92-be23-dac7328e8409",
+      "id": 1011,
+      "type_id": 222216831,
+      "activation_type": 3,
+      "snippet": null
+    }
+  ]
 }

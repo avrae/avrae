@@ -4,7 +4,7 @@ import textwrap
 
 import pytest
 
-from aliasing.evaluators import SpellEvaluator
+from aliasing.evaluators import AutomationEvaluator
 from cogs5e.models import automation
 from cogs5e.models.sheet.statblock import StatBlock
 from gamedata.compendium import compendium
@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.asyncio
 
 DEFAULT_CASTER = StatBlock("Bob")
-DEFAULT_EVALUATOR = SpellEvaluator.with_caster(DEFAULT_CASTER)
+DEFAULT_EVALUATOR = AutomationEvaluator.with_caster(DEFAULT_CASTER)
 
 
 @pytest.mark.parametrize("attack_bonus", [

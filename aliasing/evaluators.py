@@ -609,7 +609,7 @@ def load_yaml(yamlstr):
         return output
 
 
-class SpellEvaluator(MathEvaluator):
+class AutomationEvaluator(MathEvaluator):
     @classmethod
     def with_caster(cls, caster, spell_override=None):
         names = caster.get_scope_locals()

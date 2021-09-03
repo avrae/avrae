@@ -82,7 +82,7 @@ class DDBLink(Tutorial):
 
             Once you're ready, import the character into Avrae with the command `{ctx.prefix}beyond <url>`, using either the "Sharable Link" on your character sheet or the URL in the address bar of your browser.
             ```
-            {ctx.prefix}beyond <url>
+            {ctx.prefix}import <url>
             ```
             Or, if you've already imported a character, switch to them now using `{ctx.prefix}character <name>`!
             """
@@ -93,9 +93,8 @@ class DDBLink(Tutorial):
                 character = await ctx.get_character()
             except NoCharacter:
                 return
-            if ctx.command in (ctx.bot.get_command('beyond'),
-                               ctx.bot.get_command('dicecloud'),
-                               ctx.bot.get_command('gsheet'),
+            if ctx.command in (ctx.bot.get_command('import'),
+                               ctx.bot.get_command('beyond'),
                                ctx.bot.get_command('update'),
                                ctx.bot.get_command('char')) \
                     and character is not None:

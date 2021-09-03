@@ -1054,15 +1054,19 @@ class InitTracker(commands.Cog):
             return await ctx.send("You do not have permission to view this combatant's attacks.")
 
         if not combatant.is_private:
-            destination = ctx.message.channel
+            destination = ctx
         else:
             destination = ctx.message.author
 
         if isinstance(combatant, PlayerCombatant):
-            await actionutils.send_action_list(destination, caster=combatant, attacks=combatant.attacks,
-                                               actions=combatant.character.actions, args=args)
+            await actionutils.send_action_list(
+                ctx, destination=destination, caster=combatant, attacks=combatant.attacks,
+                actions=combatant.character.actions, args=args
+            )
         else:
-            await actionutils.send_action_list(destination, caster=combatant, attacks=combatant.attacks, args=args)
+            await actionutils.send_action_list(
+                ctx, destination=destination, caster=combatant, attacks=combatant.attacks, args=args
+            )
 
     async def _attack(self, ctx, combatant, atk_name, unparsed_args):
         args = await helpers.parse_snippets(unparsed_args, ctx)

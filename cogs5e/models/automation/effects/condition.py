@@ -75,7 +75,9 @@ class Condition(Effect):
         elif on_false and not on_true:
             return f"maybe {on_false}"
 
-        # both: return "X or Y".
+        # both: return "X or Y", unless they're the same.
+        elif on_true == on_false:
+            return on_true
         else:
             return f"{on_true} or {on_false}"
 

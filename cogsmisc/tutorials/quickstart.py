@@ -134,6 +134,36 @@ class Quickstart(Tutorial):
         async def transition(self, ctx, state_map):
             await ctx.trigger_typing()
             await asyncio.sleep(3)
+            embed = TutorialEmbed(self, ctx)
+            embed.description = f"""
+            Nice! You might have noticed that the command to make an attack is `{ctx.prefix}action` - this is because Avrae can automate more actions than just attacks! Let's take a look at how to use some of your other actions.
+            """
+            await ctx.send(embed=embed)
+            await state_map.transition_with_delay(ctx, self.tutorial.Actions, 5)
+
+    @state()
+    class Actions(TutorialState):
+        async def objective(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Actions"
+            embed.description = f"""
+            Actions are how you can use the rest of your character's abilities. In Avrae, most abilities can be run automatically with just one command: `{ctx.prefix}action`. These abilities include not just attacks, but any features your character has from their race, class, or feats!
+
+            Let's try using an action. List the actions you have available with `{ctx.prefix}action list`, and then use one with `{ctx.prefix}action <action>`! Don't forget to use quotes around the action name if it has multiple words! You can choose to only use part of the full name, too, if it's very long.
+            ```
+            {ctx.prefix}action list
+            {ctx.prefix}action <action>
+            ```
+            """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            if ctx.command is ctx.bot.get_command('action') and ctx.args:
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            await ctx.trigger_typing()
+            await asyncio.sleep(2)
             embed = TutorialEmbed(self, ctx, footer=False)
             embed.description = f"""
             That's all you need to get started! If you ever need a refresher on one command, you can use `{ctx.prefix}help <command>` to get the command's help sent to you. Next, you might want to try the *Playing the Game* tutorial - start this tutorial with `{ctx.prefix}tutorial Playing the Game`.

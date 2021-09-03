@@ -67,6 +67,7 @@ class Compendium:
         self._book_lookup = {}
         self._actions_by_uid = {}  # {uuid: Action}
         self._actions_by_eid = collections.defaultdict(lambda: [])  # {(tid, eid): [Action]}
+        self._epoch = 0
 
         self._base_path = os.path.relpath('res')
 
@@ -156,6 +157,9 @@ class Compendium:
         self._load_racefeats()
         self._load_actions()  # actions don't register as DDB entities, they're their own thing
         self._register_book_lookups()
+
+        # increase epoch for any dependents
+        self._epoch += 1
 
     def _load_subclasses(self):
         self.subclasses = []
@@ -306,6 +310,14 @@ class Compendium:
         :rtype: list of Action
         """
         return self._actions_by_eid[(tid, eid)]
+
+    @property
+    def epoch(self):
+        """
+        Returns an integer representing the current gamedata epoch. This number may not decrease, and must increase any
+        time any part of the gamedata changes.
+        """
+        return self._epoch
 
 
 compendium = Compendium()

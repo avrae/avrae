@@ -101,10 +101,10 @@ class SheetManager(commands.Cog):
         Lists the active character's actions.
         __Valid Arguments__
         -v - Verbose: Displays each action's character sheet description rather than the effect summary.
-        attacks - Only displays the available attacks.
-        actions - Only displays the available actions.
+        attack - Only displays the available attacks.
+        action - Only displays the available actions.
         bonus - Only displays the available bonus actions.
-        reactions - Only displays the available reactions.
+        reaction - Only displays the available reactions.
         other - Only displays the available actions that have another activation time.
         """
         char: Character = await Character.from_ctx(ctx)

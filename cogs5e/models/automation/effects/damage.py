@@ -90,7 +90,6 @@ class Damage(Effect):
         # nocrit (#1216)
         # Disable critical damage in saves (#1556)
         in_crit = (autoctx.in_crit or crit_arg) and not (nocrit or autoctx.in_save)
-        roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
         if in_crit:
             dice_ast = d20.utils.tree_map(utils.crit_mapper, dice_ast)
             if critdice and not autoctx.is_spell:
@@ -140,10 +139,15 @@ class Damage(Effect):
         # evaluate resistances
         do_resistances(dmgroll.expr, resistances, always, transforms)
 
-        # generate output
+        # determine healing/damage, stringify expr
         result = d20.MarkdownStringifier().stringify(dmgroll.expr)
+        if dmgroll.total < 0:
+            roll_for = "Healing"
+        else:
+            roll_for = "Damage"
 
         # output
+        roll_for = roll_for if not in_crit else f"{roll_for} (CRIT!)"
         if not hide:
             autoctx.queue(f"**{roll_for}**: {result}")
         else:
@@ -170,4 +174,8 @@ class Damage(Effect):
         except draconic.DraconicException:
             damage = self.damage
             evaluator.builtins['lastDamage'] = 0
+
+        # damage/healing
+        if damage.startswith('-'):
+            return f"{damage[1:].strip()} healing"
         return f"{damage} damage"

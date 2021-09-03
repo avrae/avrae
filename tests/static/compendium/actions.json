@@ -1,0 +1,53 @@
+[
+  {
+    "name": "Bardic Inspiration",
+    "uid": "221cc80c-37b9-4e92-be23-dac7328e8409",
+    "id": 1011,
+    "type_id": 222216831,
+    "activation_type": 3,
+    "source_feature_id": 75,
+    "source_feature_type_id": 12168134,
+    "automation": [
+      {
+        "type": "counter",
+        "counter": {
+          "id": 1011,
+          "typeId": 222216831
+        },
+        "amount": "1",
+        "errorBehaviour": "raise"
+      },
+      {
+        "type": "variable",
+        "name": "bardLevel",
+        "value": "caster.levels.get('Bard')",
+        "onError": "0"
+      },
+      {
+        "type": "variable",
+        "name": "scalevalue",
+        "value": "6 + 2 * ((bardLevel>=5)+(bardLevel>=10)+(bardLevel>=15))",
+        "onError": ""
+      },
+      {
+        "type": "target",
+        "target": "each",
+        "effects": [
+          {
+            "type": "ieffect",
+            "name": "Feeling Inspired",
+            "duration": 100,
+            "effects": "",
+            "desc": "For 10 minutes, the creature can add 1d{{scalevalue}} to one ability check, attack roll, or saving throw. This can be added after seeing the roll, but before knowing the outcome."
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "For 10 minutes, the creature can add 1d{{scalevalue}} to one ability check, attack roll, or saving throw. This can be added after seeing the roll, but before knowing the outcome."
+      }
+    ],
+    "list_display_override": null,
+    "skip": false
+  }
+]

@@ -81,16 +81,18 @@ class LimitedUse(Sourced):
     entity_type = "limited-use"
     type_id = 222216831
 
-    def __init__(self, name, parent, **kwargs):
+    def __init__(self, name, parent, type_id=None, **kwargs):
         super().__init__(homebrew=False, **kwargs)
         self.name = name
         self.parent = parent
+        if type_id is not None:
+            self.type_id = type_id
 
     @classmethod
     def from_dict(cls, d, parent):
         return cls(
-            d['name'], parent=parent, entity_id=d['id'],
-            page=parent.page, source=parent.source, is_free=parent.is_free,
+            d['name'], parent=parent, type_id=d.get('type_id'),
+            entity_id=d['id'], page=parent.page, source=parent.source, is_free=parent.is_free,
             url=parent.raw_url, entitlement_entity_id=parent.entitlement_entity_id,
             entitlement_entity_type=parent.entitlement_entity_type
         )

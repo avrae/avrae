@@ -56,7 +56,7 @@ class AutomationContext:
         elif isinstance(caster, character_api.Character):
             self.character = caster
 
-        self.evaluator = aliasing.evaluators.SpellEvaluator.with_caster(caster, spell_override=spell_override)
+        self.evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster, spell_override=spell_override)
 
         self.combatant = None
         if isinstance(caster, init.Combatant):

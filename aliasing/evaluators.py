@@ -455,7 +455,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     # ==== YAML ====
 def load_yaml(yamlstr):
     """
-    Loads an safe object from a YAML string. See :func:`yaml.safe_load`.
+    Loads an safe object from a YAML string. See :func:`yaml.load(yamlstr, yaml.BaseLoader)`.
     """
     
     def construct_scalar(_, node):

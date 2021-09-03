@@ -424,9 +424,13 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.delete_uvar(name)
 
-.. autofunction:: aliasing.evaluators.ScriptingEvaluator.dump_json
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_yaml
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.dump_yaml
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.dump_json
 
 .. autofunction:: aliasing.api.functions.err
 

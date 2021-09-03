@@ -453,43 +453,43 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         return default
 
     # ==== YAML ====
-def load_yaml(yamlstr):
-    """
-    Loads an safe object from a YAML string. See :func:`yaml.load(yamlstr, yaml.BaseLoader)`.
-    """
-    
-    def construct_scalar(_, node):
-        # bool checking
-        if node.value.lower() in ['yes', 'on', 'y', 'true']:
-            return True
-        elif node.value.lower() in ['false', 'no', 'off', 'n']:
-            return False
-        # null checking
-        if node.value.lower() in ['', '~', 'null']:
-            return None
-        # numeric checking
-        if node.value.isnumeric():
-            return int(node.value)
-        try:
-            return float(node.value)
-        except ValueError:
-            pass
-        # base case
-        return node.value
-    
-    def construct_mapping(loader, node):
-        if all([i[1].value == '' for i in node.value]):
-            return {i[0].value for i in node.value}
-        return loader.construct_mapping(node)
-    
-    yaml.BaseLoader.add_constructor(
-            yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG,
-            construct_scalar)
-    yaml.BaseLoader.add_constructor(
-            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-            construct_mapping)
-    
-    return yaml.load(str(yamlstr), yaml.BaseLoader) or {}
+    def load_yaml(self, yamlstr):
+        """
+        Loads an safe object from a YAML string. See :func:`yaml.load(yamlstr, yaml.BaseLoader)`.
+        """
+        
+        def construct_scalar(_, node):
+            # bool checking
+            if node.value.lower() in ['yes', 'on', 'y', 'true']:
+                return True
+            elif node.value.lower() in ['false', 'no', 'off', 'n']:
+                return False
+            # null checking
+            if node.value.lower() in ['', '~', 'null']:
+                return None
+            # numeric checking
+            if node.value.isnumeric():
+                return int(node.value)
+            try:
+                return float(node.value)
+            except ValueError:
+                pass
+            # base case
+            return node.value
+        
+        def construct_mapping(loader, node):
+            if all([i[1].value == '' for i in node.value]):
+                return {i[0].value for i in node.value}
+            return loader.construct_mapping(node)
+        
+        yaml.BaseLoader.add_constructor(
+                yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG,
+                construct_scalar)
+        yaml.BaseLoader.add_constructor(
+                yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+                construct_mapping)
+        
+        return yaml.load(str(yamlstr), yaml.BaseLoader) or {}
 
     def dump_yaml(self, obj):
         """

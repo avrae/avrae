@@ -521,7 +521,7 @@ class Combat:
     def get_channel(self):
         """Gets the Channel object of the combat."""
         if self.ctx:
-            return self.ctx.message.channel
+            return self.ctx.channel
         else:
             chan = self.ctx.bot.get_channel(int(self.channel))
             if chan:

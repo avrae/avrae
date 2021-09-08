@@ -106,22 +106,22 @@ class Avrae(commands.AutoShardedBot):
         return self.cluster_id == 0
 
     @staticmethod
-    def log_exception(exception=None, context: commands.Context = None):
+    def log_exception(exception=None, ctx: context.AvraeContext = None):
         if config.SENTRY_DSN is None:
             return
 
         with sentry_sdk.push_scope() as scope:
-            if context:
+            if ctx:
                 # noinspection PyDunderSlots,PyUnresolvedReferences
                 # for some reason pycharm doesn't pick up the attribute setter here
-                scope.user = {"id": context.author.id, "username": str(context.author)}
-                scope.set_tag("message.content", context.message.content)
-                scope.set_tag("is_private_message", context.guild is None)
-                scope.set_tag("channel.id", context.channel.id)
-                scope.set_tag("channel.name", str(context.channel))
-                if context.guild is not None:
-                    scope.set_tag("guild.id", context.guild.id)
-                    scope.set_tag("guild.name", str(context.guild))
+                scope.user = {"id": ctx.author.id, "username": str(ctx.author)}
+                scope.set_tag("message.content", ctx.message.content)
+                scope.set_tag("is_private_message", ctx.guild is None)
+                scope.set_tag("channel.id", ctx.channel.id)
+                scope.set_tag("channel.name", str(ctx.channel))
+                if ctx.guild is not None:
+                    scope.set_tag("guild.id", ctx.guild.id)
+                    scope.set_tag("guild.name", str(ctx.guild))
             sentry_sdk.capture_exception(exception)
 
     async def launch_shards(self):
@@ -162,7 +162,7 @@ class Avrae(commands.AutoShardedBot):
         # wait until the bucket is available and try to acquire the lock
         await clustering.wait_bucket_available(shard_id, bucket_id, self.rdb, pre_lock_hook=pre_lock_check)
 
-    async def get_context(self, *args, **kwargs):
+    async def get_context(self, *args, **kwargs) -> context.AvraeContext:
         return await super().get_context(*args, cls=context.AvraeContext, **kwargs)
 
     async def close(self):
@@ -241,8 +241,7 @@ async def on_command_error(ctx, error):
         return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
 
     elif isinstance(error, commands.MaxConcurrencyReached):
-        return await ctx.send(f"Only {error.number} instance{'s' if error.number > 1 else ''} of this command per "
-                              f"{error.per.name} can be running at a time.")
+        return await ctx.send(str(error))
 
     elif isinstance(error, CommandInvokeError):
         original = error.original
@@ -293,7 +292,7 @@ async def on_command_error(ctx, error):
 
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-        f"Please join <http://support.avrae.io> and let us know about the error!")
+        f"Please join <https://support.avrae.io> and let us know about the error!")
 
     log.warning("Error caused by message: `{}`".format(ctx.message.content))
     for line in traceback.format_exception(type(error), error, error.__traceback__):

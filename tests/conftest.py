@@ -314,7 +314,7 @@ async def avrae(dhttp):
 
     log.info("Ready for testing")
     yield bot
-    await bot.logout()
+    await bot.close()
 
 
 # ===== Character Fixture =====

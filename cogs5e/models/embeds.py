@@ -105,7 +105,7 @@ class EmbedPaginator:
         """Add a line of text to the last field in the current embed."""
         if not value:
             return
-        chunks = chunk_text(value, max_chunk_size=self.EMBED_FIELD_MAX)
+        chunks = chunk_text(value, max_chunk_size=self.EMBED_FIELD_MAX - 1)
 
         if self._field_count + len(chunks[0]) + 1 > self.EMBED_FIELD_MAX:
             self.close_field()

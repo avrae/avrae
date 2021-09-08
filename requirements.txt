@@ -13,7 +13,7 @@ html2text==2020.1.16
 httplib2==0.19.0
 launchdarkly-server-sdk==7.2.0
 motor==2.3.1
-Pillow==8.3.1
+Pillow==8.3.2
 psutil==5.8.0
 pyjwt==2.1.0
 python-meteor==0.1.6

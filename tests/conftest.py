@@ -138,7 +138,10 @@ class DiscordHTTPProxy(HTTPClient):
         to_wait = set()
         to_cancel = set()
         for task in asyncio.all_tasks():
-            if "ClientEventTask" in repr(task):  # tasks started by d.py in reply to an event
+            # note: we compare to repr(task) instead of the task's name since this contains information
+            # about the function that created the task
+            # if a bunch of tests are suddenly failing, this is often the culprit because of task names changing
+            if "discord.py" in repr(task):  # tasks started by d.py in reply to an event
                 to_wait.add(task)
             elif "Message.delete" in repr(task):  # Messagable.send(..., delete_after=x)
                 to_cancel.add(task)
@@ -386,9 +389,11 @@ async def end_init(avrae, dhttp):
 
 # ===== Global Fixture =====
 @pytest.fixture(autouse=True, scope="function")
-async def global_fixture(avrae, dhttp):
+async def global_fixture(avrae, dhttp, request):
     """Things to do before and after every test."""
+    log.info(f"Starting test: {request.function.__name__}")
     dhttp.clear()
     random.seed(123)  # we want to make our tests as deterministic as possible, so each one uses the same RNG seed
     yield
     await dhttp.drain()
+    log.info(f"Finished test: {request.function.__name__}")

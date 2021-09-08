@@ -123,7 +123,7 @@ class AliasChannel:
         """
         self._name = str(channel)
         self._id = channel.id
-        self._topic = channel.topic if not isinstance(channel, discord.DMChannel) else None
+        self._topic = getattr(channel, 'topic', None)
         self._category = AliasCategory(channel.category) if getattr(channel, 'category', None) is not None else None
 
     @property
@@ -147,9 +147,9 @@ class AliasChannel:
     @property
     def topic(self):
         """
-        The channel topic.
+        The channel topic. This will be None if the channel is a direct message or thread.
 
-        :rtype: str
+        :rtype: str or None
         """
         return self._topic
 

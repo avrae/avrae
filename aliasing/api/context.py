@@ -69,7 +69,6 @@ class AliasContext:
         """
         return self._alias
 
-
     def __repr__(self):
         return f"<{self.__class__.__name__} guild={self.guild!r} channel={self.channel!r} author={self.author!r} " \
                f"prefix={self.prefix!r} alias={self.alias!r}>"
@@ -125,6 +124,7 @@ class AliasChannel:
         self._id = channel.id
         self._topic = getattr(channel, 'topic', None)
         self._category = AliasCategory(channel.category) if getattr(channel, 'category', None) is not None else None
+        self._parent = AliasChannel(channel.parent) if isinstance(channel, discord.Thread) else None
 
     @property
     def name(self):
@@ -161,6 +161,15 @@ class AliasChannel:
         :rtype: :class:`~aliasing.api.context.AliasCategory` or None
         """
         return self._category
+
+    @property
+    def parent(self):
+        """
+        If this channel is a thread, the thread's parent channel, or None otherwise.
+
+        :rtype: :class:`~aliasing.api.context.AliasChannel` or None
+        """
+        return self._parent
 
     def __str__(self):
         return self.name

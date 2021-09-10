@@ -165,8 +165,6 @@ class GameLog(commands.Cog):
         """
         Sends a message with the result of the roll, similar to `!r`.
         """
-        await gctx.trigger_typing()
-
         roll_request = ddb.dice.RollRequest.from_dict(gctx.event.data)
         if not roll_request.rolls:  # do nothing if there are no rolls actually made
             return

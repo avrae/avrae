@@ -233,8 +233,11 @@ class CustomCounter:
         minv = self.get_min()
         maxv = self.get_max()
 
-        if strict and not minv <= new_value <= maxv:
-            raise CounterOutOfBounds()
+        if strict:
+            if new_value < minv:
+                raise CounterOutOfBounds(f"You do not have enough remaining uses of {self.name}.")
+            elif new_value > maxv:
+                raise CounterOutOfBounds(f"{self.name} cannot be set to {new_value} (max {maxv}).")
 
         new_value = int(min(max(minv, new_value), maxv))
         old_value = self._value

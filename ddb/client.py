@@ -3,6 +3,7 @@ import logging
 
 import aioboto3
 import aiohttp
+import cachetools
 from boto3.dynamodb.conditions import Key
 
 from cogsmisc.stats import Stats
@@ -19,8 +20,12 @@ from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, \
 AUTH_DISCORD = f"{AUTH_BASE_URL}/v1/discord-token"
 
 # cache
+# in addition to caching in redis, we have a LRU cache for 64 entity types and the 128 most recent users
 USER_ENTITLEMENT_TTL = 1 * 60
 ENTITY_ENTITLEMENT_TTL = 15 * 60
+USER_ENTITLEMENT_CACHE = cachetools.TTLCache(128, USER_ENTITLEMENT_TTL)
+ENTITY_ENTITLEMENT_CACHE = cachetools.TTLCache(64, ENTITY_ENTITLEMENT_TTL)
+USER_ENTITLEMENTS_NONE_SENTINEL = object()
 
 log = logging.getLogger(__name__)
 
@@ -160,15 +165,18 @@ class BeyondClient(BeyondClientBase):
             async with self.http.get(f"{WATERDEEP_BASE}/api/campaign/stt/active-campaigns",
                                      headers={"Authorization": f"Bearer {user.token}"}) as resp:
                 if not 199 < resp.status < 300:
-                    raise WaterdeepException(f"Waterdeep returned {resp.status}: {await resp.text()}")
+                    log.warning(f"Bad Waterdeep response: {resp.status}\n{await resp.text()}")
+                    raise WaterdeepException(f"D&D Beyond returned an error: {resp.status} {resp.reason}")
                 try:
                     data = await resp.json()
                 except (aiohttp.ContentTypeError, ValueError, TypeError):
-                    raise WaterdeepException(f"Could not deserialize Waterdeep response: {await resp.text()}")
+                    log.warning(f"Bad Waterdeep response (deserialize): {resp.status}\n{await resp.text()}")
+                    raise WaterdeepException("Could not deserialize D&D Beyond response.")
         except aiohttp.ServerTimeoutError:
-            raise WaterdeepException("Timed out connecting to Waterdeep")
+            raise WaterdeepException("Timed out connecting to D&D Beyond.")
         if not data.get('status') == 'success':
-            raise WaterdeepException(f"Waterdeep returned an error: {data}")
+            log.warning(f"Bad Waterdeep response (data): {resp.status}\n{data}")
+            raise WaterdeepException(f"D&D Beyond returned an error: {data}")
         return [campaign.ActiveCampaign.from_json(j) for j in data['data']]
 
     # ==== entitlement helpers ====
@@ -183,14 +191,24 @@ class BeyondClient(BeyondClientBase):
         :type user_id: int
         :rtype: ddb.entitlements.UserEntitlements
         """
-        user_entitlement_cache_key = f"entitlements.user.{user_id}"
-        cached_user_entitlements = await ctx.bot.rdb.jget(user_entitlement_cache_key)
-        if cached_user_entitlements is not None:
-            return entitlements.UserEntitlements.from_dict(cached_user_entitlements)
+        # L1: Memory
+        l1_user_entitlements = USER_ENTITLEMENT_CACHE.get(user_id)
+        if l1_user_entitlements is not None:
+            log.debug("found user entitlements in l1 (memory) cache")
+            return l1_user_entitlements if l1_user_entitlements is not USER_ENTITLEMENTS_NONE_SENTINEL else None
 
+        # L2: Redis
+        user_entitlement_cache_key = f"entitlements.user.{user_id}"
+        l2_user_entitlements = await ctx.bot.rdb.jget(user_entitlement_cache_key)
+        if l2_user_entitlements is not None:
+            log.debug("found user entitlements in l2 (redis) cache")
+            return entitlements.UserEntitlements.from_dict(l2_user_entitlements)
+
+        # fetch from ddb
         user = await self.get_ddb_user(ctx, user_id)
 
         if user is None:
+            USER_ENTITLEMENT_CACHE[user_id] = USER_ENTITLEMENTS_NONE_SENTINEL
             return None
 
         # feature flag: is this user allowed to use entitlements?
@@ -201,6 +219,7 @@ class BeyondClient(BeyondClientBase):
 
         user_e10s = await self._fetch_user_entitlements(int(user.user_id))
         # cache entitlements
+        USER_ENTITLEMENT_CACHE[user_id] = user_e10s
         await ctx.bot.rdb.jsetex(user_entitlement_cache_key,
                                  user_e10s.to_dict(),
                                  USER_ENTITLEMENT_TTL)
@@ -214,13 +233,24 @@ class BeyondClient(BeyondClientBase):
         :type entity_type: str
         :rtype: list[ddb.entitlements.EntityEntitlements]
         """
-        entity_entitlement_cache_key = f"entitlements.entity.{entity_type}"
-        cached_entity_entitlements = await ctx.bot.rdb.jget(entity_entitlement_cache_key)
-        if cached_entity_entitlements is not None:
-            return [entitlements.EntityEntitlements.from_dict(e) for e in cached_entity_entitlements]
+        # L1: Memory
+        l1_entity_entitlements = ENTITY_ENTITLEMENT_CACHE.get(entity_type)
+        if l1_entity_entitlements is not None:
+            log.debug("found entity entitlements in l1 (memory) cache")
+            return l1_entity_entitlements
 
+        # L2: Redis
+        entity_entitlement_cache_key = f"entitlements.entity.{entity_type}"
+        l2_entity_entitlements = await ctx.bot.rdb.jget(entity_entitlement_cache_key)
+        if l2_entity_entitlements is not None:
+            log.debug("found entity entitlements in l2 (redis) cache")
+            return [entitlements.EntityEntitlements.from_dict(e) for e in l2_entity_entitlements]
+
+        # fetch from DDB
         entity_e10s = await self._fetch_entities(entity_type)
+
         # cache entitlements
+        ENTITY_ENTITLEMENT_CACHE[entity_type] = entity_e10s
         await ctx.bot.rdb.jsetex(entity_entitlement_cache_key,
                                  [e.to_dict() for e in entity_e10s],
                                  ENTITY_ENTITLEMENT_TTL)
@@ -239,13 +269,15 @@ class BeyondClient(BeyondClientBase):
         try:
             async with self.http.post(AUTH_DISCORD, json=body) as resp:
                 if not 199 < resp.status < 300:
-                    raise AuthException(f"Auth Service returned {resp.status}: {await resp.text()}")
+                    log.warning(f"Auth Service returned {resp.status}: {await resp.text()}")
+                    raise AuthException(f"D&D Beyond returned an error: {resp.status} {resp.reason}")
                 try:
                     data = await resp.json()
                 except (aiohttp.ContentTypeError, ValueError, TypeError):
-                    raise AuthException(f"Could not deserialize Auth Service response: {await resp.text()}")
+                    log.warning(f"Cannot deserialize Auth Service response: {resp.status}: {await resp.text()}")
+                    raise AuthException("Could not deserialize D&D Beyond response.")
         except aiohttp.ServerTimeoutError:
-            raise AuthException("Timed out connecting to Auth Service")
+            raise AuthException("Timed out connecting to D&D Beyond. Please try again in a few minutes.")
         return data['token'], data.get('ttl')
 
     async def _fetch_user_entitlements(self, ddb_id: int):

@@ -1,13 +1,16 @@
 import asyncio
 import faulthandler
 import logging
+import random
 import sys
+import time
 import traceback
 
 import aioredis
 import d20
 import discord
 import motor.motor_asyncio
+import psutil
 import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
@@ -103,22 +106,22 @@ class Avrae(commands.AutoShardedBot):
         return self.cluster_id == 0
 
     @staticmethod
-    def log_exception(exception=None, context: commands.Context = None):
+    def log_exception(exception=None, ctx: context.AvraeContext = None):
         if config.SENTRY_DSN is None:
             return
 
         with sentry_sdk.push_scope() as scope:
-            if context:
+            if ctx:
                 # noinspection PyDunderSlots,PyUnresolvedReferences
                 # for some reason pycharm doesn't pick up the attribute setter here
-                scope.user = {"id": context.author.id, "username": str(context.author)}
-                scope.set_tag("message.content", context.message.content)
-                scope.set_tag("is_private_message", context.guild is None)
-                scope.set_tag("channel.id", context.channel.id)
-                scope.set_tag("channel.name", str(context.channel))
-                if context.guild is not None:
-                    scope.set_tag("guild.id", context.guild.id)
-                    scope.set_tag("guild.name", str(context.guild))
+                scope.user = {"id": ctx.author.id, "username": str(ctx.author)}
+                scope.set_tag("message.content", ctx.message.content)
+                scope.set_tag("is_private_message", ctx.guild is None)
+                scope.set_tag("channel.id", ctx.channel.id)
+                scope.set_tag("channel.name", str(ctx.channel))
+                if ctx.guild is not None:
+                    scope.set_tag("guild.id", ctx.guild.id)
+                    scope.set_tag("guild.name", str(ctx.guild))
             sentry_sdk.capture_exception(exception)
 
     async def launch_shards(self):
@@ -127,23 +130,57 @@ class Avrae(commands.AutoShardedBot):
             await clustering.coordinate_shards(self)
             if self.shard_ids is not None:
                 log.info(f"Launching {len(self.shard_ids)} shards! ({self.shard_ids})")
-            await super().launch_shards()
-            log.info(f"Launched {len(self.shards)} shards!")
+
+        # release lock and launch
+        await super().launch_shards()
+        log.info(f"Launched {len(self.shards)} shards!")
 
         if self.is_cluster_0:
             await self.rdb.incr('build_num')
 
     async def before_identify_hook(self, shard_id, *, initial=False):
         bucket_id = shard_id % self.launch_max_concurrency
-        # wait until the bucket is available and try to acquire the lock
-        await clustering.wait_bucket_available(shard_id, bucket_id, self.rdb)
+        # dummy call to initialize monitoring - see note on returning 0.0 at
+        # https://psutil.readthedocs.io/en/latest/index.html#psutil.cpu_percent
+        psutil.cpu_percent()
 
-    async def get_context(self, *args, **kwargs):
+        async def pre_lock_check(first=False):
+            """
+            Before attempting a lock, CPU utilization should be <75% to prevent a huge spike in CPU when connecting
+            up to 16 shards at once. This also allows multiple clusters to startup concurrently.
+            """
+            if not first:
+                await asyncio.sleep(0.2)
+            wait_start = time.monotonic()
+            while psutil.cpu_percent() > 75:
+                t = random.uniform(5, 15)
+                log.info(f"[C{self.cluster_id}] CPU usage is high, waiting {t:.2f}s!")
+                await asyncio.sleep(t)
+                if time.monotonic() - wait_start > 300:  # liveness: wait no more than 5 minutes
+                    break
+
+        # wait until the bucket is available and try to acquire the lock
+        await clustering.wait_bucket_available(shard_id, bucket_id, self.rdb, pre_lock_hook=pre_lock_check)
+
+    async def get_context(self, *args, **kwargs) -> context.AvraeContext:
         return await super().get_context(*args, cls=context.AvraeContext, **kwargs)
 
     async def close(self):
+        # note: when closing the bot 3 errors are emitted:
+        #
+        # ERROR:asyncio: An open stream object is being garbage collected; call "stream.close()" explicitly.
+        # ERROR:asyncio: An open stream object is being garbage collected; call "stream.close()" explicitly.
+        # ERROR:asyncio: Unclosed client session
+        # client_session: <aiohttp.client.ClientSession object at 0xblahblah>
+        #
+        # The first two are caused by aioredis streams being GC'ed when discord.py cancels the tasks that create them
+        # (because of course d.py decides it wants to cancel *all* tasks on its loop...)
+        # The second seems like it's related to a background task in a cog, but it occurs even without cogs loaded
+        # bonus points if you find where it's coming from!
         await super().close()
         await self.ddb.close()
+        await self.rdb.close()
+        self.mclient.close()
         self.ldclient.close()
 
 
@@ -204,8 +241,7 @@ async def on_command_error(ctx, error):
         return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
 
     elif isinstance(error, commands.MaxConcurrencyReached):
-        return await ctx.send(f"Only {error.number} instance{'s' if error.number > 1 else ''} of this command per "
-                              f"{error.per.name} can be running at a time.")
+        return await ctx.send(str(error))
 
     elif isinstance(error, CommandInvokeError):
         original = error.original
@@ -256,7 +292,7 @@ async def on_command_error(ctx, error):
 
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-        f"Please join <http://support.avrae.io> and let us know about the error!")
+        f"Please join <https://support.avrae.io> and let us know about the error!")
 
     log.warning("Error caused by message: `{}`".format(ctx.message.content))
     for line in traceback.format_exception(type(error), error, error.__traceback__):

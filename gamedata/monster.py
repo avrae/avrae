@@ -446,6 +446,6 @@ class MonsterCastableSpellbook(MonsterSpellbook):
             if self.daily[daily_key] > 0:
                 self.daily[daily_key] -= 1
             else:
-                raise CounterOutOfBounds("You do not have any remaining casts of this spell.")
+                raise CounterOutOfBounds(f"You do not have any remaining casts of {spell.name}.")
         else:
             self.use_slot(level, pact=pact)

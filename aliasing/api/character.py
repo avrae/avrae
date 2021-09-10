@@ -219,10 +219,11 @@ class AliasCharacter(AliasStatBlock):
     def set_cvar(self, name, val: str):
         """
         Sets a custom character variable, which will be available in all scripting contexts using this character.
+        Binds the value to the given name in the current runtime.
 
         :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
-        :param str value: The value to set it to.
-        """
+        :param str val: The value to set it to.
+        """  # noqa: E501
         name = str(name)
         val = str(val)
         helpers.set_cvar(self._character, name, val)
@@ -234,8 +235,8 @@ class AliasCharacter(AliasStatBlock):
         Sets a custom character variable if it is not already set.
 
         :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
-        :param str value: The value to set it to.
-        """
+        :param str val: The value to set it to.
+        """  # noqa: E501
         name = str(name)
         if name not in self._character.cvars:
             self.set_cvar(name, val)
@@ -243,6 +244,9 @@ class AliasCharacter(AliasStatBlock):
     def delete_cvar(self, name):
         """
         Deletes a custom character variable. Does nothing if the cvar does not exist.
+
+        .. note::
+            This method does not unbind the name in the current runtime.
 
         :param str name: The name of the variable to delete.
         """
@@ -442,10 +446,10 @@ class AliasCustomCounter:
 
         Example:
 
-        >>> full_str('Bardic Inspiration')
+        >>> full_str()
         "◉◉◉◉\\n"
         "**Resets On**: Long Rest"
-        >>> full_str('Bardic Inspiration', True)
+        >>> full_str(True)
         "**Bardic Inspiration**\\n"
         "◉◉◉◉\\n"
         "**Resets On**: Long Rest"

@@ -63,5 +63,8 @@ class SetVariable(Effect):
                 value = evaluator.eval(self.on_error)
             except draconic.DraconicException:
                 value = self.value
-        evaluator.builtins[self.name] = value
+        try:
+            evaluator.builtins[self.name] = int(value)
+        except (TypeError, ValueError):
+            evaluator.builtins[self.name] = value
         return ""

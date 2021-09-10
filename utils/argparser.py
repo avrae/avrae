@@ -158,17 +158,23 @@ class ParsedArguments:
             if 'ea' in custom:
                 ea_str = custom['ea']
 
-        adv = 0
-        if self.last(adv_str, type_=bool, ephem=ephem):
-            adv += 1
-        if has_dis := self.last(dis_str, type_=bool, ephem=ephem):
-            adv += -1
-        if ea and self.last(ea_str, type_=bool, ephem=ephem) and not has_dis:
-            return 2
-        if not boolwise:
-            return adv
+        adv_arg = self.last(adv_str, default=False, type_=bool, ephem=ephem)
+        dis_arg = self.last(dis_str, default=False, type_=bool, ephem=ephem)
+        ea_arg = ea and self.last(ea_str, default=False, type_=bool, ephem=ephem)
+
+        if ea_arg and not dis_arg:
+            out = 2
+        elif dis_arg and not (adv_arg or ea_arg):
+            out = -1
+        elif adv_arg and not dis_arg:
+            out = 1
         else:
-            return {-1: False, 0: None, 1: True}.get(adv)
+            out = 0
+
+        if not boolwise:
+            return out
+        else:
+            return {-1: False, 0: None, 1: True}.get(out)
 
     def join(self, arg, connector: str, default=None, ephem=False):
         """

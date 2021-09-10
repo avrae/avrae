@@ -1,6 +1,5 @@
 import collections
 import functools
-import itertools
 import logging
 import traceback
 
@@ -1055,15 +1054,19 @@ class InitTracker(commands.Cog):
             return await ctx.send("You do not have permission to view this combatant's attacks.")
 
         if not combatant.is_private:
-            destination = ctx.message.channel
+            destination = ctx
         else:
             destination = ctx.message.author
 
         if isinstance(combatant, PlayerCombatant):
-            await actionutils.send_action_list(destination, caster=combatant, attacks=combatant.attacks,
-                                               actions=combatant.character.actions, args=args)
+            await actionutils.send_action_list(
+                ctx, destination=destination, caster=combatant, attacks=combatant.attacks,
+                actions=combatant.character.actions, args=args
+            )
         else:
-            await actionutils.send_action_list(destination, caster=combatant, attacks=combatant.attacks, args=args)
+            await actionutils.send_action_list(
+                ctx, destination=destination, caster=combatant, attacks=combatant.attacks, args=args
+            )
 
     async def _attack(self, ctx, combatant, atk_name, unparsed_args):
         args = await helpers.parse_snippets(unparsed_args, ctx)
@@ -1096,12 +1099,14 @@ class InitTracker(commands.Cog):
                 if 'custom' in args:  # single, custom
                     attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
                 elif is_player:  # single, noncustom, action?
-                    attack = await search_and_select(
-                        ctx, list(itertools.chain(combatant.attacks, combatant.character.actions)), atk_name,
-                        lambda a: a.name, message="Select your action.")
+                    attack = await actionutils.select_action(
+                        ctx, atk_name, attacks=combatant.attacks, actions=combatant.character.actions,
+                        message="Select your action."
+                    )
                 else:  # single, noncustom
-                    attack = await search_and_select(ctx, combatant.attacks, atk_name, lambda a: a.name,
-                                                     message="Select your attack.")
+                    attack = await actionutils.select_action(
+                        ctx, atk_name, attacks=combatant.attacks, message="Select your attack."
+                    )
         except SelectionException:
             return await ctx.send("Attack not found.")
 

@@ -3,6 +3,7 @@ Created on May 26, 2020
 
 @author: andrew
 """
+import itertools
 import logging
 import re
 
@@ -65,9 +66,10 @@ class BeyondSheetParser(SheetLoaderABC):
 
         stats = self._get_stats()
         levels = self._get_levels()
-        attacks = self._get_attacks()
         skills = self._get_skills()
         saves = self._get_saves()
+        # we do this to handle the attack/action overlap (e.g. actions with displayAsAttack)
+        attacks, actions = self._get_attacks_and_actions()
 
         resistances = self._get_resistances()
         ac = self._get_ac()
@@ -86,7 +88,6 @@ class BeyondSheetParser(SheetLoaderABC):
         live = 'beyond' if self._is_live else None
         race = self._get_race()
         background = self._get_background()
-        actions = self._get_actions()
 
         # ddb campaign
         campaign = self.character_data.get('campaign')
@@ -152,49 +153,20 @@ class BeyondSheetParser(SheetLoaderABC):
 
         return Levels(out)
 
-    def _get_attacks(self):
-        """Returns an attacklist"""
-        attacks = AttackList()
-        used_names = set()
-
-        def append(atk):
-            if atk.name in used_names:
-                num = 2
-                while f"{atk.name}{num}" in used_names:
-                    num += 1
-                atk.name = f"{atk.name}{num}"
-            attacks.append(atk)
-            used_names.add(atk.name)
-
-        for attack in self.character_data['attacks']:
-            append(self._transform_attack(attack))
-
-        return attacks
-
     def _get_skills(self) -> Skills:
         out = {}
 
-        def derive_adv(skl):
-            advs = set()
-            for adv in skl['adv']:
-                if not adv['restriction']:
-                    advs.add(True)
-            for adv in skl['dis']:
-                if not adv['restriction']:
-                    advs.add(False)
-
-            if len(advs) == 1:
-                return advs.pop()
-            return None
-
+        # main skills
         for skill_id, skill in self.character_data['skills'].items():
             prof_type = {1: 0, 2: 0.5, 3: 1, 4: 2}.get(skill['prof'], 0)
-            adv_type = derive_adv(skill)
+            adv_type = derive_adv(skill['adv'], skill['dis'])
             out[SKILL_MAP[skill_id]] = Skill(skill['modifier'], prof_type, skill['bonus'], adv_type)
 
+        # initiative
         out['initiative'] = Skill(self.character_data['initiative']['modifier'],
                                   adv=self.character_data['initiative']['adv'] or None)
 
+        # ability skills (base strength, dex, etc checks)
         for stat_key, skill in zip(constants.STAT_ABBREVIATIONS, constants.STAT_NAMES):
             out[skill] = Skill(self.character_data['stats'][stat_key]['modifier'])
 
@@ -203,8 +175,13 @@ class BeyondSheetParser(SheetLoaderABC):
     def _get_saves(self) -> Saves:
         out = {}
         for stat_key, save_key in zip(constants.STAT_ABBREVIATIONS, constants.SAVE_NAMES):
-            out[save_key] = Skill(self.character_data['stats'][stat_key]['save'],
-                                  prof=1 if self.character_data['stats'][stat_key]['saveProficiency'] else 0)
+            stat_data = self.character_data['stats'][stat_key]
+            adv_type = derive_adv(stat_data['saveAdv'], stat_data['saveDis'])
+            out[save_key] = Skill(
+                stat_data['save'],
+                prof=1 if stat_data['saveProficiency'] else 0,
+                adv=adv_type
+            )
 
         return Saves(out)
 
@@ -304,41 +281,116 @@ class BeyondSheetParser(SheetLoaderABC):
     def _get_background(self):
         return self.character_data['background']
 
-    def _get_actions(self):
+    def _get_attacks_and_actions(self):
+        """
+        :rtype: tuple[AttackList, Actions]
+        """
+        attacks = self._process_attacks()  # this returns all attacks regardless of their status
+        actions, action_grantor_ids = self._process_actions()  # this skips customized actions with displayAsAttack
+
+        filtered_attacks = [attack for ((id, type_id), attack) in attacks if (id, type_id) not in action_grantor_ids]
+
+        return AttackList(filtered_attacks), actions
+
+    def _process_attacks(self):
+        """
+        :return: list of pairs ((id, typeId), attack)
+        :rtype: list[tuple[tuple[str, str], Attack]]
+        """
+        attacks = []
+        used_names = set()
+
+        def append(processed_attack, attack_data):
+            if processed_attack.name in used_names:
+                num = 2
+                while f"{processed_attack.name}{num}" in used_names:
+                    num += 1
+                processed_attack.name = f"{processed_attack.name}{num}"
+            attacks.append(((str(attack_data['id']), str(attack_data['typeId'])), processed_attack))
+            used_names.add(processed_attack.name)
+
+        for attack in self.character_data['attacks']:
+            append(self._transform_attack(attack), attack)
+
+        return attacks
+
+    def _process_actions(self):
+        """
+        :return: a pair (actions, action ids that granted valid actions (id, typeid))
+        :rtype: tuple[Actions, set[tuple[str, str]]]
+        """
         character_actions = self.character_data['actions']
         character_features = self.character_data['features']
         actions = []
+        seen_feature_ids = set()  # set of tuples (typeid, id)
+        action_ids_with_valid_actions = set()  # set of tuples (id, typeid)
+
+        def add_action_from_gamedata(d_action, g_action):
+            name = g_action.name
+            if d_action.get('isCustomized') and d_action['name'] != g_action.name:
+                # custom name handler: steal any parenthetical from the canonical name and tack it on to the custom name
+                name = d_action['name']
+                g_name_parenthetical = re.search(r'\(.+\)$', g_action.name)
+                if g_name_parenthetical:
+                    name = f"{name} {g_name_parenthetical.group(0)}"
+
+            actions.append(Action(
+                name=name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                activation_type=g_action.activation_type, snippet=html_to_md(d_action['snippet'])
+            ))
 
         # actions: save all, regardless of gamedata presence
         for d_action in character_actions:
-            if d_action['typeId'] == '1120657896' and d_action['id'] == '1':  # Unarmed Strike - already in attacks
+            # Unarmed Strike - already in attacks
+            if d_action['typeId'] == '1120657896' and d_action['id'] == '1':
                 continue
-            g_actions = compendium.lookup_actions_for_entity(int(d_action['typeId']), int(d_action['id']))
-            if g_actions:  # save a reference to each gamedata action by UID
-                for g_action in g_actions:
-                    actions.append(Action(
-                        name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                        activation_type=g_action.activation_type, snippet=html_to_md(d_action['snippet'])
-                    ))
-            else:  # just save the action w/ its snippet
-                activation_type = enums.ActivationType(d_action['activationType']) \
-                    if d_action['activationType'] is not None \
-                    else None
+            # display as attack override - fall back to attack system
+            if d_action['isCustomized'] and d_action['displayAsAttack']:
+                continue
+
+            # gamedata for limiteduse
+            try:
+                g_actions = compendium.lookup_actions_for_entity(int(d_action['typeId']), int(d_action['id']))
+            except (TypeError, ValueError):  # weird null typeid/uuid id action, maybe artificer infused item?
+                continue
+
+            # gamedata for component (parent feature)
+            # data might have been entered for the parent feature instead
+            try:
+                parent_type_id, parent_id = int(d_action['componentTypeId']), int(d_action['componentId'])
+                parent_g_actions = compendium.lookup_actions_for_entity(parent_type_id, parent_id)
+                seen_feature_ids.add((parent_type_id, parent_id))
+            except (TypeError, ValueError):
+                parent_g_actions = []
+
+            # if the lu itself has action data, save a reference to each gamedata action by UID
+            for g_action in itertools.chain(g_actions, parent_g_actions):
+                add_action_from_gamedata(d_action, g_action)
+
+            # just save the action w/ its snippet if there is no gamedata
+            if not (g_actions or parent_g_actions):
+                activation_type = (enums.ActivationType(d_action['activationType'])
+                                   if d_action['activationType'] is not None
+                                   else None)
                 actions.append(Action(
                     name=d_action['name'], uid=None, id=int(d_action['id']), type_id=int(d_action['typeId']),
                     activation_type=activation_type, snippet=html_to_md(d_action['snippet'])
                 ))
+            else:
+                # otherwise, either it or its parent successfully added something, so we can save its id
+                # for attack filtering
+                action_ids_with_valid_actions.add((str(d_action['id']), str(d_action['typeId'])))
 
         # features: save only if gamedata references them
         for d_feature in character_features:
-            g_actions = compendium.lookup_actions_for_entity(int(d_feature['typeId']), int(d_feature['id']))
+            d_type_id, d_id = int(d_feature['typeId']), int(d_feature['id'])
+            if (d_type_id, d_id) in seen_feature_ids:
+                continue
+            g_actions = compendium.lookup_actions_for_entity(d_type_id, d_id)
             for g_action in g_actions:
-                actions.append(Action(
-                    name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                    activation_type=g_action.activation_type, snippet=d_feature['snippet']
-                ))
+                add_action_from_gamedata(d_feature, g_action)
 
-        return Actions(actions)
+        return Actions(actions), action_ids_with_valid_actions
 
     # ==== helpers ====
     @staticmethod
@@ -371,6 +423,20 @@ class BeyondSheetParser(SheetLoaderABC):
             return Attack(attack['name'], automation.Automation(effects))
         else:
             return Attack.new(attack['name'], attack['toHit'], attack['damage'] or '0', desc)
+
+
+def derive_adv(advs, dises):
+    seen = set()
+    for adv in advs:
+        if not adv['restriction']:
+            seen.add(True)
+    for dis in dises:
+        if not dis['restriction']:
+            seen.add(False)
+
+    if len(seen) == 1:
+        return seen.pop()
+    return None
 
 
 def html_to_md(text):

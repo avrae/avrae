@@ -83,8 +83,7 @@ class SheetManager(commands.Cog):
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         # we select from caster attacks b/c a combat effect could add some
-        attack_or_action = await search_and_select(
-            ctx, list(itertools.chain(caster.attacks, char.actions)), atk_name, lambda a: a.name)
+        attack_or_action = await actionutils.select_action(ctx, atk_name, attacks=caster.attacks, actions=char.actions)
 
         if isinstance(attack_or_action, Attack):
             result = await actionutils.run_attack(ctx, embed, args, caster, attack_or_action, targets, combat)
@@ -102,10 +101,10 @@ class SheetManager(commands.Cog):
         Lists the active character's actions.
         __Valid Arguments__
         -v - Verbose: Displays each action's character sheet description rather than the effect summary.
-        attacks - Only displays the available attacks.
-        actions - Only displays the available actions.
+        attack - Only displays the available attacks.
+        action - Only displays the available actions.
         bonus - Only displays the available bonus actions.
-        reactions - Only displays the available reactions.
+        reaction - Only displays the available reactions.
         other - Only displays the available actions that have another activation time.
         """
         char: Character = await Character.from_ctx(ctx)
@@ -555,13 +554,15 @@ class SheetManager(commands.Cog):
         __Sheet-specific Notes__
         D&D Beyond:
             Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
-        
-        Gsheet:
-            The sheet must be shared with Avrae for this to work.
-            Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
-
+            
         Dicecloud:
             Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
+        
+        Gsheet:
+            The sheet must be shared with directly with Avrae or be publicly viewable to anyone with the link.
+            Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
+
+
         """  # noqa: E501
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet

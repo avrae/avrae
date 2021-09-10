@@ -58,6 +58,63 @@ def test_argparse():
     assert args.adv(ea=True) == 2
 
 
+def test_argparse_adv():
+    """
+    16 cases: (adv, dis, ea, ea arg in .adv())
+
+    a d e ea | out
+    =========+====
+    0 0 0 0  | 0
+    0 0 0 1  | 0
+    0 0 1 0  | 0
+    0 0 1 1  | 2
+    0 1 0 0  | -1
+    0 1 0 1  | -1
+    0 1 1 0  | -1
+    0 1 1 1  | 0
+    1 0 0 0  | 1
+    1 0 0 1  | 1
+    1 0 1 0  | 1
+    1 0 1 1  | 2
+    1 1 0 0  | 0
+    1 1 0 1  | 0
+    1 1 1 0  | 0
+    1 1 1 1  | 0
+
+    """
+    args = argparse('')
+    assert args.adv() == 0
+    assert args.adv(ea=True) == 0
+
+    args = argparse('ea')
+    assert args.adv() == 0
+    assert args.adv(ea=True) == 2
+
+    args = argparse('dis')
+    assert args.adv() == -1
+    assert args.adv(ea=True) == -1
+
+    args = argparse('dis ea')
+    assert args.adv() == -1
+    assert args.adv(ea=True) == 0
+
+    args = argparse('adv')
+    assert args.adv() == 1
+    assert args.adv(ea=True) == 1
+
+    args = argparse('adv ea')
+    assert args.adv() == 1
+    assert args.adv(ea=True) == 2
+
+    args = argparse('adv dis')
+    assert args.adv() == 0
+    assert args.adv(ea=True) == 0
+
+    args = argparse('adv dis ea')
+    assert args.adv() == 0
+    assert args.adv(ea=True) == 0
+
+
 def test_argparse_custom_adv():
     args = argparse('custom_adv')
     custom_adv = {

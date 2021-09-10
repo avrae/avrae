@@ -133,7 +133,7 @@ class Resistance:
         if not smart:
             return cls(s)
 
-        tokens = _resist_tokenize(s)
+        tokens = _resist_tokenize(s.lower())
         if not tokens:  # weird edge case of resistance of only punctuation
             return cls(s)
 

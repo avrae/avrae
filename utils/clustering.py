@@ -21,6 +21,7 @@ import asyncio
 import datetime
 import json
 import logging
+import time
 import uuid
 from contextlib import asynccontextmanager
 from math import ceil
@@ -169,7 +170,7 @@ async def coordination_lock(rdb):
         i += 1
         log.debug(f"Waiting for lock... ({i}s)")
 
-    log.info("Acquired lock, coordinating shards!")
+    log.info(f"Acquired lock with value {lock_value!r}, coordinating shards!")
     try:
         yield
     finally:
@@ -178,15 +179,27 @@ async def coordination_lock(rdb):
         if locking_val == lock_value:
             await rdb.delete(cluster_lock_key)
         else:
-            log.warning("Lock value is not what we set, ignoring value!")
+            log.warning(f"Lock value is not what we set (ours was {lock_value!r}, is {locking_val!r}), ignoring value!")
 
 
 # lock: each shard reserves the bucket for 5s by doing a SET NX EX with the currently launching shard id
-async def wait_bucket_available(shard_id, bucket_id, rdb):
+async def wait_bucket_available(shard_id, bucket_id, rdb, *, pre_lock_hook=None):
+    """
+    Waits until the given shard bucket is available. Calls ``pre_lock_hook`` exactly once before each attempt
+    to lock the appropriate bucket, with a kwarg ``first=True`` for the first attempt.
+    """
+    if pre_lock_hook is None:
+        async def pre_lock_hook(first=False):
+            if not first:
+                await asyncio.sleep(0.2)
+
+    # this might be improved by using a semaphore instead of a lock for each bucket - unclear how the Discord
+    # concurrency ratelimit operates, but this could mitigate the grocery store checkout problem
     cluster_lock_key = f"shards.{config.GIT_COMMIT_SHA}.lock:{bucket_id}"
-    i = 0
+    start = time.monotonic()
+    await pre_lock_hook(first=True)
     while not await rdb.set(cluster_lock_key, shard_id, ex=5, nx=True):
-        await asyncio.sleep(0.2)
-        i += 0.2
-        log.debug(f"Waiting for shard lock... ({i}s)")
+        await pre_lock_hook()
+        log.debug(f"Waiting for shard lock... ({time.monotonic() - start:.2}s)")
+
     log.info(f"Bucket {bucket_id} is available, launching shard ID {shard_id}")

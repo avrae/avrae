@@ -78,12 +78,13 @@ class Spellbook:
         if not 0 < level < 10:
             raise InvalidSpellLevel()
         lmax = self.get_max_slots(level)
-        if not 0 <= value <= lmax:
-            raise CounterOutOfBounds()
+        if value < 0:
+            raise CounterOutOfBounds(f"You do not have enough remaining level {level} spell slots.")
+        elif value > lmax:
+            raise CounterOutOfBounds(f"You may not have this many level {level} spell slots (max {lmax}).")
 
-        l = str(level)
         delta = value - self.get_slots(level)
-        self.slots[l] = value
+        self.slots[str(level)] = value
 
         if pact and level == self.pact_slot_level and self.max_pact_slots is not None:  # attempt to modify pact first
             self.num_pact_slots = max(min(self.num_pact_slots + delta, self.max_pact_slots), 0)
@@ -126,7 +127,7 @@ class Spellbook:
 
         val = self.get_slots(level) - 1
         if val < 0:
-            raise CounterOutOfBounds("You do not have any spell slots of this level remaining.")
+            raise CounterOutOfBounds(f"You do not have any level {level} spell slots remaining.")
 
         self.set_slots(level, val, pact=pact)
 

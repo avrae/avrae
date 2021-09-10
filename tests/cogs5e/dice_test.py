@@ -29,6 +29,7 @@ async def test_ma(avrae, dhttp):
 
     avrae.message("!ma kobold")
     await dhttp.receive_delete()
+    await dhttp.receive_typing()
     await dhttp.receive_message(embed=discord.Embed(title="A Kobold's Actions"))
 
     avrae.message("!ma kobold dagger")

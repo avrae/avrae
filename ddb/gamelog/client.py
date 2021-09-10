@@ -147,8 +147,13 @@ class GameLogClient:
             return
 
         # check: is the channel still there?
-        if (channel := guild.get_channel(campaign.channel_id)) is None:
+        if (channel := guild.get_channel_or_thread(campaign.channel_id)) is None:
             log.debug(f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event")
+            return
+
+        # check: do I have permissions to send messages to the channel?
+        if not channel.permissions_for(guild.me).send_messages:
+            log.debug(f"No permissions to send messages in channel {campaign.channel_id} - discarding event")
             return
 
         # set up the event context

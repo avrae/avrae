@@ -22,11 +22,10 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
-from utils.constants import DAMAGE_TYPES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES, SAVE_NAMES
+from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.functions import confirm, get_selection, search_and_select, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
-
 
 STAT_MOD_NAMES = ('strengthMod', 'dexterityMod', 'constitutionMod', 'intelligenceMod', 'wisdomMod', 'charismaMod')
 
@@ -161,9 +160,7 @@ class CollectableManagementGroup(commands.Group):
             return await ctx.send(embed=embed)
 
     async def list(self, ctx):
-        embed = first_embed = EmbedWithAuthor(ctx)
-        fields = 0
-        out = [embed]
+        ep = embeds.EmbedPaginator(EmbedWithAuthor(ctx))
 
         has_at_least_1 = False
 
@@ -171,8 +168,7 @@ class CollectableManagementGroup(commands.Group):
         user_obj_names = list(user_objs.keys())
         if user_obj_names:
             has_at_least_1 = True
-            fields += embeds.add_fields_from_long_text(embed, f"Your {self.obj_name_pl.title()}",
-                                                       ', '.join(sorted(user_obj_names)))
+            ep.add_field(f"Your {self.obj_name_pl.title()}", ', '.join(sorted(user_obj_names)))
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
             try:
@@ -181,22 +177,14 @@ class CollectableManagementGroup(commands.Group):
                 continue
             if bindings := subscription_doc[self.binding_key]:
                 has_at_least_1 = True
-                if fields >= embeds.MAX_NUM_FIELDS:
-                    embed = discord.Embed(colour=embed.colour)
-                    fields = 0
-                    out.append(embed)
-
-                embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
-                                inline=False)
-                fields += 1
+                ep.add_field(the_collection.name, ', '.join(sorted(ab['name'] for ab in bindings)))
 
         if not has_at_least_1:
-            first_embed.description = f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]" \
-                                      "(https://avrae.io/dashboard/workshop) to get some, " \
-                                      "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!"
+            ep.add_description(f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]"
+                               "(https://avrae.io/dashboard/workshop) to get some, "
+                               "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!")
 
-        for e in out:
-            await ctx.send(embed=e)
+        await ep.send_to(ctx)
 
     async def delete(self, ctx, name):
         if self.before_edit_check:

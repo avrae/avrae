@@ -206,7 +206,7 @@ class Character(StatBlock):
 
     @property
     def image(self) -> str:
-        return self.overrides.image or self._image
+        return self.overrides.image or self._image or ''
 
     # ---------- CSETTINGS ----------
     def get_setting(self, setting, default=None):
@@ -431,9 +431,14 @@ class Character(StatBlock):
         self.overrides = old_character.overrides
         self.cvars = old_character.cvars
 
-        # consumables
-        existing_cons_names = set(con.name.lower() for con in self.consumables)
-        self.consumables.extend(con for con in old_character.consumables if con.name.lower() not in existing_cons_names)
+        # consumables: no duplicate name or live (upstream) ids
+        new_cc_names = set(con.name.lower() for con in self.consumables)
+        new_cc_upstreams = set(con.live_id for con in self.consumables if con.live_id is not None)
+        self.consumables.extend(
+            con for con in old_character.consumables
+            if con.name.lower() not in new_cc_names
+            and con.live_id not in new_cc_upstreams
+        )
 
         # overridden spells
         self.spellbook.spells.extend(self.overrides.spells)

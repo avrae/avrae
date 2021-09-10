@@ -95,3 +95,7 @@ async def active_combat(avrae):
 class ContextBotProxy:
     def __init__(self, bot):
         self.bot = bot
+
+    @property
+    def channel(self):
+        return self.bot.get_channel(int(TEST_CHANNEL_ID))

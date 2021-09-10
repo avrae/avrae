@@ -7,6 +7,7 @@ import aiohttp
 from pymongo.errors import DuplicateKeyError
 
 import ddb
+from ddb.baseclient import BaseClient
 from ddb.gamelog.constants import AVRAE_EVENT_SOURCE, GAME_LOG_PUBSUB_CHANNEL
 from ddb.gamelog.context import GameLogEventContext
 from ddb.gamelog.errors import CampaignAlreadyLinked, CampaignLinkException, IgnoreEvent, LinkNotAllowed, NoCampaignLink
@@ -18,27 +19,26 @@ from utils.config import DDB_GAMELOG_ENDPOINT
 log = logging.getLogger(__name__)
 
 
-class GameLogClient:
+class GameLogClient(BaseClient):
+    SERVICE_BASE = DDB_GAMELOG_ENDPOINT
+    logger = log
+
     def __init__(self, bot):
         """
         :param bot: Avrae instance
         """
+        super().__init__(aiohttp.ClientSession(loop=bot.loop))
         self.bot = bot
         self.ddb = bot.ddb  # type: ddb.BeyondClient
         self.rdb = bot.rdb
         self.loop = bot.loop
         self._event_handlers = {}
 
-        self.http = None
-        self.loop.run_until_complete(self._initialize())
-
     def init(self):
         self.loop.create_task(self.main_loop())
 
-    async def _initialize(self):
-        """Initialize our async resources: aiohttp"""
-        self.http = aiohttp.ClientSession()  # this wants to run in a coroutine
-        log.info("Game Log client initialized")
+    async def close(self):
+        await self.http.close()
 
     # ==== campaign helpers ====
     async def create_campaign_link(self, ctx, campaign_id: str, overwrite=False):
@@ -91,14 +91,7 @@ class GameLogClient:
         try:
             data = message.to_dict()
             log.debug(f"Sending gamelog event {message.id!r}: {data}")
-            async with self.http.post(f"{DDB_GAMELOG_ENDPOINT}/postMessage",
-                                      headers={"Authorization": f"Bearer {ddb_user.token}"},
-                                      json=data) as resp:
-                log.debug(f"Game Log returned {resp.status} for request ID {message.id!r}")
-                if not 199 < resp.status < 300:
-                    log.warning(f"Game Log returned {resp.status}: {await resp.text()}")
-        except aiohttp.ServerTimeoutError:
-            log.warning("Timed out connecting to Game Log")
+            await self.post(ddb_user, '/postMessage', json=data)
         except Exception as e:
             self.bot.log_exception(e)
 

@@ -3,16 +3,21 @@ class DDBException(Exception):
     pass
 
 
-class WaterdeepException(DDBException):
+class ClientException(DDBException):
+    """Something happened in a service client"""
+    pass
+
+
+class WaterdeepException(ClientException):
     """Some Waterdeep HTTP exception happened"""
     pass
 
 
-class AuthException(DDBException):
+class AuthException(ClientException):
     """Something happened during auth that shouldn't have"""
     pass
 
 
-class CharacterServiceException(DDBException):
+class CharacterServiceException(ClientException):
     """Some error happened during a call to the character service"""
     pass

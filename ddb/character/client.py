@@ -1,35 +1,19 @@
 import logging
 from collections import namedtuple
 
-import aiohttp
-
+from ddb.baseclient import BaseClient
 from ddb.errors import CharacterServiceException
 from utils.config import DDB_CHARACTER_SERVICE_URL as CHARACTER_SERVICE_BASE
 
 log = logging.getLogger(__name__)
 
 
-class CharacterServiceClient:
-    def __init__(self, http):
-        self.http = http
+class CharacterServiceClient(BaseClient):
+    SERVICE_BASE = CHARACTER_SERVICE_BASE
+    logger = log
 
-    async def request(self, ddb_user, method, route, **kwargs):
-        """Performs a request on behalf of a DDB user."""
-        try:
-            async with self.http.request(method, f"{CHARACTER_SERVICE_BASE}{route}",
-                                         headers={"Authorization": f"Bearer {ddb_user.token}"},
-                                         **kwargs) as resp:
-                log.debug(f"{method} {CHARACTER_SERVICE_BASE}{route} returned {resp.status}")
-                if not 199 < resp.status < 300:
-                    raise CharacterServiceException(f"Character Service returned {resp.status}: {await resp.text()}")
-                try:
-                    data = await resp.json()
-                    log.debug(data)
-                except (aiohttp.ContentTypeError, ValueError, TypeError):
-                    raise CharacterServiceException(
-                        f"Could not deserialize Character Service response: {await resp.text()}")
-        except aiohttp.ServerTimeoutError:
-            raise CharacterServiceException("Timed out connecting to Character Service")
+    async def request(self, *args, **kwargs):
+        data = await super().request(*args, **kwargs)
         if not data['success']:
             raise CharacterServiceException(f"Character Service returned an error: {data['message']}")
         return CharacterServiceResponse(data['id'], data['message'], data['data'])
@@ -42,7 +26,7 @@ class CharacterServiceClient:
             "uses": uses,
             "characterId": character_id
         }
-        return await self.request(ddb_user, 'PUT', '/action/limited-use', json=data)
+        return await self.put(ddb_user, '/action/limited-use', json=data)
 
     # ==== Life ====
     async def set_damage_taken(self, ddb_user, removed_hit_points: int, temporary_hit_points: int, character_id: int):
@@ -51,7 +35,7 @@ class CharacterServiceClient:
             "temporaryHitPoints": temporary_hit_points,
             "characterId": character_id
         }
-        return await self.request(ddb_user, 'PUT', '/life/hp/damage-taken', json=data)
+        return await self.put(ddb_user, '/life/hp/damage-taken', json=data)
 
     async def set_death_saves(self, ddb_user, success_count: int, fail_count: int, character_id: int):
         data = {
@@ -59,7 +43,7 @@ class CharacterServiceClient:
             "failCount": fail_count,
             "characterId": character_id
         }
-        return await self.request(ddb_user, 'PUT', '/life/death-saves', json=data)
+        return await self.put(ddb_user, '/life/death-saves', json=data)
 
     # ==== Spell ====
     async def set_pact_magic(self, ddb_user, level1: int, level2: int, level3: int, level4: int, level5: int,
@@ -72,7 +56,7 @@ class CharacterServiceClient:
             "level5": level5,
             "characterId": character_id
         }
-        return await self.request(ddb_user, 'PUT', '/spell/pact-magic', json=data)
+        return await self.put(ddb_user, '/spell/pact-magic', json=data)
 
     async def set_spell_slots(self, ddb_user, level1: int, level2: int, level3: int, level4: int, level5: int,
                               level6: int, level7: int, level8: int, level9: int, character_id: int):
@@ -88,7 +72,7 @@ class CharacterServiceClient:
             "level9": level9,
             "characterId": character_id
         }
-        return await self.request(ddb_user, 'PUT', '/spell/slots', json=data)
+        return await self.put(ddb_user, '/spell/slots', json=data)
 
 
 CharacterServiceResponse = namedtuple('CharacterServiceResponse', 'id message data')

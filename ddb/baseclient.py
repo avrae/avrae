@@ -4,7 +4,7 @@ import logging
 import aiohttp
 
 from .auth import BeyondUser
-from .errors import ClientException
+from .errors import ClientResponseError, ClientTimeoutError, ClientValueError
 
 
 class BaseClient(abc.ABC):
@@ -26,7 +26,7 @@ class BaseClient(abc.ABC):
                     data = await resp.text()
                     self.logger.warning(
                         f"{method} {self.SERVICE_BASE}{route} returned {resp.status} {resp.reason}\n{data}")
-                    raise ClientException(f"Service returned {resp.status}: {resp.reason}")
+                    raise ClientResponseError(f"D&D Beyond returned an error: {resp.status}: {resp.reason}")
                 try:
                     data = await resp.json()
                     self.logger.debug(data)
@@ -34,10 +34,10 @@ class BaseClient(abc.ABC):
                     data = await resp.text()
                     self.logger.warning(
                         f"{method} {self.SERVICE_BASE}{route} response could not be deserialized:\n{data}")
-                    raise ClientException(f"Could not deserialize service response: {data}")
+                    raise ClientValueError(f"Could not deserialize D&D Beyond response: {data}")
         except aiohttp.ServerTimeoutError:
             self.logger.warning(f"Request timeout: {method} {self.SERVICE_BASE}{route}")
-            raise ClientException("Timed out connecting to service")
+            raise ClientTimeoutError("Timed out connecting to D&D Beyond. Please try again in a few minutes.")
         return data
 
     async def get(self, ddb_user: BeyondUser, route: str, **kwargs):

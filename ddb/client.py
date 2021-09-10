@@ -7,10 +7,9 @@ import cachetools
 from boto3.dynamodb.conditions import Key
 
 from cogsmisc.stats import Stats
-from ddb import auth, campaign, character, entitlements
-from ddb.errors import AuthException, WaterdeepException
+from ddb import auth, character, entitlements, waterdeep
+from ddb.errors import AuthException
 from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, \
-    DDB_WATERDEEP_URL as WATERDEEP_BASE, \
     DYNAMO_ENTITY_TABLE, DYNAMO_REGION, DYNAMO_USER_TABLE
 
 # dynamo
@@ -37,16 +36,13 @@ class BeyondClientBase:  # for development - assumes no entitlements
     async def get_ddb_user(self, ctx, user_id=None):
         return None
 
-    async def get_active_campaigns(self, ctx, user):
-        return []
-
     async def close(self):
         pass
 
 
 class BeyondClient(BeyondClientBase):
     """
-    Client to interface with DDB's Auth Service and Entitlements tables in DynamoDB.
+    Client to interface with DDB's services and Entitlements tables in DynamoDB.
     Asyncio-compatible.
 
     Most methods are private since local dev environments cannot connect to the DDB stack, and
@@ -55,8 +51,9 @@ class BeyondClient(BeyondClientBase):
     """
 
     def __init__(self, loop):
-        self.http = None
-        self.character = None
+        self.http = aiohttp.ClientSession(loop=loop)
+        self.character = character.CharacterServiceClient(self.http)
+        self.waterdeep = waterdeep.WaterdeepClient(self.http)
 
         self._dynamo = None
         self._ddb_user_table = None
@@ -64,10 +61,7 @@ class BeyondClient(BeyondClientBase):
         loop.run_until_complete(self._initialize())
 
     async def _initialize(self):
-        """Initialize our async resources: aiohttp, aioboto3"""
-        self.http = aiohttp.ClientSession()
-        self.character = character.CharacterServiceClient(self.http)
-
+        """Initialize our async resources: aioboto3"""
         self._dynamo = await aioboto3.resource('dynamodb', region_name=DYNAMO_REGION).__aenter__()
         self._ddb_user_table = await self._dynamo.Table(DYNAMO_USER_TABLE)
         self._ddb_entity_table = await self._dynamo.Table(DYNAMO_ENTITY_TABLE)
@@ -149,35 +143,6 @@ class BeyondClient(BeyondClientBase):
         )
 
         return user
-
-    async def get_active_campaigns(self, ctx, user):
-        """
-        Gets a list of campaigns the given user is in.
-
-        GET /api/campaign/stt/active-campaigns
-
-        :type ctx: discord.ext.commands.Context
-        :param user: The DDB user.
-        :type user: auth.BeyondUser
-        :rtype: list[campaign.ActiveCampaign]
-        """
-        try:
-            async with self.http.get(f"{WATERDEEP_BASE}/api/campaign/stt/active-campaigns",
-                                     headers={"Authorization": f"Bearer {user.token}"}) as resp:
-                if not 199 < resp.status < 300:
-                    log.warning(f"Bad Waterdeep response: {resp.status}\n{await resp.text()}")
-                    raise WaterdeepException(f"D&D Beyond returned an error: {resp.status} {resp.reason}")
-                try:
-                    data = await resp.json()
-                except (aiohttp.ContentTypeError, ValueError, TypeError):
-                    log.warning(f"Bad Waterdeep response (deserialize): {resp.status}\n{await resp.text()}")
-                    raise WaterdeepException("Could not deserialize D&D Beyond response.")
-        except aiohttp.ServerTimeoutError:
-            raise WaterdeepException("Timed out connecting to D&D Beyond.")
-        if not data.get('status') == 'success':
-            log.warning(f"Bad Waterdeep response (data): {resp.status}\n{data}")
-            raise WaterdeepException(f"D&D Beyond returned an error: {data}")
-        return [campaign.ActiveCampaign.from_json(j) for j in data['data']]
 
     # ==== entitlement helpers ====
     async def _get_user_entitlements(self, ctx, user_id):

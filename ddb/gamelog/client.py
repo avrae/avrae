@@ -55,7 +55,7 @@ class GameLogClient(BaseClient):
         if ddb_user is None:
             raise CampaignLinkException("You do not have a D&D Beyond account connected to your Discord account. "
                                         "Connect your accounts at <https://www.dndbeyond.com/account>!")
-        active_campaigns = await self.ddb.get_active_campaigns(ctx, ddb_user)
+        active_campaigns = await self.ddb.waterdeep.get_active_campaigns(ddb_user)
         the_campaign = next((c for c in active_campaigns if c.id == campaign_id), None)
 
         if the_campaign is None:  # the user is not in the campaign

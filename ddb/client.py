@@ -52,8 +52,10 @@ class BeyondClient(BeyondClientBase):
 
     def __init__(self, loop):
         self.http = aiohttp.ClientSession(loop=loop)
+
         self.character = character.CharacterServiceClient(self.http)
         self.waterdeep = waterdeep.WaterdeepClient(self.http)
+        self.scds = character.CharacterStorageServiceClient(self.http)
 
         self._dynamo = None
         self._ddb_user_table = None

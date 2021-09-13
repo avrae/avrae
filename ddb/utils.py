@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+
 from utils.functions import get_guild_member, user_from_id
 
 
@@ -29,3 +31,17 @@ async def ddb_id_to_discord_user(ctx, ddb_user_id, guild=None):
         return await get_guild_member(guild, discord_id)
     else:
         return await user_from_id(ctx, discord_id)
+
+
+# ==== pydantic helpers ====
+def snake_to_lowercamel(snake_case):
+    """Converts an identifier in snake_case to lowerCamelCase."""
+    first, *others = snake_case.split('_')
+    return first + ''.join(word.capitalize() for word in others)
+
+
+class ApiBaseModel(BaseModel):
+    """A base pydantic model with camelCase aliases for each property."""
+
+    class Config:
+        alias_generator = snake_to_lowercamel

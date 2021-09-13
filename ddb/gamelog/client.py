@@ -147,7 +147,7 @@ class GameLogClient:
             return
 
         # check: is the channel still there?
-        if (channel := guild.get_channel(campaign.channel_id)) is None:
+        if (channel := guild.get_channel_or_thread(campaign.channel_id)) is None:
             log.debug(f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event")
             return
 

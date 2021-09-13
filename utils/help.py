@@ -19,10 +19,9 @@ class AvraeHelp(HelpCommand):
     def get_ending_note(self):
         """Returns help command's ending note. This is mainly useful to override for i18n purposes."""
         command_name = self.invoked_with
-        return "An underlined command signifies that the command has subcommands.\n" \
-               "Type {0}{1} <command> for more info on a command.\n" \
-               "You can also type {0}{1} <category> for more info on a category.".format(self.clean_prefix,
-                                                                                         command_name)
+        return f"An underlined command signifies that the command has subcommands.\n" \
+               f"Type {self.context.clean_prefix}{command_name} <command> for more info on a command.\n" \
+               f"You can also type {self.context.clean_prefix}{command_name} <category> for more info on a category."
 
     def add_commands(self, commands, *, heading):
         """Adds a list of formatted commands under a field title."""

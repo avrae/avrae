@@ -10,9 +10,10 @@ from cogs5e.models import embeds
 from cogs5e.models.automation.results import AttackResult, DamageResult, RollResult, SaveResult, TempHPResult
 from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
-from cogs5e.utils import gamelogutils
+from cogs5e.utils import gamelogutils, gameutils
 from ddb.dice import RollContext, RollKind, RollRequest, RollRequestRoll, RollType
 from ddb.gamelog import CampaignLink
+from ddb.gamelog.context import GameLogEventContext
 from ddb.gamelog.errors import LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.event import GameLogEvent
 from utils import checks, constants
@@ -32,8 +33,9 @@ class GameLog(commands.Cog):
         self.bot = bot
 
         self._gl_callbacks = {
-            'dice/roll/fulfilled': self.dice_roll
             'dice/roll/pending': self.dice_roll_begin,
+            'dice/roll/fulfilled': self.dice_roll,
+            'character-sheet/character-update/fulfilled': self.character_update_fulfilled
         }
         for event_type, callback in self._gl_callbacks.items():
             self.bot.glclient.register_callback(event_type, callback)
@@ -74,7 +76,8 @@ class GameLog(commands.Cog):
             return await ctx.send("This campaign is already linked to this channel.")
         elif existing_link is not None:
             result = await confirm(
-                ctx, "This campaign is already linked to another channel. Link it to this one instead? (Reply with yes/no)")
+                ctx,
+                "This campaign is already linked to another channel. Link it to this one instead? (Reply with yes/no)")
             if not result:
                 return await ctx.send("Ok, canceling.")
 
@@ -329,6 +332,23 @@ class GameLog(commands.Cog):
                 await gctx.send(embed=embed)
         else:
             await gctx.send(embed=embed)
+
+    # ---- character ---- # todo break these out into callback classes
+    async def character_update_fulfilled(self, gctx: GameLogEventContext):
+        data = ddb.character.scds_types.SCDSMessageBrokerData.parse_obj(gctx.event.data)
+        character_id = data.character_id
+        ddb_user = await self.bot.ddb.get_ddb_user(gctx, gctx.discord_user_id)
+        resp = await self.bot.ddb.scds.get_characters(ddb_user, [character_id])
+        if not resp.found_characters:
+            return
+        scds_char = resp.found_characters[0]
+        char = await gctx.get_character()
+
+        char.hp = scds_char.hit_point_info.current
+        char._max_hp = scds_char.hit_point_info.maximum
+        char.temp_hp = scds_char.hit_point_info.temp
+        await char.commit(gctx, do_live_integrations=False)
+        await gameutils.send_hp_result(gctx, char)
 
     # ==== game log send methods ====
     # to access, get the cog from the handler function that is making the checks and call these

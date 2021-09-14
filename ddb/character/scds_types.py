@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 from ddb.utils import ApiBaseModel
 
 
+# ==== REST ====
 class SimplifiedAbility(ApiBaseModel):
     name: str
     label: str
@@ -156,3 +157,8 @@ class SimplifiedCharacterData(ApiBaseModel):
     speeds: List[SimplifiedSpeed]
     user_id: int
     vulnerabilities: List[SimplifiedDamageAdjustment]
+
+
+# ==== game log ====
+class SCDSMessageBrokerData(ApiBaseModel):
+    character_id: int

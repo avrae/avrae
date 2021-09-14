@@ -255,7 +255,7 @@ class Character(StatBlock):
         return out
 
     # ---------- DATABASE ----------
-    async def commit(self, ctx):
+    async def commit(self, ctx, do_live_integrations=True):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
         data.pop('active')  # #1472 - may regress when doing atomic commits, be careful
@@ -270,7 +270,7 @@ class Character(StatBlock):
             )
         except OverflowError:
             raise ExternalImportError("A number on the character sheet is too large to store.")
-        if self._live_integration is not None:
+        if self._live_integration is not None and do_live_integrations:
             asyncio.create_task(self._live_integration.commit(ctx))  # fire off a sync eventually
 
     async def set_active(self, ctx):

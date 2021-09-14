@@ -32,7 +32,7 @@ class GameLog(commands.Cog):
         self.bot = bot
 
         self._gl_callbacks = {
-            'dice/roll/begin': self.dice_roll,
+            'dice/roll/begin': self.dice_roll_begin,
             'dice/roll/fulfilled': self.dice_roll
         }
         for event_type, callback in self._gl_callbacks.items():

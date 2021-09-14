@@ -149,7 +149,7 @@ class Tutorials(commands.Cog):
             return
 
         embed = discord.Embed()
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar.url)
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.display_avatar.url)
         embed.colour = discord.Colour.blurple()
         embed.description = textwrap.dedent(f"""
         :wave: Hi there! Thanks for adding me to {guild.name}!

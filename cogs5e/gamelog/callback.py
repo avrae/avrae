@@ -1,6 +1,9 @@
 import abc
 import inspect
 from types import MappingProxyType
+from typing import Any, Callable, Coroutine, TypeVar
+
+from ddb.gamelog.context import GameLogEventContext
 
 
 class GameLogCallbackHandler(abc.ABC):
@@ -33,14 +36,21 @@ class GameLogCallbackHandler(abc.ABC):
             self.bot.glclient.deregister_callback(event_type)
 
 
-def callback(event_name):
+F1 = Callable[[GameLogEventContext], Coroutine[Any]]
+F2 = Callable[[GameLogEventContext, Any], Coroutine[Any]]
+F = TypeVar('F', F1, F2)
+
+
+def callback(event_name: str) -> Callable[[F], F]:
     """
     A function that returns a decorator that marks the decorated function as a callback for the provided event name.
 
-    The decorated function must take at least one argument of type GameLogEventContext.
+    The decorated function must take at least one argument of type GameLogEventContext. If the decorated function takes
+    a second argument, the value passed to that argument will be the event's data (optionally cast to a type provided by
+    the argument's type annotation).
     """
 
-    def decorator(func):
+    def decorator(func: F) -> F:
         func.__callback_type = event_name
         return func
 

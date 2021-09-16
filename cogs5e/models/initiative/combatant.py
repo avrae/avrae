@@ -466,12 +466,17 @@ class MonsterCombatant(Combatant):
         self._monster_id = monster_id
 
     @classmethod
-    def from_monster(cls, monster, ctx, combat, name, controller_id, init, private, hp=None, ac=None):
+    def from_monster(cls, monster, ctx, combat, name, controller_id, init, private, stats=None, skills=None, saves=None, hp=None, ac=None):
         monster_name = monster.name
         creature_type = monster.creature_type
         hp = int(monster.hp) if not hp else int(hp)
         ac = int(monster.ac) if not ac else int(ac)
         id = create_combatant_id()
+        
+        # make sure stats are set
+        stats=(stats if stats else monster.stats)
+        skills=(skills if skills else monster.skills)
+        saves=(saves if saves else monster.saves)
 
         # copy spellbook
         spellbook = None
@@ -480,11 +485,11 @@ class MonsterCombatant(Combatant):
 
         # copy resistances (#1134)
         resistances = monster.resistances.copy()
-
+                
         return cls(ctx, combat, id, name, controller_id, private, init,
                    # statblock info
-                   stats=monster.stats, levels=monster.levels, attacks=monster.attacks,
-                   skills=monster.skills, saves=monster.saves, resistances=resistances,
+                   stats=stats, levels=monster.levels, attacks=monster.attacks,
+                   skills=skills, saves=saves, resistances=resistances,
                    spellbook=spellbook, ac=ac, max_hp=hp,
                    # monster specific
                    monster_name=monster_name, monster_id=monster.entity_id, creature_type=creature_type)

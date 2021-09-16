@@ -345,20 +345,6 @@ def xp_by_cr(cr):
             '16': 15000, '17': 18000, '18': 20000, '19': 22000, '20': 25000, '21': 33000, '22': 41000, '23': 50000,
             '24': 62000, '25': 75000, '26': 90000, '27': 105000, '28': 120000, '29': 135000, '30': 155000}.get(cr, 0)
 
-
-def _calc_prof(stats, saves, skills):
-    """HACK: Calculates proficiency bonus from save/skill proficiencies."""
-    prof = None
-    for skill_name, skill in itertools.chain(saves, skills):
-        if skill.prof == 1:
-            prof = skill.value - stats.get_mod(SKILL_MAP[skill_name])
-            break
-
-    if prof is not None:
-        return prof
-    return 0
-
-
 def floatify_cr(cr: str) -> float:
     return {'1/8': 0.125, '1/4': 0.25, '1/2': 0.5}.get(cr) or float(cr)
 

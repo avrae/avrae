@@ -118,7 +118,7 @@ class Spellbook:
     def cast(self, spell, level):
         """
         Uses the resources to cast *spell* at *level*.
-
+ABILITY
         :type spell: :class:`~cogs5e.models.spell.Spell`
         :type level: int
         """

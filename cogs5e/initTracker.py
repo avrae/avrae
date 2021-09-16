@@ -14,7 +14,7 @@ from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
-from cogs5e.models.sheet.base import Skill
+from cogs5e.models.sheet.base import BaseStats, Saves, Skills, Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
@@ -22,6 +22,7 @@ from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import constants
 from utils.argparser import argparse
+from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
@@ -212,6 +213,8 @@ class InitTracker(commands.Cog):
         -thp <thp> - Sets starting THP.
         -ac <ac> - Sets the combatant's starting AC.
         -note <note> - Sets the combatant's note.
+        -pro|str|dex|con|int|wis|cha <value> - Sets the monster's ability score to the given number. Does not effect attack rolls or spells. Min of 0, max of 100 for each stat.
+        -myskills - Checks if a player is currently in combat, and if so, copies their current skill and save proficiencies to this creature.
         """
 
         monster = await select_monster_full(ctx, monster_name, pm=True)
@@ -230,10 +233,33 @@ class InitTracker(commands.Cog):
         n = args.last('n', 1)
         note = args.last('note')
         name_template = args.last('name', monster.name[:2].upper() + '#')
-        init_skill = monster.skills.initiative
 
         combat = await Combat.from_ctx(ctx)
-
+        
+        # Check for custom stats
+        cust={}
+        for stat in (('pro',)+STAT_ABBREVIATIONS):
+            if (stat_arg := args.last(stat, type_=int)):
+                cust[stat]= (max(max(stat_arg,100),0))
+        
+        if args.get("myskills"):
+            char: Character = await Character.from_ctx(ctx)
+            addiskls=char.skills
+            addisvs=char.saves
+        else:
+            addiskls=None
+            addisvs=None
+        
+        # Evaluate custom stats
+        if cust!={}:
+            stts=BaseStats.custstats(cust,monster.stats)
+            sklls=Skills.custskills(monster.skills,stts,addiskls)
+            svs=Saves.custsaves(monster.saves,stts,addisvs)
+        else:
+            (stts,sklls,svs)=(monster.stats,monster.skills,monster.saves)
+        
+        init_skill = sklls.initiative
+        
         out = ''
         to_pm = ''
 
@@ -283,7 +309,7 @@ class InitTracker(commands.Cog):
                     to_pm += f"{name} began with {rolled_hp.result} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
-                me = MonsterCombatant.from_monster(monster, ctx, combat, name, controller, init, private,
+                me = MonsterCombatant.from_monster(monster, ctx, combat, name, controller, init, private, stts, sklls, svs,
                                                    hp=hp or rolled_hp, ac=ac)
 
                 # -thp (#1142)

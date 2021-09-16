@@ -238,9 +238,9 @@ class InitTracker(commands.Cog):
         
         # Check for custom stats
         cust={}
-        for i in args:
-            if i in STAT_ABBREVIATIONS:
-                cust[i]=args.last(i, type_=int)
+        for stat in (('pro',)+STAT_ABBREVIATIONS):
+            if (stat_arg := args.last(stat, type_=int)):
+                cust[stat]= (max(max(stat_arg,100),0))
         
         if args.get("myskills"):
             char: Character = await Character.from_ctx(ctx)

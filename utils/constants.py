@@ -3,13 +3,11 @@ RESIST_TYPES = ('resist', 'immune', 'vuln', 'neutral')
 DAMAGE_TYPES = ('acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison',
                 'psychic', 'radiant', 'slashing', 'thunder')
 
-ABILITY_NAMES = ('prof_bonus','strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma')
-
 STAT_NAMES = ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma')
 
-STAT_ABBREVIATIONS = ('pro','str', 'dex', 'con', 'int', 'wis', 'cha')
+STAT_ABBREVIATIONS = ('str', 'dex', 'con', 'int', 'wis', 'cha')
 
-STAT_ABBR_MAP = {'pro': 'Proficiency Bonus','str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
+STAT_ABBR_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
                  'int': 'Intelligence', 'wis': 'Wisdom', 'cha': 'Charisma'}
 
 SKILL_NAMES = ('acrobatics', 'animalHandling', 'arcana', 'athletics', 'deception', 'history', 'initiative', 'insight',

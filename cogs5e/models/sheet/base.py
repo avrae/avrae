@@ -1,4 +1,4 @@
-from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES, ABILITY_NAMES
+from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.functions import camel_to_title, verbose_stat
 
 
@@ -60,7 +60,8 @@ class BaseStats:
                f"**CHA**: {self.charisma} ({(self.charisma - 10) // 2:+})"
 
     def __getitem__(self, item):  # little bit hacky, but works
-        if item not in ABILITY_NAMES:
+        abils=('pro',)+STAT_ABBREVIATIONS
+        if item not in abils:
             raise ValueError(f"{item} is not a stat.")
         return getattr(self, item)
 

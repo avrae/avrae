@@ -1,4 +1,4 @@
-from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
+from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES, ABILITY_NAMES
 from utils.functions import camel_to_title, verbose_stat
 
 
@@ -28,19 +28,29 @@ class BaseStats:
     @classmethod
     def default(cls):
         return cls(0, 10, 10, 10, 10, 10, 10)
+    
+    @classmethod
+    def custstats(cls,cust,origstats):
+        stats=[]
+        for i in range(len(STAT_ABBREVIATIONS)):
+            stat=STAT_ABBREVIATIONS[i]
+            stats.append(cust[stat] if stat in cust.keys() else origstats.get_mod(stat))
+        return cls(stats[0],stats[1],stats[2],stats[3],stats[4],stats[5],stats[6])
+            
 
     def get_mod(self, stat: str):
         abbr_stat = stat.lower()[:3]
         if abbr_stat not in STAT_ABBREVIATIONS:
             raise ValueError(f"{stat} is not a valid stat.")
         return {
-            'str': self.strength // 2 - 5, 'dex': self.dexterity // 2 - 5,
+            'pro': self.prof_bonus, 'str': self.strength // 2 - 5, 'dex': self.dexterity // 2 - 5,
             'con': self.constitution // 2 - 5, 'int': self.intelligence // 2 - 5,
             'wis': self.wisdom // 2 - 5, 'cha': self.charisma // 2 - 5
         }[abbr_stat]
 
     def __str__(self):
-        return f"**STR**: {self.strength} ({(self.strength - 10) // 2:+}) " \
+        return f"**PRO**: +{self.prof_bonus} " \
+               f"**STR**: {self.strength} ({(self.strength - 10) // 2:+}) " \
                f"**DEX**: {self.dexterity} ({(self.dexterity - 10) // 2:+}) " \
                f"**CON**: {self.constitution} ({(self.constitution - 10) // 2:+})\n" \
                f"**INT**: {self.intelligence} ({(self.intelligence - 10) // 2:+}) " \
@@ -48,7 +58,7 @@ class BaseStats:
                f"**CHA**: {self.charisma} ({(self.charisma - 10) // 2:+})"
 
     def __getitem__(self, item):  # little bit hacky, but works
-        if item not in STAT_NAMES:
+        if item not in ABILITY_NAMES:
             raise ValueError(f"{item} is not a stat.")
         return getattr(self, item)
 
@@ -172,6 +182,18 @@ class Skills:
         for skill in SKILL_NAMES:
             skills[skill] = Skill(base_stats.get_mod(SKILL_MAP[skill]))
         return cls(skills)
+    
+    @classmethod
+    def custskills(cls, origskills, custstats: BaseStats = None, addiskls = None):
+        """Returns a skills object with skills set to default values, based on stats."""
+        if custstats is None:
+            custstats = BaseStats.default()
+        skills = {}
+        for skill in SKILL_NAMES:
+            skills[skill] = Skill(custstats.get_mod(SKILL_MAP[skill])+(custstats.get_mod('pro')*max(origskills[skill].prof,(addiskls[skill].prof if addiskls!=None else 0)))
+                                    +origskills[skill].bonus, max(origskills[skill].prof,(addiskls[skill].prof if addiskls!=None else 0)), 
+                                    origskills[skill].bonus, origskills[skill].adv)
+        return cls(skills)
 
     def update(self, explicit_skills: dict):
         """
@@ -254,6 +276,19 @@ class Saves:
         saves = {}
         for save in SAVE_NAMES:
             saves[save] = Skill(base_stats.get_mod(SKILL_MAP[save]))
+        return cls(saves)
+    
+    @classmethod
+    def custsaves(cls, origsaves, custstats: BaseStats = None, addisvs = None):
+        """Returns a saves object with saves set to default values, based on stats."""
+        if custstats is None:
+            custstats = BaseStats.default()
+        saves = {}
+        for save in SAVE_NAMES:
+            saves[save] = Skill(custstats.get_mod(SKILL_MAP[save])+(custstats.get_mod('pro')*max(origsaves[save].prof,
+                                (addisvs[save].prof if addisvs!=None else 0)))+origsaves[save].bonus,
+                                max(origsaves[save].prof,(addisvs[save].prof if addisvs!=None else 0)),
+                                origsaves[save].bonus, origsaves[save].adv)
         return cls(saves)
 
     def update(self, explicit_saves: dict):

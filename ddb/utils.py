@@ -45,3 +45,8 @@ class ApiBaseModel(BaseModel):
 
     class Config:
         alias_generator = snake_to_lowercamel
+
+    # compatibility w/ @callback gamelog decorator
+    @classmethod
+    def from_dict(cls, d):
+        return cls.parse_obj(d)

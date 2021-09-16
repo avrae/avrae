@@ -6,8 +6,10 @@ from .callback import GameLogCallbackHandler, callback
 
 class CharacterHandler(GameLogCallbackHandler):
     @callback('character-sheet/character-update/fulfilled')
-    async def character_update_fulfilled(self, gctx: GameLogEventContext):
-        data = ddb.character.scds_types.SCDSMessageBrokerData.parse_obj(gctx.event.data)
+    async def character_update_fulfilled(
+            self,
+            gctx: GameLogEventContext,
+            data: ddb.character.scds_types.SCDSMessageBrokerData):
         character_id = data.character_id
         ddb_user = await self.bot.ddb.get_ddb_user(gctx, gctx.discord_user_id)
         resp = await self.bot.ddb.scds.get_characters(ddb_user, [character_id])

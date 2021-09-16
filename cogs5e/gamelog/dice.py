@@ -17,11 +17,10 @@ class DiceHandler(GameLogCallbackHandler):
         await gctx.trigger_typing()
 
     @callback('dice/roll/fulfilled')
-    async def dice_roll(self, gctx):
+    async def dice_roll(self, gctx, roll_request: ddb.dice.RollRequest):
         """
         Sends a message with the result of the roll, similar to `!r`.
         """
-        roll_request = ddb.dice.RollRequest.from_dict(gctx.event.data)
         if not roll_request.rolls:  # do nothing if there are no rolls actually made
             return
         elif len(roll_request.rolls) > 1:  # if there are multiple rolls in the same event, just use the default handler

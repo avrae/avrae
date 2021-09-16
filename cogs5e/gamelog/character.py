@@ -1,6 +1,6 @@
 import ddb
 from cogs5e.utils import gameutils
-from ddb.gamelog.context import GameLogEventContext
+from ddb.gamelog import GameLogEventContext
 from .callback import GameLogCallbackHandler, callback
 
 

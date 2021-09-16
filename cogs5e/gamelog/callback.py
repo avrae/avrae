@@ -4,7 +4,7 @@ import inspect
 from types import MappingProxyType
 from typing import Any, Callable, Coroutine, TypeVar, Union
 
-from ddb.gamelog.context import GameLogEventContext
+from ddb.gamelog import GameLogEventContext
 
 
 class GameLogCallbackHandler(abc.ABC):

@@ -61,6 +61,7 @@ class SimpleCombat:
     def get_combatant_by_id(self, combatant_id):
         """
         Gets a :class:`~aliasing.api.combat.SimpleCombatant` by their unique identifier.
+        A :class:`~aliasing.api.combat.SimpleCombatant` identifier is in the format of a UUID4.
 
         :param str combatant_id: The id of the combatant to get.
         :return: The combatant, or None

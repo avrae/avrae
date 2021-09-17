@@ -58,6 +58,20 @@ class SimpleCombat:
             return SimpleCombatant(combatant)
         return None
 
+    def get_combatant_by_id(self, combatant_id):
+        """
+        Gets a :class:`~aliasing.api.combat.SimpleCombatant` by their unique identifier.
+
+        :param str combatant_id: The id of the combatant to get.
+        :return: The combatant, or None
+        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
+        """
+        combatant_id = str(combatant_id)
+        combatant = self._combat.combatant_by_id(combatant_id)
+        if combatant:
+            return SimpleCombatant(combatant)
+        return None
+
     def get_group(self, name):
         """
         Gets a :class:`~aliasing.api.combat.SimpleGroup`, fuzzy searching (partial match) on name.
@@ -160,6 +174,15 @@ class SimpleCombatant(AliasStatBlock):
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
+
+    @property
+    def id(self):
+        """
+        The combatant's unique identifier.
+
+        :rtype: str
+        """
+        return self._combatant.id
 
     @property
     def note(self):

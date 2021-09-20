@@ -40,13 +40,13 @@ class Character(StatBlock):
             log.warning(f"Unused kwargs: {kwargs}")
         if actions is None:
             actions = Actions()
+        if active_guilds is None:
+            active_guilds = []
         # sheet metadata
         self._owner = owner
         self._upstream = upstream
         self._active = active
-        if active_guilds is None:
-            active_guilds = []
-        self.active_guilds = active_guilds
+        self._active_guilds = active_guilds
         self._sheet_type = sheet_type
         self._import_version = import_version
 
@@ -100,10 +100,11 @@ class Character(StatBlock):
         return inst
 
     @classmethod
-    async def from_ctx(cls, ctx):
+    async def from_ctx(cls, ctx, ignoreGuild: bool = False):
         owner_id = str(ctx.author.id)
-        guild_id = (str(ctx.guild.id) if ctx.guild is not None else None)
-        if guild_id:
+        active_character = None
+        if ctx.guild and not ignoreGuild:
+            guild_id = str(ctx.guild.id)
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
         if active_character is None:
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
@@ -118,34 +119,7 @@ class Character(StatBlock):
             inst = cls.from_dict(active_character)
             cls._cache[owner_id, active_character['upstream']] = inst
             return inst
-        
-    @classmethod
-    async def get_global(cls, ctx):
-        owner_id = str(ctx.author.id)
-        active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
-        if active_character is None:
-            raise NoCharacter()
-
-        try:
-            # return from cache if available
-            return cls._cache[owner_id, active_character['upstream']]
-        except KeyError:
-            # otherwise deserialize and write to cache
-            inst = cls.from_dict(active_character)
-            cls._cache[owner_id, active_character['upstream']] = inst
-            return inst
-        
-    async def remove_server(self, ctx):
-        guild_id = (str(ctx.guild.id) if ctx.guild is not None else None)
-        if guild_id is not None:
-            await ctx.bot.mdb.characters.update_many(
-                {"owner": str(ctx.author.id), "active_guilds": guild_id},
-                {"$pull": {"active_guilds": guild_id}}
-            )
-            guilds=await ctx.bot.mdb.characters.find({"owner": str(ctx.author.id), "upstream": self._upstream},
-                {"active_guilds": 1, "_id": 0}).to_list(None)
-            self.active_guilds=guilds[0]["active_guilds"]
-
+    
     @classmethod
     async def from_bot_and_ids(cls, bot, owner_id: str, character_id: str):
         owner_id = str(owner_id)
@@ -192,7 +166,7 @@ class Character(StatBlock):
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
             "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict(),
-            "active_guilds": self.active_guilds
+            "active_guilds": self._active_guilds
         })
         return d
 
@@ -292,12 +266,13 @@ class Character(StatBlock):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
         data.pop('active')  # #1472 - may regress when doing atomic commits, be careful
+        data.pop('active_guilds')
         try:
             await ctx.bot.mdb.characters.update_one(
                 {"owner": self._owner, "upstream": self._upstream},
                 {
                     "$set": data,
-                    "$setOnInsert": {'active': self._active}  # also #1472
+                    "$setOnInsert": {'active': self._active,'active_guilds': self._active_guilds}  # also #1472
                 },
                 upsert=True
             )
@@ -307,12 +282,12 @@ class Character(StatBlock):
     async def set_active(self, ctx):
         """Sets the character as active and removes the active character from the current server if possible."""
         self._active = True
-        guild_id = (str(ctx.guild.id) if ctx.guild is not None else None)
-        if guild_id:
+        if ctx.guild:
+            guild_id = str(ctx.guild.id)
             await ctx.bot.mdb.characters.update_many(
                 {"owner": str(ctx.author.id), "active_guilds": guild_id},
                 {"$pull": {"active_guilds": guild_id}}
-        )
+            )
         await ctx.bot.mdb.characters.update_many(
             {"owner": str(ctx.author.id), "active": True},
             {"$set": {"active": False}}
@@ -321,22 +296,34 @@ class Character(StatBlock):
             {"owner": str(ctx.author.id), "upstream": self._upstream},
             {"$set": {"active": True}}
         )
-        
-    async def set_server(self, ctx):
-        """Sets the active character on the current server."""
-        guild_id = (str(ctx.guild.id) if ctx.guild is not None else None)
-        if guild_id:
-            await ctx.bot.mdb.characters.update_many(
-                {"owner": str(ctx.author.id), "active_guilds": guild_id},
-                {"$pull": {"active_guilds": guild_id}}
-            )
-            await ctx.bot.mdb.characters.update_one(
-                {"owner": str(ctx.author.id), "upstream": self._upstream},
-                {"$push": {"active_guilds": guild_id}}
-            )
-            guilds=await ctx.bot.mdb.characters.find({"owner": str(ctx.author.id), "upstream": self._upstream},
-                {"active_guilds": 1, "_id": 0}).to_list(None)
-            self.active_guilds=guilds[0]["active_guilds"]
+    
+    async def set_server_active(self, ctx):
+        """Sets the active character on the current server. Raises NoPrivateMessage() if not in a server."""
+        if ctx.guild is None:
+            raise NoPrivateMessage()
+        guild_id = str(ctx.guild.id)
+        await ctx.bot.mdb.characters.update_many(
+            {"owner": str(ctx.author.id), "active_guilds": guild_id},
+            {"$pull": {"active_guilds": guild_id}}
+        )
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": str(ctx.author.id), "upstream": self._upstream},
+            {"$push": {"active_guilds": guild_id}}
+        )
+        self._active_guilds.append(guild_id)
+            
+    async def unset_server_active(self, ctx):
+        """Unsets the active character on the current server. Raises NoPrivateMessage() if not in a server."""
+        if ctx.guild is None:
+            raise NoPrivateMessage()
+        guild_id = str(ctx.guild.id)
+        await ctx.bot.mdb.characters.update_many(
+            {"owner": str(ctx.author.id), "active_guilds": guild_id},
+            {"$pull": {"active_guilds": guild_id}}
+        )
+        if guild_id in self._active_guilds:
+            self._active_guilds.remove(guild_id)
+
 
     # ---------- HP ----------
     @property
@@ -537,14 +524,16 @@ class Character(StatBlock):
 
         return embed
     
-    def active_context(self,ctx):
-        #retrieves which contexts the character is active in
-        contexts=[]
-        if self._active:
-            contexts.append("GLOBAL")
-        if (str(ctx.guild.id) if ctx.guild is not None else None) in self.active_guilds:
-            contexts.append("SERVER")
-        return contexts
+    def is_active_global(self, ctx):
+        """Returns if a character is active globally."""
+        return self._active
+    
+    def is_active_server(self, ctx):
+        """Returns if a character is active on the current server."""
+        if ctx.guild:
+            guild_id=str(ctx.guild.id)
+            return guild_id in self._active_guilds
+        return False
 
 
 class CharacterSpellbook(Spellbook):

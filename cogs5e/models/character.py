@@ -401,7 +401,7 @@ class Character(StatBlock):
 
     # ---------- RESTING ----------
     def on_hp(self):
-        """You cannot do thsi.
+        """
         Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return Death Saves.
         """

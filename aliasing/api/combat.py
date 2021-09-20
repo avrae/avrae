@@ -7,6 +7,8 @@ from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
 from cogs5e.models.sheet.statblock import StatBlock
+from cogs5e.models.initiative.combatant import Combatant
+from cogs5e.models.initiative.group import CombatantGroup
 from utils.argparser import ParsedArguments
 
 MAX_METADATA_SIZE = 100000
@@ -46,31 +48,20 @@ class SimpleCombat:
     # public methods
     def get_combatant(self, name):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
+        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name, or searching by ID.
+        When searching by ID, you can retrieve a :class:`~aliasing.api.combat.SimpleGroup`
 
-        :param str name: The name of the combatant to get.
-        :return: The combatant.
-        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
+        :param str name: The name (or ID) of the combatant to get.
+        :return: The combatant or group.
+        :rtype: :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
         combatant = self._combat.get_combatant(name, False)
         if combatant:
-            return SimpleCombatant(combatant)
-        return None
-
-    def get_combatant_by_id(self, combatant_id):
-        """
-        Gets a :class:`~aliasing.api.combat.SimpleCombatant` by their unique identifier.
-        A :class:`~aliasing.api.combat.SimpleCombatant` identifier is in the format of a UUID4.
-
-        :param str combatant_id: The id of the combatant to get.
-        :return: The combatant, or None
-        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
-        """
-        combatant_id = str(combatant_id)
-        combatant = self._combat.combatant_by_id(combatant_id)
-        if combatant:
-            return SimpleCombatant(combatant)
+            if isinstance(combatant, CombatantGroup):
+                return SimpleGroup(combatant)
+            elif isinstance(combatant, Combatant):
+                return SimpleCombatant(combatant)
         return None
 
     def get_group(self, name):
@@ -507,6 +498,15 @@ class SimpleGroup:
         :rtype: str
         """
         return self._group.name
+
+    @property
+    def id(self):
+        """
+        The group's unique identifier.
+
+        :rtype: str
+        """
+        return self._group.id
 
     def get_combatant(self, name):
         """

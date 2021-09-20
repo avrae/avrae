@@ -34,7 +34,7 @@ class Character(StatBlock):
                  cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
                  spellbook: Spellbook,
                  live, race: str, background: str, creature_type: str = None,
-                 ddb_campaign_id: str = None, actions: Actions = None,
+                 ddb_campaign_id: str = None, actions: Actions = None, active_guilds: list = None,
                  **kwargs):
         if kwargs:
             log.warning(f"Unused kwargs: {kwargs}")
@@ -44,6 +44,9 @@ class Character(StatBlock):
         self._owner = owner
         self._upstream = upstream
         self._active = active
+        if active_guilds is None:
+            active_guilds = []
+        self.active_guilds = active_guilds
         self._sheet_type = sheet_type
         self._import_version = import_version
 
@@ -99,6 +102,26 @@ class Character(StatBlock):
     @classmethod
     async def from_ctx(cls, ctx):
         owner_id = str(ctx.author.id)
+        guild_id = (str(ctx.guild.id) if ctx.guild is not None else None)
+        if guild_id:
+            active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
+        if active_character is None:
+            active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
+        if active_character is None:
+            raise NoCharacter()
+
+        try:
+            # return from cache if available
+            return cls._cache[owner_id, active_character['upstream']]
+        except KeyError:
+            # otherwise deserialize and write to cache
+            inst = cls.from_dict(active_character)
+            cls._cache[owner_id, active_character['upstream']] = inst
+            return inst
+        
+    @classmethod
+    async def get_global(cls, ctx):
+        owner_id = str(ctx.author.id)
         active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
         if active_character is None:
             raise NoCharacter()
@@ -111,6 +134,17 @@ class Character(StatBlock):
             inst = cls.from_dict(active_character)
             cls._cache[owner_id, active_character['upstream']] = inst
             return inst
+        
+    async def remove_server(cls, ctx):
+        guild_id = (str(ctx.guild.id) if ctx.guild is not None else None)
+        if guild_id is not None:
+            await ctx.bot.mdb.characters.update_many(
+                {"owner": str(ctx.author.id), "active_guilds": guild_id},
+                {"$pull": {"active_guilds": guild_id}}
+            )
+            guilds=await ctx.bot.mdb.characters.find({"owner": str(ctx.author.id), "upstream": self._upstream},
+                {"active_guilds": 1, "_id": 0}).to_list(None)
+            self.active_guilds=guilds[0]["active_guilds"]
 
     @classmethod
     async def from_bot_and_ids(cls, bot, owner_id: str, character_id: str):
@@ -152,12 +186,13 @@ class Character(StatBlock):
     def to_dict(self):
         d = super().to_dict()
         d.update({
-            "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
-            "import_version": self._import_version, "description": self._description,
+            "owner": self._owner, "upstream": self._upstream, "active": self._active,
+            "sheet_type": self._sheet_type, "import_version": self._import_version, "description": self._description,
             "image": self._image, "cvars": self.cvars, "options": self.options.to_dict(),
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
-            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict()
+            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict(),
+            "active_guilds": self.active_guilds
         })
         return d
 
@@ -270,8 +305,14 @@ class Character(StatBlock):
             raise ExternalImportError("A number on the character sheet is too large to store.")
 
     async def set_active(self, ctx):
-        """Sets the character as active."""
+        """Sets the character as active and removes the active character from the current server if possible."""
         self._active = True
+        guild_id = (str(ctx.guild.id) if ctx.guild is not None else None)
+        if guild_id:
+            await ctx.bot.mdb.characters.update_many(
+                {"owner": str(ctx.author.id), "active_guilds": guild_id},
+                {"$pull": {"active_guilds": guild_id}}
+        )
         await ctx.bot.mdb.characters.update_many(
             {"owner": str(ctx.author.id), "active": True},
             {"$set": {"active": False}}
@@ -280,6 +321,22 @@ class Character(StatBlock):
             {"owner": str(ctx.author.id), "upstream": self._upstream},
             {"$set": {"active": True}}
         )
+        
+    async def set_server(self, ctx):
+        """Sets the active character on the current server."""
+        guild_id = (str(ctx.guild.id) if ctx.guild is not None else None)
+        if guild_id:
+            await ctx.bot.mdb.characters.update_many(
+                {"owner": str(ctx.author.id), "active_guilds": guild_id},
+                {"$pull": {"active_guilds": guild_id}}
+            )
+            await ctx.bot.mdb.characters.update_one(
+                {"owner": str(ctx.author.id), "upstream": self._upstream},
+                {"$push": {"active_guilds": guild_id}}
+            )
+            guilds=await ctx.bot.mdb.characters.find({"owner": str(ctx.author.id), "upstream": self._upstream},
+                {"active_guilds": 1, "_id": 0}).to_list(None)
+            self.active_guilds=guilds[0]["active_guilds"]
 
     # ---------- HP ----------
     @property
@@ -344,7 +401,7 @@ class Character(StatBlock):
 
     # ---------- RESTING ----------
     def on_hp(self):
-        """
+        """You cannot do thsi.
         Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return Death Saves.
         """
@@ -479,6 +536,15 @@ class Character(StatBlock):
                                   f"Please run !update.")
 
         return embed
+    
+    def active_context(self,ctx):
+        #retrieves which contexts the character is active in
+        contexts=[]
+        if self._active:
+            contexts.append("GLOBAL")
+        if (str(ctx.guild.id) if ctx.guild is not None else None) in self.active_guilds:
+            contexts.append("SERVER")
+        return contexts
 
 
 class CharacterSpellbook(Spellbook):

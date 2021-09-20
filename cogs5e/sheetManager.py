@@ -373,7 +373,7 @@ class SheetManager(commands.Cog):
 
         if name is None:
             active_character: Character = await Character.from_ctx(ctx)
-            return await ctx.send(f'Currently active: {active_character.name}')
+            return await ctx.send(f'Currently active: {active_character.name} ({", ".join(active_character.active_context(ctx))}, `{active_character.sheet_type}`)')
 
         selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
                                                 selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
@@ -385,6 +385,66 @@ class SheetManager(commands.Cog):
 
         await ctx.send(f"Active character changed to {char.name}.", delete_after=20)
 
+    @character.command(name='server')
+    async def server_character(self, ctx, *, name: str = None):
+        """Switches the active character on the current server."""
+        if(ctx.guild is not None):
+            user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
+            if not user_characters:
+                return await ctx.send('You have no characters.')
+            
+            if name is None:
+                active_character: Character = await Character.from_ctx(ctx)
+                return await ctx.send(f'Currently active: {active_character.name} ({", ".join(active_character.active_context(ctx))}, `{active_character.sheet_type}`)')
+            
+            selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
+                                                    selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
+            
+            char = Character.from_dict(selected_char)
+            await char.set_server(ctx)
+            
+            await try_delete(ctx.message)
+            
+            await ctx.send(f"Active server character changed to {char.name}.", delete_after=20)
+        else:
+            await ctx.send("Error: This command cannot be used in private messages.", delete_after=20)
+            
+    @character.command(name='unset',aliases=['srm'])
+    async def unset_server_char(self, ctx):
+        """Removes the active character on the current server."""
+        if(ctx.guild is not None):
+            user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
+            if not user_characters:
+                return await ctx.send('You have no characters.')
+            
+            active_character: Character = await Character.from_ctx(ctx)
+            active_character.remove_server(ctx)
+        
+            await ctx.send("Unset server character, defaulting to global.", delete_after=20)
+        else:
+            await ctx.send("Error: This command cannot be used in private messages.", delete_after=20)
+    
+    @character.command(name='global')
+    async def global_character(self, ctx, *, name: str = None):
+        """Switches the active character on the current server."""
+        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
+        if not user_characters:
+            return await ctx.send('You have no characters.')
+        
+        if name is None:
+            active_character: Character = await Character.get_global(ctx)
+            return await ctx.send(f'Currently active globally: {active_character.name} ({", ".join(active_character.active_context(ctx))}, `{active_character.sheet_type}`)')
+        
+        selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
+                                                selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
+        
+        char = Character.from_dict(selected_char)
+        await char.set_active(ctx)
+        
+        await try_delete(ctx.message)
+        
+        await ctx.send(f"Active character changed to {char.name}.", delete_after=20)
+    
     @character.command(name='list')
     async def character_list(self, ctx):
         """Lists your characters."""

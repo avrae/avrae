@@ -135,7 +135,7 @@ class Character(StatBlock):
             cls._cache[owner_id, active_character['upstream']] = inst
             return inst
         
-    async def remove_server(cls, ctx):
+    async def remove_server(self, ctx):
         guild_id = (str(ctx.guild.id) if ctx.guild is not None else None)
         if guild_id is not None:
             await ctx.bot.mdb.characters.update_many(

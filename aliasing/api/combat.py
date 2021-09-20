@@ -48,12 +48,11 @@ class SimpleCombat:
     # public methods
     def get_combatant(self, name):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name, or searching by ID.
-        When searching by ID, you can retrieve a :class:`~aliasing.api.combat.SimpleGroup`
+        Gets a combatant by its name or ID.
 
-        :param str name: The name (or ID) of the combatant to get.
-        :return: The combatant or group.
-        :rtype: :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
+        If a combatant name is passed, returns the first :class:`~aliasing.api.combat.SimpleCombatant` that matches the name via fuzzy searching (partial match) on name. This cannot return groups.
+
+        If a combatant ID is passed, returns the combatant with the given ID, which may be a :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
         combatant = self._combat.get_combatant(name, False)

@@ -7,6 +7,8 @@ from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
 from cogs5e.models.sheet.statblock import StatBlock
+from cogs5e.models.initiative.combatant import Combatant
+from cogs5e.models.initiative.group import CombatantGroup
 from utils.argparser import ParsedArguments
 
 MAX_METADATA_SIZE = 100000
@@ -46,16 +48,19 @@ class SimpleCombat:
     # public methods
     def get_combatant(self, name):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
+        Gets a combatant by its name or ID.
 
-        :param str name: The name of the combatant to get.
-        :return: The combatant.
-        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
+        If a combatant name is passed, returns the first :class:`~aliasing.api.combat.SimpleCombatant` that matches the name via fuzzy searching (partial match) on name. This cannot return groups.
+
+        If a combatant ID is passed, returns the combatant with the given ID, which may be a :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
         combatant = self._combat.get_combatant(name, False)
         if combatant:
-            return SimpleCombatant(combatant)
+            if isinstance(combatant, CombatantGroup):
+                return SimpleGroup(combatant)
+            elif isinstance(combatant, Combatant):
+                return SimpleCombatant(combatant)
         return None
 
     def get_group(self, name):
@@ -160,6 +165,15 @@ class SimpleCombatant(AliasStatBlock):
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
+
+    @property
+    def id(self):
+        """
+        The combatant's unique identifier.
+
+        :rtype: str
+        """
+        return self._combatant.id
 
     @property
     def note(self):
@@ -483,6 +497,15 @@ class SimpleGroup:
         :rtype: str
         """
         return self._group.name
+
+    @property
+    def id(self):
+        """
+        The group's unique identifier.
+
+        :rtype: str
+        """
+        return self._group.id
 
     def get_combatant(self, name):
         """

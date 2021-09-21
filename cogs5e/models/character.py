@@ -316,7 +316,7 @@ class Character(StatBlock):
         self._active_guilds.append(guild_id)
             
     async def unset_server_active(self, ctx):
-        """Unsets the active character on the current server. Raises NoPrivateMessage() if not in a server."""
+        """Unsets any active character on the current server. Raises NoPrivateMessage() if not in a server."""
         if ctx.guild is None:
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)

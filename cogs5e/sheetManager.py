@@ -389,39 +389,20 @@ class SheetManager(commands.Cog):
     @character.command(name='server')
     @commands.guild_only()
     async def character_server(self, ctx, *, name: str = None):
-        """Switches the active character on the current server."""
-        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
-        if not user_characters:
-            return await ctx.send('You have no characters.')
+        """Toggles the active character on the current server."""
+        char: Character = await Character.from_ctx(ctx)
         
-        if name is None:
-            active_character: Character = await Character.from_ctx(ctx)
-            embed = active_character.active_embed()
-            await ctx.send(embed=embed)
-        
-        selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
-                                                selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
-        
-        char = Character.from_dict(selected_char)
-        await char.set_server_active(ctx)
+        if char.is_active_server(ctx):
+            await char.set_server_active(ctx)
+            msg = f"Active server character set to {char.name}."
+        else:
+            await char.unset_server_active(ctx)
+            msg = f"Active server character unset from {char.name}."
         
         await try_delete(ctx.message)
         
-        await ctx.send(f"Active server character changed to {char.name}.", delete_after=20)
-            
-    @character.command(name='unset',aliases=['srm'])
-    @commands.guild_only()
-    async def character_unset(self, ctx):
-        """Removes the active character on the current server."""
-        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
-        if not user_characters:
-            return await ctx.send('You have no characters.')
-            
-        active_character: Character = await Character.from_ctx(ctx)
-        active_character.unset_server_active(ctx)
-        
-        await ctx.send("Unset server character, defaulting to global.", delete_after=20)
-    
+        await ctx.send(msg, delete_after=20)
+
     @character.command(name='global')
     async def character_global(self, ctx):
         """Shows the active global character."""
@@ -432,7 +413,7 @@ class SheetManager(commands.Cog):
         active_character: Character = await Character.from_ctx(ctx,ignoreGlobal=True)
         embed = active_character.active_embed()
         await ctx.send(embed=embed)
-    
+
     @character.command(name='list')
     async def character_list(self, ctx):
         """Lists your characters."""

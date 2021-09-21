@@ -375,6 +375,7 @@ class SheetManager(commands.Cog):
             active_character: Character = await Character.from_ctx(ctx)
             embed = active_character.active_embed()
             await ctx.send(embed=embed)
+            return
 
         selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
                                                 selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")

@@ -373,7 +373,8 @@ class SheetManager(commands.Cog):
 
         if name is None:
             active_character: Character = await Character.from_ctx(ctx)
-            return await ctx.send(f'Currently active: {active_character.name} ({", ".join(active_character.active_context(ctx))}, `{active_character.sheet_type}`)')
+            embed = active_character.active_embed()
+            await ctx.send(embed=embed)
 
         selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
                                                 selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
@@ -386,64 +387,51 @@ class SheetManager(commands.Cog):
         await ctx.send(f"Active character changed to {char.name}.", delete_after=20)
 
     @character.command(name='server')
-    async def server_character(self, ctx, *, name: str = None):
-        """Switches the active character on the current server."""
-        if(ctx.guild is not None):
-            user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
-            if not user_characters:
-                return await ctx.send('You have no characters.')
-            
-            if name is None:
-                active_character: Character = await Character.from_ctx(ctx)
-                return await ctx.send(f'Currently active: {active_character.name} ({", ".join(active_character.active_context(ctx))}, `{active_character.sheet_type}`)')
-            
-            selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
-                                                    selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
-            
-            char = Character.from_dict(selected_char)
-            await char.set_server(ctx)
-            
-            await try_delete(ctx.message)
-            
-            await ctx.send(f"Active server character changed to {char.name}.", delete_after=20)
-        else:
-            await ctx.send("Error: This command cannot be used in private messages.", delete_after=20)
-            
-    @character.command(name='unset',aliases=['srm'])
-    async def unset_server_char(self, ctx):
-        """Removes the active character on the current server."""
-        if(ctx.guild is not None):
-            user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
-            if not user_characters:
-                return await ctx.send('You have no characters.')
-            
-            active_character: Character = await Character.from_ctx(ctx)
-            active_character.remove_server(ctx)
-        
-            await ctx.send("Unset server character, defaulting to global.", delete_after=20)
-        else:
-            await ctx.send("Error: This command cannot be used in private messages.", delete_after=20)
-    
-    @character.command(name='global')
-    async def global_character(self, ctx, *, name: str = None):
+    @commands.guild_only()
+    async def character_server(self, ctx, *, name: str = None):
         """Switches the active character on the current server."""
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
         
         if name is None:
-            active_character: Character = await Character.get_global(ctx)
-            return await ctx.send(f'Currently active globally: {active_character.name} ({", ".join(active_character.active_context(ctx))}, `{active_character.sheet_type}`)')
+            active_character: Character = await Character.from_ctx(ctx)
+            embed = active_character.active_embed()
+            await ctx.send(embed=embed)
         
         selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
                                                 selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
         
         char = Character.from_dict(selected_char)
-        await char.set_active(ctx)
+        await char.set_server_active(ctx)
         
         await try_delete(ctx.message)
         
-        await ctx.send(f"Active character changed to {char.name}.", delete_after=20)
+        await ctx.send(f"Active server character changed to {char.name}.", delete_after=20)
+            
+    @character.command(name='unset',aliases=['srm'])
+    @commands.guild_only()
+    async def character_unset(self, ctx):
+        """Removes the active character on the current server."""
+        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
+        if not user_characters:
+            return await ctx.send('You have no characters.')
+            
+        active_character: Character = await Character.from_ctx(ctx)
+        active_character.unset_server_active(ctx)
+        
+        await ctx.send("Unset server character, defaulting to global.", delete_after=20)
+    
+    @character.command(name='global')
+    async def character_global(self, ctx):
+        """Shows the active global character."""
+        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
+        if not user_characters:
+            return await ctx.send('You have no characters.')
+        
+        active_character: Character = await Character.from_ctx(ctx,ignoreGlobal=True)
+        embed = active_character.active_embed()
+        await ctx.send(embed=embed)
     
     @character.command(name='list')
     async def character_list(self, ctx):
@@ -453,7 +441,19 @@ class SheetManager(commands.Cog):
         ).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
-        await ctx.send('Your characters:\n{}'.format(', '.join(sorted(c['name'] for c in user_characters))))
+        embed = embeds.EmbedWithAuthor(ctx)
+        embed.title = "Character List"
+        embed.description = ""
+        for char in sorted(user_characters,key=lambda k: k['name']):
+            charstring=f"{char.name} (`{char.upstream}`)\n"
+            newembed = embed
+            newembed.description+=charstring
+            if len(newembed) > 6000:
+                break
+            else:
+                embed = newembed
+        
+        await ctx.send(embed=embed)
 
     @character.command(name='delete')
     async def character_delete(self, ctx, *, name):

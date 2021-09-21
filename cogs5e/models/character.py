@@ -298,7 +298,10 @@ class Character(StatBlock):
         )
     
     async def set_server_active(self, ctx):
-        """Sets the active character on the current server. Raises NoPrivateMessage() if not in a server."""
+        """
+        Removes all server-active characters and sets the character as active on the current server. 
+        Raises NoPrivateMessage() if not in a server.
+        """
         if ctx.guild is None:
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)

@@ -526,7 +526,7 @@ class Character(StatBlock):
     
     def active_embed(self):
         """Creates an embed to be displayed when the active character is checked"""
-        embed = embeds.EmbedWithCharacter(self)
+        embed = EmbedWithCharacter(self)
         embed.title = self.name
         urls = {"beyond": "https://ddb.ac/characters/",
                 "dicecloud": "https://dicecloud.com/character/",

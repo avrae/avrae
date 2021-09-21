@@ -524,7 +524,7 @@ class Character(StatBlock):
 
         return embed
     
-    def is_active_global(self, ctx):
+    def is_active_global(self):
         """Returns if a character is active globally."""
         return self._active
     

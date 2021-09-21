@@ -394,11 +394,11 @@ class SheetManager(commands.Cog):
         char: Character = await Character.from_ctx(ctx)
         
         if char.is_active_server(ctx):
-            await char.set_server_active(ctx)
-            msg = f"Active server character set to {char.name}."
-        else:
             await char.unset_server_active(ctx)
             msg = f"Active server character unset from {char.name}."
+        else:
+            await char.set_server_active(ctx)
+            msg = f"Active server character set to {char.name}."
         
         await try_delete(ctx.message)
         

@@ -313,7 +313,7 @@ class Character(StatBlock):
         )
         await ctx.bot.mdb.characters.update_one(
             {"owner": str(ctx.author.id), "upstream": self._upstream},
-            {"$push": {"active_guilds": guild_id}}
+            {"$addToSet": {"active_guilds": guild_id}}
         )
         self._active_guilds.append(guild_id)
             

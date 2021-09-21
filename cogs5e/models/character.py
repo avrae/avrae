@@ -534,7 +534,7 @@ class Character(StatBlock):
                 "dicecloud": "https://dicecloud.com/character/",
                 "google": "https://docs.google.com/spreadsheets/d/"}
         sheeturl = urls[self.sheet_type] + self.upstream_id
-        desc = f"Your current active character is {active_character.name}. " \
+        desc = f"Your current active character is {self.name}. " \
                 "All of your checks, saves and actions will use this character's stats.\n" \
                 "This character is active in " + \
                 (", ".join(["GLOBAL" if self.is_active_global()] +

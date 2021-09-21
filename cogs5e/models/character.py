@@ -286,10 +286,7 @@ class Character(StatBlock):
         self._active = True
         if ctx.guild:
             guild_id = str(ctx.guild.id)
-            await ctx.bot.mdb.characters.update_many(
-                {"owner": str(ctx.author.id), "active_guilds": guild_id},
-                {"$pull": {"active_guilds": guild_id}}
-            )
+            self.unset_server_active(ctx)
         await ctx.bot.mdb.characters.update_many(
             {"owner": str(ctx.author.id), "active": True},
             {"$set": {"active": False}}
@@ -307,10 +304,7 @@ class Character(StatBlock):
         if ctx.guild is None:
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)
-        await ctx.bot.mdb.characters.update_many(
-            {"owner": str(ctx.author.id), "active_guilds": guild_id},
-            {"$pull": {"active_guilds": guild_id}}
-        )
+        self.unset_server_active(ctx)
         await ctx.bot.mdb.characters.update_one(
             {"owner": str(ctx.author.id), "upstream": self._upstream},
             {"$addToSet": {"active_guilds": guild_id}}
@@ -318,7 +312,10 @@ class Character(StatBlock):
         self._active_guilds.append(guild_id)
             
     async def unset_server_active(self, ctx):
-        """Unsets any active character on the current server. Raises NoPrivateMessage() if not in a server."""
+        """
+        Unsets any active character on the current server. 
+        Raises NoPrivateMessage() if not in a server.
+        """
         if ctx.guild is None:
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)

@@ -103,7 +103,7 @@ class Character(StatBlock):
     async def from_ctx(cls, ctx, ignore_guild: bool = False):
         owner_id = str(ctx.author.id)
         active_character = None
-        if ctx.guild and not ignoreGuild:
+        if ctx.guild is not None and not ignoreGuild:
             guild_id = str(ctx.guild.id)
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
         if active_character is None:

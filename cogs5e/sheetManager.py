@@ -389,7 +389,7 @@ class SheetManager(commands.Cog):
 
     @character.command(name='server')
     @commands.guild_only()
-    async def character_server(self, ctx, *, name: str = None):
+    async def character_server(self, ctx):
         """Toggles the active character on the current server."""
         char: Character = await Character.from_ctx(ctx)
         

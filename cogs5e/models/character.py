@@ -1,5 +1,7 @@
 import logging
 
+from discord.ext.commands import NoPrivateMessage
+
 import cachetools
 
 import aliasing.evaluators

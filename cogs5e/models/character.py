@@ -100,7 +100,7 @@ class Character(StatBlock):
         return inst
 
     @classmethod
-    async def from_ctx(cls, ctx, ignoreGuild: bool = False):
+    async def from_ctx(cls, ctx, ignore_guild: bool = False):
         owner_id = str(ctx.author.id)
         active_character = None
         if ctx.guild and not ignoreGuild:

@@ -525,27 +525,7 @@ class Character(StatBlock):
                                   f"Please run !update.")
 
         return embed
-    
-    def active_embed(self):
-        """Creates an embed to be displayed when the active character is checked"""
-        embed = EmbedWithCharacter(self)
-        embed.title = self.name
-        urls = {"beyond": "https://ddb.ac/characters/",
-                "dicecloud": "https://dicecloud.com/character/",
-                "google": "https://docs.google.com/spreadsheets/d/"}
-        
-        link = (f"[Go to Character Sheet]({urls[self.sheet_type] + self.upstream_id})." \
-                if self.sheet_type in urls.keys() else "")
-        
-        desc = f"Your current active character is {self.name}. " \
-                "All of your checks, saves and actions will use this character's stats.\n" \
-                link
-        embed.description = desc
-        embed.set_footer(text="This character is active in " +
-                        (", and ".join(["Global" if self.is_active_global()] +
-                                       ["Server" if self.is_active_server(ctx)])))
-        return embed
-    
+
     def is_active_global(self):
         """Returns if a character is active globally."""
         return self._active

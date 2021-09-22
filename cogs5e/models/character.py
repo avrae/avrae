@@ -105,7 +105,7 @@ class Character(StatBlock):
     async def from_ctx(cls, ctx, ignore_guild: bool = False):
         owner_id = str(ctx.author.id)
         active_character = None
-        if ctx.guild is not None and not ignoreGuild:
+        if ctx.guild is not None and not ignore_guild:
             guild_id = str(ctx.guild.id)
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
         if active_character is None:
@@ -281,12 +281,11 @@ class Character(StatBlock):
         except OverflowError:
             raise ExternalImportError("A number on the character sheet is too large to store.")
 
-    async def set_active(self, ctx):
+    async def set_active(self, ctx, active_character = None):
         """Sets the character as active and removes the active character from the current server if possible."""
         self._active = True
-        if ctx.guild:
-            guild_id = str(ctx.guild.id)
-            self.unset_server_active(ctx)
+        if ctx.guild is not None and active_character is not None:
+            await active_character.unset_server_active(ctx)
         await ctx.bot.mdb.characters.update_many(
             {"owner": str(ctx.author.id), "active": True},
             {"$set": {"active": False}}
@@ -325,6 +324,7 @@ class Character(StatBlock):
         )
         if guild_id in self._active_guilds:
             self._active_guilds.remove(guild_id)
+        return
 
 
     # ---------- HP ----------

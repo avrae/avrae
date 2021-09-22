@@ -533,14 +533,17 @@ class Character(StatBlock):
         urls = {"beyond": "https://ddb.ac/characters/",
                 "dicecloud": "https://dicecloud.com/character/",
                 "google": "https://docs.google.com/spreadsheets/d/"}
-        sheeturl = urls[self.sheet_type] + self.upstream_id
+        
+        link = (f"[Go to Character Sheet]({urls[self.sheet_type] + self.upstream_id})." \
+                if self.sheet_type in urls.keys() else "")
+        
         desc = f"Your current active character is {self.name}. " \
                 "All of your checks, saves and actions will use this character's stats.\n" \
-                "This character is active in " + \
-                (", ".join(["GLOBAL" if self.is_active_global()] +
-                           ["SERVER" if self.is_active_server(ctx)])) + "\n" \
-                f"[Go to Character Sheet]({sheeturl})."
+                link
         embed.description = desc
+        embed.set_footer(text="This character is active in " +
+                        (", and ".join(["Global" if self.is_active_global()] +
+                                       ["Server" if self.is_active_server(ctx)])))
         return embed
     
     def is_active_global(self):

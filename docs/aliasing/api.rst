@@ -982,6 +982,12 @@ SimpleGroup
 
         :type: str
 
+    .. attribute:: init
+
+        What the group rolled for initiative.
+
+        :type: int
+
 SimpleEffect
 ^^^^^^^^^^^^
 

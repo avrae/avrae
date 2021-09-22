@@ -423,19 +423,7 @@ class SheetManager(commands.Cog):
         ).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
-        embed = embeds.EmbedWithAuthor(ctx)
-        embed.title = "Character List"
-        embed.description = ""
-        for char in sorted(user_characters,key=lambda k: k['name']):
-            charstring=f"{char.name} (`{char.upstream}`)\n"
-            newembed = embed
-            newembed.description+=charstring
-            if len(newembed) > 6000:
-                break
-            else:
-                embed = newembed
-        
-        await ctx.send(embed=embed)
+        await ctx.send('Your characters:\n{}'.format(', '.join(sorted(c['name'] for c in user_characters))))
 
     @character.command(name='delete')
     async def character_delete(self, ctx, *, name):

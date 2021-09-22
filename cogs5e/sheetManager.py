@@ -373,7 +373,8 @@ class SheetManager(commands.Cog):
 
         if name is None:
             active_character: Character = await Character.from_ctx(ctx)
-            embed = active_character.active_embed()
+            global_character: Character = await Character.from_ctx(ctx, ignore_guild = True)
+            embed = self.active_embed(ctx, active_character, global_character)
             await ctx.send(embed=embed)
             return
 
@@ -403,17 +404,6 @@ class SheetManager(commands.Cog):
         await try_delete(ctx.message)
         
         await ctx.send(msg, delete_after=20)
-
-    @character.command(name='global')
-    async def character_global(self, ctx):
-        """Shows the active global character."""
-        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
-        if not user_characters:
-            return await ctx.send('You have no characters.')
-        
-        active_character: Character = await Character.from_ctx(ctx,ignoreGlobal=True)
-        embed = active_character.active_embed()
-        await ctx.send(embed=embed)
 
     @character.command(name='list')
     async def character_list(self, ctx):
@@ -656,6 +646,26 @@ class SheetManager(commands.Cog):
                 f"\nUse `{ctx.prefix}help` for more details.")
         return url
 
+    @staticmethod
+    async def active_embed(ctx, active_character, global_character=None):
+        """Creates an embed to be displayed when the active character is checked"""
+        embed = EmbedWithCharacter(active_character)
+        embed.title = active_character.name
+        urls = {"beyond": "https://ddb.ac/characters/",
+                "dicecloud": "https://dicecloud.com/character/",
+                "google": "https://docs.google.com/spreadsheets/d/"}
+        
+        link = (f"[Go to Character Sheet]({urls[active_character.sheet_type] + active_character.upstream_id})." \
+                if active_character.sheet_type in urls.keys() else "")
+        
+        desc = f"Your current active character is {self.name}. " \
+                "All of your checks, saves and actions will use this character's stats.\n" \
+                link
+        embed.description = desc
+        if global_character is not None and global_character is not active:
+            embed.set_footer(f"This character overrides the active character {global_character.name} \
+            on this server only. Use {ctx.prefix}char <name> to switch active characters.")
+        return embed
 
 async def send_ddb_ctas(ctx, character):
     """Sends relevant CTAs after a DDB character is imported. Only show a CTA 1/24h to not spam people."""

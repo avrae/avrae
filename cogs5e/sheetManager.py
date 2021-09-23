@@ -4,7 +4,6 @@ Created on Jan 19, 2017
 @author: andrew
 """
 import asyncio
-import itertools
 import logging
 import time
 import traceback
@@ -17,7 +16,7 @@ from discord.ext.commands.cooldowns import BucketType
 from aliasing import helpers
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
-from cogs5e.models.errors import ExternalImportError
+from cogs5e.models.errors import ExternalImportError, NoCharacter
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DICECLOUD_URL_RE, DicecloudParser
@@ -370,11 +369,9 @@ class SheetManager(commands.Cog):
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
-        
-        active_character: Character = await Character.from_ctx(ctx)
+
         if name is None:
-            global_character: Character = await Character.from_ctx(ctx, ignore_guild = True)
-            embed = await self._active_embed(ctx, active_character, global_character)
+            embed = await self._active_character_embed(ctx)
             await ctx.send(embed=embed)
             return
 
@@ -382,34 +379,35 @@ class SheetManager(commands.Cog):
                                                 selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
 
         char = Character.from_dict(selected_char)
-        await char.set_active(ctx, active_character)
-
+        await char.set_active(ctx)
         await try_delete(ctx.message)
-        
-        if active_character is not None:
-            previous = f" from {active_character.name}"
-        else:
-            previous = ""
-
         await ctx.send(f"Active character changed to {char.name}.", delete_after=20)
 
     @character.command(name='server')
     @commands.guild_only()
     async def character_server(self, ctx):
-        """Toggles the active character on the current server."""
-        char: Character = await Character.from_ctx(ctx)
+        """
+        Sets the current active character as a server character.
+        If the character is already the server character, unsets the server character.
         
+        All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
+        """  # noqa: E501
+        char: Character = await Character.from_ctx(ctx)
+
         if char.is_active_server(ctx):
-            global_character: Character = await Character.from_ctx(ctx, ignore_guild = True)
             await char.unset_server_active(ctx)
-            msg = f"Active server character unset from {char.name}. Defaulting to {global_character.name}."
+            msg = f"Active server character unset from {char.name}."
+            try:
+                global_character = await Character.from_ctx(ctx)
+            except NoCharacter:
+                await ctx.send(f"{msg} You have no global active character.")
+            else:
+                await ctx.send(f"{msg} {global_character.name} is now active.")
         else:
             await char.set_server_active(ctx)
-            msg = f"Active server character set to {char.name}."
-        
+            await ctx.send(f"Active server character set to {char.name}.")
+
         await try_delete(ctx.message)
-        
-        await ctx.send(msg, delete_after=20)
 
     @character.command(name='list')
     async def character_list(self, ctx):
@@ -653,33 +651,41 @@ class SheetManager(commands.Cog):
         return url
 
     @staticmethod
-    async def _active_embed(ctx, active_character, global_character=None):
+    async def _active_character_embed(ctx):
         """Creates an embed to be displayed when the active character is checked"""
+        active_character: Character = await ctx.get_character()
         embed = embeds.EmbedWithCharacter(active_character)
-        urls = {"beyond": "https://ddb.ac/characters/",
-                "dicecloud": "https://dicecloud.com/character/",
-                "google": "https://docs.google.com/spreadsheets/d/"}
-        
-        link = (f"[Go to Character Sheet]({urls[active_character.sheet_type] + active_character.upstream_id})." \
-                if active_character.sheet_type in urls.keys() else "")
-        
-        desc = f"Your current active character is {active_character.name}. " \
-                "All of your checks, saves and actions will use this character's stats.\n" + \
-                link
+
+        desc = (f"Your current active character is {active_character.name}. "
+                f"All of your checks, saves and actions will use this character's stats.")
+        if (link := active_character.get_sheet_url()) is not None:
+            desc = f"{desc}\n[Go to Character Sheet]({link})"
         embed.description = desc
-        if global_character is not None:
-            if global_character is not active_character:
-                embed.set_footer(text = "This character overrides the global character, " \
-                                        f"{global_character.name}, on this server only. Use " \
-                                        f"`{ctx.prefix}char <name>` to switch active characters.")
-            elif not global_character.is_active_server(ctx):
-                embed.set_footer(text = "You have no server character set for this server, defaulted " \
-                                        f"to global character. Use `{ctx.prefix}char server` " \
-                                        "to set this character for this server")
-            elif global_character is active_character:
-                embed.set_footer(text = "This is both your global and server character. " \
-                                        f"Use `{ctx.prefix}char server` to unset this character for this server.")
+        embed.set_footer(text=f"To change active characters, use {ctx.prefix}character <name>.")
+
+        # for a global character, we can return here
+        if not active_character.is_active_server(ctx):
+            return embed
+
+        # get the global active character or None
+        try:
+            global_character: Character = await ctx.get_character(ignore_guild=True)
+        except NoCharacter:
+            embed.set_footer(text=f"{active_character.name} is only active on {ctx.guild.name}. You have no global "
+                                  f"active character. To set one, use {ctx.prefix}character <name>.")
+            return embed
+
+        # global active character is server active
+        if global_character.upstream == active_character.upstream:
+            embed.set_footer(text=f"{active_character.name} is active on {ctx.guild.name} and globally. "
+                                  f"To change active characters, use {ctx.prefix}character <name>.")
+            return embed
+
+        # global and server active differ
+        embed.set_footer(text=f"{active_character.name} is active on {ctx.guild.name}, overriding your global active "
+                              f"character. To change active characters, use {ctx.prefix}character <name>.")
         return embed
+
 
 async def send_ddb_ctas(ctx, character):
     """Sends relevant CTAs after a DDB character is imported. Only show a CTA 1/24h to not spam people."""

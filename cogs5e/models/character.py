@@ -1,4 +1,5 @@
 import logging
+from collections import namedtuple
 
 import cachetools
 from discord.ext.commands import NoPrivateMessage
@@ -283,13 +284,15 @@ class Character(StatBlock):
     async def set_active(self, ctx):
         """Sets the character as globally active and unsets any server-active character in the current context."""
         owner_id = str(ctx.author.id)
+        did_unset_server_active = False
         if ctx.guild is not None:
             guild_id = str(ctx.guild.id)
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-            await ctx.bot.mdb.characters.update_many(
+            result = await ctx.bot.mdb.characters.update_many(
                 {"owner": owner_id, "active_guilds": guild_id},
                 {"$pull": {"active_guilds": guild_id}}
             )
+            did_unset_server_active = result.modified_count > 0
             try:
                 self._active_guilds.remove(guild_id)
             except ValueError:
@@ -305,6 +308,7 @@ class Character(StatBlock):
             {"$set": {"active": True}}
         )
         self._active = True
+        return SetActiveResult(did_unset_server_active=did_unset_server_active)
 
     async def set_server_active(self, ctx):
         """
@@ -316,7 +320,7 @@ class Character(StatBlock):
         guild_id = str(ctx.guild.id)
         owner_id = str(ctx.author.id)
         # unset anyone else that might be active on this server
-        await ctx.bot.mdb.characters.update_many(
+        unset_result = await ctx.bot.mdb.characters.update_many(
             {"owner": owner_id, "active_guilds": guild_id},
             {"$pull": {"active_guilds": guild_id}}
         )
@@ -327,6 +331,7 @@ class Character(StatBlock):
         )
         if guild_id not in self._active_guilds:
             self._active_guilds.append(guild_id)
+        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
 
     async def unset_server_active(self, ctx):
         """
@@ -337,7 +342,7 @@ class Character(StatBlock):
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)
         # if and only if this character is active in this server, unset me as active on this server
-        await ctx.bot.mdb.characters.update_one(
+        unset_result = await ctx.bot.mdb.characters.update_one(
             {"owner": str(ctx.author.id), "upstream": self._upstream},
             {"$pull": {"active_guilds": guild_id}}
         )
@@ -345,6 +350,7 @@ class Character(StatBlock):
             self._active_guilds.remove(guild_id)
         except ValueError:
             pass
+        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
 
     # ---------- HP ----------
     @property
@@ -582,6 +588,8 @@ class CharacterSpellbook(Spellbook):
         if self._live_integration:
             self._live_integration.sync_slots()
 
+
+SetActiveResult = namedtuple('SetActiveResult', 'did_unset_server_active')
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
 DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions}

@@ -1,8 +1,7 @@
 import logging
 
-from discord.ext.commands import NoPrivateMessage
-
 import cachetools
+from discord.ext.commands import NoPrivateMessage
 
 import aliasing.evaluators
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
@@ -121,7 +120,7 @@ class Character(StatBlock):
             inst = cls.from_dict(active_character)
             cls._cache[owner_id, active_character['upstream']] = inst
             return inst
-    
+
     @classmethod
     async def from_bot_and_ids(cls, bot, owner_id: str, character_id: str):
         owner_id = str(owner_id)
@@ -274,27 +273,39 @@ class Character(StatBlock):
                 {"owner": self._owner, "upstream": self._upstream},
                 {
                     "$set": data,
-                    "$setOnInsert": {'active': self._active,'active_guilds': self._active_guilds}  # also #1472
+                    "$setOnInsert": {'active': self._active, 'active_guilds': self._active_guilds}  # also #1472
                 },
                 upsert=True
             )
         except OverflowError:
             raise ExternalImportError("A number on the character sheet is too large to store.")
 
-    async def set_active(self, ctx, active_character = None):
-        """Sets the character as active and removes the active character from the current server if possible."""
-        self._active = True
-        if ctx.guild is not None and active_character is not None:
-            await active_character.unset_server_active(ctx)
+    async def set_active(self, ctx):
+        """Sets the character as globally active and unsets any server-active character in the current context."""
+        owner_id = str(ctx.author.id)
+        if ctx.guild is not None:
+            guild_id = str(ctx.guild.id)
+            # for all characters owned by this owner who are active on this guild, make them inactive on this guild
+            await ctx.bot.mdb.characters.update_many(
+                {"owner": owner_id, "active_guilds": guild_id},
+                {"$pull": {"active_guilds": guild_id}}
+            )
+            try:
+                self._active_guilds.remove(guild_id)
+            except ValueError:
+                pass
+        # for all characters owned by this owner who are globally active, make them inactive
         await ctx.bot.mdb.characters.update_many(
-            {"owner": str(ctx.author.id), "active": True},
+            {"owner": owner_id, "active": True},
             {"$set": {"active": False}}
         )
+        # make this character active
         await ctx.bot.mdb.characters.update_one(
-            {"owner": str(ctx.author.id), "upstream": self._upstream},
+            {"owner": owner_id, "upstream": self._upstream},
             {"$set": {"active": True}}
         )
-    
+        self._active = True
+
     async def set_server_active(self, ctx):
         """
         Removes all server-active characters and sets the character as active on the current server. 
@@ -303,29 +314,37 @@ class Character(StatBlock):
         if ctx.guild is None:
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)
-        self.unset_server_active(ctx)
+        owner_id = str(ctx.author.id)
+        # unset anyone else that might be active on this server
+        await ctx.bot.mdb.characters.update_many(
+            {"owner": owner_id, "active_guilds": guild_id},
+            {"$pull": {"active_guilds": guild_id}}
+        )
+        # set us as active on this server
         await ctx.bot.mdb.characters.update_one(
-            {"owner": str(ctx.author.id), "upstream": self._upstream},
+            {"owner": owner_id, "upstream": self._upstream},
             {"$addToSet": {"active_guilds": guild_id}}
         )
-        self._active_guilds.append(guild_id)
-            
+        if guild_id not in self._active_guilds:
+            self._active_guilds.append(guild_id)
+
     async def unset_server_active(self, ctx):
         """
-        Unsets any active character on the current server. 
+        If this character is active on the contextual guild, unset it as the guild active character.
         Raises NoPrivateMessage() if not in a server.
         """
         if ctx.guild is None:
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)
-        await ctx.bot.mdb.characters.update_many(
-            {"owner": str(ctx.author.id), "active_guilds": guild_id},
+        # if and only if this character is active in this server, unset me as active on this server
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": str(ctx.author.id), "upstream": self._upstream},
             {"$pull": {"active_guilds": guild_id}}
         )
-        if guild_id in self._active_guilds:
+        try:
             self._active_guilds.remove(guild_id)
-        return
-
+        except ValueError:
+            pass
 
     # ---------- HP ----------
     @property
@@ -529,13 +548,26 @@ class Character(StatBlock):
     def is_active_global(self):
         """Returns if a character is active globally."""
         return self._active
-    
+
     def is_active_server(self, ctx):
-        """Returns if a character is active on the current server."""
-        if ctx.guild:
-            guild_id=str(ctx.guild.id)
-            return guild_id in self._active_guilds
+        """Returns if a character is active on the contextual server."""
+        if ctx.guild is not None:
+            return str(ctx.guild.id) in self._active_guilds
         return False
+
+    def get_sheet_url(self):
+        """
+        Returns the sheet URL this character lives at, or None if the sheet url could not be created (possible for
+        really old characters).
+        """
+        base_urls = {
+            "beyond": "https://ddb.ac/characters/",
+            "dicecloud": "https://dicecloud.com/character/",
+            "google": "https://docs.google.com/spreadsheets/d/"
+        }
+        if self.sheet_type in base_urls:
+            return f"{base_urls[self.sheet_type]}{self.upstream_id}"
+        return None
 
 
 class CharacterSpellbook(Spellbook):

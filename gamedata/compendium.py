@@ -180,6 +180,7 @@ class Compendium:
         seen = set()
 
         def handle_class(cls_or_sub):
+            # load classfeats
             for i, level in enumerate(cls_or_sub.levels):
                 for feature in level:
                     copied = copy.copy(feature)
@@ -196,11 +197,18 @@ class Compendium:
                         self.cfeats.append(copied)
                         self._register_entity_lookup(cfo)
 
+            # TCoE optional features and options
             for feature in cls_or_sub.optional_features:
                 copied = copy.copy(feature)
                 copied.name = f"{cls_or_sub.name}: {feature.name}"
                 self.optional_cfeats.append(copied)
                 self._register_entity_lookup(feature)
+
+                for cfo in feature.options:
+                    copied = copy.copy(cfo)
+                    copied.name = f"{cls_or_sub.name}: {feature.name}: {cfo.name}"
+                    self.optional_cfeats.append(copied)
+                    self._register_entity_lookup(cfo)
 
         for cls in self.classes:
             handle_class(cls)

@@ -61,6 +61,13 @@ def get_actions_for_names(names):
 
     for name in names:
         g_actions = get_actions_for_name(name)
+        # in some cases, a very generic feature name (e.g. "Channel Divinity") will grant far more actions than we want
+        # code snippet to determine this threshold:
+        # bleps = [(name, len(actions), actions) for name, actions in discoverer.actions_granted_by_name.items()]
+        # bleps = sorted(bleps, key=lambda blep: blep[1], reverse=True)
+        if len(g_actions) > 20:
+            continue
+
         for g_action in g_actions:
             if g_action.name in seen_action_names:
                 continue

@@ -222,7 +222,12 @@ class AdminUtils(commands.Cog):
             options = list(compendium._entity_lookup.values())
             e = await search_and_select(ctx, options, tid, lambda en: en.name,
                                         selectkey=lambda en: f"{en.name} ({en.entity_type})")
-        await ctx.send(f"```py\n# {e.entity_id=}, {e.type_id=}\n{e!r}\n```")
+        entitlement_entity = compendium.lookup_entity(e.entitlement_entity_type, e.entitlement_entity_id)
+        entitlement_entity_name = entitlement_entity.name if entitlement_entity is not None else 'unknown entity!'
+        await ctx.send(f"```py\n"
+                       f"# {e.entity_id=}, {e.type_id=}\n"
+                       f"# {e.entitlement_entity_id=}, {e.entitlement_entity_type=} ({entitlement_entity_name})\n"
+                       f"{e!r}\n```")
 
     # ---- cluster management ----
     @admin.command(hidden=True, name="restart-shard")
@@ -239,10 +244,11 @@ class AdminUtils(commands.Cog):
     async def admin_kill_cluster(self, ctx, cluster_id: int):
         """Forces a cluster to restart by killing it."""
         num_shards = len(self.bot.shard_ids) if self.bot.shard_ids is not None else 1
-        if not await confirm(ctx, f"Are you absolutely sure you want to kill cluster {cluster_id}? (Reply with yes/no)\n"
-                                  f"**This will terminate approximately {num_shards} shards, which "
-                                  f"will take at least {num_shards * 5} seconds to restart, and "
-                                  f"impact about {len(self.bot.guilds)} servers.**"):
+        if not await confirm(ctx,
+                             f"Are you absolutely sure you want to kill cluster {cluster_id}? (Reply with yes/no)\n"
+                             f"**This will terminate approximately {num_shards} shards, which "
+                             f"will take at least {num_shards * 5} seconds to restart, and "
+                             f"impact about {len(self.bot.guilds)} servers.**"):
             return await ctx.send("ok, not killing")
         resp = await self.pscall("kill_cluster", kwargs={"cluster_id": cluster_id}, expected_replies=1)
         await self._send_replies(ctx, resp)

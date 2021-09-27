@@ -429,7 +429,7 @@ async def user_from_id(ctx, the_id):
         await ctx.bot.mdb.users.update_one(
             {"id": str(the_user.id)},
             {"$set": {'username': the_user.name, 'discriminator': the_user.discriminator,
-                      'avatar': the_user.avatar, 'bot': the_user.bot}},
+                      'avatar': the_user.display_avatar.url, 'bot': the_user.bot}},
             upsert=True
         )
 

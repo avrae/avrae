@@ -41,16 +41,7 @@ COGS = (
 async def get_prefix(the_bot, message):
     if not message.guild:
         return commands.when_mentioned_or(config.DEFAULT_PREFIX)(the_bot, message)
-    guild_id = str(message.guild.id)
-    if guild_id in the_bot.prefixes:
-        gp = the_bot.prefixes.get(guild_id, config.DEFAULT_PREFIX)
-    else:  # load from db and cache
-        gp_obj = await the_bot.mdb.prefixes.find_one({"guild_id": guild_id})
-        if gp_obj is None:
-            gp = config.DEFAULT_PREFIX
-        else:
-            gp = gp_obj.get("prefix", config.DEFAULT_PREFIX)
-        the_bot.prefixes[guild_id] = gp
+    gp = await the_bot.get_guild_prefix(message.guild)
     return commands.when_mentioned_or(gp)(the_bot, message)
 
 
@@ -96,8 +87,18 @@ class Avrae(commands.AutoShardedBot):
     async def setup_rdb(self):
         return RedisIO(await aioredis.create_redis_pool(config.REDIS_URL, db=config.REDIS_DB_NUM))
 
-    async def get_server_prefix(self, msg):
-        return (await get_prefix(self, msg))[-1]
+    async def get_guild_prefix(self, guild: discord.Guild) -> str:
+        guild_id = str(guild.id)
+        if guild_id in self.prefixes:
+            return self.prefixes.get(guild_id, config.DEFAULT_PREFIX)
+        # load from db and cache
+        gp_obj = await self.mdb.prefixes.find_one({"guild_id": guild_id})
+        if gp_obj is None:
+            gp = config.DEFAULT_PREFIX
+        else:
+            gp = gp_obj.get("prefix", config.DEFAULT_PREFIX)
+        self.prefixes[guild_id] = gp
+        return gp
 
     @property
     def is_cluster_0(self):

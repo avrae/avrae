@@ -2,10 +2,12 @@ import ddb
 from cogs5e.utils import gameutils
 from ddb.gamelog import GameLogEventContext
 from .callback import GameLogCallbackHandler, callback
+from .utils import feature_flag
 
 
 class CharacterHandler(GameLogCallbackHandler):
     @callback('character-sheet/character-update/fulfilled')
+    @feature_flag('cog.gamelog.character-update-fulfilled.enabled')
     async def character_update_fulfilled(
             self,
             gctx: GameLogEventContext,

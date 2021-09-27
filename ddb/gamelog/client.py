@@ -121,6 +121,7 @@ class GameLogClient(BaseClient):
 
         # check: is this event from us (ignore it)?
         if event.source == AVRAE_EVENT_SOURCE:
+            log.debug(f"Event ID {event.id!r} is from avrae - ignoring")
             return
 
         # check: do we have a callback for this event?
@@ -132,6 +133,7 @@ class GameLogClient(BaseClient):
         try:
             campaign = await CampaignLink.from_id(self.bot.mdb, event.game_id)
         except NoCampaignLink:
+            log.debug(f"Campaign {event.game_id} is not linked to Discord - ignoring")
             return
 
         # check: is this campaign id for an event that is handled by this cluster?
@@ -160,7 +162,7 @@ class GameLogClient(BaseClient):
         try:
             await self._event_handlers[event.event_type](gctx)
         except IgnoreEvent as e:
-            log.info(f"Event ID {event.id!r} was ignored: {e}")
+            log.debug(f"Event ID {event.id!r} was ignored: {e}")
             return
         except Exception as e:
             traceback.print_exc()

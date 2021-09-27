@@ -1,6 +1,8 @@
 import logging
+from collections import namedtuple
 
 import cachetools
+from discord.ext.commands import NoPrivateMessage
 
 import aliasing.evaluators
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
@@ -34,16 +36,19 @@ class Character(StatBlock):
                  cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
                  spellbook: Spellbook,
                  live, race: str, background: str, creature_type: str = None,
-                 ddb_campaign_id: str = None, actions: Actions = None,
+                 ddb_campaign_id: str = None, actions: Actions = None, active_guilds: list = None,
                  **kwargs):
         if kwargs:
             log.warning(f"Unused kwargs: {kwargs}")
         if actions is None:
             actions = Actions()
+        if active_guilds is None:
+            active_guilds = []
         # sheet metadata
         self._owner = owner
         self._upstream = upstream
         self._active = active
+        self._active_guilds = active_guilds
         self._sheet_type = sheet_type
         self._import_version = import_version
 
@@ -97,9 +102,14 @@ class Character(StatBlock):
         return inst
 
     @classmethod
-    async def from_ctx(cls, ctx):
+    async def from_ctx(cls, ctx, ignore_guild: bool = False):
         owner_id = str(ctx.author.id)
-        active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
+        active_character = None
+        if ctx.guild is not None and not ignore_guild:
+            guild_id = str(ctx.guild.id)
+            active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
+        if active_character is None:
+            active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
         if active_character is None:
             raise NoCharacter()
 
@@ -152,12 +162,13 @@ class Character(StatBlock):
     def to_dict(self):
         d = super().to_dict()
         d.update({
-            "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
-            "import_version": self._import_version, "description": self._description,
+            "owner": self._owner, "upstream": self._upstream, "active": self._active,
+            "sheet_type": self._sheet_type, "import_version": self._import_version, "description": self._description,
             "image": self._image, "cvars": self.cvars, "options": self.options.to_dict(),
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
-            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict()
+            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict(),
+            "active_guilds": self._active_guilds
         })
         return d
 
@@ -257,12 +268,13 @@ class Character(StatBlock):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
         data.pop('active')  # #1472 - may regress when doing atomic commits, be careful
+        data.pop('active_guilds')
         try:
             await ctx.bot.mdb.characters.update_one(
                 {"owner": self._owner, "upstream": self._upstream},
                 {
                     "$set": data,
-                    "$setOnInsert": {'active': self._active}  # also #1472
+                    "$setOnInsert": {'active': self._active, 'active_guilds': self._active_guilds}  # also #1472
                 },
                 upsert=True
             )
@@ -270,16 +282,75 @@ class Character(StatBlock):
             raise ExternalImportError("A number on the character sheet is too large to store.")
 
     async def set_active(self, ctx):
-        """Sets the character as active."""
-        self._active = True
+        """Sets the character as globally active and unsets any server-active character in the current context."""
+        owner_id = str(ctx.author.id)
+        did_unset_server_active = False
+        if ctx.guild is not None:
+            guild_id = str(ctx.guild.id)
+            # for all characters owned by this owner who are active on this guild, make them inactive on this guild
+            result = await ctx.bot.mdb.characters.update_many(
+                {"owner": owner_id, "active_guilds": guild_id},
+                {"$pull": {"active_guilds": guild_id}}
+            )
+            did_unset_server_active = result.modified_count > 0
+            try:
+                self._active_guilds.remove(guild_id)
+            except ValueError:
+                pass
+        # for all characters owned by this owner who are globally active, make them inactive
         await ctx.bot.mdb.characters.update_many(
-            {"owner": str(ctx.author.id), "active": True},
+            {"owner": owner_id, "active": True},
             {"$set": {"active": False}}
         )
+        # make this character active
         await ctx.bot.mdb.characters.update_one(
-            {"owner": str(ctx.author.id), "upstream": self._upstream},
+            {"owner": owner_id, "upstream": self._upstream},
             {"$set": {"active": True}}
         )
+        self._active = True
+        return SetActiveResult(did_unset_server_active=did_unset_server_active)
+
+    async def set_server_active(self, ctx):
+        """
+        Removes all server-active characters and sets the character as active on the current server. 
+        Raises NoPrivateMessage() if not in a server.
+        """
+        if ctx.guild is None:
+            raise NoPrivateMessage()
+        guild_id = str(ctx.guild.id)
+        owner_id = str(ctx.author.id)
+        # unset anyone else that might be active on this server
+        unset_result = await ctx.bot.mdb.characters.update_many(
+            {"owner": owner_id, "active_guilds": guild_id},
+            {"$pull": {"active_guilds": guild_id}}
+        )
+        # set us as active on this server
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": owner_id, "upstream": self._upstream},
+            {"$addToSet": {"active_guilds": guild_id}}
+        )
+        if guild_id not in self._active_guilds:
+            self._active_guilds.append(guild_id)
+        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
+
+    async def unset_server_active(self, ctx):
+        """
+        If this character is active on the contextual guild, unset it as the guild active character.
+        Raises NoPrivateMessage() if not in a server.
+        """
+        if ctx.guild is None:
+            raise NoPrivateMessage()
+        guild_id = str(ctx.guild.id)
+        # if and only if this character is active in this server, unset me as active on this server
+        unset_result = await ctx.bot.mdb.characters.update_one(
+            {"owner": str(ctx.author.id), "upstream": self._upstream},
+            {"$pull": {"active_guilds": guild_id}}
+        )
+        try:
+            self._active_guilds.remove(guild_id)
+        except ValueError:
+            pass
+        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
 
     # ---------- HP ----------
     @property
@@ -480,6 +551,30 @@ class Character(StatBlock):
 
         return embed
 
+    def is_active_global(self):
+        """Returns if a character is active globally."""
+        return self._active
+
+    def is_active_server(self, ctx):
+        """Returns if a character is active on the contextual server."""
+        if ctx.guild is not None:
+            return str(ctx.guild.id) in self._active_guilds
+        return False
+
+    def get_sheet_url(self):
+        """
+        Returns the sheet URL this character lives at, or None if the sheet url could not be created (possible for
+        really old characters).
+        """
+        base_urls = {
+            "beyond": "https://ddb.ac/characters/",
+            "dicecloud": "https://dicecloud.com/character/",
+            "google": "https://docs.google.com/spreadsheets/d/"
+        }
+        if self.sheet_type in base_urls:
+            return f"{base_urls[self.sheet_type]}{self.upstream_id}"
+        return None
+
 
 class CharacterSpellbook(Spellbook):
     """A subclass of spellbook to support live integrations."""
@@ -493,6 +588,8 @@ class CharacterSpellbook(Spellbook):
         if self._live_integration:
             self._live_integration.sync_slots()
 
+
+SetActiveResult = namedtuple('SetActiveResult', 'did_unset_server_active')
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
 DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions}

@@ -488,6 +488,7 @@ class SimpleGroup:
         self._group = group
         self.type = "group"
         self.combatants = [SimpleCombatant(c) for c in self._group.get_combatants()]
+        self.init = self._group.init
 
     @property
     def name(self):
@@ -520,6 +521,17 @@ class SimpleGroup:
         if combatant:
             return combatant
         return None
+
+    def set_init(self, init: int):
+        """
+        Sets the group's initiative roll.
+
+        :param int init: The new initiative.
+        """
+        if not isinstance(init, int):
+            raise ValueError("Initiative must be an integer.")
+        self._group.init = init
+        self._group.combat.sort_combatants()
 
     def __str__(self):
         return str(self._group)

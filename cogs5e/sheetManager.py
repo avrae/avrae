@@ -732,8 +732,11 @@ async def send_ddb_ctas(ctx, character):
         except NoCampaignLink:
             embed.add_field(
                 name="Link Your D&D Beyond Campaign",
-                value=f"Sync rolls between a Discord channel and your D&D Beyond character sheet by linking your "
-                      f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
+                value=f"Have your dungeon master link your D&D Beyond campaign to a Discord channel for even more "
+                      f"integrations!\n"
+                      f"• See rolls from your D&D Beyond character sheet and send rolls to the Game Log!\n"
+                      f"• Synchronize your character's hit points, spell slots, custom counters, and more!\n"
+                      f"If you are the DM, use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
                       f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.",
                 inline=False
             )

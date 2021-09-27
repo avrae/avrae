@@ -41,12 +41,15 @@ class GameLog(commands.Cog):
     @checks.feature_flag('command.campaign.enabled', use_ddb_user=True)
     async def campaign(self, ctx, campaign_link=None):
         """
-        Links a D&D Beyond campaign to this channel, displaying rolls made on players' character sheets in real time.
+        Links a D&D Beyond campaign to this channel to synchronize players' rolls and character information.
+
+        • See rolls from your D&D Beyond character sheet and send rolls to the Game Log!
+        • Synchronize your character's hit points, spell slots, custom counters, and more!
 
         You must be the DM of the campaign to link it to a channel.
 
-        Not seeing a player's rolls? Link their D&D Beyond and Discord accounts [here](https://www.dndbeyond.com/account), and check with the `!ddb` command!
-        """
+        Not seeing a player's rolls? Link their D&D Beyond and Discord accounts [here](https://www.dndbeyond.com/account), and check with the `!ddb` command.
+        """  # noqa: E501
         if campaign_link is None:
             return await self.campaign_list(ctx)
 

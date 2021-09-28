@@ -380,6 +380,18 @@ class Character(StatBlock):
         if self._live_integration and self._temp_hp != old_temp:
             self._live_integration.sync_hp()
 
+    @property
+    def max_hp(self):
+        return super().max_hp
+
+    @max_hp.setter
+    def max_hp(self, value):
+        """
+        Sets the character's base/canonical permanent max hp, which can be further modified by effects.
+        To temporarily change the character's max hp (i.e. in combat), use PlayerCombatant.max_hp.
+        """
+        self._max_hp = max(0, value)
+
     # ---------- SPELLBOOK ----------
     def add_known_spell(self, spell, dc: int = None, sab: int = None, mod: int = None):
         """Adds a spell to the character's known spell list."""

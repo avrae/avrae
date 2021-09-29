@@ -1,13 +1,22 @@
 from cogs5e.models.sheet.integrations import LiveIntegration
-from utils.aldclient import discord_user_to_dict
+
+_sentinel = object()
 
 
 class DDBSheetSync(LiveIntegration):
+    def __init__(self, *args, **kwargs):
+        self._ddb_user = _sentinel
+        super().__init__(*args, **kwargs)
+
     async def _preflight(self):
         """Checks that the context is set and returns the DDB user."""
         if self._ctx is None:
             raise ValueError("Attempted to call DDB sheet sync method with no valid context")
-        return await self._ctx.bot.ddb.get_ddb_user(self._ctx)
+        if self._ddb_user is not _sentinel:
+            return self._ddb_user
+        ddb_user = await self._ctx.bot.ddb.get_ddb_user(self._ctx)
+        self._ddb_user = ddb_user
+        return ddb_user
 
     async def _do_sync_hp(self):
         if (ddb_user := await self._preflight()) is None:
@@ -76,6 +85,7 @@ class DDBSheetSync(LiveIntegration):
 
     async def commit(self, ctx):
         ddb_user = await ctx.bot.ddb.get_ddb_user(ctx)
+        self._ddb_user = ddb_user
         if ddb_user is None:
             return
         flag = await ctx.bot.ldclient.variation(

@@ -11,7 +11,7 @@ from .callback import GameLogCallbackHandler, callback
 from .utils import feature_flag
 
 # ==== types ====
-SyncHPResult = namedtuple('SyncHPResult', 'changed old_hp old_max old_temp delta')
+SyncHPResult = namedtuple('SyncHPResult', 'changed old_hp old_max old_temp delta message')
 SyncDeathSavesResult = namedtuple('SyncDeathSavesResult', 'changed old_successes old_fails')
 
 
@@ -46,18 +46,29 @@ class CharacterHandler(GameLogCallbackHandler):
     def sync_hp(
             char: Character,
             hp_info: scds_types.SimplifiedHitPointInfo) -> SyncHPResult:
-        old_hp = char.hp
-        old_max = char.max_hp
+        old_hp = new_hp = char.hp
+        old_max = new_max = char.max_hp
         old_temp = char.temp_hp
 
-        char.hp = hp_info.current
-        char.max_hp = hp_info.maximum
+        # if the character's current hp is greater than its canonical max (i.e. not considering combats) and ddb says
+        # the character is at full, skip hp sync - the character's hp may have been updated in some combat somewhere
+        # which may or may not be the combat in the sync channel (which is the *combat* local here)
+        # (demorgans: char.hp > char.max_hp and hp_info.current == hp_info.maximum)
+        if char.hp <= char.max_hp or hp_info.current != hp_info.maximum:
+            # otherwise, we can sync it up
+            char.hp = new_hp = hp_info.current
+            char.max_hp = new_max = hp_info.maximum
         char.temp_hp = hp_info.temp
 
+        # build display message
+        delta = new_hp - old_hp
+        deltaend = f" ({delta:+})" if delta else ""
+        message = f"{char.hp_str()}{deltaend}"
+
         return SyncHPResult(
-            changed=any((old_hp != hp_info.current, old_max != hp_info.maximum, old_temp != hp_info.temp)),
+            changed=any((old_hp != new_hp, old_max != new_max, old_temp != hp_info.temp)),
             old_hp=old_hp, old_max=old_max, old_temp=old_temp,
-            delta=hp_info.current - old_hp
+            delta=delta, message=message
         )
 
     @staticmethod
@@ -67,7 +78,7 @@ class CharacterHandler(GameLogCallbackHandler):
         old_successes = char.death_saves.successes
         old_fails = char.death_saves.fails
 
-        # it is possible in ddb to have a death save state at nonzerho HP, but in Avrae it resets this, so
+        # it is possible in ddb to have a death save state at nonzero HP, but in Avrae it resets this, so
         # any update will show the death saves since on_hp resets them when syncing hp
         if char.hp <= 0:
             char.death_saves.successes = death_save_info.success_count
@@ -89,8 +100,7 @@ class CharacterHandler(GameLogCallbackHandler):
 
         # --- hp ---
         if hp_result.changed:
-            deltaend = f" ({hp_result.delta:+})" if hp_result.delta else ""
-            embed.add_field(name="Hit Points", value=f"{char.hp_str()}{deltaend}")
+            embed.add_field(name="Hit Points", value=hp_result.message)
 
         # --- death saves ---
         if death_save_result.changed:

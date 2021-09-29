@@ -4,9 +4,11 @@ import asyncio
 
 class LiveIntegration(abc.ABC):
     """Interface defining how to sync character resources with upstream. Tied to the character object's lifecycle."""
+    _inflight_tasks = dict()  # map: key -> task to cancel a task if a new one comes along
 
     def __init__(self, character):
         self.character = character
+        self._key = character.upstream
         self._should_sync_hp = False
         self._should_sync_slots = False
         self._should_sync_ccs = {}
@@ -72,5 +74,21 @@ class LiveIntegration(abc.ABC):
                 to_await.append(self._do_sync_consumable(cc))
             await asyncio.gather(*to_await)
             self.clear()
+        except asyncio.CancelledError:
+            pass
+        else:
+            self._inflight_tasks.pop(self._key, None)
         finally:
             self._ctx = None
+
+    def commit_soon(self, ctx):
+        """Creates a task to commit any updates in this sync instance soon. May cancel a previous pending sync task."""
+        # if a task to sync this character already exists, cancel it
+        # since this is sync, it operates atomically on _inflight_tasks, so two commit_soon's running on the same
+        # instance cannot be in contention
+        try:
+            self._inflight_tasks.pop(self._key).cancel()
+        except KeyError:
+            pass
+        task = asyncio.create_task(self.commit(ctx))
+        self._inflight_tasks[self._key] = task

@@ -283,7 +283,7 @@ class Character(StatBlock):
         except OverflowError:
             raise ExternalImportError("A number on the character sheet is too large to store.")
         if self._live_integration is not None and do_live_integrations:
-            asyncio.create_task(self._live_integration.commit(ctx))  # fire off a sync eventually
+            self._live_integration.commit_soon(ctx)  # creates a task to commit eventually
 
     async def set_active(self, ctx):
         """Sets the character as globally active and unsets any server-active character in the current context."""

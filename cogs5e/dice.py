@@ -146,14 +146,13 @@ class Dice(commands.Cog):
         if ast.comment:
             header = f"{ast.comment}: {header}"
 
-        result_strs = '\n'.join([str(o) for o in results])
+        result_strs = '\n'.join(str(o) for o in results)
 
         out = f"{header}\n{result_strs}\n{footer}"
 
         if len(out) > 1500:
-            one_result = str(results[0])[:100]
-            one_result = f"{one_result}..." if len(one_result) > 100 else one_result
-            out = f"{header}\n{one_result}\n{footer}"
+            one_result = str(results[0])
+            out = f"{header}\n{one_result}\n[{len(results) - 1} results omitted for output size.]\n{footer}"
 
         await try_delete(ctx.message)
         await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))

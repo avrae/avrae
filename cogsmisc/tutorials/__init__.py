@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 
 from cogs5e.models.embeds import EmbedWithAuthor
-from utils import checks
+from utils import checks, config
 from utils.aldclient import discord_user_to_dict
 from utils.functions import confirm, get_guild_member, search_and_select
 from .ddblink import DDBLink
@@ -147,6 +147,8 @@ class Tutorials(commands.Cog):
                                                     default=False)
         if not flag_on:
             return
+        prefix = await self.bot.get_guild_prefix(guild)
+        prefix_is_default = prefix == config.DEFAULT_PREFIX
 
         embed = discord.Embed()
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.display_avatar.url)
@@ -157,14 +159,22 @@ class Tutorials(commands.Cog):
         I'm ready to roll, but before we get started, let's take a look at some of the things I can do! 
         """).strip()
 
+        if not prefix_is_default:
+            embed.add_field(
+                name="Prefix", inline=False,
+                value=f"Looks like you've added me to {guild.name} in the past before. On {guild.name}, my prefix is "
+                      f"`{prefix}`, but by default, it's `{config.DEFAULT_PREFIX}`. You can reset it with "
+                      f"`{prefix}prefix {config.DEFAULT_PREFIX}`, or roll with it using the examples below!"
+            )
+
         embed.add_field(
             name="Rolling Dice", inline=False,
-            value=f"Want to get rolling as soon as possible? Just use the `!roll` command to get started! "
+            value=f"Want to get rolling as soon as possible? Just use the `{prefix}roll` command to get started! "
                   f"Here's some examples: ```\n"
-                  f"!roll 1d20\n"
-                  f"!roll 4d6kh3\n"
-                  f"!roll 1d20+1 adv\n"
-                  f"!r 1d10[cold]+2d6[piercing]\n"
+                  f"{prefix}roll 1d20\n"
+                  f"{prefix}roll 4d6kh3\n"
+                  f"{prefix}roll 1d20+1 adv\n"
+                  f"{prefix}r 1d10[cold]+2d6[piercing]\n"
                   f"```"
         )
 
@@ -172,19 +182,20 @@ class Tutorials(commands.Cog):
             name="Quickstart", inline=False,
             value=f"I can do more than just roll dice, too! If you'd like to learn more about importing a "
                   f"character and rolling checks, saves, and attacks, try out the Quickstart tutorial!"
-                  f"```\n!tutorial quickstart\n```"
+                  f"```\n{prefix}tutorial quickstart\n```"
         )
 
         embed.add_field(
             name="Content Lookup", inline=False,
-            value=f"You can look up any spell, item, creature, and more right in Discord! Just use the `!spell`, "
-                  f"`!item`, `!monster`, or other lookup command! You can see a full list with `!help Lookup`.\n\n"
+            value=f"You can look up any spell, item, creature, and more right in Discord! Just use the `{prefix}spell`"
+                  f", `{prefix}item`, `{prefix}monster`, or other lookup command! You can see a full list with "
+                  f"`{prefix}help Lookup`.\n\n"
                   f"I'll even link with your D&D Beyond account to give you access to everything you've unlocked, "
                   f"all for free! To get started, try out the D&D Beyond tutorial."
-                  f"```\n!tutorial beyond\n```\n"
+                  f"```\n{prefix}tutorial beyond\n```\n"
                   f"\u203b By default, for servers with less than 250 members, a monster's full stat block will be "
                   f"hidden unless you have a Discord role named `Dungeon Master`. You can turn this off with "
-                  f"`!lookup_settings -req_dm_monster false`."
+                  f"`{prefix}lookup_settings -req_dm_monster false`."
         )
 
         embed.add_field(
@@ -192,7 +203,7 @@ class Tutorials(commands.Cog):
             value=f"Once you're familiar with the basics, to learn how to get started with initiative tracking, "
                   f"try out the initiative tutorial! You can choose between a Dungeon Master's or a player's "
                   f"perspective."
-                  f"```\n!tutorial initiative\n```"
+                  f"```\n{prefix}tutorial initiative\n```"
         )
 
         embed.add_field(
@@ -203,8 +214,8 @@ class Tutorials(commands.Cog):
 
         embed.add_field(
             name="More Resources", inline=False,
-            value=f"If you ever want a refresher on a command or feature, use the `!help` command for help on a "
-                  f"command, or `!tutorial` for a list of available tutorials.\n\n"
+            value=f"If you ever want a refresher on a command or feature, use the `{prefix}help` command for help on a "
+                  f"command, or `{prefix}tutorial` for a list of available tutorials.\n\n"
                   f"For even more resources, come join us in the development Discord at <https://support.avrae.io>!"
         )
 

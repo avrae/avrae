@@ -8,7 +8,7 @@ import logging
 import re
 
 import aiohttp
-import html2text
+from markdownify import markdownify
 
 from cogs5e.models import automation
 from cogs5e.models.character import Character
@@ -22,6 +22,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from gamedata.compendium import compendium
 from utils import config, constants, enums
+from utils.functions import smart_trim
 
 log = logging.getLogger(__name__)
 
@@ -424,4 +425,4 @@ def derive_adv(advs, dises):
 def html_to_md(text):
     if not text:
         return text
-    return html2text.html2text(text, bodywidth=0).strip()
+    return markdownify(text).strip()

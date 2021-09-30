@@ -1139,6 +1139,12 @@ AliasDeathSaves
 .. autoclass:: aliasing.api.character.AliasDeathSaves()
     :members:
 
+AliasAction
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.character.AliasAction()
+    :members:
+
 StatBlock Models
 ----------------
 

@@ -503,7 +503,7 @@ class GameTrack(commands.Cog):
         """
         Creates a new custom counter.
         __Valid Arguments__
-        `-title <title>` - Sets the title when setting or viewing the counter. `[name]` will be replaced with the player's name.
+        `-title <title>` - Sets the title for the output when modifying the counter. `[name]` will be replaced with the player's name.
         `-desc <desc>` - Sets the description when setting or viewing the counter.
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.

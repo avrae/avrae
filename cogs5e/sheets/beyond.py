@@ -238,9 +238,12 @@ class BeyondSheetParser(SheetLoaderABC):
             display_type = 'bubble' if cons['max'] < 7 else None
             reset = RESET_MAP.get(cons['reset'], 'long')
             name = cons['name'].replace('\u2019', "'").strip()
-            desc = cons['desc'].replace('\u2019', "'") if cons['desc'] is not None else None
+            desc = None
             source_feature_type = cons['sourceFeatureType']
             source_feature_id = cons['sourceFeatureId']
+
+            if cons['desc'] is not None:
+                desc = smart_trim(html_to_md(cons['desc'].replace('\u2019', "'")))
 
             source_feature = compendium.lookup_entity(source_feature_type, source_feature_id)
             log.debug(f"Processed counter named {name!r} for feature {source_feature}")
@@ -250,11 +253,11 @@ class BeyondSheetParser(SheetLoaderABC):
                             f"named {name!r}")
 
             if cons['max'] and name:  # don't make counters with a range of 0 - 0, or blank named counters
-                out.append(
-                    CustomCounter(None, name, cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
-                                  display_type=display_type, live_id=live_id, desc=desc,
-                                  ddb_source_feature_type=source_feature_type, ddb_source_feature_id=source_feature_id)
-                )
+                out.append(CustomCounter(
+                    None, name, cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
+                    display_type=display_type, live_id=live_id, desc=desc,
+                    ddb_source_feature_type=source_feature_type, ddb_source_feature_id=source_feature_id
+                ))
 
         return [cc.to_dict() for cc in out]
 

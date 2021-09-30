@@ -111,8 +111,10 @@ It must be inside a Target effect.
 - ``lastSaveDidPass`` (:class:`bool`) Whether the target passed the save.
 - ``lastSaveDC`` (:class:`int`) The DC of the last save roll.
 - ``lastSaveRollTotal`` (:class:`int`) The result of the last save roll (0 if no roll was made).
-- ``lastSaveNaturalRoll`` (:class:`int`) The natural roll of the last save roll (e.g. `10` in `1d20 (10) + 5 = 15`;
+- ``lastSaveNaturalRoll`` (:class:`int`) The natural roll of the last save roll (e.g. ``10`` in ``1d20 (10) + 5 = 15``;
   0 if no roll was made).
+- ``lastSaveAbility`` (:class:`str`) The title-case full name of the ability the save was made with (e.g.
+  ``"Strength"``, ``"Wisdom"``, etc).
 
 Damage
 ------

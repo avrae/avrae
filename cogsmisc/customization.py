@@ -77,10 +77,12 @@ class CollectableManagementGroup(commands.Group):
         self._register_commands()
 
     def _register_commands(self):
-        self.list = self.command(name='list',
-                                 help=f'Lists all {self.obj_name_pl}.')(self.list)
-        self.delete = self.command(name='delete', aliases=['remove'],
-                                   help=f'Deletes a {self.obj_name}.')(self.delete)
+        self.list = self.command(
+            name='list',
+            help=f'Lists all {self.obj_name_pl}.')(self.list)
+        self.delete = self.command(
+            name='delete', aliases=['remove'],
+            help=f'Deletes a {self.obj_name}.')(self.delete)
         self.subscribe = self.command(
             name='subscribe', aliases=['sub'],
             help='Subscribes to all aliases and snippets in a workshop collection.')(self.subscribe)
@@ -159,16 +161,16 @@ class CollectableManagementGroup(commands.Group):
 
             return await ctx.send(embed=embed)
 
-    async def list(self, ctx):
+    async def list(self, ctx, page: int = 0):
         ep = embeds.EmbedPaginator(EmbedWithAuthor(ctx))
 
-        has_at_least_1 = False
+        collections = []  # tuples (name, bindings)
 
+        # load all the user's aliases
         user_objs = await self.personal_cls.get_ctx_map(ctx)
         user_obj_names = list(user_objs.keys())
         if user_obj_names:
-            has_at_least_1 = True
-            ep.add_field(f"Your {self.obj_name_pl.title()}", ', '.join(sorted(user_obj_names)))
+            collections.append((f"Your {self.obj_name_pl.title()}", ', '.join(sorted(user_obj_names))))
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
             try:
@@ -176,10 +178,20 @@ class CollectableManagementGroup(commands.Group):
             except workshop.CollectionNotFound:
                 continue
             if bindings := subscription_doc[self.binding_key]:
-                has_at_least_1 = True
-                ep.add_field(the_collection.name, ', '.join(sorted(ab['name'] for ab in bindings)))
+                collections.append((the_collection.name, ', '.join(sorted(ab['name'] for ab in bindings))))
 
-        if not has_at_least_1:
+        # build the resulting embed
+        total = len(collections)
+        page = max(0, page - 1)
+        maxpage = total // 25
+        start = min(page * 25, total - 25)
+        end = max(start + 25, total)
+        for name, bindings_str in collections[start:end]:
+            ep.add_field(name, bindings_str)
+        if total > 25:
+            ep.set_footer(value=f"Page [{page + 1}/{maxpage + 1}] | {ctx.prefix}{ctx.command.qualified_name} <page>")
+
+        if not collections:
             ep.add_description(f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]"
                                "(https://avrae.io/dashboard/workshop) to get some, "
                                "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!")

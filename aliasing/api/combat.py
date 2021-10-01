@@ -121,6 +121,7 @@ class SimpleCombat:
     def set_round(self, round_num: int):
         """
         Sets the current round.
+        Setting the round will not tick any events with durations.
 
         :param int round_num: the new round number
         """
@@ -131,6 +132,7 @@ class SimpleCombat:
     def end_round(self):
         """
         Moves initiative to just before the next round (no active combatant or group).
+        Ending the round will not tick any events with durations.
         """
         self._combat.end_round()
 

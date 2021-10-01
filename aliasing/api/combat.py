@@ -118,6 +118,22 @@ class SimpleCombat:
         """
         return self._combat._metadata.pop(str(k), None)
 
+    def set_round(self, round_num: int):
+        """
+        Sets the current round.
+
+        :param int round_num: the new round number
+        """
+        if not isinstance(round_num, int):
+            raise ValueError("Round_num must be an integer.")
+        self._combat._round_num = round_num
+
+    def end_round(self):
+        """
+        Moves initiative to just before the next round (no active combatant or group).
+        """
+        self._combat.end_round()
+
     # private functions
     def func_set_character(self, character):
         me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),

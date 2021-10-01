@@ -331,6 +331,13 @@ class Combat:
 
         return order
 
+    def end_round(self):
+        """
+        Moves initiative to just before the next round (no active combatant or group).
+        """
+        self._turn = 0
+        self._current_index = None
+
     async def select_combatant(self, name, choice_message=None, select_group=False):
         """
         Opens a prompt for a user to select the combatant they were searching for.

@@ -127,7 +127,7 @@ class SimpleCombat:
         """
         if not isinstance(round_num, int):
             raise ValueError("Round_num must be an integer.")
-        self._combat._round_num = round_num
+        self._combat.round_num = round_num
 
     def end_round(self):
         """

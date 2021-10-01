@@ -10,6 +10,7 @@ import re
 import aiohttp
 from markdownify import markdownify
 
+import gamedata
 from cogs5e.models import automation
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
@@ -332,6 +333,11 @@ class BeyondSheetParser(SheetLoaderABC):
                 continue
             # display as attack override - fall back to attack system
             if d_action['isCustomized'] and d_action['displayAsAttack']:
+                continue
+            # racial feature affected by martial arts - fall back to attack system
+            if (d_action['isMartialArts']
+                    and d_action['displayAsAttack']
+                    and int(d_action['componentTypeId']) == gamedata.race.RaceFeature.type_id):
                 continue
 
             # gamedata for limiteduse

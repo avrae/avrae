@@ -319,8 +319,7 @@ class Combat:
         self.sort_combatants()
 
         # reset current turn
-        self._turn = 0
-        self._current_index = None
+        self.end_round()
 
         order = []
         for combatant, init_roll in sorted(rolls.items(), key=lambda r: (r[1].total, int(r[0].init_skill)),

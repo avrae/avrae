@@ -13,17 +13,19 @@ class AvraeContext(Context):
         self._character = _sentinel
         self._combat = _sentinel
 
-    async def get_character(self):
+    async def get_character(self, ignore_guild: bool = False):
         """
         Gets the character active in this context.
 
+        :param bool ignore_guild: Whether to ignore any guild-active character and return the global active character.
         :raises NoCharacter: If the context has no character (author has none active).
         :rtype: Character
         """
-        if self._character is not _sentinel:
+        if not ignore_guild and self._character is not _sentinel:
             return self._character
-        character = await Character.from_ctx(self)
-        self._character = character
+        character = await Character.from_ctx(self, ignore_guild=ignore_guild)
+        if not ignore_guild:
+            self._character = character
         return character
 
     async def get_combat(self):

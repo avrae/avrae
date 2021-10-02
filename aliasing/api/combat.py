@@ -7,8 +7,6 @@ from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
 from cogs5e.models.sheet.statblock import StatBlock
-from cogs5e.models.initiative.combatant import Combatant
-from cogs5e.models.initiative.group import CombatantGroup
 from utils.argparser import ParsedArguments
 
 MAX_METADATA_SIZE = 100000
@@ -57,9 +55,9 @@ class SimpleCombat:
         name = str(name)
         combatant = self._combat.get_combatant(name, False)
         if combatant:
-            if isinstance(combatant, CombatantGroup):
+            if combatant.type == init.CombatantType.GROUP:
                 return SimpleGroup(combatant)
-            elif isinstance(combatant, Combatant):
+            else:
                 return SimpleCombatant(combatant)
         return None
 

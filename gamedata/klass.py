@@ -111,13 +111,23 @@ class ClassFeature(LimitedUseGrantorMixin, DescribableMixin, Sourced):
 
     @classmethod
     def from_data(cls, d, source_class, **kwargs):
+        # priority: data, kwarg, source class
+        entitlement_entity_id = d.get(
+            'entitlementEntityId',
+            kwargs.pop('entitlement_entity_id', source_class.entity_id)
+        )
+        entitlement_entity_type = d.get(
+            'entitlementEntityType',
+            kwargs.pop('entitlement_entity_type', 'class')
+        )
+
         inst = cls(
             d['name'], d['text'], [],
             entity_id=d['id'], page=d['page'],
             source=d.get('source', source_class.source), is_free=d.get('isFree', source_class.is_free),
             url=d.get('url', source_class.raw_url),
-            entitlement_entity_id=d.get('entitlementEntityId', source_class.entity_id),
-            entitlement_entity_type=d.get('entitlementEntityType', 'class'),
+            entitlement_entity_id=entitlement_entity_id,
+            entitlement_entity_type=entitlement_entity_type,
             **kwargs
         )
         if 'options' in d:
@@ -136,4 +146,10 @@ class ClassFeatureOption(ClassFeature):
 
     @classmethod
     def from_data(cls, d, source_class, class_feature=None, **kwargs):
-        return super().from_data(d, source_class, parent=class_feature, **kwargs)
+        return super().from_data(
+            d, source_class,
+            parent=class_feature,
+            entitlement_entity_id=d.get('entitlementEntityId', class_feature.entitlement_entity_id),
+            entitlement_entity_type=d.get('entitlementEntityType', class_feature.entitlement_entity_type),
+            **kwargs
+        )

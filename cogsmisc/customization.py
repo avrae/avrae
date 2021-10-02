@@ -488,7 +488,7 @@ class Customization(commands.Cog):
         """
         guild_id = str(ctx.guild.id)
         if prefix is None:
-            current_prefix = await self.bot.get_server_prefix(ctx.message)
+            current_prefix = await self.bot.get_guild_prefix(ctx.guild)
             return await ctx.send(f"My current prefix is: `{current_prefix}`. You can run commands like "
                                   f"`{current_prefix}roll 1d20` or by mentioning me!")
 

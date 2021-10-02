@@ -346,9 +346,9 @@ class CollectableManagementGroup(commands.Group):
             return await ctx.send(
                 f"Okay, the workshop {self.obj_name} that was bound to {old_name} is now bound to {new_name}.")
         
-    async def serve(self, ctx, personal_name):
+    async def serve(self, ctx, name):
         if self.before_edit_check:
-            self.before_edit_check(ctx, personal_name)
+            self.before_edit_check(ctx, name)
         if not _can_edit_servaliases(ctx):
             raise NotAllowed("You do not have permission to edit server aliases. Either __Administrator__ "
                              "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
@@ -358,16 +358,16 @@ class CollectableManagementGroup(commands.Group):
 
         # list of (name, (alias or sub doc, collection or None))
         choices = []
-        if personal_obj := await self.personal_cls.get_named(personal_name, ctx):
-            choices.append((f"{personal_name} ({self.obj_name})",
+        if personal_obj := await self.personal_cls.get_named(name, ctx):
+            choices.append((f"{name} ({self.obj_name})",
                             (personal_obj, None)))
 
         # get list of (subscription object ids, subscription doc)
         async for subscription_doc in self.workshop_sub_meth(ctx):
             the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
             for binding in subscription_doc[self.binding_key]:
-                if binding['name'] == personal_name:
-                    choices.append((f"{personal_name} ({the_collection.name})",
+                if binding['name'] == name:
+                    choices.append((f"{name} ({the_collection.name})",
                                     (subscription_doc, the_collection)))
 
         personal_obj, collection = await get_selection(ctx, choices)

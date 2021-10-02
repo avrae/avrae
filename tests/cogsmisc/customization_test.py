@@ -110,3 +110,6 @@ async def servering_aliases(avrae, dhttp):
     avrae.message("!alias serve foobar")
     await dhttp.receive_message(r'Server alias `foobar` added\.\n```py\n.foobar echo foobar\n?```', regex=True)
     
+    avrae.message('!alias serve')
+    await dhttp.receive_message('Error: name is a required argument that is missing.\n' \
+        'Use !help alias serve for help.')

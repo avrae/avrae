@@ -230,7 +230,7 @@ class Attack(Effect):
         if self.miss:
             miss_out = self.build_child_str(self.miss, caster, evaluator)
             if miss_out:
-                out += f". Miss: {', '.join(miss_out)}"
+                out += f". Miss: {miss_out}"
         return out
 
     @property

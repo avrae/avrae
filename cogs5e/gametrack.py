@@ -550,27 +550,24 @@ class GameTrack(commands.Cog):
         await ctx.send(f"Deleted counter {counter.name}.")
 
     @customcounter.command(name='summary', aliases=['list'])
-    async def customcounter_summary(self, ctx, page: int = 0):
+    async def customcounter_summary(self, ctx, page: int = 1):
         """
         Prints a summary of all custom counters.
         Use `!cc list <page>` to view pages if you have more than 25 counters.
         """
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character, title="Custom Counters")
-        # Check that we're not over the field limit
+
+        # paginate if > 25
         total = len(character.consumables)
-        if total > 25:  # Discord Field limit
-            page = max(0, page - 1)  # Humans count from 1
-            maxpage = total // 25
-            start = min(page * 25, total - 25)
-            end = max(start + 25, total)
-            # Build the current page
-            embed.set_footer(text=f"Page [{page + 1}/{maxpage + 1}] | {ctx.prefix}cc list <page>")
-            for counter in character.consumables[start:end]:
-                embed.add_field(name=counter.name, value=counter.full_str())
-        else:
-            for counter in character.consumables:
-                embed.add_field(name=counter.name, value=counter.full_str())
+        maxpage = total // 25 + 1
+        page = max(1, min(page, maxpage))
+        pages = [character.consumables[i:i + 25] for i in range(0, total, 25)]
+        for counter in pages[page - 1]:
+            embed.add_field(name=counter.name, value=counter.full_str())
+        if total > 25:
+            embed.set_footer(text=f"Page [{page}/{maxpage}] | {ctx.prefix}cc list <page>")
+
         await ctx.send(embed=embed)
 
     @customcounter.command(name='reset')

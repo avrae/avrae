@@ -161,7 +161,7 @@ class CollectableManagementGroup(commands.Group):
 
             return await ctx.send(embed=embed)
 
-    async def list(self, ctx, page: int = 0):
+    async def list(self, ctx, page: int = 1):
         ep = embeds.EmbedPaginator(EmbedWithAuthor(ctx))
 
         collections = []  # tuples (name, bindings)
@@ -182,14 +182,13 @@ class CollectableManagementGroup(commands.Group):
 
         # build the resulting embed
         total = len(collections)
-        page = max(0, page - 1)
-        maxpage = total // 25
-        start = min(page * 25, total - 25)
-        end = max(start + 25, total)
-        for name, bindings_str in collections[start:end]:
+        maxpage = total // 25 + 1
+        page = max(1, min(page, maxpage))
+        pages = [collections[i:i + 25] for i in range(0, total, 25)]
+        for name, bindings_str in pages[page - 1]:
             ep.add_field(name, bindings_str)
         if total > 25:
-            ep.set_footer(value=f"Page [{page + 1}/{maxpage + 1}] | {ctx.prefix}{ctx.command.qualified_name} <page>")
+            ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{ctx.command.qualified_name} <page>")
 
         if not collections:
             ep.add_description(f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]"

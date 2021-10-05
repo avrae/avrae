@@ -1,3 +1,5 @@
+from functools import cached_property
+
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.statblock import AliasStatBlock
@@ -13,9 +15,6 @@ class AliasCharacter(AliasStatBlock):
         super().__init__(character)
         self._character = character
         self._interpreter = interpreter
-        # memoized attrs
-        self._consumables = None
-        self._death_saves = None
 
     # helpers
     def _get_consumable(self, name):
@@ -26,29 +25,15 @@ class AliasCharacter(AliasStatBlock):
         return consumable
 
     # methods
-    # --- death saves ---
-    @property
-    def death_saves(self):
-        """
-        Returns the characters death saves.
-
-        :rtype: AliasDeathSaves
-        """
-        if self._death_saves is None:
-            self._death_saves = AliasDeathSaves(self._character.death_saves)
-        return self._death_saves
-
     # --- ccs ---
-    @property
+    @cached_property
     def consumables(self):
         """
         Returns a list of custom counters on the character.
 
         :rtype: list[AliasCustomCounter]
         """
-        if self._consumables is None:
-            self._consumables = [AliasCustomCounter(cc) for cc in self._character.consumables]
-        return self._consumables
+        return [AliasCustomCounter(cc) for cc in self._character.consumables]
 
     def cc(self, name):
         """
@@ -255,6 +240,24 @@ class AliasCharacter(AliasStatBlock):
             del self._character.cvars[name]
 
     # --- other properties ---
+    @cached_property
+    def death_saves(self):
+        """
+        Returns the character's death saves.
+
+        :rtype: AliasDeathSaves
+        """
+        return AliasDeathSaves(self._character.death_saves)
+
+    @cached_property
+    def actions(self):
+        """
+        The character's actions. These do not include attacks - see the ``attacks`` property.
+
+        :rtype: list[AliasAction]
+        """
+        return [AliasAction(action, self._character) for action in self._character.actions]
+
     @property
     def owner(self):
         """
@@ -536,3 +539,89 @@ class AliasDeathSaves:
 
     def __repr__(self):
         return f"<AliasDeathSaves successes={self.successes} fails={self.fails}>"
+
+
+class AliasAction:
+    """
+    An action.
+    """
+
+    def __init__(self, action, parent_statblock):
+        """
+        :type action: cogs5e.models.sheet.action.Action
+        :type parent_statblock: cogs5e.models.character.Character
+        """
+        self._action = action
+        self._parent_statblock = parent_statblock
+
+    @property
+    def name(self):
+        """
+        The name of the action.
+
+        :rtype: str
+        """
+        return self._action.name
+
+    @property
+    def activation_type(self):
+        """
+        The activation type of the action (e.g. action, bonus, etc).
+
+        +--------------+-------+
+        | Action Type  | Value |
+        +==============+=======+
+        | Action       | 1     |
+        +--------------+-------+
+        | No Action    | 2     |
+        +--------------+-------+
+        | Bonus Action | 3     |
+        +--------------+-------+
+        | Reaction     | 4     |
+        +--------------+-------+
+        | Minute       | 6     |
+        +--------------+-------+
+        | Hour         | 7     |
+        +--------------+-------+
+        | Special      | 8     |
+        +--------------+-------+
+
+        :rtype: int
+        """
+        return self._action.activation_type.value
+
+    @property
+    def activation_type_name(self):
+        """
+        The name of the activation type of the action. Will be one of:
+        "ACTION", "NO_ACTION", "BONUS_ACTION", "REACTION", "MINUTE", "HOUR", "SPECIAL".
+        This list of options may expand in the future.
+
+        :rtype: str
+        """
+        return self._action.activation_type.name
+
+    @cached_property
+    def description(self):
+        """
+        The description of the action as it appears in a non-verbose action list.
+
+        :rtype: str
+        """
+        return self._action.build_str(caster=self._parent_statblock, snippet=False)
+
+    @cached_property
+    def snippet(self):
+        """
+        The description of the action as it appears in a verbose action list.
+
+        :rtype: str
+        """
+        return self._action.build_str(caster=self._parent_statblock, snippet=True)
+
+    def __str__(self):
+        return f"**{self.name}**: {self.description}"
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} activation_type={self.activation_type!r} " \
+               f"activation_type_name={self.activation_type_name!r}>"

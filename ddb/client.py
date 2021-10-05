@@ -312,7 +312,10 @@ class BeyondClient(BeyondClientBase):
 
             lek = response.get('LastEvaluatedKey')
             for obj in response['Items']:
-                yield json.loads(obj['JSON'])
+                try:
+                    yield json.loads(obj['JSON'])
+                except json.JSONDecodeError:
+                    log.warning(f"Could not decode entitlement object: {obj!r}")
 
     async def close(self):
         await self.http.close()

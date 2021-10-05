@@ -87,7 +87,11 @@ INDICES = {
         IndexModel([('username', ASCENDING), ('discriminator', ASCENDING)])
     ],
     # todo put the existing indices here
-    "characters": [],
+    "characters": [
+        IndexModel([('owner', ASCENDING), ('upstream', ASCENDING)], unique=True),
+        IndexModel([('owner', ASCENDING), ('active', ASCENDING)], background=True),
+        IndexModel([('owner', ASCENDING), ('active_guilds', ASCENDING)], background=True),
+    ],
     "combats": [],
     "lookupsettings": [],
     "static_data": [],

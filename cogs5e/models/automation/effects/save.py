@@ -1,7 +1,7 @@
 import d20
 
 from cogs5e.models.errors import InvalidSaveType
-from utils.functions import maybe_mod, reconcile_adv
+from utils.functions import maybe_mod, reconcile_adv, verbose_stat
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
 from ..results import SaveResult
@@ -85,6 +85,7 @@ class Save(Effect):
         autoctx.metavars['lastSaveRollTotal'] = 0
         autoctx.metavars['lastSaveNaturalRoll'] = 0  # 1495
         autoctx.metavars['lastSaveDC'] = dc
+        autoctx.metavars['lastSaveAbility'] = verbose_stat(stat)
         autoctx.meta_queue(f"**DC**: {dc}")
 
         if not autoctx.target.is_simple:

@@ -4,17 +4,17 @@ import re
 from math import floor
 
 import aiohttp
-import html2text
+from markdownify import markdownify
 
 import gamedata.compendium as gd
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
-from utils.subscription_mixins import CommonHomebrewMixin
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
 from gamedata.monster import Monster, MonsterSpellbook, Trait
 from utils.functions import search_and_select
+from utils.subscription_mixins import CommonHomebrewMixin
 
 log = logging.getLogger(__name__)
 
@@ -358,7 +358,7 @@ def parse_critterdb_traits(data, key):
         raw_damage = list(JUST_DAMAGE_RE.finditer(raw))
 
         filtered = AVRAE_ATTACK_OVERRIDES_RE.sub('', raw)
-        desc = '\n'.join(html2text.html2text(text, bodywidth=0).strip() for text in filtered.split('\n')).strip()
+        desc = markdownify(filtered).strip()
 
         if overrides:
             for override in overrides:
@@ -401,7 +401,7 @@ def parse_critterdb_spellcasting(traits, base_stats):
     usual_dc = (0, 0)  # dc, number of spells using dc
     usual_sab = (0, 0)  # same thing
     usual_cab = (0, 0)
-    caster_level = 0 # default caster level should be 0
+    caster_level = 0  # default caster level should be 0
     slots = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0}
 
     for trait in traits:

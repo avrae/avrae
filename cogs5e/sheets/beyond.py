@@ -8,8 +8,9 @@ import logging
 import re
 
 import aiohttp
-import html2text
+from markdownify import markdownify
 
+import gamedata
 from cogs5e.models import automation
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
@@ -22,6 +23,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from gamedata.compendium import compendium
 from utils import config, constants, enums
+from utils.functions import smart_trim
 
 log = logging.getLogger(__name__)
 
@@ -237,9 +239,12 @@ class BeyondSheetParser(SheetLoaderABC):
             display_type = 'bubble' if cons['max'] < 7 else None
             reset = RESET_MAP.get(cons['reset'], 'long')
             name = cons['name'].replace('\u2019', "'").strip()
-            desc = cons['desc'].replace('\u2019', "'") if cons['desc'] is not None else None
+            desc = None
             source_feature_type = cons['sourceFeatureType']
             source_feature_id = cons['sourceFeatureId']
+
+            if cons['desc'] is not None:
+                desc = smart_trim(html_to_md(cons['desc'].replace('\u2019', "'")))
 
             source_feature = compendium.lookup_entity(source_feature_type, source_feature_id)
             log.debug(f"Processed counter named {name!r} for feature {source_feature}")
@@ -249,11 +254,11 @@ class BeyondSheetParser(SheetLoaderABC):
                             f"named {name!r}")
 
             if cons['max'] and name:  # don't make counters with a range of 0 - 0, or blank named counters
-                out.append(
-                    CustomCounter(None, name, cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
-                                  display_type=display_type, live_id=live_id, desc=desc,
-                                  ddb_source_feature_type=source_feature_type, ddb_source_feature_id=source_feature_id)
-                )
+                out.append(CustomCounter(
+                    None, name, cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
+                    display_type=display_type, live_id=live_id, desc=desc,
+                    ddb_source_feature_type=source_feature_type, ddb_source_feature_id=source_feature_id
+                ))
 
         return [cc.to_dict() for cc in out]
 
@@ -328,6 +333,11 @@ class BeyondSheetParser(SheetLoaderABC):
                 continue
             # display as attack override - fall back to attack system
             if d_action['isCustomized'] and d_action['displayAsAttack']:
+                continue
+            # racial feature affected by martial arts - fall back to attack system
+            if (d_action['isMartialArts']
+                    and d_action['displayAsAttack']
+                    and int(d_action['componentTypeId']) == gamedata.race.RaceFeature.type_id):
                 continue
 
             # gamedata for limiteduse
@@ -424,4 +434,4 @@ def derive_adv(advs, dises):
 def html_to_md(text):
     if not text:
         return text
-    return html2text.html2text(text, bodywidth=0).strip()
+    return markdownify(text).strip()

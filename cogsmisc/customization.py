@@ -188,7 +188,7 @@ class CollectableManagementGroup(commands.Group):
         for name, bindings_str in pages[page - 1]:
             ep.add_field(name, bindings_str)
         if total > 25:
-            ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{ctx.command.qualified_name} list <page>")
+            ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{ctx.command.root_parent} list <page>")
 
         if not collections:
             ep.add_description(f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]"

@@ -65,12 +65,10 @@ class CollectableManagementGroup(commands.Group):
         self.obj_name = 'alias' if self.is_alias else 'snippet'
         self.obj_copy_command = self.obj_name  # when an item is viewed, we show the non-server version of the command
         self.obj_name_pl = 'aliases' if self.is_alias else 'snippets'
-        self.base_name = self.obj_name
 
         if self.is_server:
             self.obj_name = f'server {self.obj_name}'
             self.obj_name_pl = f'server {self.obj_name_pl}'
-            self.base_name = f'serv{self.base_name}'
             self.owner_from_ctx = lambda ctx: str(ctx.guild.id)
         else:
             self.owner_from_ctx = lambda ctx: str(ctx.author.id)
@@ -190,7 +188,7 @@ class CollectableManagementGroup(commands.Group):
         for name, bindings_str in pages[page - 1]:
             ep.add_field(name, bindings_str)
         if total > 25:
-            ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{self.base_name} list <page>")
+            ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{self.command.qualified_name} list <page>")
 
         if not collections:
             ep.add_description(f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]"

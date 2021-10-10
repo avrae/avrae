@@ -20,8 +20,8 @@ class DicecloudClient:
     user_id = None
 
     def __init__(self, debug=False):
-        self.meteor_client = MeteorClient(SOCKET_BASE, debug=False)
-        self.http = DicecloudHTTP(API_BASE, config.DICECLOUD_API_KEY, debug=False)
+        self.meteor_client = MeteorClient(SOCKET_BASE, debug=debug)
+        self.http = DicecloudHTTP(API_BASE, config.DICECLOUD_API_KEY, debug=debug)
         self.logged_in = False
 
     @classmethod

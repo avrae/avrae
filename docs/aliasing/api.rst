@@ -14,6 +14,10 @@ Draconic
 The language used in Avrae aliases is a custom modified version of Python, called Draconic. In most cases,
 Draconic uses the same syntax and base types as Python - any exceptions will be documented here!
 
+.. note::
+    It is highly recommended to be familiar with the Python language before diving into Draconic, as the two
+    use the same syntax and types.
+
 As Draconic is meant to both be an operational and templating language, there are multiple ways to use Draconic
 inside your alias.
 
@@ -56,7 +60,7 @@ Draconic Expressions
 **Syntax**: ``{{code}}``
 
 **Description**: Runs the Draconic code inside the braces and is replaced by the value the code evaluates to.
-If the code evaluates to ``None``, is removed from the output.
+If the code evaluates to ``None``, is removed from the output, otherwise it is cast to ``str``.
 
 See below for a list of builtin Draconic functions.
 
@@ -78,8 +82,8 @@ Draconic Blocks
     code
     </drac2>
 
-**Description**: Runs the multi-line Draconic code between the delimiters. If a value is returned (via the ``return``
-keyword), is replaced by the returned value.
+**Description**: Runs the multi-line Draconic code between the delimiters. If a non-``None`` value is returned (via the
+``return`` keyword), is replaced by the returned value, cast to ``str``.
 
 **Examples**
 
@@ -106,23 +110,38 @@ Argument Parsing
 Often times when writing aliases, you will need to access user input. These special strings will be replaced
 with user arguments (if applicable)!
 
-**Syntax**: ``%1%``, ``%2%``, etc.
+Non-Code, Space-Aware
+"""""""""""""""""""""
+
+**Syntax**: ``%1%``, ``%2%``, ..., ``%N%``
 
 **Description**: Replaced with the Nth argument passed to the alias. If the argument contains spaces, the replacement
 will contain quotes around the argument.
 
+Non-Code, Preserving All
+""""""""""""""""""""""""
+
 **Syntax**: ``%*%``
 
 **Description**: Replaced with the unmodified string following the alias.
+
+In Code, Quote-Escaping
+"""""""""""""""""""""""
 
 **Syntax**: ``&1&``, ``&2&``, etc.
 
 **Description**: Replaced with the Nth argument passed to the alias. If the argument contains spaces, the replacement
 will **not** contain quotes around the argument. Additionally, any quotes in the argument will be backslash-escaped.
 
+In Code, Quote-Escaping All
+"""""""""""""""""""""""""""
+
 **Syntax**: ``&*&``
 
 **Description**: Replaced with the string following the alias. Any quotes will be backslash-escaped.
+
+In Code, List Literal
+"""""""""""""""""""""
 
 **Syntax**: ``&ARGS&``
 
@@ -160,32 +179,33 @@ This table lists the available cvars when a character is active.
 ================ =========================================== ====
 Name             Description                                 Type
 ================ =========================================== ====
-armor            Armor Class.                                int
 charisma         Charisma score.                             int
 charismaMod      Charisma modifier.                          int
 charismaSave     Charisma saving throw modifier.             int
 constitution     Constitution score.                         int
 constitutionMod  Constitution modifier.                      int
 constitutionSave Constitution saving throw modifier.         int
-description      Full character description.                 str
 dexterity        Dexterity score.                            int
 dexterityMod     Dexterity modifier.                         int
 dexteritySave    Dexterity saving throw modifier.            int
-hp               Maximum hit points.                         int
-image            Character image URL.                        str
 intelligence     Intelligence score.                         int
 intelligenceMod  Intelligence modifier.                      int
 intelligenceSave Intelligence saving throw modifier.         int
-level            Character level.                            int
-name             The character's name.                       str
-proficiencyBonus Proficiency bonus.                          int
-spell            The character's spellcasting ability mod.   int
 strength         Strength score.                             int
 strengthMod      Strength modifier.                          int
 strengthSave     Strength saving throw modifier.             int
 wisdom           Wisdom score.                               int
 wisdomMod        Wisdom modifier.                            int
 wisdomSave       Wisdom saving throw modifier.               int
+armor            Armor Class.                                int
+color            The CSettings color for the character       str
+description      Full character description.                 str
+hp               Maximum hit points.                         int
+image            Character image URL.                        str
+level            Character level.                            int
+name             The character's name.                       str
+proficiencyBonus Proficiency bonus.                          int
+spell            The character's spellcasting ability mod.   int
 XLevel           How many levels a character has in class X. int
 ================ =========================================== ====
 
@@ -208,6 +228,15 @@ These functions are available in any scripting context, regardless if you have a
 
 Python Builtins
 """""""""""""""
+
+.. function:: abs(x)
+
+    Takes a number (float or int) and returns the absolute value of that number.
+
+    :param x: The number to find the absolute value of.
+    :type x: float or int
+    :return: The absolute value of x.
+    :rtype: float or int
 
 .. function:: all(iterable)
 
@@ -409,13 +438,34 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
 
-.. function:: randint(x)
+.. function:: randint(stop)
+              randint(start, stop[, step])
 
-    Returns a random integer in the range ``[0..x)``.
+    Returns a random integer in the range ``[start..stop)``.
+    
+    If the step argument is omitted, it defaults to ``1``. If the start argument is omitted, it defaults to ``0``.
+    If step is zero, :exc:`ValueError` is raised.
 
-    :param int x: The upper limit (non-inclusive).
+    For a positive step, the contents of a range ``r`` are determined by the formula
+    ``r[i] = start + step*i`` where ``i >= 0`` and ``r[i] < stop``.
+
+    For a negative step, the contents of the range are still determined by the formula
+    ``r[i] = start + step*i``, but the constraints are ``i >= 0`` and ``r[i] > stop``.
+
+    :param int start: The lower limit (inclusive).
+    :param int stop: The upper limit (non-inclusive).
+    :param int step: The step value.
     :return: A random integer.
     :rtype: int
+
+.. function:: randchoice(seq)
+    
+    Returns a random item from ``seq``.
+    
+    :param seq: The itterable to choose a random item from.
+    :type seq: iterable.
+    :return: A random item from the iterable.
+    :rtype: Any.
 
 .. autofunction:: aliasing.api.functions.roll
 
@@ -743,17 +793,19 @@ In addition to Python's normal variable scoping rules, Avrae introduces 4 new sc
 user variables, server variables, and global variables. The intended purpose and binding rules of each are detailed
 below.
 
-+---------------+------+-------+----------+------------+------------------+
-| Variable Type | Read | Write | Binding  | Scope      | Who              |
-+===============+======+=======+==========+============+==================+
-| Cvar          | Yes  | Yes   | Implicit | Character  | User             |
-+---------------+------+-------+----------+------------+------------------+
-| Uvar          | Yes  | Yes   | Implicit | User       | User             |
-+---------------+------+-------+----------+------------+------------------+
-| Svar          | Yes  | No    | Explicit | Server     | Anyone on server |
-+---------------+------+-------+----------+------------+------------------+
-| Gvar          | Yes  | No    | Explicit | Everywhere | Anyone           |
-+---------------+------+-------+----------+------------+------------------+
++---------------+------+-------+----------+------------+-------------------+
+| Variable Type | Read | Write | Binding  | Scope      | Who               |
++===============+======+=======+==========+============+===================+
+| Cvar          | Yes  | Yes   | Implicit | Character  | User              |
++---------------+------+-------+----------+------------+-------------------+
+| Uvar          | Yes  | Yes   | Implicit | User       | User              |
++---------------+------+-------+----------+------------+-------------------+
+| Svar          | Yes  | No    | Explicit | Server     | Anyone on server  |
++---------------+------+-------+----------+------------+-------------------+
+| Gvar          | Yes  | No    | Explicit | Everywhere | Anyone            |
++---------------+------+-------+----------+------------+-------------------+
+| Init Metadata | Yes  | Yes   | Explicit | Initiative | Anyone in channel |
++---------------+------+-------+----------+------------+-------------------+
 
 Character Variables
 ^^^^^^^^^^^^^^^^^^^
@@ -761,7 +813,7 @@ Character Variables
 
 Character variables are variables bound to a character. These are usually used to set character-specific defaults
 or options for aliases and snippets (e.g. a character's familiar type/name). When running an alias or snippet, cvars are
-*implicitly* bound as local variables in the runtime.
+*implicitly* bound as local variables in the runtime at the runtime's instantiation.
 
 Cvars can be written or deleted in Draconic using :meth:`.AliasCharacter.set_cvar` and
 :meth:`.AliasCharacter.delete_cvar`, respectively.
@@ -774,8 +826,8 @@ User Variables
 
 User variables are bound per Discord user, and will go with you regardless of what server or character you are on.
 These variables are usually used for user-specific options (e.g. a user's timezone, favorite color, etc.). When running
-an alias or snippet, uvars are *implicitly* bound as local variables in the runtime. If a cvar and uvar have the same
-name, the cvar takes priority.
+an alias or snippet, uvars are *implicitly* bound as local variables in the runtime at the runtime's instantiation. If a
+cvar and uvar have the same name, the cvar takes priority.
 
 Uvars can be written or deleted in Draconic using :meth:`~aliasing.evaluators.ScriptingEvaluator.set_uvar` or
 :meth:`~aliasing.evaluators.ScriptingEvaluator.delete_uvar`, respectively.
@@ -807,6 +859,15 @@ Gvars can be read by anyone, so be careful what data you store!
 Gvars can only be created using ``!gvar create <value>``, and by default can only be edited by its creator. See
 ``!help gvar`` for more information.
 
+Honorable Mention: Initiative Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Initiative metadata is a form of key-value pair storage attached to an ongoing initiative in a given channel. This
+storage is usually used for storing a medium-sized amount of programmatic information about an ongoing initiative (e.g.
+an alias' metadata on each combatant).
+
+Metadata can be created, retrieved, and deleted using the :meth:`.SimpleCombat.set_metadata`,
+:meth:`.SimpleCombat.get_metadata`, and :meth:`.SimpleCombat.delete_metadata` methods, respectively.
+
 See Also
 --------
 
@@ -835,6 +896,10 @@ SimpleCombat
 
         The :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
         representing the combatant whose turn it is.
+
+    .. attribute:: groups
+
+        A list of all :class:`~aliasing.api.combat.SimpleGroup` in combat.
 
     .. attribute:: me
 
@@ -909,11 +974,19 @@ SimpleGroup
 
         A list of all :class:`~aliasing.api.combat.SimpleCombatant` in this group.
 
+        :type: list of :class:`~aliasing.api.combat.SimpleCombatant`
+
     .. attribute:: type
 
         The type of the object (``"group"``), to determine whether this is a group or not.
 
         :type: str
+
+    .. attribute:: init
+
+        What the group rolled for initiative.
+
+        :type: int
 
 SimpleEffect
 ^^^^^^^^^^^^
@@ -921,11 +994,23 @@ SimpleEffect
 .. autoclass:: aliasing.api.combat.SimpleEffect()
     :members:
 
+    .. attribute:: combatant_name
+
+        The name of the combatant this effect is on.
+
+        :type: str
+
     .. attribute:: conc
 
         Whether the effect requires concentration.
 
         :type: bool
+
+    .. attribute:: desc
+
+        The description of the effect.
+
+        :type: str
 
     .. attribute:: duration
 
@@ -950,6 +1035,12 @@ SimpleEffect
         The remaining duration of the effect, in rounds.
 
         :type: int
+
+    .. attribute:: ticks_on_end
+
+        Whether the effect duration ticks at the end of the combatant's turn or at the start.
+
+        :type: bool
 
 SimpleRollResult
 ----------------
@@ -1017,6 +1108,12 @@ AliasChannel
 .. autoclass:: aliasing.api.context.AliasChannel()
     :members:
 
+AliasCategory
+^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasCategory()
+    :members:
+
 AliasAuthor
 ^^^^^^^^^^^
 
@@ -1040,6 +1137,12 @@ AliasDeathSaves
 ^^^^^^^^^^^^^^^
 
 .. autoclass:: aliasing.api.character.AliasDeathSaves()
+    :members:
+
+AliasAction
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.character.AliasAction()
     :members:
 
 StatBlock Models

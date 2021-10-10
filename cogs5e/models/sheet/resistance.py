@@ -90,6 +90,8 @@ class Resistances:
             out.append(f"**Immunities**: {', '.join([str(r) for r in self.immune])}")
         if self.vuln:
             out.append(f"**Vulnerabilities**: {', '.join([str(r) for r in self.vuln])}")
+        if self.neutral:
+            out.append(f"**Ignored**: {', '.join([str(r) for r in self.neutral])}")
         return '\n'.join(out)
 
 
@@ -131,7 +133,7 @@ class Resistance:
         if not smart:
             return cls(s)
 
-        tokens = _resist_tokenize(s)
+        tokens = _resist_tokenize(s.lower())
         if not tokens:  # weird edge case of resistance of only punctuation
             return cls(s)
 
@@ -154,6 +156,12 @@ class Resistance:
 
     def copy(self):
         return Resistance(self.dtype, self.unless.copy(), self.only.copy())
+
+    # ---------- props ----------
+    @property
+    def is_complex(self):
+        """Whether or not the resistance has some more complex conditional beyond just a dtype."""
+        return self.unless or self.only
 
     # ---------- main funcs ----------
     def applies_to_str(self, dtype):
@@ -186,6 +194,12 @@ class Resistance:
 
     def __repr__(self):
         return f"<Resistance {repr(self.dtype)} unless={repr(self.unless)} only={repr(self.only)}>"
+
+    def __eq__(self, other):
+        """A given Resistance is equal to another if all of their attrs match"""
+        if not isinstance(other, Resistance):
+            return False
+        return self.dtype == other.dtype and self.only == other.only and self.unless == other.unless
 
 
 def _resist_tokenize(res_str):

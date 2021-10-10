@@ -33,4 +33,3 @@ services:
     image: redis:5
     ports:
       - 58379:6379
-

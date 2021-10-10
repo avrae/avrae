@@ -138,26 +138,43 @@ class ParsedArguments:
         except (ValueError, TypeError):
             raise InvalidArgument(f"{last_arg} cannot be cast to {type_.__name__} (in `{arg}`)")
 
-    def adv(self, ea=False, boolwise=False, ephem=False):
+    def adv(self, ea=False, boolwise=False, ephem=False, custom: dict = None):
         """
         Determines whether to roll with advantage, disadvantage, Elven Accuracy, or no special effect.
 
         :param ea: Whether to parse for elven accuracy.
         :param boolwise: Whether to return an integer or tribool representation.
         :param ephem: Whether to return an ephemeral argument if such exists.
+        :param custom: Dictionary of custom values to parse for. There should be a key for each value you want to overwrite. ``custom={'adv': 'custom_adv'}`` would allow you to parse for advantage if the ``custom_adv`` argument is found.
+
         :return: -1 for dis, 0 for normal, 1 for adv, 2 for ea
         """
-        adv = 0
-        if self.last("adv", type_=bool, ephem=ephem):
-            adv += 1
-        if self.last("dis", type_=bool, ephem=ephem):
-            adv += -1
-        if ea and self.last("ea", type_=bool, ephem=ephem) and adv > -1:
-            return 2
-        if not boolwise:
-            return adv
+        adv_str, dis_str, ea_str = 'adv', 'dis', 'ea'
+        if custom is not None:
+            if 'adv' in custom:
+                adv_str = custom['adv']
+            if 'dis' in custom:
+                dis_str = custom['dis']
+            if 'ea' in custom:
+                ea_str = custom['ea']
+
+        adv_arg = self.last(adv_str, default=False, type_=bool, ephem=ephem)
+        dis_arg = self.last(dis_str, default=False, type_=bool, ephem=ephem)
+        ea_arg = ea and self.last(ea_str, default=False, type_=bool, ephem=ephem)
+
+        if ea_arg and not dis_arg:
+            out = 2
+        elif dis_arg and not (adv_arg or ea_arg):
+            out = -1
+        elif adv_arg and not dis_arg:
+            out = 1
         else:
-            return {-1: False, 0: None, 1: True}.get(adv)
+            out = 0
+
+        if not boolwise:
+            return out
+        else:
+            return {-1: False, 0: None, 1: True}.get(out)
 
     def join(self, arg, connector: str, default=None, ephem=False):
         """
@@ -180,6 +197,28 @@ class ParsedArguments:
         del self[arg]
         for context in self._contexts.values():
             del context[arg]
+
+    def update(self, new):
+        """
+        Updates the arguments in this argument list from a dict.
+
+        :param new: The new values for each argument.
+        :type new: dict[str, str] or dict[str, list[str]]
+        """
+        for k, v in new.items():
+            self[k] = v
+
+    def update_nx(self, new):
+        """
+        Like ``.update()``, but only fills in arguments that were not already parsed. Ignores the argument if the
+        value is None.
+
+        :param new: The new values for each argument.
+        :type new: dict[str, str] or dict[str, list[str]] or dict[str, None]
+        """
+        for k, v in new.items():
+            if k not in self and v is not None:
+                self[k] = v
 
     # ephemeral setup
     def _parse_ephemeral(self, argdict):
@@ -270,7 +309,11 @@ class ParsedArguments:
         return len(self._parsed)
 
     def __setitem__(self, key, value):
-        if not isinstance(value, list):
+        """
+        :type key: str
+        :type value: str or bool or list[str or bool]
+        """
+        if not isinstance(value, (collections.UserList, list)):
             value = [value]
         self._parsed[key] = value
         self._original_parsed[key] = value.copy()

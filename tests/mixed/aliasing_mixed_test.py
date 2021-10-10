@@ -104,7 +104,7 @@ async def test_alias_ampersand_all_arguments(avrae, dhttp):
 
 
 async def test_servalias(avrae, dhttp):
-    avrae.message("!servalias serverfoobar echo this is serverfoobar")
+    avrae.message("!servalias serverfoobar echo this is serverfoobar", as_owner=True)
     await dhttp.drain()
 
     avrae.message("!serverfoobar")
@@ -117,7 +117,7 @@ async def test_servalias(avrae, dhttp):
 
 async def test_alias_vs_servalias(avrae, dhttp):
     avrae.message("!alias foobar echo this is foobar")
-    avrae.message("!servalias foobar echo this is server foobar")
+    avrae.message("!servalias foobar echo this is server foobar", as_owner=True)
     await dhttp.drain()
 
     avrae.message("!foobar")

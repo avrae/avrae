@@ -24,8 +24,11 @@ class RedisIO:
         encoded_data = await self._db.get(key)
         return encoded_data.decode() if encoded_data is not None else default
 
-    async def set(self, key, value, **kwargs):
-        return await self._db.set(key, value, **kwargs)
+    async def set(self, key, value, *, ex=0, nx=False):
+        exist = None
+        if nx:
+            exist = self._db.SET_IF_NOT_EXIST
+        return await self._db.set(key, value, expire=ex, exist=exist)
 
     async def incr(self, key):
         return await self._db.incr(key)
@@ -121,6 +124,11 @@ class RedisIO:
     async def publish(self, channel, data):
         return await self._db.publish(channel, data)
 
+    # ==== misc ====
+    async def close(self):
+        self._db.close()
+        await self._db.wait_closed()
+
 
 class _PubSubMessageBase(abc.ABC):
     def __init__(self, type, id, sender):
@@ -190,5 +198,6 @@ def deserialize_ps_msg(message: str):
     if t not in PS_DESER_MAP:
         raise TypeError(f"{t} is not a valid pubsub message type.")
     return PS_DESER_MAP[t].from_dict(data)
+
 
 pslogger = logging.getLogger("rdb.pubsub")

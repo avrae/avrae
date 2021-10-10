@@ -18,12 +18,16 @@ else:
     figure out which task died, and take over for it
 """
 import asyncio
+import datetime
 import json
 import logging
+import time
+import uuid
 from contextlib import asynccontextmanager
 from math import ceil
 
 import aiohttp
+import discord.http
 
 from utils import config
 
@@ -54,21 +58,34 @@ async def _coordinate_shards(bot):
     coordinator_exists = await bot.rdb.exists(cluster_coordination_key)
     my_task_arn, my_family, my_ecs_cluster_name = await _get_ecs_metadata()
 
+    # poll discord - how many shards, max concurrency?
+    try:
+        data = await bot.http.request(discord.http.Route('GET', '/gateway/bot'))
+    except discord.HTTPException as e:
+        raise discord.GatewayNotFound() from e
+    recommended_shards = data['shards']
+    session_start_limit = data['session_start_limit']
+    bot.launch_max_concurrency = session_start_limit['max_concurrency']
+
+    # alert if remaining starts < 25% total
+    if session_start_limit['remaining'] < (session_start_limit['total'] * 0.25):
+        log.critical(f"Remaining IDENTIFY quota low! Remaining: {session_start_limit['remaining']}")
+        reset_at = datetime.datetime.now() + datetime.timedelta(milliseconds=session_start_limit['reset_after'])
+        log.info(f"Resets at: {reset_at}")
+
     # get the total number of shards running on this acct
     if coordinator_exists:
         # get the canonical number of shards
         bot.shard_count = int(await bot.rdb.hget(cluster_coordination_key, "num_shards"))
     else:
-        if config.NUM_SHARDS is None:
-            # how many shards does Discord want?
-            recommended_shards, _ = await bot.http.get_bot_gateway()
-        else:
+        if config.NUM_SHARDS is not None:
             recommended_shards = config.NUM_SHARDS
         # create the task coordinator
         await bot.rdb.hset(cluster_coordination_key, "num_shards", recommended_shards)
         bot.shard_count = recommended_shards
         log.info(f"Created task coordinator {cluster_coordination_key} with num_shards={bot.shard_count}!")
-    log.debug(f"SHARD_COUNT={bot.shard_count}")
+    log.info(f"Session start limits: {session_start_limit}")
+    log.debug(f"SHARD_COUNT={bot.shard_count}; MAX_CONCURRENCY={bot.launch_max_concurrency}")
 
     # claim unclaimed shards, or take over a dead task
     num_existing_clusters = await bot.rdb.hlen(cluster_coordination_key) - 1
@@ -146,15 +163,43 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
 @asynccontextmanager
 async def coordination_lock(rdb):
     cluster_lock_key = f"clusters.{config.GIT_COMMIT_SHA}.lock:{config.NUM_CLUSTERS}"
+    lock_value = str(uuid.uuid4())
     i = 0
-    while not await rdb.setnx(cluster_lock_key, "lockme"):
+    while not await rdb.setnx(cluster_lock_key, lock_value):
         await asyncio.sleep(1)
         i += 1
-        log.info(f"Waiting for lock... ({i}s)")
+        log.debug(f"Waiting for lock... ({i}s)")
 
-    log.info("Acquired lock, coordinating shards!")
+    log.info(f"Acquired lock with value {lock_value!r}, coordinating shards!")
     try:
         yield
     finally:
-        await rdb.delete(cluster_lock_key)
         log.info("Coordination complete, releasing lock.")
+        locking_val = await rdb.get(cluster_lock_key)
+        if locking_val == lock_value:
+            await rdb.delete(cluster_lock_key)
+        else:
+            log.warning(f"Lock value is not what we set (ours was {lock_value!r}, is {locking_val!r}), ignoring value!")
+
+
+# lock: each shard reserves the bucket for 5s by doing a SET NX EX with the currently launching shard id
+async def wait_bucket_available(shard_id, bucket_id, rdb, *, pre_lock_hook=None):
+    """
+    Waits until the given shard bucket is available. Calls ``pre_lock_hook`` exactly once before each attempt
+    to lock the appropriate bucket, with a kwarg ``first=True`` for the first attempt.
+    """
+    if pre_lock_hook is None:
+        async def pre_lock_hook(first=False):
+            if not first:
+                await asyncio.sleep(0.2)
+
+    # this might be improved by using a semaphore instead of a lock for each bucket - unclear how the Discord
+    # concurrency ratelimit operates, but this could mitigate the grocery store checkout problem
+    cluster_lock_key = f"shards.{config.GIT_COMMIT_SHA}.lock:{bucket_id}"
+    start = time.monotonic()
+    await pre_lock_hook(first=True)
+    while not await rdb.set(cluster_lock_key, shard_id, ex=5, nx=True):
+        await pre_lock_hook()
+        log.debug(f"Waiting for shard lock... ({time.monotonic() - start:.2}s)")
+
+    log.info(f"Bucket {bucket_id} is available, launching shard ID {shard_id}")

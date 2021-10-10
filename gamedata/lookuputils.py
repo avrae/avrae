@@ -11,8 +11,7 @@ from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
-from utils import constants
-from utils.functions import long_source_name, search_and_select
+from utils.functions import search_and_select
 from .compendium import compendium
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
@@ -27,14 +26,13 @@ async def available(ctx, entities, entity_type, user_id=None):
     Returns the subset of entities available to the given user in this context.
 
     :param ctx: The Discord Context.
-    :type ctx: discord.ext.commands.Context
     :param entities: The compendium list of all available entities.
     :type entities: list[gamedata.shared.Sourced]
     :param entity_type: The entity type to get entitlements data for.
     :type entity_type: str
     :param user_id: The Discord user ID of the user (optional - if not passed, assumes ctx.author)
     :type user_id: int
-    :rtype: list[gamedata.shared.Sourced]
+    :returns: the list of accessible entities
     """
     if user_id is None:
         user_id = ctx.author.id
@@ -42,12 +40,12 @@ async def available(ctx, entities, entity_type, user_id=None):
     available_ids = await ctx.bot.ddb.get_accessible_entities(ctx, user_id, entity_type)
     if available_ids is None:
         return [e for e in entities if e.is_free]
-    return [e for e in entities if e.is_free or e.entity_id in available_ids]
+    return [e for e in entities if e.is_free or e.entitlement_entity_id in available_ids]
 
 
 def can_access(entity, available_ids=None):
     return entity.is_free \
-           or available_ids is not None and entity.entity_id in available_ids \
+           or available_ids is not None and entity.entitlement_entity_id in available_ids \
            or entity.homebrew
 
 
@@ -103,15 +101,14 @@ async def handle_required_license(ctx, err):
             embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
                                   "link.")
     else:
-        embed.title = f"Purchase {result.name} on D&D Beyond to view it here!"
+        embed.title = f"Unlock {result.name} on D&D Beyond to view it here!"
         embed.description = \
             f"To see and search this {result.entity_type}'s full details, unlock **{result.name}** by " \
             f"purchasing {long_source_name(result.source)} on D&D Beyond.\n\n" \
             f"[Go to Marketplace]({result.marketplace_url})"
         embed.url = result.marketplace_url
 
-        embed.set_footer(text="Already purchased? It may take up to a minute for Avrae to recognize the "
-                              "purchase.")
+        embed.set_footer(text="Already unlocked? It may take up to a minute for Avrae to recognize the purchase.")
     await ctx.send(embed=embed)
 
 
@@ -134,25 +131,26 @@ def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_o
     """
     text_pieces = []
     icon_url = embed.Empty
+    book = compendium.book_by_source(sourced.source)
     if text is not None:
         text_pieces.append(text)
     if add_source_str:
         text_pieces.append(sourced.source_str())
 
     # set icon url and default text
-    if sourced.homebrew:
+    if book is None:
         icon_url = "https://avrae.io/assets/img/homebrew.png"
         text_pieces = text_pieces or ["Homebrew content."]
-    elif sourced.source in constants.UA_SOURCES:
+    elif book.is_ua:
         icon_url = "https://media-waterdeep.cursecdn.com/avatars/110/171/636516074887091041.png"
         text_pieces = text_pieces or ["Unearthed Arcana content."]
-    elif sourced.source in constants.PARTNERED_SOURCES:
+    elif book.is_partnered:
         icon_url = "https://media-waterdeep.cursecdn.com/avatars/11008/904/637274855809570341.png"
         text_pieces = text_pieces or ["Partnered content."]
-    elif sourced.source in constants.CR_SOURCES:
+    elif book.is_cr:
         icon_url = "https://media-waterdeep.cursecdn.com/avatars/105/174/636512853628516966.png"
         text_pieces = text_pieces or ["Critical Role content."]
-    elif sourced.source in constants.NONCORE_SOURCES:
+    elif book.is_noncore:
         text_pieces = text_pieces or ["Noncore content."]
 
     # do the writing
@@ -164,6 +162,20 @@ def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_o
             icon_url = embed.footer.icon_url
 
     embed.set_footer(text=text, icon_url=icon_url)
+
+
+def long_source_name(source):
+    book = compendium.book_by_source(source)
+    if book is None:
+        return source
+    return book.name
+
+
+def source_slug(source):
+    book = compendium.book_by_source(source)
+    if book is None:
+        return None
+    return book.slug
 
 
 # ---- monster stuff ----

@@ -1,7 +1,7 @@
 # Avrae Discord Bot
 [![Avrae Website](http://avrae.io/assets/img/AvraeLogo.jpg)](https://avrae.io/)
 
-[![Build Status](https://travis-ci.org/avrae/avrae.svg?branch=master)](https://travis-ci.org/avrae/avrae)
+![Build Status](https://github.com/avrae/avrae/workflows/Test/badge.svg)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/678413361db643d9af25d9e8e2cdeaeb)](https://www.codacy.com/app/mommothazaz123/avrae?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=avrae/avrae&amp;utm_campaign=Badge_Grade)
 
 Avrae is a Discord bot designed to help you and your friends play D&D online.
@@ -68,7 +68,7 @@ Install the dependencies with `pip install -r requirements.txt`.
 These are the required/recommended environment variables for local dev.
 
 - `ENVIRONMENT` - "development" for development
-- `TOKEN` - a valid Discord bot token
+- `DISCORD_BOT_TOKEN` - a valid Discord bot token
 - `DISCORD_OWNER_USER_ID` - your Discord user ID
 - `MONGO_URL` - a MongoDB connection string (defaults to `mongodb://localhost:27017`)
 - `REDIS_URL` - a Redis connection string (defaults to `redis://redis:6379/0`)
@@ -85,12 +85,13 @@ These are the required/recommended environment variables for local dev.
 #### Testing
 To test Avrae, run these commands:
 ```
-docker-compose -f docker-compose.ci.yml -p avrae build
-docker-compose -f docker-compose.ci.yml -p avrae up -d
+docker-compose -f docker-compose.ci.yml -p avrae up -d --build
 docker logs -f avrae_tests_1
 ```
 This should initialize an ephemeral database to run command unit tests in. 
 You should set the `DICECLOUD_USER`, `DICECLOUD_PASS`, `DICECLOUD_TOKEN`, and `GOOGLE_SERVICE_ACCOUNT` env vars to their correct values.
+
+Once tests complete, it is recommended to clean up the containers with `docker-compose down`.
 
 #### Misc
 Env vars required to deploy to production - not required for local dev:
@@ -112,3 +113,4 @@ Env vars required to deploy to production - not required for local dev:
 Other env vars:
 - `NUM_SHARDS` - explicitly set the number of shards to run
 - `GIT_COMMIT_SHA` - should be set in Travis (required for prod)
+

@@ -6,6 +6,7 @@ Created on Sep 23, 2016
 import asyncio
 import copy
 import itertools
+import json
 import logging
 import re
 from math import floor
@@ -17,7 +18,7 @@ from discord.ext import commands
 import utils.redisIO as redis
 from gamedata.compendium import compendium
 from utils import checks, config
-from utils.functions import confirm
+from utils.functions import confirm, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -198,12 +199,42 @@ class AdminUtils(commands.Cog):
             from aliasing.helpers import handle_aliases
             await handle_aliases(ctx)
 
+    @admin.command(hidden=True)
+    @checks.is_owner()
+    async def set_user_permissions(self, ctx, member: discord.Member, permission: str, value: bool):
+        """Sets a user's global permission."""
+        await self.bot.mdb.user_permissions.update_one(
+            {"id": str(member.id)},
+            {"$set": {permission: value}},
+            upsert=True
+        )
+        permissions = await self.bot.mdb.user_permissions.find_one({"id": str(member.id)})
+        del permissions['_id']
+        await ctx.send(f"Updated user permissions: ```json\n{json.dumps(permissions, indent=2)}\n```")
+
+    @admin.command(hidden=True, name='debug_entity')
+    @checks.is_owner()
+    async def admin_debug_entity(self, ctx, tid, eid: int = None):
+        if eid is not None:
+            e = compendium.lookup_entity(int(tid), eid)
+        else:
+            # noinspection PyProtectedMember
+            options = list(compendium._entity_lookup.values())
+            e = await search_and_select(ctx, options, tid, lambda en: en.name,
+                                        selectkey=lambda en: f"{en.name} ({en.entity_type})")
+        entitlement_entity = compendium.lookup_entity(e.entitlement_entity_type, e.entitlement_entity_id)
+        entitlement_entity_name = entitlement_entity.name if entitlement_entity is not None else 'unknown entity!'
+        await ctx.send(f"```py\n"
+                       f"# {e.entity_id=}, {e.type_id=}\n"
+                       f"# {e.entitlement_entity_id=}, {e.entitlement_entity_type=} ({entitlement_entity_name})\n"
+                       f"{e!r}\n```")
+
     # ---- cluster management ----
     @admin.command(hidden=True, name="restart-shard")
     @checks.is_owner()
     async def admin_restart_shard(self, ctx, shard_id: int):
         """Forces a shard to disconnect from the Discord API and reconnect."""
-        if not await confirm(ctx, f"Are you sure you want to restart shard {shard_id}?"):
+        if not await confirm(ctx, f"Are you sure you want to restart shard {shard_id}? (Reply with yes/no)"):
             return await ctx.send("ok, not restarting")
         resp = await self.pscall("restart_shard", kwargs={"shard_id": shard_id}, expected_replies=1)
         await self._send_replies(ctx, resp)
@@ -213,10 +244,11 @@ class AdminUtils(commands.Cog):
     async def admin_kill_cluster(self, ctx, cluster_id: int):
         """Forces a cluster to restart by killing it."""
         num_shards = len(self.bot.shard_ids) if self.bot.shard_ids is not None else 1
-        if not await confirm(ctx, f"Are you absolutely sure you want to kill cluster {cluster_id}?\n"
-                                  f"**This will terminate approximately {num_shards} shards, which "
-                                  f"will take at least {num_shards * 5} seconds to restart, and "
-                                  f"impact about {len(self.bot.guilds)} servers.**"):
+        if not await confirm(ctx,
+                             f"Are you absolutely sure you want to kill cluster {cluster_id}? (Reply with yes/no)\n"
+                             f"**This will terminate approximately {num_shards} shards, which "
+                             f"will take at least {num_shards * 5} seconds to restart, and "
+                             f"impact about {len(self.bot.guilds)} servers.**"):
             return await ctx.send("ok, not killing")
         resp = await self.pscall("kill_cluster", kwargs={"cluster_id": cluster_id}, expected_replies=1)
         await self._send_replies(ctx, resp)

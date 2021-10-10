@@ -38,6 +38,7 @@ def get_positivity(string):
         return None
 
 
+# ==== search / select menus ====
 def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=False):
     """Fuzzy searches a list for an object
     result can be either an object or list of objects
@@ -94,9 +95,12 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
 
 
 async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, return_key=False, pm=False, message=None,
-                            list_filter=None, selectkey=None, search_func=search, return_metadata=False):
+                            list_filter=None, selectkey=None, search_func=search, return_metadata=False,
+                            strip_query_quotes=True):
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
+    Guaranteed to return a result - raises if there is no result.
+
     :param ctx: The context of the search.
     :param list_to_search: The list of objects to search.
     :param query: The value to search for.
@@ -108,14 +112,17 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
     :param list_filter: A filter to filter the list to search by.
     :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
     :param search_func: The function to use to search.
-    :param return_metadata Whether to return a metadata object {num_options, chosen_index}.
-    :return:
+    :param return_metadata: Whether to return a metadata object {num_options, chosen_index}.
+    :param strip_query_quotes: Whether to strip quotes from the query.
     """
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))
 
     if search_func is None:
         search_func = search
+
+    if strip_query_quotes:
+        query = query.strip("\"'")
 
     if asyncio.iscoroutinefunction(search_func):
         result = await search_func(list_to_search, query, key, cutoff, return_key)
@@ -152,18 +159,6 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
         "chosen_index": 0 if strict else results.index(result)
     }
     return result, metadata
-
-
-def a_or_an(string, upper=False):
-    if string.startswith('^') or string.endswith('^'):
-        return string.strip('^')
-    if re.match('[AEIOUaeiou].*', string):
-        return 'an {0}'.format(string) if not upper else f'An {string}'
-    return 'a {0}'.format(string) if not upper else f'A {string}'
-
-
-def camel_to_title(string):
-    return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
 
 
 def paginate(iterable, n, fillvalue=None):
@@ -251,21 +246,16 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
     return choices[int(m.content) - 1][1]
 
 
-ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
-               'int': 'Intelligence', 'wis': 'Wisdom', 'cha': 'Charisma'}
-
-
-def verbose_stat(stat):
-    return ABILITY_MAP[stat.lower()]
-
-
-async def confirm(ctx, message, delete_msgs=False):
+async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity):
     """
     Confirms whether a user wants to take an action.
+
     :rtype: bool|None
     :param ctx: The current Context.
     :param message: The message for the user to confirm.
     :param delete_msgs: Whether to delete the messages.
+    :param response_check: A function (str) -> bool that returns whether a given reply is a valid response.
+    :type response_check: (str) -> bool
     :return: Whether the user confirmed or not. None if no reply was recieved
     """
     msg = await ctx.channel.send(message)
@@ -273,16 +263,101 @@ async def confirm(ctx, message, delete_msgs=False):
         reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
     except asyncio.TimeoutError:
         return None
-    replyBool = get_positivity(reply.content) if reply is not None else None
+    reply_bool = response_check(reply.content) if reply is not None else None
     if delete_msgs:
         try:
             await msg.delete()
             await reply.delete()
         except:
             pass
-    return replyBool
+    return reply_bool
 
 
+# ==== display helpers ====
+def a_or_an(string, upper=False):
+    if string.startswith('^') or string.endswith('^'):
+        return string.strip('^')
+    if re.match('[AEIOUaeiou].*', string):
+        return 'an {0}'.format(string) if not upper else f'An {string}'
+    return 'a {0}'.format(string) if not upper else f'A {string}'
+
+
+def camel_to_title(string):
+    return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
+
+
+def bubble_format(value: int, max_: int, fill_from_right=False):
+    """Returns a bubble string to represent a counter's value."""
+    if max_ > 100:
+        return f"{value}/{max_}"
+
+    used = max_ - value
+    filled = '\u25c9' * value
+    empty = '\u3007' * used
+    if fill_from_right:
+        return f"{empty}{filled}"
+    return f"{filled}{empty}"
+
+
+def verbose_stat(stat):
+    """Returns the long stat name for a abbreviation (e.g. "str" -> "Strength", etc)"""
+    return constants.STAT_ABBR_MAP[stat.lower()]
+
+
+def natural_join(things, between: str):
+    if len(things) < 3:
+        return f" {between} ".join(things)
+    first_part = ", ".join(things[:-1])
+    return f"{first_part}, {between} {things[-1]}"
+
+
+def trim_str(text, max_len):
+    """Trims a string to max_len."""
+    if len(text) < max_len:
+        return text
+    return f"{text[:max_len - 4]}..."
+
+
+def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ' '), chunker_i=0):
+    """
+    Recursively chunks *text* into a list of str, with each element no longer than *max_chunk_size*.
+    Prefers splitting on the elements of *chunk_on*, in order.
+    """
+
+    if len(text) <= max_chunk_size:  # the chunk is small enough
+        return [text]
+    if chunker_i >= len(chunk_on):  # we have no more preferred chunk_on characters
+        # optimization: instead of merging a thousand characters, just use list slicing
+        return [text[:max_chunk_size],
+                *chunk_text(text[max_chunk_size:], max_chunk_size, chunk_on, chunker_i + 1)]
+
+    # split on the current character
+    chunks = []
+    split_char = chunk_on[chunker_i]
+    for chunk in text.split(split_char):
+        chunk = f"{chunk}{split_char}"
+        if len(chunk) > max_chunk_size:  # this chunk needs to be split more, recurse
+            chunks.extend(chunk_text(chunk, max_chunk_size, chunk_on, chunker_i + 1))
+        elif chunks and len(chunk) + len(chunks[-1]) <= max_chunk_size:  # this chunk can be merged
+            chunks[-1] += chunk
+        else:
+            chunks.append(chunk)
+
+    # remove extra split_char from last chunk
+    chunks[-1] = chunks[-1][:-len(split_char)]
+    return chunks
+
+
+def smart_trim(text, max_len=1024):
+    """Uses chunk_text to return a trimmed str."""
+    chunks = chunk_text(text, max_len - 5)
+    out = chunks[0].strip()
+    if len(chunks) > 1:
+        return f"{chunks[0]}[...]"
+    return out
+
+
+# ==== misc helpers ====
 def auth_and_chan(ctx):
     """Message check: same author and channel"""
 
@@ -305,6 +380,7 @@ def maybe_mod(val: str, base=0):
     If *val* starts with + or -, it returns *base + val*.
     Otherwise, it returns *val*.
     """
+    # This is done to handle GenericCombatants who might not have an hp/ac/etc
     base = base or 0
 
     try:
@@ -317,41 +393,29 @@ def maybe_mod(val: str, base=0):
     return base
 
 
-def bubble_format(value: int, max_: int, fill_from_right=False):
-    """Returns a bubble string to represent a counter's value."""
-    if max_ > 100:
-        return f"{value}/{max_}"
+def combine_maybe_mods(vals: list, base=0):
+    """
+    Takes a list of arguments, which are strings that may start with + or -, and combines them to calculate a value.
+    If *val* starts with + or -, add it to sums. Otherwise, add it to sets.
+    Give back the maximum set or base + sum of sums
+    """
+    sums = []
+    sets = []
+    # This is done to handle GenericCombatants who might not have an hp/ac/etc
+    base = base or 0
 
-    used = max_ - value
-    filled = '\u25c9' * value
-    empty = '\u3007' * used
-    if fill_from_right:
-        return f"{empty}{filled}"
-    return f"{filled}{empty}"
-
-
-def long_source_name(source):
-    return constants.SOURCE_MAP.get(source, source)
-
-
-def source_slug(source):
-    return constants.SOURCE_SLUG_MAP.get(source)
-
-
-def natural_join(things, between: str):
-    if len(things) < 3:
-        return f" {between} ".join(things)
-    first_part = ", ".join(things[:-1])
-    return f"{first_part}, {between} {things[-1]}"
+    for val in vals:
+        try:
+            if val.startswith(('+', '-')):
+                sums.append(int(val))
+            else:
+                sets.append(int(val))
+        except (ValueError, TypeError):
+            continue
+    return (max(sets) if sets else base) + sum(sums)
 
 
-def trim_str(text, max_len):
-    """Trims a string to max_len."""
-    if len(text) < max_len:
-        return text
-    return f"{text[:max_len - 4]}..."
-
-
+# ==== user stuff ====
 async def user_from_id(ctx, the_id):
     """
     Gets a :class:`discord.User` given their user id in the context. Returns member if context has data.
@@ -365,7 +429,7 @@ async def user_from_id(ctx, the_id):
         await ctx.bot.mdb.users.update_one(
             {"id": str(the_user.id)},
             {"$set": {'username': the_user.name, 'discriminator': the_user.discriminator,
-                      'avatar': the_user.avatar, 'bot': the_user.bot}},
+                      'avatar': the_user.display_avatar.url, 'bot': the_user.bot}},
             upsert=True
         )
 
@@ -409,3 +473,29 @@ async def get_guild_member(guild, member_id):
     if result:
         return result[0]
     return None
+
+
+def reconcile_adv(adv=False, dis=False, ea=False):
+    """
+    Reconciles sets of advantage passed in
+
+    :param adv: Combined advantage
+    :param dis: Combined disadvantage
+    :param ea:  Combined elven accuracy
+    :rtype: int
+    :return: The combined advantage result
+    """
+    result = 0
+    if adv:
+        result += 1
+    if dis:
+        result += -1
+    if ea and not dis:
+        return 2
+    return result
+
+
+def maybe_http_url(url: str):
+    """Returns a url if one found, otherwise blank string."""
+    # Mainly used for embed.set_thumbnail(url=url)
+    return url if 'http' in url else ''

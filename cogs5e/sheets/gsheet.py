@@ -11,20 +11,24 @@ import logging
 import re
 from contextlib import contextmanager
 
+import google.oauth2.service_account
 import gspread
+from google.auth.transport.requests import Request
+from google.oauth2.service_account import Credentials
 from gspread import SpreadsheetNotFound
 from gspread.exceptions import APIError
 from gspread.utils import a1_to_rowcol, fill_gaps
-from oauth2client.service_account import ServiceAccountCredentials
 
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
+from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute
+from cogs5e.sheets.utils import get_actions_for_names
 from gamedata.compendium import compendium
 from utils import config
 from utils.constants import DAMAGE_TYPES
@@ -167,11 +171,11 @@ class GoogleSheet(SheetLoaderABC):
         with GoogleSheet._client_lock():
             def _():
                 if config.GOOGLE_SERVICE_ACCOUNT is not None:
-                    credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+                    credentials = Credentials.from_service_account_info(
                         json.loads(config.GOOGLE_SERVICE_ACCOUNT),
                         scopes=SCOPES)
                 else:
-                    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+                    credentials = Credentials.from_service_account_file(
                         "avrae-google.json",
                         scopes=SCOPES)
                 return gspread.authorize(credentials)
@@ -181,20 +185,18 @@ class GoogleSheet(SheetLoaderABC):
             except:
                 GoogleSheet._client_initializing = False
                 raise
+        # noinspection PyProtectedMember
         GoogleSheet._token_expiry = datetime.datetime.now() + datetime.timedelta(
-            seconds=ServiceAccountCredentials.MAX_TOKEN_LIFETIME_SECS)
+            seconds=google.oauth2.service_account._DEFAULT_TOKEN_LIFETIME_SECS)
         log.info("Logged in to google")
 
     @staticmethod
     async def _refresh_google_token():
         with GoogleSheet._client_lock():
             def _():
-                import httplib2
-
-                http = httplib2.Http()
-                GoogleSheet.g_client.auth.refresh(http)
+                GoogleSheet.g_client.auth.refresh(request=Request())
                 GoogleSheet.g_client.session.headers.update({
-                    'Authorization': 'Bearer %s' % GoogleSheet.g_client.auth.access_token
+                    'Authorization': 'Bearer %s' % GoogleSheet.g_client.auth.token
                 })
 
             try:
@@ -216,7 +218,7 @@ class GoogleSheet(SheetLoaderABC):
         if '1.3' in vcell:
             self.version = (1, 3)
         elif vcell:
-            self.additional = TempCharacter(doc.get_worksheet(1))
+            self.additional = TempCharacter(doc.worksheet('Additional'))
             self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
 
     # main loading methods
@@ -267,11 +269,12 @@ class GoogleSheet(SheetLoaderABC):
         live = None
         race = self.get_race()
         background = self.get_background()
+        actions = self.get_actions()
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
             skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
-            spellbook, live, race, background
+            spellbook, live, race, background, actions=actions
         )
         return character
 
@@ -348,6 +351,7 @@ class GoogleSheet(SheetLoaderABC):
                 levelcell = f"N{rownum}"
                 classname = self.additional.value(namecell)
                 if classname:
+                    classname = re.sub(r'[.$]', '_', classname)  # sentry-H7 - invalid class names
                     classlevel = int(self.additional.value(levelcell))
                     level_dict[classname] = classlevel
                 else:  # classes should be top-aligned
@@ -471,7 +475,7 @@ class GoogleSheet(SheetLoaderABC):
 
     def get_hp(self):
         try:
-            return int(self.character_data.value("U16"))
+            return int(self.character_data.unformatted_value("U16"))
         except (TypeError, ValueError):
             raise MissingAttribute("Max HP")
 
@@ -540,6 +544,17 @@ class GoogleSheet(SheetLoaderABC):
 
         spellbook = Spellbook(slots, slots, spells, dc, sab, self.total_level, spell_mod)
         return spellbook
+
+    def get_actions(self):
+        # v1: Z45:AH56
+        # v2: C59:AC84
+        if self.version >= (2, 0):
+            feature_names = self.character_data.value_range("C59:AC84")
+        else:
+            feature_names = self.character_data.value_range("Z45:AH56")
+
+        actions = get_actions_for_names(feature_names)
+        return Actions(actions)
 
     # helper methods
     def parse_attack(self, name_index, bonus_index, damage_index, sheet=None):

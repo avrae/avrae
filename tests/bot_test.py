@@ -18,6 +18,7 @@ async def test_basic_commands(avrae, dhttp):
     await dhttp.receive_delete(dm=True)
     await dhttp.receive_message(embed=discord.Embed(title=r"Hello \w+"), regex=True, dm=True)
 
+
 async def test_nonexistant_commands(avrae, dhttp):
     dhttp.clear()
     avrae.message("!this_command_does_not_exist_and_is_not_an_alias")

@@ -142,6 +142,15 @@ class AliasStatBlock:
             self._spellbook = AliasSpellbook(self._statblock.spellbook)
         return self._spellbook
 
+    @property
+    def creature_type(self):
+        """
+        The creature type of the creature. Will return None for players or creatures with no creature type.
+
+        :rtype: str or None
+        """
+        return self._statblock.creature_type
+
     # ---- hp ----
     def set_hp(self, new_hp):
         """
@@ -185,7 +194,7 @@ class AliasStatBlock:
 
     # ---- __dunder__ ----
     def __repr__(self):
-        return f"<AliasStatBlock name={self.name}>"
+        return f"<{self.__class__.__name__} name={self.name!r}>"
 
 
 class AliasBaseStats:
@@ -276,6 +285,11 @@ class AliasBaseStats:
     def __str__(self):
         return str(self._stats)
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__} prof_bonus={self.prof_bonus!r} strength={self.strength!r} " \
+               f"dexterity={self.dexterity!r} constitution={self.constitution!r} intelligence={self.intelligence!r} " \
+               f"wisdom={self.wisdom!r} charisma={self.charisma!r}>"
+
 
 class AliasLevels:
     """
@@ -293,7 +307,7 @@ class AliasLevels:
         """
         The total level.
 
-        :rtype: int
+        :rtype: float or int
         """
         return self._levels.total_level
 
@@ -303,15 +317,18 @@ class AliasLevels:
 
         :param str cls_name: The name of the class to get the levels of.
         :param int default: What to return if the statblock does not have levels in the given class.
-        :rtype: int
+        :rtype: float or int
         """
-        return self._levels.get(cls_name, default)
+        return self._levels.get(str(cls_name), default)
 
     def __iter__(self):
         return iter(self._levels)
 
     def __str__(self):
         return str(self._levels)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} total_level={self.total_level!r}>"
 
 
 class AliasAttackList:
@@ -341,6 +358,9 @@ class AliasAttackList:
 
     def __len__(self):
         return len(self._attack_list)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} len={len(self)}>"
 
 
 class AliasAttack:
@@ -394,6 +414,9 @@ class AliasAttack:
 
     def __str__(self):
         return self._attack.build_str(self._parent_statblock)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} verb={self.verb!r} proper={self.proper!r}>"
 
 
 class AliasSkill:
@@ -459,8 +482,23 @@ class AliasSkill:
         return int(self._skill)
 
     def __repr__(self):
-        return f"<AliasSkill {self.value:+} prof={self.prof} bonus={self.bonus} adv={self.adv}>"
+        return f"<{self.__class__.__name__} value={self.value!r} prof={self.prof!r} bonus={self.bonus!r} " \
+               f"adv={self.adv!r}>"
+    
+    def __gt__(self, other):
+        return self.value > other
+    
+    def __ge__(self, other):
+        return self.value >= other
 
+    def __eq__(self, other):
+        return self.value == other
+    
+    def __le__(self, other):
+        return self.value <= other
+    
+    def __lt__(self, other):
+        return self.value < other
 
 class AliasSkills:
     """
@@ -483,6 +521,9 @@ class AliasSkills:
 
     def __str__(self):
         return str(self._skills)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}>"
 
     def __iter__(self):
         """An iterator of (key, Skill)."""
@@ -508,10 +549,13 @@ class AliasSaves:
         :param str base_stat: The stat to get the save for.
         :rtype: :class:`~aliasing.api.statblock.AliasSkill`
         """
-        return AliasSkill(self._saves.get(base_stat))
+        return AliasSkill(self._saves.get(str(base_stat)))
 
     def __str__(self):
         return str(self._saves)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}>"
 
     def __iter__(self):
         """An iterator of (key, Skill)."""
@@ -569,6 +613,9 @@ class AliasResistances:
 
     def __str__(self):
         return str(self._resistances)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} resist={self.resist!r} vuln={self.vuln!r} immune={self.immune!r}>"
 
 
 class AliasSpellbook:
@@ -711,10 +758,11 @@ class AliasSpellbook:
         return self._spellbook.can_cast(the_spell, int(level))
 
     def __contains__(self, item):
-        return item in self._spellbook
+        return str(item) in self._spellbook
 
     def __repr__(self):
-        return "<AliasSpellbook object>"
+        return f"<{self.__class__.__name__} dc={self.dc!r} sab={self.sab!r} caster_level={self.caster_level!r} " \
+               f"spell_mod={self.spell_mod!r}>"
 
 
 class AliasSpellbookSpell:
@@ -764,7 +812,7 @@ class AliasSpellbookSpell:
         return self.name
 
     def __repr__(self):
-        return f"<AliasSpellbookSpell name={self.name} dc={self.dc} sab={self.sab} mod={self.mod}>"
+        return f"<{self.__class__.__name__} name={self.name} dc={self.dc} sab={self.sab} mod={self.mod}>"
 
 
 class _SpellProxy:

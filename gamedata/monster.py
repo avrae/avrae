@@ -1,6 +1,7 @@
 import itertools
 import logging
 
+from cogs5e.models.errors import CounterOutOfBounds
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
@@ -24,11 +25,15 @@ class Trait:
 
 
 class Monster(StatBlock, Sourced):
+    entity_type = 'monster'
+    type_id = 779871897
+
     def __init__(self, name: str, size: str, race: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
                  speed: str, ability_scores: BaseStats, saves: Saves, skills: Skills, senses: str,
                  display_resists: Resistances, condition_immune: list, languages: list, cr: str, xp: int,
                  # optional
                  traits: list = None, actions: list = None, reactions: list = None, legactions: list = None,
+                 bonus_actions: list = None, mythic_actions: list = None,
                  la_per_round=3, passiveperc: int = None,
                  # augmented
                  resistances: Resistances = None, attacks: AttackList = None, proper: bool = False,
@@ -43,6 +48,10 @@ class Monster(StatBlock, Sourced):
             reactions = []
         if legactions is None:
             legactions = []
+        if mythic_actions is None:
+            mythic_actions = []
+        if bonus_actions is None:
+            bonus_actions = []
         if attacks is None:
             attacks = AttackList()
         if spellcasting is None:
@@ -59,20 +68,19 @@ class Monster(StatBlock, Sourced):
             resistances = Resistances.from_dict(dict(vuln=vuln, resist=resist, immune=immune))
 
         try:
-            levels = Levels({"Monster": spellcasting.caster_level or int(cr)})
+            levels = Levels({"Monster": floatify_cr(cr)})
         except ValueError:
-            levels = None
+            levels = Levels({"Monster": 0})
 
-        Sourced.__init__(self, 'monster', homebrew, source=kwargs['source'],
+        Sourced.__init__(self, homebrew, source=kwargs['source'],
                          entity_id=kwargs.get('entity_id'), page=kwargs.get('page'), url=kwargs.get('url'),
                          is_free=kwargs.get('is_free'))
         StatBlock.__init__(
             self,
             name=name, stats=ability_scores, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels
+            spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels, creature_type=race
         )
         self.size = size
-        self.race = race
         self.alignment = alignment
         self.armortype = armortype
         self.hitdice = hitdice
@@ -87,6 +95,8 @@ class Monster(StatBlock, Sourced):
         self.actions = actions
         self.reactions = reactions
         self.legactions = legactions
+        self.mythic_actions = mythic_actions
+        self.bonus_actions = bonus_actions
         self.la_per_round = la_per_round
         self.proper = proper
         self.image_url = image_url
@@ -105,6 +115,8 @@ class Monster(StatBlock, Sourced):
         actions = [Trait(**t) for t in d['actions']]
         reactions = [Trait(**t) for t in d['reactions']]
         legactions = [Trait(**t) for t in d['legactions']]
+        bonus_actions = [Trait(**t) for t in d.get('bonus_actions', [])]
+        mythic_actions = [Trait(**t) for t in d.get('mythic_actions', [])]
         resistances = Resistances.from_dict(d['resistances'])
         attacks = AttackList.from_dict(d['attacks'])
         if d['spellbook'] is not None:
@@ -114,11 +126,12 @@ class Monster(StatBlock, Sourced):
         return cls(d['name'], d['size'], d['race'], d['alignment'], d['ac'], d['armortype'], d['hp'], d['hitdice'],
                    d['speed'], ability_scores, saves, skills, d['senses'], display_resists, d['condition_immune'],
                    d['languages'], d['cr'], d['xp'],
-                   traits, actions, reactions, legactions,
-                   d['la_per_round'], d['passiveperc'],
+                   traits=traits, actions=actions, reactions=reactions, legactions=legactions,
+                   bonus_actions=bonus_actions, mythic_actions=mythic_actions,
+                   la_per_round=d['la_per_round'], passiveperc=d['passiveperc'],
                    # augmented
-                   resistances, attacks, d['proper'], d['image_url'], spellcasting=spellcasting,
-                   token_free_fp=d['token_free'], token_sub_fp=d['token_sub'],
+                   resistances=resistances, attacks=attacks, proper=d['proper'], image_url=d['image_url'],
+                   spellcasting=spellcasting, token_free_fp=d['token_free'], token_sub_fp=d['token_sub'],
                    # sourcing
                    source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
 
@@ -143,16 +156,18 @@ class Monster(StatBlock, Sourced):
 
     def to_dict(self):
         return {
-            'name': self.name, 'size': self.size, 'race': self.race, 'alignment': self.alignment, 'ac': self.ac,
-            'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
+            'name': self.name, 'size': self.size, 'race': self.creature_type, 'alignment': self.alignment,
+            'ac': self.ac, 'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
             'ability_scores': self.stats.to_dict(),
             'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
             'resistances': self.resistances.to_dict(),
             'condition_immune': self.condition_immune,
             'saves': self.saves.to_dict(), 'skills': self.skills.to_dict(), 'languages': self.languages,
             'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
-            'reactions': [t.to_dict() for t in self.reactions],
-            'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
+            'reactions': [t.to_dict() for t in self.reactions], 'legactions': [t.to_dict() for t in self.legactions],
+            'bonus_actions': [t.to_dict() for t in self.bonus_actions],
+            'mythic_actions': [t.to_dict() for t in self.mythic_actions],
+            'la_per_round': self.la_per_round,
             'attacks': self.attacks.to_dict(), 'proper': self.proper,
             'image_url': self.image_url, 'spellbook': self.spellbook.to_dict(),
             'display_resists': self._displayed_resistances.to_dict()
@@ -196,7 +211,7 @@ class Monster(StatBlock, Sourced):
         Should be the portion between the embed title and special abilities.
         """
         size = self.size
-        type_ = self.race
+        type_ = self.creature_type
         alignment = self.alignment
         ac = str(self.ac) + (f" ({self.armortype})" if self.armortype else "")
         hp = f"{self.hp} ({self.hitdice})"
@@ -344,6 +359,10 @@ def _calc_prof(stats, saves, skills):
     return 0
 
 
+def floatify_cr(cr: str) -> float:
+    return {'1/8': 0.125, '1/4': 0.25, '1/2': 0.5}.get(cr) or float(cr)
+
+
 # ===== spellcasting =====
 class MonsterSpellbook(Spellbook):
     def __init__(self, *args, at_will=None, daily=None, daily_max=None, **kwargs):
@@ -424,6 +443,9 @@ class MonsterCastableSpellbook(MonsterSpellbook):
         if spell.name.lower() in [s.lower() for s in self.at_will]:
             return
         elif (daily_key := next((k for k in self.daily if spell.name.lower() == k.lower()), None)) is not None:
-            self.daily[daily_key] -= 1
+            if self.daily[daily_key] > 0:
+                self.daily[daily_key] -= 1
+            else:
+                raise CounterOutOfBounds(f"You do not have any remaining casts of {spell.name}.")
         else:
             self.use_slot(level)

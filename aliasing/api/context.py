@@ -70,8 +70,8 @@ class AliasContext:
         return self._alias
 
     def __repr__(self):
-        return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix}" \
-               f" alias={self.alias}>"
+        return f"<{self.__class__.__name__} guild={self.guild!r} channel={self.channel!r} author={self.author!r} " \
+               f"prefix={self.prefix!r} alias={self.alias!r}>"
 
 
 class AliasGuild:
@@ -107,6 +107,9 @@ class AliasGuild:
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
+
 
 class AliasChannel:
     """
@@ -119,7 +122,9 @@ class AliasChannel:
         """
         self._name = str(channel)
         self._id = channel.id
-        self._topic = channel.topic if not isinstance(channel, discord.DMChannel) else None
+        self._topic = getattr(channel, 'topic', None)
+        self._category = AliasCategory(channel.category) if getattr(channel, 'category', None) is not None else None
+        self._parent = AliasChannel(channel.parent) if isinstance(channel, discord.Thread) else None
 
     @property
     def name(self):
@@ -142,14 +147,35 @@ class AliasChannel:
     @property
     def topic(self):
         """
-        The channel topic.
+        The channel topic. This will be None if the channel is a direct message or thread.
 
-        :rtype: str
+        :rtype: str or None
         """
         return self._topic
 
+    @property
+    def category(self):
+        """
+        The category of the channel the alias was run in
+
+        :rtype: :class:`~aliasing.api.context.AliasCategory` or None
+        """
+        return self._category
+
+    @property
+    def parent(self):
+        """
+        If this channel is a thread, the thread's parent channel, or None otherwise.
+
+        :rtype: :class:`~aliasing.api.context.AliasChannel` or None
+        """
+        return self._parent
+
     def __str__(self):
         return self.name
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
 
 
 class AliasAuthor:
@@ -204,3 +230,43 @@ class AliasAuthor:
 
     def __str__(self):
         return f"{self.name}#{self.discriminator}"
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
+
+
+class AliasCategory:
+    """
+    Represents the category of the Discord channel an alias was invoked in.
+    """
+
+    def __init__(self, category):
+        """
+        :type channel: discord.ChannelCategory
+        """
+        self._name = str(category)
+        self._id = category.id
+
+    @property
+    def name(self):
+        """
+        The name of the category
+
+        :rtype: str
+        """
+        return self._name
+
+    @property
+    def id(self):
+        """
+        The ID of the category.
+
+        :rtype: int
+        """
+        return self._id
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"

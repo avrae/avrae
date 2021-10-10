@@ -6,146 +6,22 @@ from discord.ext.commands import Group, HelpCommand
 import aliasing.errors
 import aliasing.helpers
 import aliasing.personal
+from cogs5e.models.embeds import EmbedPaginator
 from utils.functions import user_from_id
-
-
-class EmbedPaginator:
-    EMBED_MAX = 6000
-    EMBED_FIELD_MAX = 1024
-    EMBED_DESC_MAX = 2048
-    EMBED_TITLE_MAX = 256
-
-    def __init__(self, **embed_options):
-        self._current_field_name = ''
-        self._current_field_inline = False
-        self._current_field = []
-        self._field_count = 0
-        self._embed_count = 0
-
-        self._footer_url = None
-        self._footer_text = None
-
-        self._default_embed_options = embed_options
-        self._embeds = [discord.Embed(**embed_options)]
-
-    def add_title(self, value):
-        """
-        Adds a title to the embed. This appears before any fields, and will raise a ValueError if the current
-        embed can't fit the value.
-        """
-        if len(value) > self.EMBED_TITLE_MAX or len(value) + self._embed_count > self.EMBED_MAX:
-            raise ValueError("The current embed cannot fit this title.")
-
-        self._embeds[-1].title = value
-        self._embed_count += len(value)
-
-    def add_description(self, value):
-        """
-        Adds a description to the embed. This appears before any fields, and will raise a ValueError if the current
-        embed can't fit the value.
-        """
-        if len(value) > self.EMBED_DESC_MAX or len(value) + self._embed_count > self.EMBED_MAX:
-            raise ValueError("The current embed cannot fit this description.")
-
-        self._embeds[-1].description = value
-        self._embed_count += len(value)
-
-    def add_field(self, name='', value='', inline=False):
-        """Add a new field to the help embed."""
-        if len(value) > self.EMBED_FIELD_MAX or len(name) > self.EMBED_TITLE_MAX:
-            raise ValueError("This value is too large to store in an embed field.")
-
-        if self._current_field:
-            self.close_field()
-
-        self._field_count += len(value) + 1
-
-        self._current_field_name = name
-        self._current_field_inline = inline
-        self._current_field.append(value)
-
-    def extend_field(self, value):
-        """Add a line of text to the last field in the help embed."""
-        if len(value) > self.EMBED_FIELD_MAX:
-            raise ValueError("This value is too large to store in an embed field.")
-
-        if self._field_count + len(value) + 1 > self.EMBED_FIELD_MAX:
-            self.close_field()
-            self.add_field("** **", value)  # this creates a field with no title to look somewhat seamless
-        else:
-            self._field_count += len(value) + 1
-            self._current_field.append(value)
-
-    def close_field(self):
-        """Terminate the current field and write it to the last embed."""
-        value = "\n".join(self._current_field)
-
-        if self._embed_count + len(value) + len(self._current_field_name) > self.EMBED_MAX:
-            self.close_embed()
-
-        self._embeds[-1].add_field(name=self._current_field_name, value=value, inline=self._current_field_inline)
-        self._embed_count += len(value) + len(self._current_field_name)
-
-        self._current_field_name = ''
-        self._current_field_inline = False
-        self._current_field = []
-        self._field_count = 0
-
-    def set_footer(self, icon_url=None, value=None):
-        """Sets the footer on the final embed."""
-        self._footer_url = icon_url
-        self._footer_text = value
-
-    def close_footer(self):
-        """Write the footer to the last embed."""
-        current_count = self._embed_count
-        kwargs = {}
-        if self._footer_url:
-            current_count += len(self._footer_url)
-            kwargs['icon_url'] = self._footer_url
-        if self._footer_text:
-            current_count += len(self._footer_text)
-            kwargs['text'] = self._footer_text
-        if current_count > self.EMBED_MAX:
-            self.close_embed()
-        self._embeds[-1].set_footer(**kwargs)
-
-    def close_embed(self):
-        """Terminate the current embed and create a new one."""
-        self._embeds.append(discord.Embed(**self._default_embed_options))
-        self._embed_count = 0
-
-    def __len__(self):
-        total = sum(len(e) for e in self._embeds)
-        return total + self._embed_count
-
-    @property
-    def embeds(self):
-        """Returns the rendered list of embeds."""
-        if self._field_count:
-            self.close_field()
-        self.close_footer()
-        return self._embeds
-
-    def __repr__(self):
-        fmt = '<EmbedPaginator _current_field_name={0._current_field_name} _field_count={0._field_count} ' \
-              '_embed_count={0._embed_count}>'
-        return fmt.format(self)
 
 
 class AvraeHelp(HelpCommand):
     def __init__(self, **options):
         super().__init__(**options)
-        self.embed_paginator = EmbedPaginator()
+        self.embed_paginator = EmbedPaginator(colour=discord.Colour.blurple())
         self.in_dms = True
 
     def get_ending_note(self):
         """Returns help command's ending note. This is mainly useful to override for i18n purposes."""
         command_name = self.invoked_with
-        return "An underlined command signifies that the command has subcommands.\n" \
-               "Type {0}{1} <command> for more info on a command.\n" \
-               "You can also type {0}{1} <category> for more info on a category.".format(self.clean_prefix,
-                                                                                         command_name)
+        return f"An underlined command signifies that the command has subcommands.\n" \
+               f"Type {self.context.clean_prefix}{command_name} <command> for more info on a command.\n" \
+               f"You can also type {self.context.clean_prefix}{command_name} <category> for more info on a category."
 
     def add_commands(self, commands, *, heading):
         """Adds a list of formatted commands under a field title."""

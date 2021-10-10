@@ -1,26 +1,29 @@
 import logging
 import re
+from collections import namedtuple
 
 import discord
 
-import cogs5e.models.initiative as init
 import gamedata.lookuputils
-from cogs5e.models import initiative
-from cogs5e.models.automation import Automation
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
-from cogs5e.models.errors import AvraeException
+from cogs5e.models.errors import AvraeException, InvalidArgument
+from cogs5e.models.initiative.effect import Effect
+from cogs5e.models.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
-from utils.functions import trim_str, verbose_stat
+from utils.functions import maybe_http_url, smart_trim, verbose_stat
+from .mixins import AutomatibleMixin, DescribableMixin
 from .shared import Sourced
 
 log = logging.getLogger(__name__)
 
 
-class Spell(Sourced):
+class Spell(AutomatibleMixin, DescribableMixin, Sourced):
+    entity_type = 'spell'
+    type_id = 1118725998
+
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
                  description: str, homebrew: bool, classes=None, subclasses=None, ritual: bool = False,
-                 higherlevels: str = None, concentration: bool = False, automation: Automation = None,
-                 image: str = None, **kwargs):
+                 higherlevels: str = None, concentration: bool = False, image: str = None, **kwargs):
         if classes is None:
             classes = []
         if isinstance(classes, str):
@@ -30,7 +33,7 @@ class Spell(Sourced):
         if isinstance(subclasses, str):
             subclasses = [cls.strip() for cls in subclasses.split(',') if cls.strip()]
 
-        super().__init__('spell', homebrew, **kwargs)
+        super().__init__(homebrew=homebrew, **kwargs)
 
         self.name = name
         self.level = level
@@ -45,7 +48,6 @@ class Spell(Sourced):
         self.description = description
         self.higherlevels = higherlevels
         self.concentration = concentration
-        self.automation = automation
         self.image = image
 
         if self.concentration and 'Concentration' not in self.duration:
@@ -53,20 +55,19 @@ class Spell(Sourced):
 
     @classmethod
     def from_data(cls, d):  # local JSON
-        automation = Automation.from_data(d["automation"])
         return cls(
             d['name'], d['level'], d['school'], d['casttime'], d['range'], d['components'], d['duration'],
             d['description'],
             homebrew=False, classes=d['classes'], subclasses=d['subclasses'], ritual=d['ritual'],
-            higherlevels=d['higherlevels'], concentration=d['concentration'], automation=automation,
-            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
+            higherlevels=d['higherlevels'], concentration=d['concentration'],
+            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
+        ).initialize_automation(d)
 
     @classmethod
     def from_homebrew(cls, data, source):  # homebrew spells
         data['components'] = parse_homebrew_components(data['components'])
         data["range_"] = data.pop("range")
-        data["automation"] = Automation.from_data(data["automation"])
-        return cls(homebrew=True, source=source, **data)
+        return cls(homebrew=True, source=source, **data).initialize_automation(data)
 
     def get_school(self):
         return {
@@ -138,7 +139,7 @@ class Spell(Sourced):
         :param args: Args
         :type args: :class:`~utils.argparser.ParsedArguments`
         :param combat: The combat the spell was cast in, if applicable.
-        :return: {embed: Embed}
+        :rtype: CastResult
         """
 
         # generic args
@@ -190,13 +191,14 @@ class Spell(Sourced):
                 embed.description = err
                 if l > 0:
                     embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))
-                return {"embed": embed}
+                return CastResult(embed=embed, success=False, automation_result=None)
 
             # use resource
             caster.spellbook.cast(self, l)
 
         # base stat stuff
         mod_arg = args.last("mod", type_=int)
+        with_arg = args.last("with")
         stat_override = ''
         if mod_arg is not None:
             mod = mod_arg
@@ -204,18 +206,22 @@ class Spell(Sourced):
             dc_override = 8 + mod + prof_bonus
             ab_override = mod + prof_bonus
             spell_override = mod
-        elif any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
-            base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
-            mod = caster.stats.get_mod(base)
+        elif with_arg is not None:
+            if with_arg not in STAT_ABBREVIATIONS:
+                raise InvalidArgument(f"{with_arg} is not a valid stat to cast with.")
+            mod = caster.stats.get_mod(with_arg)
             dc_override = 8 + mod + caster.stats.prof_bonus
             ab_override = mod + caster.stats.prof_bonus
             spell_override = mod
-            stat_override = f" with {verbose_stat(base)}"
+            stat_override = f" with {verbose_stat(with_arg)}"
 
         # begin setup
         embed = discord.Embed()
         if title:
-            embed.title = title.replace('[sname]', self.name)
+            embed.title = title.replace('[name]', caster.name) \
+                .replace('[aname]', self.name) \
+                .replace('[sname]', self.name) \
+                .replace('[verb]', 'casts')  # #1514, [aname] is action name now, #1587, add verb to action/cast
         else:
             embed.title = f"{caster.get_title_name()} casts {self.name}{stat_override}!"
         if targets is None:
@@ -225,26 +231,27 @@ class Spell(Sourced):
         noconc = args.last("noconc", type_=bool)
         conc_conflict = None
         conc_effect = None
-        if all((self.concentration, isinstance(caster, init.Combatant), combat, not noconc)):
+        if all((self.concentration, isinstance(caster, BaseCombatant), combat, not noconc)):
             duration = args.last('dur', self.get_combat_duration(), int)
-            conc_effect = initiative.Effect.new(combat, caster, self.name, duration, "", True)
+            conc_effect = Effect.new(combat, caster, self.name, duration, "", True)
             effect_result = caster.add_effect(conc_effect)
             conc_conflict = effect_result['conc_conflict']
 
+        # run
+        automation_result = None
         if self.automation and self.automation.effects:
             title = f"{caster.name} cast {self.name}!"
-            await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect,
-                                      ab_override=ab_override, dc_override=dc_override, spell_override=spell_override,
-                                      title=title)
-        else:
+            automation_result = await self.automation.run(
+                ctx, embed, caster, targets, args, combat, self,
+                conc_effect=conc_effect, ab_override=ab_override, dc_override=dc_override,
+                spell_override=spell_override, title=title)
+        else:  # no automation, display spell description
             phrase = args.join('phrase', '\n')
             if phrase:
                 embed.description = f"*{phrase}*"
-
-            text = trim_str(self.description, 1024)
-            embed.add_field(name="Description", value=text, inline=False)
+            embed.add_field(name="Description", value=smart_trim(self.description), inline=False)
             if l != self.level and self.higherlevels:
-                embed.add_field(name="At Higher Levels", value=trim_str(self.higherlevels, 1024), inline=False)
+                embed.add_field(name="At Higher Levels", value=smart_trim(self.higherlevels), inline=False)
             embed.set_footer(text="No spell automation found.")
 
         if l > 0 and not i:
@@ -256,14 +263,17 @@ class Spell(Sourced):
                             value=f"Dropped {conflicts} due to concentration.")
 
         if 'thumb' in args:
-            embed.set_thumbnail(url=args.last('thumb'))
+            embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
         elif self.image:
             embed.set_thumbnail(url=self.image)
 
         add_fields_from_args(embed, args.get('f'))
         gamedata.lookuputils.handle_source_footer(embed, self, add_source_str=False)
 
-        return {"embed": embed}
+        return CastResult(embed=embed, success=True, automation_result=automation_result)
+
+
+CastResult = namedtuple('CastResult', 'embed success automation_result')
 
 
 def parse_homebrew_components(components):

@@ -2,12 +2,15 @@ from .shared import Sourced, Trait
 
 
 class Background(Sourced):
+    entity_type = 'background'
+    type_id = 1669830167
+
     def __init__(self, name, traits, **kwargs):
         """
         :type name: str
         :type traits: list[gamedata.shared.Trait]
         """
-        super().__init__('background', False, **kwargs)
+        super().__init__(False, **kwargs)
         self.name = name
         self.traits = traits
 

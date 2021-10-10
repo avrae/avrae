@@ -56,7 +56,7 @@ def vroll(dice, multiply=1, add=0):
     :return: The result of the roll.
     :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
     """
-    return _vroll(dice, multiply, add)
+    return _vroll(str(dice), int(multiply), int(add))
 
 
 def roll(dice):
@@ -67,7 +67,7 @@ def roll(dice):
     :return: The roll's total, or 0 if an error was encountered.
     :rtype: int
     """
-    return _roll(dice)
+    return _roll(str(dice))
 
 
 def _roll(dice, roller=None):
@@ -103,36 +103,40 @@ def _vroll(dice, multiply=1, add=0, roller=None):
 
 
 # range()
+# noinspection PyProtectedMember
 def safe_range(start, stop=None, step=None):
     if stop is None and step is None:
         if start > MAX_ITER_LENGTH:
-            raise draconic.IterableTooLong("This range is too large.")
+            draconic._raise_in_context(draconic.IterableTooLong, "This range is too large.")
         return list(range(start))
     elif stop is not None and step is None:
         if stop - start > MAX_ITER_LENGTH:
-            raise draconic.IterableTooLong("This range is too large.")
+            draconic._raise_in_context(draconic.IterableTooLong, "This range is too large.")
         return list(range(start, stop))
     elif stop is not None and step is not None:
         if (stop - start) / step > MAX_ITER_LENGTH:
-            raise draconic.IterableTooLong("This range is too large.")
+            draconic._raise_in_context(draconic.IterableTooLong, "This range is too large.")
         return list(range(start, stop, step))
     else:
-        raise draconic.DraconicValueError("Invalid arguments passed to range()")
+        raise draconic._raise_in_context(draconic.DraconicValueError, "Invalid arguments passed to range()")
 
 
 # err()
 class AliasException(AvraeException):
-    pass
+    def __init__(self, msg, pm_user):
+        super().__init__(msg)
+        self.pm_user = pm_user
 
 
-def err(reason):
+def err(reason, pm_user=False):
     """
     Stops evaluation of an alias and shows the user an error.
 
     :param str reason: The error to show.
+    :param bool pm_user: Whether or not to PM the user the error traceback.
     :raises: AliasException
     """
-    raise AliasException(reason)
+    raise AliasException(str(reason), pm_user)
 
 
 # typeof()
@@ -152,5 +156,9 @@ def rand():
     return random.random()
 
 
-def randint(top):
-    return random.randrange(top)
+def randint(start, stop=None, step=1):
+    return random.randrange(start, stop, step)
+
+
+def randchoice(seq):
+    return random.choice(seq)

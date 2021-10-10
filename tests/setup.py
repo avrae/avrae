@@ -24,8 +24,8 @@ DEFAULT_USER = {
     "avatar": None
 }
 ME_USER = {
-    'username': 'Avrae Test', 'verified': True, 'locale': 'en-US', 'mfa_enabled': True, 'bot': True,
-    'id': '111111111111111111', 'flags': 0, 'avatar': None, 'discriminator': '0000', 'email': None
+    'verified': True, 'username': 'Avrae Test', 'mfa_enabled': True, 'id': '111111111111111111', 'flags': 0,
+    'email': None, 'discriminator': '0000', 'bot': True, 'avatar': None
 }
 NOW = datetime.datetime.now().isoformat()
 
@@ -73,93 +73,48 @@ RESPONSES = {
     "GET /users/@me": lambda _: ME_USER,
     "GET /gateway": lambda _: {'url': 'wss://gateway.discord.gg'},
     f"POST /channels/*/messages": message_response,
-    f"PATCH /channels/*/messages/{MESSAGE_ID}": edit_response,
-    f"DELETE /channels/*/messages/{MESSAGE_ID}": lambda _: None,
+    f"PATCH /channels/*/messages/*": edit_response,
+    f"DELETE /channels/*/messages/*": lambda _: None,
     "POST /users/@me/channels": start_dm_response,
-    f"PUT /channels/*/pins/{MESSAGE_ID}": lambda _: None,
-    f"DELETE /channels/*/pins/{MESSAGE_ID}": lambda _: None,
-    f"PUT /channels/*/messages/{MESSAGE_ID}/reactions/*/@me": lambda _: None,
-    f"GET /channels/*/messages/{MESSAGE_ID}": message_response,
+    f"PUT /channels/*/pins/*": lambda _: None,
+    f"DELETE /channels/*/pins/*": lambda _: None,
+    f"PUT /channels/*/messages/*/reactions/*/@me": lambda _: None,
+    f"GET /channels/*/messages/*": message_response,
     f"POST /channels/*/typing": lambda _: None,
 }
 
 # initialization
 DUMMY_READY = {
-    'v': 6,
+    'v': 9,
     'user_settings': {},
     'user': ME_USER,
-    'shard': [
-        0,
-        1
-    ],
+    'shard': [0, 1],
     'session_id': 'foobar',
     'relationships': [],
     'private_channels': [],
     'presences': [],
-    'guilds': [
-        {
-            'unavailable': True,
-            'id': str(TEST_GUILD_ID)
-        }
-    ],
+    'guilds': [{'unavailable': True, 'id': str(TEST_GUILD_ID)}],
+    'guild_join_requests': [],
+    'geo_ordered_rtc_regions': ['santa-clara', 'us-west', 'seattle', 'us-south', 'us-central'],
+    'application': {'id': '111111111111111111', 'flags': 294912},
+    '_trace': ['blah'],
     '__shard_id__': 0
 }
 
 DUMMY_GUILD_CREATE = {
-    'afk_timeout': 300,
-    'description': None,
-    'members': [
-        {
-            'user': ME_USER,
-            'roles': [],
-            'mute': False,
-            'joined_at': NOW,
-            'deaf': False
-        },
-        {
-            'user': DEFAULT_USER,
-            'roles': [],
-            'mute': False,
-            'joined_at': NOW,
-            'deaf': False
-        },
-        {
-            'user': OWNER_USER,
-            'roles': [],
-            'mute': False,
-            'joined_at': NOW,
-            'deaf': False
-        }
-    ],
-    'roles': [
-        {
-            'position': 0,
-            'permissions': 104324681,
-            'name': '@everyone',
-            'mentionable': False,
-            'managed': False,
-            'id': str(TEST_GUILD_ID),
-            'hoist': False,
-            'color': 0
-        }
-    ],
-    'afk_channel_id': None,
-    'system_channel_flags': 0,
-    'emojis': [],
-    'voice_states': [],
-    'application_id': None,
-    'system_channel_id': str(TEST_CHANNEL_ID),
-    'name': 'Test Guild',
-    'premium_tier': 0,
-    'joined_at': NOW,
-    'banner': None,
-    'id': str(TEST_GUILD_ID),
-    'features': [],
-    'preferred_locale': 'en-US',
-    'region': 'us-west',
-    'member_count': 3,
-    'premium_subscription_count': 0,
     'default_message_notifications': 0,
+    'afk_channel_id': None,
+    'voice_states': [],
+    'public_updates_channel_id': None,
+    'name': 'Test Guild',
+    'region': 'us-west',
+    'stickers': [],
+    'banner': None,
+    'description': None,
+    'splash': None,
+    'discovery_splash': None,
+    'preferred_locale': 'en-US',
+    'application_id': '207919515336441856',
     'channels': [
         {
             'type': 0,
@@ -173,17 +128,80 @@ DUMMY_GUILD_CREATE = {
             'id': str(TEST_CHANNEL_ID)
         }
     ],
-    'unavailable': False,
-    'icon': None,
-    'vanity_url_code': None,
-    'owner_id': OWNER_USER['id'],
-    'presences': [],
-    'splash': None,
     'mfa_level': 0,
+    'unavailable': False,
+    'guild_scheduled_events': [],
+    'icon': None,
+    'large': False,
     'explicit_content_filter': 0,
     'lazy': True,
-    'large': False,
-    'verification_level': 0
+    'joined_at': NOW,
+    'system_channel_id': str(TEST_CHANNEL_ID),
+    'premium_tier': 0,
+    'verification_level': 0,
+    'owner_id': OWNER_USER['id'],
+    'max_video_channel_users': 25,
+    'vanity_url_code': None,
+    'threads': [],
+    'member_count': 3,
+    'nsfw_level': 0,
+    'features': [],
+    'application_command_counts': {'3': 0, '2': 0, '1': 0},
+    'members': [
+        {
+            'user': ME_USER,
+            'roles': [],
+            'mute': False,
+            'joined_at': NOW,
+            'hoisted_role': None,
+            'deaf': False
+        },
+        {
+            'user': DEFAULT_USER,
+            'roles': [],
+            'mute': False,
+            'joined_at': NOW,
+            'hoisted_role': None,
+            'deaf': False
+        },
+        {
+            'user': OWNER_USER,
+            'roles': [],
+            'mute': False,
+            'joined_at': NOW,
+            'hoisted_role': None,
+            'deaf': False
+        }
+    ],
+    'afk_timeout': 300,
+    'application_command_count': 0,
+    'id': str(TEST_GUILD_ID),
+    'nsfw': False,
+    'stage_instances': [],
+    'rules_channel_id': None,
+    'system_channel_flags': 0,
+    'max_members': 250000,
+    'roles': [
+        {
+            'position': 0,
+            'permissions': '6442451968',
+            'name': '@everyone',
+            'mentionable': False,
+            'managed': False,
+            'id': str(TEST_GUILD_ID),
+            'hoist': False,
+            'color': 0
+        }
+    ],
+    'premium_subscription_count': 0,
+    'presences': [],
+    'guild_hashes': {
+        'version': 1,
+        'roles': {'omitted': True},
+        'metadata': {'omitted': True},
+        'channels': {'omitted': True}
+    },
+    'emojis': []
 }
 
 DUMMY_DMCHANNEL_CREATE = {

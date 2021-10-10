@@ -10,15 +10,16 @@ from discord.ext import commands
 
 import gamedata
 from cogs5e.models import errors
-from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, chunk_text, set_maybe_long_desc
+from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
-from gamedata.lookuputils import HOMEBREW_EMOJI, can_access, get_item_choices, get_monster_choices, get_spell_choices, \
-    handle_source_footer
-from gamedata.shared import SourcedTrait
+from gamedata.klass import ClassFeature
+from gamedata.lookuputils import HOMEBREW_EMOJI, available, can_access, get_item_choices, get_monster_choices, \
+    get_spell_choices, handle_source_footer
+from gamedata.race import RaceFeature
 from utils import checks, img
 from utils.argparser import argparse
-from utils.functions import get_positivity, search_and_select, trim_str
+from utils.functions import chunk_text, get_positivity, search_and_select, trim_str
 
 LARGE_THRESHOLD = 200
 
@@ -57,10 +58,14 @@ class Lookup(commands.Cog):
         await destination.send(embed=embed)
 
     @commands.command(aliases=['status'])
-    async def condition(self, ctx, *, name: str):
+    async def condition(self, ctx, *, name: str = None):
         """Looks up a condition."""
+        if not name:
+            name = 'condition'
+        else:
+            name = f"Condition: {name}"
         # this is an invoke instead of an alias to make more sense in docs
-        await self.rule(ctx, name=f"Condition: {name}")
+        await self.rule(ctx, name=name)
 
     @commands.command(aliases=['reference'])
     async def rule(self, ctx, *, name: str = None):
@@ -107,9 +112,10 @@ class Lookup(commands.Cog):
     @commands.command()
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
-        result: SourcedTrait = await self._lookup_search3(ctx,
-                                                          {'race': compendium.rfeats, 'subrace': compendium.subrfeats},
-                                                          name, 'racefeat')
+        result: RaceFeature = await self._lookup_search3(
+            ctx,
+            {'race': compendium.rfeats, 'subrace': compendium.subrfeats},
+            name, 'racefeat')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -122,9 +128,10 @@ class Lookup(commands.Cog):
     @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        result: gamedata.Race = await self._lookup_search3(ctx,
-                                                           {'race': compendium.races, 'subrace': compendium.subraces},
-                                                           name, 'race')
+        result: gamedata.Race = await self._lookup_search3(
+            ctx,
+            {'race': compendium.races, 'subrace': compendium.subraces},
+            name, 'race')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -140,8 +147,10 @@ class Lookup(commands.Cog):
     @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        result: SourcedTrait = await self._lookup_search3(ctx, {'class': compendium.cfeats}, name,
-                                                          query_type='classfeat')
+        result: ClassFeature = await self._lookup_search3(
+            ctx,
+            {'class': compendium.cfeats, 'class-feature': compendium.optional_cfeats},
+            name, query_type='classfeat')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -167,16 +176,24 @@ class Lookup(commands.Cog):
 
             levels = []
             for level in range(1, 21):
-                level = result.levels[level - 1]
-                levels.append(', '.join([feature.name for feature in level]))
-
-            embed.add_field(name="Starting Proficiencies", value=result.proficiencies, inline=False)
-            embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
+                level_features = result.levels[level - 1]
+                feature_names = [feature.name for feature in level_features]
+                if level in result.subclass_feature_levels:
+                    feature_names.append(f"{result.subclass_title} Feature")
+                levels.append(', '.join(feature_names))
 
             level_features_str = ""
             for i, l in enumerate(levels):
                 level_features_str += f"`{i + 1}` {l}\n"
             embed.description = level_features_str
+
+            available_ocfs = await available(ctx, result.optional_features, entity_type='class-feature')
+            if available_ocfs:
+                ocf_names = ', '.join(ocf.name for ocf in available_ocfs)
+                embed.add_field(name="Optional Class Features", value=ocf_names, inline=False)
+
+            embed.add_field(name="Starting Proficiencies", value=result.proficiencies, inline=False)
+            embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
 
             handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature.",
                                  add_source_str=False)
@@ -294,6 +311,10 @@ class Lookup(commands.Cog):
                 action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.actions)
                 if action:
                     safe_append("Actions", action)
+            if monster.bonus_actions:
+                bonus_action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.bonus_actions)
+                if bonus_action:
+                    safe_append("Bonus Actions", bonus_action)
             if monster.reactions:
                 reaction = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.reactions)
                 if reaction:
@@ -311,12 +332,16 @@ class Lookup(commands.Cog):
                         legendary.append(a.desc)
                 if legendary:
                     safe_append("Legendary Actions", '\n\n'.join(legendary))
+            if monster.mythic_actions:
+                mythic_action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.mythic_actions)
+                if mythic_action:
+                    safe_append("Mythic Actions", mythic_action)
 
         else:
             hp = monster.hp
             ac = monster.ac
             size = monster.size
-            _type = monster.race
+            _type = monster.creature_type
             if hp < 10:
                 hp = "Very Low"
             elif 10 <= hp < 50:
@@ -355,6 +380,9 @@ class Lookup(commands.Cog):
 
             if monster.actions:
                 embed_queue[-1].add_field(name="Actions", value=str(len(monster.actions)))
+
+            if monster.bonus_actions:
+                embed_queue[-1].add_field(name="Bonus Actions", value=str(len(monster.bonus_actions)))
 
             if monster.reactions:
                 embed_queue[-1].add_field(name="Reactions", value=str(len(monster.reactions)))
@@ -598,10 +626,10 @@ class Lookup(commands.Cog):
         """
         :type ctx: discord.ext.commands.Context
         :param entities: A dict mapping entitlements entity types to the entities themselves.
-        :type entities: dict[str, list[gamedata.shared.Sourced]]
+        :type entities: dict[str, list[T]]
         :type query: str
         :param str query_type: The type of the object being queried for (default entity type if only one dict key)
-        :rtype: gamedata.shared.Sourced
+        :rtype: T
         :raises: RequiresLicense if an entity that requires a license is selected
         """
         # sanity checks
@@ -629,24 +657,24 @@ class Lookup(commands.Cog):
 
         # get the object
         choices = []
-        for etype, es in entities.items():
+        for entity_entitlement_type, es in entities.items():
             for entity in es:
-                choices.append((entity, etype))  # entity, entity type
+                choices.append((entity, entity_entitlement_type))  # entity, entity type
 
         result, metadata = await search_and_select(
             ctx, choices, query, lambda e: e[0].name, return_metadata=True,
             selectkey=selectkey)
 
         # get the entity
-        entity, entity_type = result
+        entity, entity_entitlement_type = result
 
         # log the query
         await self._add_training_data(query_type, query, entity.name, metadata=metadata, srd=entity.is_free,
-                                      could_view=can_access(entity, available_ids[entity_type]))
+                                      could_view=can_access(entity, available_ids[entity_entitlement_type]))
 
         # display error if not srd
-        if not can_access(entity, available_ids[entity_type]):
-            raise errors.RequiresLicense(entity, available_ids[entity_type] is not None)
+        if not can_access(entity, available_ids[entity_entitlement_type]):
+            raise errors.RequiresLicense(entity, available_ids[entity_entitlement_type] is not None)
         return entity
 
     # ==== various listeners ====

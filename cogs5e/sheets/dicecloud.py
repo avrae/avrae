@@ -16,12 +16,13 @@ from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import DicecloudClient
 from cogs5e.models.dicecloud.errors import DicecloudException
 from cogs5e.models.errors import ExternalImportError
+from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
+from cogs5e.sheets.utils import get_actions_for_names
 from gamedata.compendium import compendium
-from utils import config
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from .abc import SHEET_VERSION, SheetLoaderABC
@@ -34,7 +35,7 @@ CLASS_RESOURCE_NAMES = {"expertiseDice": "Expertise Dice", "ki": "Ki", "rages": 
 CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long',
                          "sorceryPoints": 'long', "superiorityDice": 'short'}
 API_BASE = "https://dicecloud.com/character/"
-KEY = config.DICECLOUD_API_KEY
+DICECLOUD_URL_RE = re.compile(r"(?:https?://)?dicecloud\.com/character/([\d\w]+)/?")
 
 
 class DicecloudParser(SheetLoaderABC):
@@ -90,11 +91,12 @@ class DicecloudParser(SheetLoaderABC):
         live = self.is_live()
         race = self.character_data['characters'][0]['race'].strip()
         background = self.character_data['characters'][0]['backstory'].strip()
+        actions = self.get_actions()
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
             skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
-            spellbook, live, race, background
+            spellbook, live, race, background, actions=actions
         )
         return character
 
@@ -304,7 +306,7 @@ class DicecloudParser(SheetLoaderABC):
         counters = []
 
         for res in CLASS_RESOURCES:
-            res_value = self.calculate_stat(res)
+            res_value = int(self.calculate_stat(res))
             if res_value > 0:
                 display_type = 'bubble' if res_value < 6 else None
                 co = {  # we have to initialize counters this way, which is meh
@@ -325,7 +327,7 @@ class DicecloudParser(SheetLoaderABC):
             elif 'long rest' in desc:
                 reset = 'long'
             try:
-                initial_value = self.evaluator.eval(f['uses'])
+                initial_value = int(self.evaluator.eval(f['uses']))
             except draconic.DraconicException:
                 raise ExternalImportError(f"Invalid max uses on limited use feature {f['name']}: {f['uses']}")
             display_type = 'bubble' if initial_value < 7 else None
@@ -338,6 +340,15 @@ class DicecloudParser(SheetLoaderABC):
             counters.append(co)
 
         return counters
+
+    def get_actions(self):
+        feature_names = [
+            f.get('name')
+            for f in self.character_data.get('features', [])
+            if f.get('enabled') and not f.get('removed')
+        ]
+        actions = get_actions_for_names(feature_names)
+        return Actions(actions)
 
     # helper funcs
     def calculate_stat(self, stat, base=0):

@@ -61,10 +61,11 @@
 !admin workshop tags add mordenkainens-tome-of-foes "Mordenkainen's Tome of Foes" Books
 !admin workshop tags add eberron-rising-from-the-last-war "Eberron: Rising from the Last War" Books
 !admin workshop tags add guildmasters-guide-to-ravnica "Guildmaster's Guide to Ravnica" Books
-!admin workshop tags add explorers-guide-to-wildemount "Explorer's Guide to WIldemount" Books
+!admin workshop tags add explorers-guide-to-wildemount "Explorer's Guide to Wildemount" Books
 !admin workshop tags add mythic-odysseys-of-theros "Mythic Odysseys of Theros" Books
 !admin workshop tags add sword-coast-adventurers-guide "Sword Coast Adventurer's Guide" Books
 !admin workshop tags add adventure-book "Adventure Book" Books
+!admin workshop tags add tashas-cauldron-of-everything "Tasha's Cauldron of Everything" Books
 
 !admin workshop tags add class Class Other
 !admin workshop tags add race Race Other

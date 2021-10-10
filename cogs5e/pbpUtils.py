@@ -9,7 +9,7 @@ from discord.ext import commands
 
 from cogs5e.models import embeds
 from utils.argparser import argparse
-from utils.functions import try_delete
+from utils.functions import try_delete, maybe_http_url
 
 
 class PBPUtils(commands.Cog):
@@ -26,7 +26,7 @@ class PBPUtils(commands.Cog):
 
     @commands.command()
     async def techo(self, ctx, seconds: int, *, msg):
-        """Echos a message, and deletes it after a few seconds."""
+        """Echos a message, and deletes it after a number of seconds (0-600)."""
         await try_delete(ctx.message)
 
         seconds = min(max(0, seconds), 600)
@@ -44,7 +44,8 @@ class PBPUtils(commands.Cog):
         -footer <footer text>
         -f "<Field Title>|<Field Text>[|inline]"
             (e.g. "Donuts|I have 15 donuts|inline" for an inline field, or "Donuts|I have 15 donuts" for one with its own line.)
-        -color <hex color>
+        -color [hex color]
+            Leave blank for random color.
         -t <timeout (0..600)>
         """
         await try_delete(ctx.message)
@@ -53,12 +54,12 @@ class PBPUtils(commands.Cog):
         args = argparse(args)
         embed.title = args.last('title')
         embed.description = args.last('desc')
-        embed.set_thumbnail(url=args.last('thumb', '') if 'http' in str(args.last('thumb')) else '')
-        embed.set_image(url=args.last('image', '') if 'http' in str(args.last('image')) else '')
+        embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
+        embed.set_image(url=maybe_http_url(args.last('image', '')))
         embed.set_footer(text=args.last('footer', ''))
         try:
-            embed.colour = int(args.last('color', "0").strip('#'), base=16)
-        except:
+            embed.colour = int(args.last('color').strip('#'), base=16)
+        except (AttributeError, ValueError):
             pass
 
         embeds.add_fields_from_args(embed, args.get('f'))
@@ -79,7 +80,7 @@ class PBPUtils(commands.Cog):
     async def br(self, ctx):
         """Prints a scene break."""
         await try_delete(ctx.message)
-        await ctx.send("``` ```")
+        await ctx.send("```\n \n```")
 
     @commands.command(hidden=True)
     async def pythag(self, ctx, num1: int, num2: int):

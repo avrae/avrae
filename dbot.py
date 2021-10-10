@@ -1,31 +1,30 @@
 import asyncio
 import faulthandler
 import logging
+import random
 import sys
+import time
 import traceback
-
-# this hooks a lot of weird things and needs to be imported early
-import utils.newrelic
-
-utils.newrelic.hook_all()
-from utils import clustering, config
 
 import aioredis
 import d20
 import discord
 import motor.motor_asyncio
+import psutil
 import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
+from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
 from cogs5e.models.errors import AvraeException, RequiresLicense
-from aliasing.errors import CollectableRequiresLicenses, EvaluationError
+from ddb import BeyondClient, BeyondClientBase
+from ddb.gamelog import GameLogClient
 from gamedata.compendium import compendium
-from gamedata.ddb import BeyondClient, BeyondClientBase
 from gamedata.lookuputils import handle_required_license
+from utils import clustering, config, context
 from utils.aldclient import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
@@ -33,24 +32,16 @@ from utils.redisIO import RedisIO
 # -----COGS-----
 COGS = (
     "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
-    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization", "cogsmisc.core",
-    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"
+    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogs5e.gamelog",
+    "cogsmisc.customization", "cogsmisc.core",
+    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils", "cogsmisc.tutorials"
 )
 
 
 async def get_prefix(the_bot, message):
     if not message.guild:
         return commands.when_mentioned_or(config.DEFAULT_PREFIX)(the_bot, message)
-    guild_id = str(message.guild.id)
-    if guild_id in the_bot.prefixes:
-        gp = the_bot.prefixes.get(guild_id, config.DEFAULT_PREFIX)
-    else:  # load from db and cache
-        gp_obj = await the_bot.mdb.prefixes.find_one({"guild_id": guild_id})
-        if gp_obj is None:
-            gp = config.DEFAULT_PREFIX
-        else:
-            gp = gp_obj.get("prefix", config.DEFAULT_PREFIX)
-        the_bot.prefixes[guild_id] = gp
+    gp = await the_bot.get_guild_prefix(message.guild)
     return commands.when_mentioned_or(gp)(the_bot, message)
 
 
@@ -59,12 +50,19 @@ class Avrae(commands.AutoShardedBot):
         super(Avrae, self).__init__(prefix, help_command=help_command, description=description, **options)
         self.testing = testing
         self.state = "init"
+
+        # dbs
         self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
+
+        # misc caches
         self.prefixes = dict()
         self.muted = set()
         self.cluster_id = 0
+
+        # launch concurrency
+        self.launch_max_concurrency = 1
 
         # sentry
         if config.SENTRY_DSN is not None:
@@ -82,28 +80,25 @@ class Avrae(commands.AutoShardedBot):
         # launchdarkly
         self.ldclient = AsyncLaunchDarklyClient(self.loop, sdk_key=config.LAUNCHDARKLY_SDK_KEY)
 
+        # ddb game log
+        self.glclient = GameLogClient(self)
+        self.glclient.init()
+
     async def setup_rdb(self):
         return RedisIO(await aioredis.create_redis_pool(config.REDIS_URL, db=config.REDIS_DB_NUM))
 
-    async def get_server_prefix(self, msg):
-        return (await get_prefix(self, msg))[-1]
-
-    async def launch_shards(self):
-        # set up my shard_ids
-        async with clustering.coordination_lock(self.rdb):
-            await clustering.coordinate_shards(self)
-            if self.shard_ids is not None:
-                log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
-            await super(Avrae, self).launch_shards()
-            log.info(f"Launched {len(self.shards)} shards!")
-
-        if self.is_cluster_0:
-            await self.rdb.incr('build_num')
-
-    async def close(self):
-        await super().close()
-        await self.ddb.close()
-        self.ldclient.close()
+    async def get_guild_prefix(self, guild: discord.Guild) -> str:
+        guild_id = str(guild.id)
+        if guild_id in self.prefixes:
+            return self.prefixes.get(guild_id, config.DEFAULT_PREFIX)
+        # load from db and cache
+        gp_obj = await self.mdb.prefixes.find_one({"guild_id": guild_id})
+        if gp_obj is None:
+            gp = config.DEFAULT_PREFIX
+        else:
+            gp = gp_obj.get("prefix", config.DEFAULT_PREFIX)
+        self.prefixes[guild_id] = gp
+        return gp
 
     @property
     def is_cluster_0(self):
@@ -112,23 +107,82 @@ class Avrae(commands.AutoShardedBot):
         return self.cluster_id == 0
 
     @staticmethod
-    def log_exception(exception=None, context: commands.Context = None):
+    def log_exception(exception=None, ctx: context.AvraeContext = None):
         if config.SENTRY_DSN is None:
             return
 
         with sentry_sdk.push_scope() as scope:
-            if context:
+            if ctx:
                 # noinspection PyDunderSlots,PyUnresolvedReferences
                 # for some reason pycharm doesn't pick up the attribute setter here
-                scope.user = {"id": context.author.id, "username": str(context.author)}
-                scope.set_tag("message.content", context.message.content)
-                scope.set_tag("is_private_message", context.guild is None)
-                scope.set_tag("channel.id", context.channel.id)
-                scope.set_tag("channel.name", str(context.channel))
-                if context.guild is not None:
-                    scope.set_tag("guild.id", context.guild.id)
-                    scope.set_tag("guild.name", str(context.guild))
+                scope.user = {"id": ctx.author.id, "username": str(ctx.author)}
+                scope.set_tag("message.content", ctx.message.content)
+                scope.set_tag("is_private_message", ctx.guild is None)
+                scope.set_tag("channel.id", ctx.channel.id)
+                scope.set_tag("channel.name", str(ctx.channel))
+                if ctx.guild is not None:
+                    scope.set_tag("guild.id", ctx.guild.id)
+                    scope.set_tag("guild.name", str(ctx.guild))
             sentry_sdk.capture_exception(exception)
+
+    async def launch_shards(self):
+        # set up my shard_ids
+        async with clustering.coordination_lock(self.rdb):
+            await clustering.coordinate_shards(self)
+            if self.shard_ids is not None:
+                log.info(f"Launching {len(self.shard_ids)} shards! ({self.shard_ids})")
+
+        # release lock and launch
+        await super().launch_shards()
+        log.info(f"Launched {len(self.shards)} shards!")
+
+        if self.is_cluster_0:
+            await self.rdb.incr('build_num')
+
+    async def before_identify_hook(self, shard_id, *, initial=False):
+        bucket_id = shard_id % self.launch_max_concurrency
+        # dummy call to initialize monitoring - see note on returning 0.0 at
+        # https://psutil.readthedocs.io/en/latest/index.html#psutil.cpu_percent
+        psutil.cpu_percent()
+
+        async def pre_lock_check(first=False):
+            """
+            Before attempting a lock, CPU utilization should be <75% to prevent a huge spike in CPU when connecting
+            up to 16 shards at once. This also allows multiple clusters to startup concurrently.
+            """
+            if not first:
+                await asyncio.sleep(0.2)
+            wait_start = time.monotonic()
+            while psutil.cpu_percent() > 75:
+                t = random.uniform(5, 15)
+                log.info(f"[C{self.cluster_id}] CPU usage is high, waiting {t:.2f}s!")
+                await asyncio.sleep(t)
+                if time.monotonic() - wait_start > 300:  # liveness: wait no more than 5 minutes
+                    break
+
+        # wait until the bucket is available and try to acquire the lock
+        await clustering.wait_bucket_available(shard_id, bucket_id, self.rdb, pre_lock_hook=pre_lock_check)
+
+    async def get_context(self, *args, **kwargs) -> context.AvraeContext:
+        return await super().get_context(*args, cls=context.AvraeContext, **kwargs)
+
+    async def close(self):
+        # note: when closing the bot 3 errors are emitted:
+        #
+        # ERROR:asyncio: An open stream object is being garbage collected; call "stream.close()" explicitly.
+        # ERROR:asyncio: An open stream object is being garbage collected; call "stream.close()" explicitly.
+        # ERROR:asyncio: Unclosed client session
+        # client_session: <aiohttp.client.ClientSession object at 0xblahblah>
+        #
+        # The first two are caused by aioredis streams being GC'ed when discord.py cancels the tasks that create them
+        # (because of course d.py decides it wants to cancel *all* tasks on its loop...)
+        # The second seems like it's related to a background task in a cog, but it occurs even without cogs loaded
+        # bonus points if you find where it's coming from!
+        await super().close()
+        await self.ddb.close()
+        await self.rdb.close()
+        self.mclient.close()
+        self.ldclient.close()
 
 
 desc = '''
@@ -188,8 +242,7 @@ async def on_command_error(ctx, error):
         return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
 
     elif isinstance(error, commands.MaxConcurrencyReached):
-        return await ctx.send(f"Only {error.number} instance{'s' if error.number > 1 else ''} of this command per "
-                              f"{error.per.name} can be running at a time.")
+        return await ctx.send(str(error))
 
     elif isinstance(error, CommandInvokeError):
         original = error.original
@@ -240,7 +293,7 @@ async def on_command_error(ctx, error):
 
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-        f"Please join <http://support.avrae.io> and let us know about the error!")
+        f"Please join <https://support.avrae.io> and let us know about the error!")
 
     log.warning("Error caused by message: `{}`".format(ctx.message.content))
     for line in traceback.format_exception(type(error), error, error.__traceback__):
@@ -257,7 +310,7 @@ async def on_message(message):
         return
 
     ctx = await bot.get_context(message)
-    if ctx.command is not None:  # builtins first
+    if ctx.valid:  # builtins first
         await bot.invoke(ctx)
     elif ctx.invoked_with:  # then aliases if there is some word (and not just the prefix)
         await handle_aliases(ctx)

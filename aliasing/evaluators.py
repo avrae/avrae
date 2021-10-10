@@ -13,7 +13,7 @@ import aliasing.api.combat as combat_api
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.context import AliasContext
-from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
+from aliasing.api.functions import _roll, _vroll, err, rand, randchoice, randint, roll, safe_range, typeof, vroll
 from aliasing.api.legacy import LegacyRawCharacter
 from aliasing.errors import EvaluationError, FunctionRequiresCharacter
 from cogs5e.models.errors import ConsumableException, InvalidArgument
@@ -23,11 +23,10 @@ from utils.dice import PersistentRollContext
 DEFAULT_BUILTINS = {
     # builtins
     'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min, 'enumerate': enumerate,
-    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
+    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'abs': abs, 'time': time.time,
     # ours
     'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof,
-    # legacy from simpleeval
-    'rand': rand, 'randint': randint
+    'rand': rand, 'randint': randint, 'randchoice': randchoice,
 }
 SCRIPTING_RE = re.compile(
     r'(?<!\\)(?:'  # backslash-escape
@@ -54,6 +53,11 @@ class MathEvaluator(draconic.SimpleInterpreter):
     # also disable per-eval limits, limit should be global
     def _preflight(self):
         pass
+
+    def eval(self, expr):
+        if expr is None:
+            return None
+        return super().eval(expr)
 
     def transformed_str(self, string):
         """Transforms a dicecloud-formatted string (evaluating text in {})."""
@@ -133,6 +137,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         # helpers
         def _get_consumable(name):
+            name = str(name)
             consumable = next((con for con in character.consumables if con.name == name), None)
             if consumable is None:
                 raise ConsumableException(f"There is no counter named {name}.")
@@ -155,11 +160,11 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             return _get_consumable(name).get_min()
 
         def set_cc(name, value: int, strict=False):
-            _get_consumable(name).set(value, strict)
+            _get_consumable(name).set(int(value), strict)
             self.character_changed = True
 
         def mod_cc(name, val: int, strict=False):
-            return set_cc(name, get_cc(name) + val, strict)
+            return set_cc(name, get_cc(name) + int(val), strict)
 
         def delete_cc(name):
             to_delete = _get_consumable(name)
@@ -168,47 +173,57 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                          dispType: str = None):
+            if minVal is not None:
+                minVal = str(minVal)
+            if maxVal is not None:
+                maxVal = str(maxVal)
+            if reset is not None:
+                reset = str(reset)
+            if dispType is not None:
+                dispType = str(dispType)
             if not cc_exists(name):
                 new_consumable = player_api.CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
                 character.consumables.append(new_consumable)
                 self.character_changed = True
 
         def create_cc(name: str, *args, **kwargs):
+            name = str(name)
             if cc_exists(name):
                 delete_cc(name)
             create_cc_nx(name, *args, **kwargs)
 
         def cc_exists(name):
-            return name in set(con.name for con in character.consumables)
+            return str(name) in set(con.name for con in character.consumables)
 
         def cc_str(name):
             return str(_get_consumable(name))
 
         def get_slots(level: int):
-            return character.spellbook.get_slots(level)
+            return character.spellbook.get_slots(int(level))
 
         def get_slots_max(level: int):
-            return character.spellbook.get_max_slots(level)
+            return character.spellbook.get_max_slots(int(level))
 
         def slots_str(level: int):
-            return character.spellbook.slots_str(level)
+            return character.spellbook.slots_str(int(level))
 
         def set_slots(level: int, value: int):
-            character.spellbook.set_slots(level, value)
+            character.spellbook.set_slots(int(level), int(value))
             self.character_changed = True
 
         def use_slot(level: int):
-            character.spellbook.use_slot(level)
+            character.spellbook.use_slot(int(level))
             self.character_changed = True
 
         def get_hp():
             return character.hp
 
         def set_hp(val: int):
-            character.hp = val
+            character.hp = int(val)
             self.character_changed = True
 
         def mod_hp(val: int, overflow: bool = True):
+            val = int(val)
             character.modify_hp(val, overflow=overflow)
             self.character_changed = True
 
@@ -219,19 +234,24 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             return character.temp_hp
 
         def set_temphp(val: int):
+            val = int(val)
             character.temp_hp = val
             self.character_changed = True
 
         def set_cvar(name, val: str):
+            name = str(name)
+            val = str(val)
             helpers.set_cvar(character, name, val)
-            self._names[name] = str(val)
+            self._names[name] = val
             self.character_changed = True
 
         def set_cvar_nx(name, val: str):
+            name = str(name)
             if name not in character.cvars:
                 set_cvar(name, val)
 
         def delete_cvar(name):
+            name = str(name)
             if name in character.cvars:
                 del character.cvars[name]
                 self.character_changed = True
@@ -258,7 +278,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             await self._cache['character'].func_commit(self.ctx)
         if self.combat_changed and 'combat' in self._cache and self._cache['combat']:
             await self._cache['combat'].func_commit()
-        if self.uvars_changed and 'uvars' in self._cache and self._cache['uvars']:
+        if self.uvars_changed and 'uvars' in self._cache and self._cache['uvars'] is not None:
             await helpers.update_uvars(self.ctx, self._cache['uvars'], self.uvars_changed)
 
     # helpers
@@ -275,6 +295,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :param name: The name to set.
         :param value: The value to set it to.
         """
+        name = str(name)
         if name in self.builtins:
             raise ValueError(f"{name} is already builtin (no shadow assignments).")
         self._names[name] = value
@@ -285,6 +306,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         :rtype: bool
         """
+        name = str(name)
         return name in self.names
 
     def combat(self):
@@ -315,6 +337,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         :rtype: bool
         """
+        name = str(name)
         return self.exists(name) and name in self._cache['uvars']
 
     def get_gvar(self, address):
@@ -325,6 +348,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :return: The value of the gvar.
         :rtype: str
         """
+        address = str(address)
         if address not in self._cache['gvars']:
             result = self.ctx.bot.mdb.gvars.delegate.find_one({"key": address})
             if result is None:
@@ -341,8 +365,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :return: The value of the svar, or the default value if it does not exist.
         :rtype: str or None
         """
+        name = str(name)
         if self.ctx.guild is None:
-            return None
+            return default
         if name not in self._cache['svars']:
             result = self.ctx.bot.mdb.svars.delegate.find_one({"owner": self.ctx.guild.id, "name": name})
             if result is None:
@@ -357,10 +382,12 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :param str name: The name of the variable to set.
         :param str value: The value to set it to.
         """
+        name = str(name)
+        value = str(value)
         if not name.isidentifier():
-            raise InvalidArgument("Cvar contains invalid character.")
-        self._cache['uvars'][name] = str(value)
-        self._names[name] = str(value)
+            raise InvalidArgument("Uvar contains invalid character.")
+        self._cache['uvars'][name] = value
+        self._names[name] = value
         self.uvars_changed.add(name)
 
     def set_uvar_nx(self, name, value: str):
@@ -370,6 +397,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :param str name: The name of the variable to set.
         :param str value: The value to set it to.
         """
+        name = str(name)
         if not name in self.names:
             self.set_uvar(name, value)
 
@@ -379,6 +407,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         :param str name: The name of the variable to delete.
         """
+        name = str(name)
         if name in self._cache['uvars']:
             del self._cache['uvars'][name]
             self.uvars_changed.add(name)
@@ -416,6 +445,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :param str name: The name to retrieve.
         :param default: What to return if the name is not set.
         """
+        name = str(name)
         if name in self.names:
             return self.names[name]
         return default
@@ -450,7 +480,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Loads an object from a JSON string. See :func:`json.loads`.
         """
-        return json.loads(jsonstr, cls=self._json_decoder())
+        return json.loads(str(jsonstr), cls=self._json_decoder())
 
     def dump_json(self, obj):
         """
@@ -460,9 +490,11 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
     # ==== roll limiters ====
     def _limited_vroll(self, dice, multiply=1, add=0):
+        dice = str(dice)
         return _vroll(dice, multiply, add, roller=self._roller)
 
     def _limited_roll(self, dice):
+        dice = str(dice)
         return _roll(dice, roller=self._roller)
 
     # evaluation
@@ -512,7 +544,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         return output
 
 
-class SpellEvaluator(MathEvaluator):
+class AutomationEvaluator(MathEvaluator):
     @classmethod
     def with_caster(cls, caster, spell_override=None):
         names = caster.get_scope_locals()

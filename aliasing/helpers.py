@@ -3,18 +3,20 @@ import traceback
 import uuid
 
 import draconic
+from discord.ext.commands import ArgumentParsingError
 
-import cogs5e.models.character as character_model
 from aliasing import evaluators
-from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
+from aliasing.api.functions import AliasException
+from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT, VAR_NAME_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
 from gamedata.compendium import compendium
+from gamedata.lookuputils import long_source_name
 from utils.argparser import argquote, argsplit
-from utils.functions import long_source_name, natural_join
+from utils.functions import natural_join
 
 
 async def handle_aliases(ctx):
@@ -59,10 +61,13 @@ async def handle_aliases(ctx):
     # analytics
     await the_alias.log_invocation(ctx, server_invoker)
 
-    command_code = await handle_alias_arguments(the_alias.code, ctx)
+    try:
+        command_code = await handle_alias_arguments(the_alias.code, ctx)
+    except ArgumentParsingError as e:
+        return await ctx.send(f"Error parsing alias arguments: {e}")
     char = None
     try:
-        char = await character_model.Character.from_ctx(ctx)
+        char = await ctx.get_character()
     except NoCharacter:
         pass
 
@@ -192,6 +197,8 @@ def set_cvar(character, name, value):
     if not name.isidentifier():
         raise InvalidArgument("Cvar names must be identifiers "
                               "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+    elif len(name) > VAR_NAME_LIMIT:
+        raise InvalidArgument(f'Cvar name must be shorter than {VAR_NAME_LIMIT} characters.')
     elif name in character.get_scope_locals(True):
         raise InvalidArgument(f"The variable `{name}` is already built in.")
     elif len(value) > CVAR_SIZE_LIMIT:
@@ -213,6 +220,8 @@ async def set_uvar(ctx, name, value):
     if not name.isidentifier():
         raise InvalidArgument("Uvar names must be valid identifiers "
                               "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+    elif len(name) > VAR_NAME_LIMIT:
+        raise InvalidArgument(f'Uvar name must be shorter than {VAR_NAME_LIMIT} characters.')
     elif len(value) > UVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Uvars must be shorter than {UVAR_SIZE_LIMIT} characters.")
     await ctx.bot.mdb.uvars.update_one(
@@ -259,6 +268,8 @@ async def set_svar(ctx, name, value):
     if not name.isidentifier():
         raise InvalidArgument("Svar names must be valid identifiers "
                               "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+    elif len(name) > VAR_NAME_LIMIT:
+        raise InvalidArgument(f'Svar name must be shorter than {VAR_NAME_LIMIT} characters.')
     elif len(value) > SVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Svars must be shorter than {SVAR_SIZE_LIMIT} characters.")
     await ctx.bot.mdb.svars.update_one(
@@ -392,13 +403,16 @@ async def handle_alias_exception(ctx, err):
 
     tb = ''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))
     try:
-        await ctx.author.send(
-            f"```py\n"
-            f"Error {location}:\n"
-            f"{point_to_error}"
-            f"{tb}\n"
-            f"```"
-            f"This is an issue in a user-created command; do *not* report this on the official bug tracker.")
+        if isinstance(e, AliasException) and not e.pm_user:
+            pass
+        else:
+            await ctx.author.send(
+                f"```py\n"
+                f"Error {location}:\n"
+                f"{point_to_error}"
+                f"{tb}\n"
+                f"```"
+                f"This is an issue in a user-created command; do *not* report this on the official bug tracker.")
     except:
         pass
     return await ctx.channel.send(err)
@@ -428,14 +442,14 @@ async def workshop_entitlements_check(ctx, ws_obj):
             has_connected_ddb = False
             # add all ids of this type to missing
             for missing_id in required_ids:
-                entity = compendium.lookup_by_entitlement(entity_type, missing_id)
+                entity = compendium.lookup_entity(entity_type, missing_id)
                 if entity is not None:
                     missing.append(entity)
 
         elif not available_set.issuperset(required_ids):
             # add the missing ids to missing
             for missing_id in set(required_ids).difference(available_set):
-                entity = compendium.lookup_by_entitlement(entity_type, missing_id)
+                entity = compendium.lookup_entity(entity_type, missing_id)
                 if entity is not None:
                     missing.append(entity)
 
@@ -470,14 +484,14 @@ async def handle_alias_required_licenses(ctx, err):
     else:
         missing_source_ids = {e.source for e in err.entities}
         if len(err.entities) == 1:  # 1 entity, display entity piecemeal
-            embed.title = f"Purchase {err.entities[0].name} on D&D Beyond to use this customization!"
+            embed.title = f"Unlock {err.entities[0].name} on D&D Beyond to use this customization!"
             marketplace_url = err.entities[0].marketplace_url
         elif len(missing_source_ids) == 1:  # 1 source, recommend purchasing source
             missing_source = next(iter(missing_source_ids))
-            embed.title = f"Purchase {long_source_name(missing_source)} on D&D Beyond to use this customization!"
+            embed.title = f"Unlock {long_source_name(missing_source)} on D&D Beyond to use this customization!"
             marketplace_url = f"https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
         else:  # more than 1 source
-            embed.title = f"Purchase {len(missing_source_ids)} sources on D&D Beyond to use this customization!"
+            embed.title = f"Unlock {len(missing_source_ids)} sources on D&D Beyond to use this customization!"
             marketplace_url = "https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
 
         missing = natural_join([f"[{e.name}]({e.marketplace_url})" for e in err.entities], "and")
@@ -491,6 +505,6 @@ async def handle_alias_required_licenses(ctx, err):
             f"[Go to Marketplace]({marketplace_url})"
         embed.url = marketplace_url
 
-        embed.set_footer(text="Already purchased? It may take up to a minute for Avrae to recognize the "
+        embed.set_footer(text="Already unlocked? It may take up to a minute for Avrae to recognize the "
                               "purchase.")
     await ctx.send(embed=embed)

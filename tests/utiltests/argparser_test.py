@@ -48,6 +48,100 @@ def test_argparse():
     args = argparse("""adv dis adv""")
     assert args.adv() == 0
 
+    args = argparse("""adv dis ea""")
+    assert args.adv(ea=True) == 0
+
+    args = argparse("""ea""")
+    assert args.adv(ea=True) == 2
+
+    args = argparse("""adv ea""")
+    assert args.adv(ea=True) == 2
+
+
+def test_argparse_adv():
+    """
+    16 cases: (adv, dis, ea, ea arg in .adv())
+
+    a d e ea | out
+    =========+====
+    0 0 0 0  | 0
+    0 0 0 1  | 0
+    0 0 1 0  | 0
+    0 0 1 1  | 2
+    0 1 0 0  | -1
+    0 1 0 1  | -1
+    0 1 1 0  | -1
+    0 1 1 1  | 0
+    1 0 0 0  | 1
+    1 0 0 1  | 1
+    1 0 1 0  | 1
+    1 0 1 1  | 2
+    1 1 0 0  | 0
+    1 1 0 1  | 0
+    1 1 1 0  | 0
+    1 1 1 1  | 0
+
+    """
+    args = argparse('')
+    assert args.adv() == 0
+    assert args.adv(ea=True) == 0
+
+    args = argparse('ea')
+    assert args.adv() == 0
+    assert args.adv(ea=True) == 2
+
+    args = argparse('dis')
+    assert args.adv() == -1
+    assert args.adv(ea=True) == -1
+
+    args = argparse('dis ea')
+    assert args.adv() == -1
+    assert args.adv(ea=True) == 0
+
+    args = argparse('adv')
+    assert args.adv() == 1
+    assert args.adv(ea=True) == 1
+
+    args = argparse('adv ea')
+    assert args.adv() == 1
+    assert args.adv(ea=True) == 2
+
+    args = argparse('adv dis')
+    assert args.adv() == 0
+    assert args.adv(ea=True) == 0
+
+    args = argparse('adv dis ea')
+    assert args.adv() == 0
+    assert args.adv(ea=True) == 0
+
+
+def test_argparse_custom_adv():
+    args = argparse('custom_adv')
+    custom_adv = {
+        'adv': 'custom_adv',
+    }
+
+    assert args.adv(custom=custom_adv) == 1
+    assert args.adv() == 0
+
+    custom_dis = {
+        'dis': 'custom_dis'
+    }
+    assert args.adv(custom=custom_dis) == 0
+
+    args = argparse('custom_dis')
+
+    assert args.adv(custom=custom_dis) == -1
+    assert args.adv() == 0
+
+    custom_ea = {
+        'ea': 'custom_ea'
+    }
+    args = argparse('custom_ea')
+
+    assert args.adv(ea=True, custom=custom_ea) == 2
+    assert args.adv() == 0
+
 
 def test_argparse_ephem():
     args = argparse("""-d5 1d6 adv1 -d 1""")

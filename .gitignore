@@ -13,7 +13,7 @@ venv/
 /venv-rewrite/
 /.idea/
 temp/
-test/
+tempvenv/
 
 /.cache/
 /.pytest_cache/

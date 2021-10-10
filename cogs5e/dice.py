@@ -6,8 +6,9 @@ import discord
 from discord.ext import commands
 
 from aliasing import helpers
-from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.models.errors import NoSelectionElements
+from cogs5e.utils import actionutils, checkutils, targetutils
+from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata import Monster
 from gamedata.lookuputils import handle_source_footer, select_monster_full, select_spell_full
@@ -31,31 +32,60 @@ class Dice(commands.Cog):
 
     @commands.command(name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
-        """Rolls dice in xdy format.
+        """Roll is used to roll any combination of dice in the `XdY` format. (`1d6`, `2d8`, etc)
+        
+        Multiple rolls can be added together as an equation. Standard Math operators and Parentheses can be used: `() + - / *`
+
+        Roll also accepts `adv` and `dis` for Advantage and Disadvantage. Rolls can also be tagged with `[text]` for informational purposes. Any text after the roll will assign the name of the roll.
+
+        ___Examples___
+        `!r` or `!r 1d20` - Roll a single d20, just like at the table
+        `!r 1d20+4` - A skill check or attack roll
+        `!r 1d8+2+1d6` - Longbow damage with Hunter’s Mark
+
+        `!r 1d20+1 adv` - A skill check or attack roll with Advantage
+        `!r 1d20-3 dis` - A skill check or attack roll with Disadvantage
+
+        `!r (1d8+4)*2` - Warhammer damage against bludgeoning vulnerability
+
+        `!r 1d10[cold]+2d6[piercing] Ice Knife` - The Ice Knife Spell does cold and piercing damage
+
+        **Advanced Options**
+        __Operators__
+        Operators are always followed by a selector, and operate on the items in the set that match the selector.
+        A set can be made of a single or multiple entries i.e. `1d20` or `(1d6,1d8,1d10)`
+
+        These operations work on dice and sets of numbers
+        `k` - keep - Keeps all matched values.
+        `p` - drop - Drops all matched values.
+
+        These operators only work on dice rolls.
+        `rr` - reroll - Rerolls all matched die values until none match.
+        `ro` - reroll - once - Rerolls all matched die values once. 
+        `ra` - reroll and add - Rerolls up to one matched die value once, add to the roll.
+        `mi` - minimum - Sets the minimum value of each die.
+        `ma` - maximum - Sets the maximum value of each die.
+        `e` - explode on - Rolls an additional die for each matched die value. Exploded dice can explode.
+
+        __Selectors__
+        Selectors select from the remaining kept values in a set.
+        `X`  | literal X
+        `lX` | lowest X
+        `hX` | highest X
+        `>X` | greater than X
+        `<X` | less than X
+
         __Examples__
-        !r xdy Attack!
-        !r xdy+z adv Attack with Advantage!
-        !r xdy-z dis Hide with Heavy Armor!
-        !r xdy+xdy*z
-        !r XdYkhZ
-        !r 4d6mi2[fire] Elemental Adept, Fire
-        !r 2d6e6 Explode on 6
-        !r 10d6ra6 Spell Bombardment
-        !r 4d6ro<3 Great Weapon Master
-        __Supported Operators__
-        k (keep)
-        p (drop)
-        ro (reroll once)
-        rr (reroll infinitely)
-        mi/ma (min/max result)
-        e (explode dice of value)
-        ra (reroll and add)
-        __Supported Selectors__
-        X (literal X)
-        lX (lowest X)
-        hX (highest X)
-        >X (greater than X)
-        <X (less than X)"""
+        `!r 2d20kh1+4` - Advantage roll, using Keep Highest format
+        `!r 2d20kl1-2` - Disadvantage roll, using Keep Lowest format
+        `!r 4d6mi2[fire]` - Elemental Adept, Fire
+        `!r 10d6ra6` - Wild Magic Sorcerer Spell Bombardment
+        `!r 4d6ro<3` - Great Weapon Master
+        `!r 2d6e6` - Explode on 6
+        `!r (1d6,1d8,1d10)kh2` - Keep 2 highest rolls of a set of dice
+
+        **Additional Information can be found at:**
+        https://d20.readthedocs.io/en/latest/start.html#dice-syntax"""
 
         if rollStr == '0/0':  # easter eggs
             return await ctx.send("What do you expect me to do, destroy the universe?")
@@ -68,11 +98,13 @@ class Dice(commands.Cog):
         if len(out) > 1999:
             out = f"{ctx.author.mention}  :game_die:\n" \
                   f"{str(res)[:100]}...\n" \
-                  f"**Total:** {res.total}"
+                  f"**Total**: {res.total}"
 
         await try_delete(ctx.message)
         await ctx.send(out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
+        if gamelog := self.bot.get_cog('GameLog'):
+            await gamelog.send_roll(ctx, res)
 
     @commands.command(name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations: int, *, rollStr):
@@ -114,59 +146,24 @@ class Dice(commands.Cog):
         if ast.comment:
             header = f"{ast.comment}: {header}"
 
-        result_strs = '\n'.join([str(o) for o in results])
+        result_strs = '\n'.join(str(o) for o in results)
 
         out = f"{header}\n{result_strs}\n{footer}"
 
         if len(out) > 1500:
-            one_result = str(results[0])[:100]
-            one_result = f"{one_result}..." if len(one_result) > 100 else one_result
-            out = f"{header}\n{one_result}\n{footer}"
+            one_result = str(results[0])
+            out = f"{header}\n{one_result}\n[{len(results) - 1} results omitted for output size.]\n{footer}"
 
         await try_delete(ctx.message)
         await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
-    @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)
+    @commands.group(name='monattack', aliases=['ma', 'monster_attack'], invoke_without_command=True, help=f"""
+    Rolls a monster's attack.
+    __**Valid Arguments**__
+    {VALID_AUTOMATION_ARGS}
+    """)
     async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
-        """Rolls a monster's attack.
-        __Valid Arguments__
-        -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
-        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
-
-        *adv/dis* - Advantage or Disadvantage
-        *ea* - Elven Accuracy double advantage
-
-        -ac <target ac> - overrides target AC
-        *-b* <to hit bonus> - adds a bonus to hit
-        -criton <num> - a number to crit on if rolled on or above
-        *-d* <damage bonus> - adds a bonus to damage
-        *-c* <damage bonus on crit> - adds a bonus to crit damage
-        -rr <times> - number of times to roll the attack against each target
-        *-mi <value>* - minimum value of each die on the damage roll
-
-        *-resist* <damage resistance>
-        *-immune* <damage immunity>
-        *-vuln* <damage vulnerability>
-        *-neutral* <damage type> - ignores this damage type in resistance calculations
-        *-dtype <damage type>* - replaces all damage types with this damage type
-        *-dtype <old>new>* - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
-
-        *hit* - automatically hits
-        *miss* - automatically misses
-        *crit* - automatically crits if hit
-        *max* - deals max damage
-        *magical* - makes the damage type magical
-
-        -h - hides name, rolled values, and monster details
-        -phrase <text> - adds flavour text
-        -title <title> - changes the result title *note: `[name]` and `[aname]` will be replaced automatically*
-        -thumb <url> - adds flavour image
-        -f "Field Title|Field Text" - see `!help embed`
-        <user snippet> - see `!help snippet`
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on.
-        """
         if atk_name is None or atk_name == 'list':
             return await self.monster_atk_list(ctx, monster_name)
 
@@ -185,7 +182,7 @@ class Dice(commands.Cog):
             embed.set_thumbnail(url=monster.get_image_url())
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args)
-        await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        await actionutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         embed.colour = random.randint(0, 0xffffff)
         handle_source_footer(embed, monster, add_source_str=False)
@@ -196,28 +193,14 @@ class Dice(commands.Cog):
     async def monster_atk_list(self, ctx, monster_name):
         """Lists a monster's attacks."""
         await try_delete(ctx.message)
-
         monster = await select_monster_full(ctx, monster_name)
-        monster_name = monster.get_title_name()
-        return await ctx.send(f"{monster_name}'s attacks:\n{monster.attacks.build_str(monster)}")
+        await actionutils.send_action_list(ctx, caster=monster, attacks=monster.attacks)
 
-    @commands.command(aliases=['mc'])
+    @commands.command(name='moncheck', aliases=['mc', 'monster_check'], help=f"""
+    Rolls a check for a monster.
+    {VALID_CHECK_ARGS}
+    """)
     async def monster_check(self, ctx, monster_name, check, *args):
-        """Rolls a check for a monster.
-        __Valid Arguments__
-        *adv/dis*
-        *-b [conditional bonus]*
-        -phrase [flavor text]
-        -title [title] *note: [name] and [cname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -dc [dc]
-        -rr [iterations]
-        str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
-        -h (hides name and image of monster)
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one check.
-        """
-
         monster: Monster = await select_monster_full(ctx, monster_name)
 
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
@@ -239,19 +222,11 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(aliases=['ms'])
+    @commands.command(name='monsave', aliases=['ms', 'monster_save'], help=f"""
+    Rolls a save for a monster.
+    {VALID_SAVE_ARGS}
+    """)
     async def monster_save(self, ctx, monster_name, save_stat, *args):
-        """Rolls a save for a monster.
-        __Valid Arguments__
-        adv/dis
-        -b [conditional bonus]
-        -phrase [flavor text]
-        -title [title] *note: [name] and [cname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -dc [dc]
-        -rr [iterations]
-        -h (hides name and image of monster)"""
-
         monster: Monster = await select_monster_full(ctx, monster_name)
 
         embed = discord.Embed()
@@ -271,32 +246,14 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(aliases=['mcast'])
+    @commands.command(name='moncast', aliases=['mcast', 'monster_cast'], help=f"""
+    Casts a spell as a monster.
+    __**Valid Arguments**__
+    {VALID_SPELLCASTING_ARGS}
+    
+    {VALID_AUTOMATION_ARGS}
+    """)
     async def monster_cast(self, ctx, monster_name, spell_name, *args):
-        """
-        Casts a spell as a monster.
-        __Valid Arguments__
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
-        -l <level> - Specifies the level to cast the spell at.
-        noconc - Ignores concentration requirements.
-        -h - Hides rolled values.
-        **__Save Spells__**
-        -dc <Save DC> - Overrides the spell save DC.
-        -save <Save type> - Overrides the spell save type.
-        -d <damage> - Adds additional damage.
-        pass - Target automatically succeeds save.
-        fail - Target automatically fails save.
-        adv/dis - Target makes save at advantage/disadvantage.
-        **__Attack Spells__**
-        See `!a`.
-        **__All Spells__**
-        -phrase <phrase> - adds flavor text.
-        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
-        -thumb <url> - adds an image to the cast.
-        -dur <duration> - changes the duration of any effect applied by the spell.
-        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
-        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
-        """
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
 
@@ -317,7 +274,7 @@ class Dice(commands.Cog):
         result = await spell.cast(ctx, caster, targets, args, combat=combat)
 
         # embed display
-        embed = result['embed']
+        embed = result.embed
         embed.colour = random.randint(0, 0xffffff)
 
         if not args.last('h', type_=bool) and 'thumb' not in args:

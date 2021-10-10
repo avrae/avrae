@@ -24,6 +24,7 @@ class CharGenerator(commands.Cog):
         self.bot = bot
 
     @commands.command(name='randchar')
+    @commands.max_concurrency(1, per=commands.BucketType.user)
     async def randchar(self, ctx, level=None):
         """Rolls up a random 5e character."""
         if level is None:
@@ -63,6 +64,7 @@ class CharGenerator(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='charref', hidden=True)
+    @commands.max_concurrency(1, per=commands.BucketType.user)
     async def charref(self, ctx, level):
         """Gives you reference stats for a 5e character."""
         try:

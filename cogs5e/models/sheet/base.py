@@ -119,15 +119,17 @@ class Skill:
         else:
             adv = None
 
-        if adv is False:
-            base = f"2d20kl1"
-        elif adv is True:
-            base = f"2d20kh1"
-        else:
-            base = f"1d20"
-
+        # reroll string (#1199)
+        reroll_str = ''
         if reroll:
-            base = f"{base}ro{reroll}"
+            reroll_str = f"ro{reroll}"
+
+        if adv is False:
+            base = f"2d20{reroll_str}kl1"
+        elif adv is True:
+            base = f"2d20{reroll_str}kh1"
+        else:
+            base = f"1d20{reroll_str}"
 
         if min_val:
             base = f"{base}mi{min_val}"

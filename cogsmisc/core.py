@@ -133,6 +133,12 @@ class Core(commands.Cog):
                 "Linking your account means that you'll be able to use everything you own on " \
                 "D&D Beyond in Avrae for free - you can link your accounts " \
                 "[here](https://www.dndbeyond.com/account)."
+            embed.add_field(name="Important Note", value=("Sometimes on the first attempt to link, Discord links to a proxy "
+                                                          "account. If you've connected, but this command says you haven't, "
+                                                          "compare the numbers at the end of the your discord tag (For "
+                                                          f"`{ctx.author.name}#{ctx.author.discriminator}`, check for the "
+                                                          f"`{ctx.author.discriminator}`) on Discord and on Beyond. If they do "
+                                                          f"not match, unlink the account, and try again."))
             embed.set_footer(text="Already linked your account? It may take up to 15 minutes for Avrae to recognize "
                                   "the link.")
             return await ctx.send(embed=embed)

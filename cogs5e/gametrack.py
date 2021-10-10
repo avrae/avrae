@@ -558,15 +558,19 @@ class GameTrack(commands.Cog):
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character, title="Custom Counters")
 
-        # paginate if > 25
-        total = len(character.consumables)
-        maxpage = total // 25 + 1
-        page = max(1, min(page, maxpage))
-        pages = [character.consumables[i:i + 25] for i in range(0, total, 25)]
-        for counter in pages[page - 1]:
-            embed.add_field(name=counter.name, value=counter.full_str())
-        if total > 25:
-            embed.set_footer(text=f"Page [{page}/{maxpage}] | {ctx.prefix}cc list <page>")
+        if character.consumables:
+            # paginate if > 25
+            total = len(character.consumables)
+            maxpage = total // 25 + 1
+            page = max(1, min(page, maxpage))
+            pages = [character.consumables[i:i + 25] for i in range(0, total, 25)]
+            for counter in pages[page - 1]:
+                embed.add_field(name=counter.name, value=counter.full_str())
+            if total > 25:
+                embed.set_footer(text=f"Page [{page}/{maxpage}] | {ctx.prefix}cc list <page>")
+        else:
+            embed.add_field(name="No Custom Counters",
+                            value=f"Check out `{ctx.prefix}help cc create` to see how to create new ones.")
 
         await ctx.send(embed=embed)
 

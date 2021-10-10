@@ -183,16 +183,16 @@ class CollectableManagementGroup(commands.Group):
                 collections.append((the_collection.name, ', '.join(sorted(ab['name'] for ab in bindings))))
 
         # build the resulting embed
-        total = len(collections)
-        maxpage = total // 25 + 1
-        page = max(1, min(page, maxpage))
-        pages = [collections[i:i + 25] for i in range(0, total, 25)]
-        for name, bindings_str in pages[page - 1]:
-            ep.add_field(name, bindings_str)
-        if total > 25:
-            ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{self.base_name} list <page>")
-
-        if not collections:
+        if collections:
+            total = len(collections)
+            maxpage = total // 25 + 1
+            page = max(1, min(page, maxpage))
+            pages = [collections[i:i + 25] for i in range(0, total, 25)]
+            for name, bindings_str in pages[page - 1]:
+                ep.add_field(name, bindings_str)
+            if total > 25:
+                ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{self.base_name} list <page>")
+        else:
             ep.add_description(f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]"
                                "(https://avrae.io/dashboard/workshop) to get some, "
                                "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!")

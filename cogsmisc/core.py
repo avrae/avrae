@@ -134,11 +134,14 @@ class Core(commands.Cog):
                 "D&D Beyond in Avrae for free - you can link your accounts " \
                 "[here](https://www.dndbeyond.com/account)."
             embed.add_field(name="Having trouble?",
-                            value=(f"Sometimes on the first attempt to link, Discord links to a placeholder account. "
-                                   f"If you've connected, but this command says you haven't, compare the numbers at "
-                                   f"the end of your Discord tag (For `{ctx.author.name}#{ctx.author.discriminator}`, "
-                                   f"check for the `{ctx.author.discriminator}`) on Discord and on D&D Beyond. If they "
-                                   f"do not match, unlink the account, and try again."))
+                            value=(f"On occasion, the first time you link your Discord and D&D Beyond accounts, "
+                                   f"Discord may use a temporary account that differs from your actual account. "
+                                   f"If your accounts appear linked, but this command says they are not, compare "
+                                   f"the numbers at the end of your Discord username to the numbers displayed in "
+                                   f"the [D&D Beyond Account Settings](https://www.dndbeyond.com/account). For "
+                                   f"this account, `{ctx.author!s}`, they should be `{ctx.author.discriminator}`. "
+                                   f"If they do not match, unlink the account, and try again."))
+
             embed.set_footer(text="Already linked your account? It may take up to 15 minutes for Avrae to recognize "
                                   "the link.")
             return await ctx.send(embed=embed)

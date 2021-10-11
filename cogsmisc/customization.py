@@ -65,10 +65,12 @@ class CollectableManagementGroup(commands.Group):
         self.obj_name = 'alias' if self.is_alias else 'snippet'
         self.obj_copy_command = self.obj_name  # when an item is viewed, we show the non-server version of the command
         self.obj_name_pl = 'aliases' if self.is_alias else 'snippets'
+        self.command_group_name = self.obj_name
 
         if self.is_server:
             self.obj_name = f'server {self.obj_name}'
             self.obj_name_pl = f'server {self.obj_name_pl}'
+            self.command_group_name = f'serv{self.command_group_name}'
             self.owner_from_ctx = lambda ctx: str(ctx.guild.id)
         else:
             self.owner_from_ctx = lambda ctx: str(ctx.author.id)
@@ -181,16 +183,16 @@ class CollectableManagementGroup(commands.Group):
                 collections.append((the_collection.name, ', '.join(sorted(ab['name'] for ab in bindings))))
 
         # build the resulting embed
-        total = len(collections)
-        maxpage = total // 25 + 1
-        page = max(1, min(page, maxpage))
-        pages = [collections[i:i + 25] for i in range(0, total, 25)]
-        for name, bindings_str in pages[page - 1]:
-            ep.add_field(name, bindings_str)
-        if total > 25:
-            ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{ctx.command.qualified_name} <page>")
-
-        if not collections:
+        if collections:
+            total = len(collections)
+            maxpage = total // 25 + 1
+            page = max(1, min(page, maxpage))
+            pages = [collections[i:i + 25] for i in range(0, total, 25)]
+            for name, bindings_str in pages[page - 1]:
+                ep.add_field(name, bindings_str)
+            if total > 25:
+                ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{self.command_group_name} list <page>")
+        else:
             ep.add_description(f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]"
                                "(https://avrae.io/dashboard/workshop) to get some, "
                                "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!")

@@ -1,9 +1,14 @@
+import logging
+
+import discord
 from discord.ext.commands import Context
 
 from cogs5e.models.character import Character
 from cogs5e.models.initiative import Combat
 
 _sentinel = object()
+
+log = logging.getLogger(__name__)
 
 
 class AvraeContext(Context):
@@ -40,3 +45,10 @@ class AvraeContext(Context):
         combat = await Combat.from_ctx(self)
         self._combat = combat
         return combat
+
+    # ==== overrides ====
+    async def trigger_typing(self):
+        try:
+            await super().trigger_typing()
+        except discord.HTTPException as e:
+            log.warning(f"Could not trigger typing: {e}")

@@ -503,7 +503,7 @@ class GameTrack(commands.Cog):
         """
         Creates a new custom counter.
         __Valid Arguments__
-        `-title <title>` - Sets the title when setting or viewing the counter. `[name]` will be replaced with the player's name.
+        `-title <title>` - Sets the title for the output when modifying the counter. `[name]` will be replaced with the player's name.
         `-desc <desc>` - Sets the description when setting or viewing the counter.
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.
@@ -550,27 +550,28 @@ class GameTrack(commands.Cog):
         await ctx.send(f"Deleted counter {counter.name}.")
 
     @customcounter.command(name='summary', aliases=['list'])
-    async def customcounter_summary(self, ctx, page: int = 0):
+    async def customcounter_summary(self, ctx, page: int = 1):
         """
         Prints a summary of all custom counters.
         Use `!cc list <page>` to view pages if you have more than 25 counters.
         """
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character, title="Custom Counters")
-        # Check that we're not over the field limit
-        total = len(character.consumables)
-        if total > 25:  # Discord Field limit
-            page = max(0, page - 1)  # Humans count from 1
-            maxpage = total // 25
-            start = min(page * 25, total - 25)
-            end = max(start + 25, total)
-            # Build the current page
-            embed.set_footer(text=f"Page [{page + 1}/{maxpage + 1}] | {ctx.prefix}cc list <page>")
-            for counter in character.consumables[start:end]:
+
+        if character.consumables:
+            # paginate if > 25
+            total = len(character.consumables)
+            maxpage = total // 25 + 1
+            page = max(1, min(page, maxpage))
+            pages = [character.consumables[i:i + 25] for i in range(0, total, 25)]
+            for counter in pages[page - 1]:
                 embed.add_field(name=counter.name, value=counter.full_str())
+            if total > 25:
+                embed.set_footer(text=f"Page [{page}/{maxpage}] | {ctx.prefix}cc list <page>")
         else:
-            for counter in character.consumables:
-                embed.add_field(name=counter.name, value=counter.full_str())
+            embed.add_field(name="No Custom Counters",
+                            value=f"Check out `{ctx.prefix}help cc create` to see how to create new ones.")
+
         await ctx.send(embed=embed)
 
     @customcounter.command(name='reset')

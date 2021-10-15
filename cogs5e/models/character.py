@@ -480,7 +480,7 @@ class Character(StatBlock):
         self.options = old_character.options
         self.overrides = old_character.overrides
         self.cvars = old_character.cvars
-        self.active_guilds = old_character.active_guilds
+        self._active_guilds = old_character._active_guilds
 
         # consumables: no duplicate name or live (upstream) ids
         new_cc_names = set(con.name.lower() for con in self.consumables)

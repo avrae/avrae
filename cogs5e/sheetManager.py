@@ -485,7 +485,10 @@ class SheetManager(commands.Cog):
         character.update(old_character)
 
         await character.commit(ctx)
-        await character.set_active(ctx)
+        if old_character.is_active_global():
+            await character.set_active(ctx)
+        if old_character.is_active_server():
+            await character.set_server_active(ctx)
         await loading.edit(content=f"Updated and saved data for {character.name}!")
         if args.last('v'):
             await ctx.send(embed=character.get_sheet_embed())

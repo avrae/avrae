@@ -909,7 +909,7 @@ class InitTracker(commands.Cog):
         -dur <duration> - Sets the duration of the effect, in rounds.
         conc - Makes the effect require concentration. Will end any other concentration effects.
         end - Makes the effect duration tick on the end of turn, rather than the beginning.
-        -t <target> - Specifies more combatant's to target, chainable (e.g., "-t or1 -t or2").
+        -t <target> - Specifies more combatants to target, chainable (e.g., "-t or1 -t or2").
         -parent <"[combatant]|[effect]"> - Sets a parent effect from a specified combatant.
         __Attacks__
         adv/dis - Give advantage or disadvantage to all attack rolls.

@@ -71,7 +71,7 @@ jobs:
         uses: getsentry/action-release@v1
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: curse-llc
+          SENTRY_ORG: fandom-tabletop
           SENTRY_PROJECT: avrae-bot
         with:
           environment: nightly

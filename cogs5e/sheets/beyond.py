@@ -43,6 +43,8 @@ class BeyondSheetParser(SheetLoaderABC):
     def __init__(self, charId):
         super(BeyondSheetParser, self).__init__(charId)
         self.ctx = None
+        self.args = None
+        self._is_live = None
 
     async def load_character(self, ctx, args):
         """
@@ -51,6 +53,7 @@ class BeyondSheetParser(SheetLoaderABC):
         :raises Exception if something weirder happened
         """
         self.ctx = ctx
+        self.args = args
 
         owner_id = str(ctx.author.id)
         await self._get_character()
@@ -84,7 +87,7 @@ class BeyondSheetParser(SheetLoaderABC):
             consumables = self._get_custom_counters()
 
         spellbook = self._get_spellbook()
-        live = None  # todo
+        live = 'beyond' if self._is_live else None
         race = self._get_race()
         background = self._get_background()
 
@@ -131,6 +134,7 @@ class BeyondSheetParser(SheetLoaderABC):
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = char_id
         self.character_data = character
+        self._is_live = ddb_user.user_id == str(character['ownerId'])
         log.debug(character)
         return character
 
@@ -211,6 +215,7 @@ class BeyondSheetParser(SheetLoaderABC):
             spell_ab = spell['sab']
             spell_dc = spell['dc']
             spell_mod = spell['mod']
+            spell_prepared = spell['prepared'] or 'noprep' in self.args
             if spell_ab is not None:
                 sabs.append(spell_ab)
             if spell_dc is not None:
@@ -221,15 +226,28 @@ class BeyondSheetParser(SheetLoaderABC):
             result = next((s for s in compendium.spells if s.entity_id == spell['id']), None)
 
             if result:
-                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                                        prepared=spell_prepared))
             else:
-                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                             prepared=spell_prepared))
 
         dc = max(dcs, key=dcs.count, default=None)
         sab = max(sabs, key=sabs.count, default=None)
         smod = max(mods, key=mods.count, default=None)
 
-        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod)
+        # assumption: a character will only ever have one pact slot level, with a given number of slots of that level
+        pact_slot_level = None
+        num_pact_slots = None
+        max_pact_slots = None
+        if spellbook['pactSlots']:
+            pact_info = spellbook['pactSlots'][0]
+            pact_slot_level = pact_info['level']
+            max_pact_slots = pact_info['available']
+            num_pact_slots = max_pact_slots - pact_info['used']
+
+        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod,
+                         pact_slot_level=pact_slot_level, num_pact_slots=num_pact_slots, max_pact_slots=max_pact_slots)
 
     def _get_custom_counters(self):
         out = []

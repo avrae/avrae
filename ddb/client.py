@@ -7,10 +7,9 @@ import cachetools
 from boto3.dynamodb.conditions import Key
 
 from cogsmisc.stats import Stats
-from ddb import auth, campaign, entitlements
-from ddb.errors import AuthException, WaterdeepException
+from ddb import auth, character, entitlements, waterdeep
+from ddb.errors import AuthException
 from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, \
-    DDB_WATERDEEP_URL as WATERDEEP_BASE, \
     DYNAMO_ENTITY_TABLE, DYNAMO_REGION, DYNAMO_USER_TABLE
 
 # dynamo
@@ -34,11 +33,8 @@ class BeyondClientBase:  # for development - assumes no entitlements
     async def get_accessible_entities(self, ctx, user_id, entity_type):
         return None
 
-    async def get_ddb_user(self, ctx, user_id):
+    async def get_ddb_user(self, ctx, user_id=None):
         return None
-
-    async def get_active_campaigns(self, ctx, user):
-        return []
 
     async def close(self):
         pass
@@ -46,7 +42,7 @@ class BeyondClientBase:  # for development - assumes no entitlements
 
 class BeyondClient(BeyondClientBase):
     """
-    Client to interface with DDB's Auth Service and Entitlements tables in DynamoDB.
+    Client to interface with DDB's services and Entitlements tables in DynamoDB.
     Asyncio-compatible.
 
     Most methods are private since local dev environments cannot connect to the DDB stack, and
@@ -55,18 +51,22 @@ class BeyondClient(BeyondClientBase):
     """
 
     def __init__(self, loop):
-        self.http = None
-        self.dynamo = None
-        self.ddb_user_table = None
-        self.ddb_entity_table = None
+        self.http = aiohttp.ClientSession(loop=loop)
+
+        self.character = character.CharacterServiceClient(self.http)
+        self.waterdeep = waterdeep.WaterdeepClient(self.http)
+        self.scds = character.CharacterStorageServiceClient(self.http)
+
+        self._dynamo = None
+        self._ddb_user_table = None
+        self._ddb_entity_table = None
         loop.run_until_complete(self._initialize())
 
     async def _initialize(self):
-        """Initialize our async resources: aiohttp, aioboto3"""
-        self.http = aiohttp.ClientSession()
-        self.dynamo = await aioboto3.resource('dynamodb', region_name=DYNAMO_REGION).__aenter__()
-        self.ddb_user_table = await self.dynamo.Table(DYNAMO_USER_TABLE)
-        self.ddb_entity_table = await self.dynamo.Table(DYNAMO_ENTITY_TABLE)
+        """Initialize our async resources: aioboto3"""
+        self._dynamo = await aioboto3.resource('dynamodb', region_name=DYNAMO_REGION).__aenter__()
+        self._ddb_user_table = await self._dynamo.Table(DYNAMO_USER_TABLE)
+        self._ddb_entity_table = await self._dynamo.Table(DYNAMO_ENTITY_TABLE)
         log.info("DDB client initialized")
 
     # ==== methods ====
@@ -100,15 +100,18 @@ class BeyondClient(BeyondClientBase):
 
         return accessible
 
-    async def get_ddb_user(self, ctx, user_id):
+    async def get_ddb_user(self, ctx, user_id=None):
         """
         Gets a Discord user's DDB user, communicating with the Auth Service if necessary.
         Returns None if the user has no DDB link.
 
         :type ctx: discord.ext.commands.Context
-        :type user_id: int
+        :param int user_id: The Discord user ID to get the DDB user of. If None, defaults to ctx.author.id.
         :rtype: auth.BeyondUser or None
         """
+        if user_id is None:
+            user_id = ctx.author.id
+
         log.debug(f"Getting DDB user for Discord ID {user_id}")
         user_cache_key = f"beyond.user.{user_id}"
         unlinked_sentinel = {"unlinked": True}
@@ -142,35 +145,6 @@ class BeyondClient(BeyondClientBase):
         )
 
         return user
-
-    async def get_active_campaigns(self, ctx, user):
-        """
-        Gets a list of campaigns the given user is in.
-
-        GET /api/campaign/stt/active-campaigns
-
-        :type ctx: discord.ext.commands.Context
-        :param user: The DDB user.
-        :type user: auth.BeyondUser
-        :rtype: list[campaign.ActiveCampaign]
-        """
-        try:
-            async with self.http.get(f"{WATERDEEP_BASE}/api/campaign/stt/active-campaigns",
-                                     headers={"Authorization": f"Bearer {user.token}"}) as resp:
-                if not 199 < resp.status < 300:
-                    log.warning(f"Bad Waterdeep response: {resp.status}\n{await resp.text()}")
-                    raise WaterdeepException(f"D&D Beyond returned an error: {resp.status} {resp.reason}")
-                try:
-                    data = await resp.json()
-                except (aiohttp.ContentTypeError, ValueError, TypeError):
-                    log.warning(f"Bad Waterdeep response (deserialize): {resp.status}\n{await resp.text()}")
-                    raise WaterdeepException("Could not deserialize D&D Beyond response.")
-        except aiohttp.ServerTimeoutError:
-            raise WaterdeepException("Timed out connecting to D&D Beyond.")
-        if not data.get('status') == 'success':
-            log.warning(f"Bad Waterdeep response (data): {resp.status}\n{data}")
-            raise WaterdeepException(f"D&D Beyond returned an error: {data}")
-        return [campaign.ActiveCampaign.from_json(j) for j in data['data']]
 
     # ==== entitlement helpers ====
     async def _get_user_entitlements(self, ctx, user_id):
@@ -280,7 +254,7 @@ class BeyondClient(BeyondClientBase):
         :param int ddb_id: The DDB user ID.
         :rtype: entitlements.UserEntitlements
         """
-        user_r = await self.ddb_user_table.get_item(Key={"ID": ddb_id})  # ints are automatically converted to N-type
+        user_r = await self._ddb_user_table.get_item(Key={"ID": ddb_id})  # ints are automatically converted to N-type
         if 'Item' not in user_r:
             return entitlements.UserEntitlements([], [])
         result = user_r['Item']
@@ -297,7 +271,7 @@ class BeyondClient(BeyondClientBase):
         """
         log.debug(f"fetching entity entitlements for etype {etype}")
         return [entitlements.EntityEntitlements.from_dict(e)
-                async for e in self.query(self.ddb_entity_table, KeyConditionExpression=Key('EntityType').eq(etype))]
+                async for e in self.query(self._ddb_entity_table, KeyConditionExpression=Key('EntityType').eq(etype))]
 
     # ---- helpers ----
     @staticmethod
@@ -319,4 +293,4 @@ class BeyondClient(BeyondClientBase):
 
     async def close(self):
         await self.http.close()
-        await self.dynamo.__aexit__(None, None, None)
+        await self._dynamo.__aexit__(None, None, None)

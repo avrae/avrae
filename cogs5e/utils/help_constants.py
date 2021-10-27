@@ -95,6 +95,7 @@ __Damage Types__
 **Counters**
 -amt <amount> - Overrides the amount of the resource used.
 -l <level> - Specifies the level of the spell slot to use.
+nopact - Uses a normal spell slot instead of a Pact Magic slot, if applicable.
 -i - Skips using any resources.
 
 **Other**
@@ -114,4 +115,5 @@ VALID_SPELLCASTING_ARGS = """
 -mod <spellcasting mod> - Overrides the value of the spellcasting ability modifier.
 -with <int/wis/cha> - Uses a different skill base for DC/AB (will not account for extra bonuses)
 noconc - Ignores concentration requirements.
+nopact - Uses a normal spell slot instead of a Pact Magic slot, if applicable.
 """.strip()

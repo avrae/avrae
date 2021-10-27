@@ -471,7 +471,7 @@ class Character(StatBlock):
     def update(self, old_character):
         """
         Updates certain attributes to match an old character's.
-        Currently updates settings, overrides, cvars, consumables, overriden spellbook spells,
+        Currently updates settings, overrides, cvars, active guilds, consumables, overriden spellbook spells,
         hp, temp hp, death saves, used spell slots
         and caches the new character.
         :type old_character Character
@@ -480,6 +480,7 @@ class Character(StatBlock):
         self.options = old_character.options
         self.overrides = old_character.overrides
         self.cvars = old_character.cvars
+        self._active_guilds = old_character._active_guilds
 
         # consumables: no duplicate name or live (upstream) ids
         new_cc_names = set(con.name.lower() for con in self.consumables)

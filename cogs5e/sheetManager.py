@@ -483,9 +483,19 @@ class SheetManager(commands.Cog):
             return await loading.edit(content=f"Error loading character: {eep}")
 
         character.update(old_character)
-
+        
+        # keeps an old check if the old character was active on the current server
+        was_server_active = old_character.is_active_server(ctx)
+        
         await character.commit(ctx)
-        await character.set_active(ctx)
+        
+        # overwrites the old_character's server active state
+        # since character._active_guilds is old_character._active_guilds here
+        if old_character.is_active_global():
+            await character.set_active(ctx)
+        if was_server_active:
+            await character.set_server_active(ctx)
+        
         await loading.edit(content=f"Updated and saved data for {character.name}!")
         if args.last('v'):
             await ctx.send(embed=character.get_sheet_embed())

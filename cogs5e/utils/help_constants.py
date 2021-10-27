@@ -69,7 +69,7 @@ An italicized argument below means the argument supports ephemeral arguments - e
 sadv/sdis - Gives the target advantage/disadvantage on the saving throw.
 -dc <dc> - Overrides the DC of the save.
 -dc <+X/-X> - Modifies the DC by a certain amount.
--sb <bonus> - Adds a bonus to saving throws.
+*-sb <bonus>* - Adds a bonus to saving throws.
 -save <save type> - Overrides the spell save type (e.g. `-save str`).
 
 **Damage**

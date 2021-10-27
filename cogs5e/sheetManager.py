@@ -490,9 +490,9 @@ class SheetManager(commands.Cog):
         await character.commit(ctx)
         
         # overwrites the old_character's server active state
+        # since character._active_guilds is old_character._active_guilds here
         if old_character.is_active_global():
             await character.set_active(ctx)
-
         if was_server_active:
             await character.set_server_active(ctx)
         

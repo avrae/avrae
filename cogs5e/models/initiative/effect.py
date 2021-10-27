@@ -257,6 +257,8 @@ def parse_stat_choice(args, _):
     for i, arg in enumerate(args):
         if arg == 'True':  # hack: sadv/sdis on their own should be equivalent to -sadv/sdis all
             args[i] = arg = 'all'
+        else:
+            args[i] = arg = arg[:3].lower()  # only check first three arg characters against STAT_ABBREVIATIONS
         if arg not in STAT_ABBREVIATIONS and arg != 'all':
             raise InvalidArgument(f"{arg} is not a valid stat")
     return args

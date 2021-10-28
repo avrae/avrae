@@ -34,5 +34,5 @@ DDB_LOGO_ICON = 'https://cdn.discordapp.com/emojis/783780183559372890.png?v=1'
 EMPTY_BUBBLE = '\u3007'
 FILLED_BUBBLE = '\u25c9'
 # pact slots
-EMPTY_DIAMOND = '\u25c7'
-FILLED_DIAMOND = '\u25c8'
+EMPTY_BUBBLE_ALT = '\u25a2'
+FILLED_BUBBLE_ALT = '\u25a3'

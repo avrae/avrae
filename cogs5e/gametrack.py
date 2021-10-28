@@ -88,7 +88,7 @@ class GameTrack(commands.Cog):
         # footer - pact vs non pact
         if character.spellbook.max_pact_slots is not None:
             embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
-                                  f"{constants.FILLED_DIAMOND} / {constants.EMPTY_DIAMOND} = Pact Slot")
+                                  f"{constants.FILLED_BUBBLE_ALT} / {constants.EMPTY_BUBBLE_ALT} = Pact Slot")
         else:
             embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used")
 

@@ -53,7 +53,7 @@ class Spellbook:
             nonpact_slot_bubbles = bubble_format(remaining_non_pact, max_non_pact)
             pact_slot_bubbles = bubble_format(
                 self.num_pact_slots, self.max_pact_slots,
-                used_char=constants.EMPTY_DIAMOND, unused_char=constants.FILLED_DIAMOND
+                used_char=constants.EMPTY_BUBBLE_ALT, unused_char=constants.FILLED_BUBBLE_ALT
             )
             return f"`{level}` {nonpact_slot_bubbles}{pact_slot_bubbles}"
 

@@ -84,4 +84,4 @@ class IEffect(Effect):
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
-        return self.name
+        return f"Effect: {self.name}"

@@ -69,6 +69,7 @@ An italicized argument below means the argument supports ephemeral arguments - e
 sadv/sdis - Gives the target advantage/disadvantage on the saving throw.
 -dc <dc> - Overrides the DC of the save.
 -dc <+X/-X> - Modifies the DC by a certain amount.
+*-sb <bonus>* - Adds a bonus to saving throws.
 -save <save type> - Overrides the spell save type (e.g. `-save str`).
 
 **Damage**
@@ -94,12 +95,13 @@ __Damage Types__
 **Counters**
 -amt <amount> - Overrides the amount of the resource used.
 -l <level> - Specifies the level of the spell slot to use.
+nopact - Uses a normal spell slot instead of a Pact Magic slot, if applicable.
 -i - Skips using any resources.
 
 **Other**
 -h - Hides rolled values.
 -phrase <phrase> - Adds flavor text.
--title <title> - Changes the title of the attack. Replaces [name] with the caster's name and [aname] with the action's name.
+-title <title> - Changes the title of the attack. Replaces [name] with the caster's name, [aname] with the action's name, and [verb] with the action's verb.
 -f "Field Title|Field Text" - Creates a field with the given title and text.
 -thumb <url> - Adds a thumbnail to the attack.
 [user snippet] - Allows the user to use snippets on the attack.
@@ -113,4 +115,5 @@ VALID_SPELLCASTING_ARGS = """
 -mod <spellcasting mod> - Overrides the value of the spellcasting ability modifier.
 -with <int/wis/cha> - Uses a different skill base for DC/AB (will not account for extra bonuses)
 noconc - Ignores concentration requirements.
+nopact - Uses a normal spell slot instead of a Pact Magic slot, if applicable.
 """.strip()

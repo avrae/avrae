@@ -22,11 +22,10 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
-from utils.constants import DAMAGE_TYPES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES, SAVE_NAMES
+from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.functions import confirm, get_selection, search_and_select, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
-
 
 STAT_MOD_NAMES = ('strengthMod', 'dexterityMod', 'constitutionMod', 'intelligenceMod', 'wisdomMod', 'charismaMod')
 
@@ -66,10 +65,12 @@ class CollectableManagementGroup(commands.Group):
         self.obj_name = 'alias' if self.is_alias else 'snippet'
         self.obj_copy_command = self.obj_name  # when an item is viewed, we show the non-server version of the command
         self.obj_name_pl = 'aliases' if self.is_alias else 'snippets'
+        self.command_group_name = self.obj_name
 
         if self.is_server:
             self.obj_name = f'server {self.obj_name}'
             self.obj_name_pl = f'server {self.obj_name_pl}'
+            self.command_group_name = f'serv{self.command_group_name}'
             self.owner_from_ctx = lambda ctx: str(ctx.guild.id)
         else:
             self.owner_from_ctx = lambda ctx: str(ctx.author.id)
@@ -78,10 +79,12 @@ class CollectableManagementGroup(commands.Group):
         self._register_commands()
 
     def _register_commands(self):
-        self.list = self.command(name='list',
-                                 help=f'Lists all {self.obj_name_pl}.')(self.list)
-        self.delete = self.command(name='delete', aliases=['remove'],
-                                   help=f'Deletes a {self.obj_name}.')(self.delete)
+        self.list = self.command(
+            name='list',
+            help=f'Lists all {self.obj_name_pl}.')(self.list)
+        self.delete = self.command(
+            name='delete', aliases=['remove'],
+            help=f'Deletes a {self.obj_name}.')(self.delete)
         self.subscribe = self.command(
             name='subscribe', aliases=['sub'],
             help='Subscribes to all aliases and snippets in a workshop collection.')(self.subscribe)
@@ -160,19 +163,16 @@ class CollectableManagementGroup(commands.Group):
 
             return await ctx.send(embed=embed)
 
-    async def list(self, ctx):
-        embed = first_embed = EmbedWithAuthor(ctx)
-        fields = 0
-        out = [embed]
+    async def list(self, ctx, page: int = 1):
+        ep = embeds.EmbedPaginator(EmbedWithAuthor(ctx))
 
-        has_at_least_1 = False
+        collections = []  # tuples (name, bindings)
 
+        # load all the user's aliases
         user_objs = await self.personal_cls.get_ctx_map(ctx)
         user_obj_names = list(user_objs.keys())
         if user_obj_names:
-            has_at_least_1 = True
-            fields += embeds.add_fields_from_long_text(embed, f"Your {self.obj_name_pl.title()}",
-                                                       ', '.join(sorted(user_obj_names)))
+            collections.append((f"Your {self.obj_name_pl.title()}", ', '.join(sorted(user_obj_names))))
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
             try:
@@ -180,23 +180,24 @@ class CollectableManagementGroup(commands.Group):
             except workshop.CollectionNotFound:
                 continue
             if bindings := subscription_doc[self.binding_key]:
-                has_at_least_1 = True
-                if fields >= embeds.MAX_NUM_FIELDS:
-                    embed = discord.Embed(colour=embed.colour)
-                    fields = 0
-                    out.append(embed)
+                collections.append((the_collection.name, ', '.join(sorted(ab['name'] for ab in bindings))))
 
-                embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
-                                inline=False)
-                fields += 1
+        # build the resulting embed
+        if collections:
+            total = len(collections)
+            maxpage = total // 25 + 1
+            page = max(1, min(page, maxpage))
+            pages = [collections[i:i + 25] for i in range(0, total, 25)]
+            for name, bindings_str in pages[page - 1]:
+                ep.add_field(name, bindings_str)
+            if total > 25:
+                ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{self.command_group_name} list <page>")
+        else:
+            ep.add_description(f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]"
+                               "(https://avrae.io/dashboard/workshop) to get some, "
+                               "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!")
 
-        if not has_at_least_1:
-            first_embed.description = f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]" \
-                                      "(https://avrae.io/dashboard/workshop) to get some, " \
-                                      "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!"
-
-        for e in out:
-            await ctx.send(embed=e)
+        await ep.send_to(ctx)
 
     async def delete(self, ctx, name):
         if self.before_edit_check:
@@ -442,7 +443,7 @@ class Customization(commands.Cog):
         """
         guild_id = str(ctx.guild.id)
         if prefix is None:
-            current_prefix = await self.bot.get_server_prefix(ctx.message)
+            current_prefix = await self.bot.get_guild_prefix(ctx.guild)
             return await ctx.send(f"My current prefix is: `{current_prefix}`. You can run commands like "
                                   f"`{current_prefix}roll 1d20` or by mentioning me!")
 

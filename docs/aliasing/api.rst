@@ -793,17 +793,19 @@ In addition to Python's normal variable scoping rules, Avrae introduces 4 new sc
 user variables, server variables, and global variables. The intended purpose and binding rules of each are detailed
 below.
 
-+---------------+------+-------+----------+------------+------------------+
-| Variable Type | Read | Write | Binding  | Scope      | Who              |
-+===============+======+=======+==========+============+==================+
-| Cvar          | Yes  | Yes   | Implicit | Character  | User             |
-+---------------+------+-------+----------+------------+------------------+
-| Uvar          | Yes  | Yes   | Implicit | User       | User             |
-+---------------+------+-------+----------+------------+------------------+
-| Svar          | Yes  | No    | Explicit | Server     | Anyone on server |
-+---------------+------+-------+----------+------------+------------------+
-| Gvar          | Yes  | No    | Explicit | Everywhere | Anyone           |
-+---------------+------+-------+----------+------------+------------------+
++---------------+------+-------+----------+------------+-------------------+
+| Variable Type | Read | Write | Binding  | Scope      | Who               |
++===============+======+=======+==========+============+===================+
+| Cvar          | Yes  | Yes   | Implicit | Character  | User              |
++---------------+------+-------+----------+------------+-------------------+
+| Uvar          | Yes  | Yes   | Implicit | User       | User              |
++---------------+------+-------+----------+------------+-------------------+
+| Svar          | Yes  | No    | Explicit | Server     | Anyone on server  |
++---------------+------+-------+----------+------------+-------------------+
+| Gvar          | Yes  | No    | Explicit | Everywhere | Anyone            |
++---------------+------+-------+----------+------------+-------------------+
+| Init Metadata | Yes  | Yes   | Explicit | Initiative | Anyone in channel |
++---------------+------+-------+----------+------------+-------------------+
 
 Character Variables
 ^^^^^^^^^^^^^^^^^^^
@@ -811,7 +813,7 @@ Character Variables
 
 Character variables are variables bound to a character. These are usually used to set character-specific defaults
 or options for aliases and snippets (e.g. a character's familiar type/name). When running an alias or snippet, cvars are
-*implicitly* bound as local variables in the runtime.
+*implicitly* bound as local variables in the runtime at the runtime's instantiation.
 
 Cvars can be written or deleted in Draconic using :meth:`.AliasCharacter.set_cvar` and
 :meth:`.AliasCharacter.delete_cvar`, respectively.
@@ -824,8 +826,8 @@ User Variables
 
 User variables are bound per Discord user, and will go with you regardless of what server or character you are on.
 These variables are usually used for user-specific options (e.g. a user's timezone, favorite color, etc.). When running
-an alias or snippet, uvars are *implicitly* bound as local variables in the runtime. If a cvar and uvar have the same
-name, the cvar takes priority.
+an alias or snippet, uvars are *implicitly* bound as local variables in the runtime at the runtime's instantiation. If a
+cvar and uvar have the same name, the cvar takes priority.
 
 Uvars can be written or deleted in Draconic using :meth:`~aliasing.evaluators.ScriptingEvaluator.set_uvar` or
 :meth:`~aliasing.evaluators.ScriptingEvaluator.delete_uvar`, respectively.
@@ -856,6 +858,15 @@ Gvars can be read by anyone, so be careful what data you store!
 
 Gvars can only be created using ``!gvar create <value>``, and by default can only be edited by its creator. See
 ``!help gvar`` for more information.
+
+Honorable Mention: Initiative Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Initiative metadata is a form of key-value pair storage attached to an ongoing initiative in a given channel. This
+storage is usually used for storing a medium-sized amount of programmatic information about an ongoing initiative (e.g.
+an alias' metadata on each combatant).
+
+Metadata can be created, retrieved, and deleted using the :meth:`.SimpleCombat.set_metadata`,
+:meth:`.SimpleCombat.get_metadata`, and :meth:`.SimpleCombat.delete_metadata` methods, respectively.
 
 See Also
 --------
@@ -970,6 +981,12 @@ SimpleGroup
         The type of the object (``"group"``), to determine whether this is a group or not.
 
         :type: str
+
+    .. attribute:: init
+
+        What the group rolled for initiative.
+
+        :type: int
 
 SimpleEffect
 ^^^^^^^^^^^^
@@ -1120,6 +1137,12 @@ AliasDeathSaves
 ^^^^^^^^^^^^^^^
 
 .. autoclass:: aliasing.api.character.AliasDeathSaves()
+    :members:
+
+AliasAction
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.character.AliasAction()
     :members:
 
 StatBlock Models

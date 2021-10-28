@@ -149,12 +149,15 @@ class Spellcasting(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Long Resting"
 
-            # if singleclassed warlock, show srslots info
+            # if singleclassed warlock not using DDB import, show srslots info
             warlock_info = ""
             try:
                 character = await ctx.get_character()
                 if (warlock_level := character.levels.get("Warlock")) and warlock_level == character.levels.total_level:
-                    warlock_info = f"By the way, since you're a Warlock, you can also set your spell slots to recover on a Short Rest with `{ctx.prefix}csettings srslots true`."
+                    if character.sheet_type == 'beyond':
+                        warlock_info = "Since you're a Warlock, your spell slots will reset on a Short Rest, too!"
+                    else:
+                        warlock_info = f"By the way, since you're a Warlock, you can also set your spell slots to recover on a Short Rest with `{ctx.prefix}csettings srslots true`."
             except NoCharacter:
                 pass
 

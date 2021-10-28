@@ -3,12 +3,14 @@ Created on May 26, 2020
 
 @author: andrew
 """
+import itertools
 import logging
 import re
 
 import aiohttp
-import html2text
+from markdownify import markdownify
 
+import gamedata
 from cogs5e.models import automation
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
@@ -21,6 +23,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from gamedata.compendium import compendium
 from utils import config, constants, enums
+from utils.functions import smart_trim
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +43,8 @@ class BeyondSheetParser(SheetLoaderABC):
     def __init__(self, charId):
         super(BeyondSheetParser, self).__init__(charId)
         self.ctx = None
+        self.args = None
+        self._is_live = None
 
     async def load_character(self, ctx, args):
         """
@@ -48,6 +53,7 @@ class BeyondSheetParser(SheetLoaderABC):
         :raises Exception if something weirder happened
         """
         self.ctx = ctx
+        self.args = args
 
         owner_id = str(ctx.author.id)
         await self._get_character()
@@ -62,9 +68,10 @@ class BeyondSheetParser(SheetLoaderABC):
 
         stats = self._get_stats()
         levels = self._get_levels()
-        attacks = self._get_attacks()
         skills = self._get_skills()
         saves = self._get_saves()
+        # we do this to handle the attack/action overlap (e.g. actions with displayAsAttack)
+        attacks, actions = self._get_attacks_and_actions()
 
         resistances = self._get_resistances()
         ac = self._get_ac()
@@ -80,10 +87,9 @@ class BeyondSheetParser(SheetLoaderABC):
             consumables = self._get_custom_counters()
 
         spellbook = self._get_spellbook()
-        live = None  # todo
+        live = 'beyond' if self._is_live else None
         race = self._get_race()
         background = self._get_background()
-        actions = self._get_actions()
 
         # ddb campaign
         campaign = self.character_data.get('campaign')
@@ -128,6 +134,7 @@ class BeyondSheetParser(SheetLoaderABC):
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = char_id
         self.character_data = character
+        self._is_live = ddb_user.user_id == str(character['ownerId'])
         log.debug(character)
         return character
 
@@ -147,25 +154,6 @@ class BeyondSheetParser(SheetLoaderABC):
             out[cleaned_name] = klass['level']
 
         return Levels(out)
-
-    def _get_attacks(self):
-        """Returns an attacklist"""
-        attacks = AttackList()
-        used_names = set()
-
-        def append(atk):
-            if atk.name in used_names:
-                num = 2
-                while f"{atk.name}{num}" in used_names:
-                    num += 1
-                atk.name = f"{atk.name}{num}"
-            attacks.append(atk)
-            used_names.add(atk.name)
-
-        for attack in self.character_data['attacks']:
-            append(self._transform_attack(attack))
-
-        return attacks
 
     def _get_skills(self) -> Skills:
         out = {}
@@ -227,6 +215,7 @@ class BeyondSheetParser(SheetLoaderABC):
             spell_ab = spell['sab']
             spell_dc = spell['dc']
             spell_mod = spell['mod']
+            spell_prepared = spell['prepared'] or 'noprep' in self.args
             if spell_ab is not None:
                 sabs.append(spell_ab)
             if spell_dc is not None:
@@ -237,15 +226,28 @@ class BeyondSheetParser(SheetLoaderABC):
             result = next((s for s in compendium.spells if s.entity_id == spell['id']), None)
 
             if result:
-                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                                        prepared=spell_prepared))
             else:
-                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                             prepared=spell_prepared))
 
         dc = max(dcs, key=dcs.count, default=None)
         sab = max(sabs, key=sabs.count, default=None)
         smod = max(mods, key=mods.count, default=None)
 
-        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod)
+        # assumption: a character will only ever have one pact slot level, with a given number of slots of that level
+        pact_slot_level = None
+        num_pact_slots = None
+        max_pact_slots = None
+        if spellbook['pactSlots']:
+            pact_info = spellbook['pactSlots'][0]
+            pact_slot_level = pact_info['level']
+            max_pact_slots = pact_info['available']
+            num_pact_slots = max_pact_slots - pact_info['used']
+
+        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod,
+                         pact_slot_level=pact_slot_level, num_pact_slots=num_pact_slots, max_pact_slots=max_pact_slots)
 
     def _get_custom_counters(self):
         out = []
@@ -255,9 +257,12 @@ class BeyondSheetParser(SheetLoaderABC):
             display_type = 'bubble' if cons['max'] < 7 else None
             reset = RESET_MAP.get(cons['reset'], 'long')
             name = cons['name'].replace('\u2019', "'").strip()
-            desc = cons['desc'].replace('\u2019', "'") if cons['desc'] is not None else None
+            desc = None
             source_feature_type = cons['sourceFeatureType']
             source_feature_id = cons['sourceFeatureId']
+
+            if cons['desc'] is not None:
+                desc = smart_trim(html_to_md(cons['desc'].replace('\u2019', "'")))
 
             source_feature = compendium.lookup_entity(source_feature_type, source_feature_id)
             log.debug(f"Processed counter named {name!r} for feature {source_feature}")
@@ -267,11 +272,11 @@ class BeyondSheetParser(SheetLoaderABC):
                             f"named {name!r}")
 
             if cons['max'] and name:  # don't make counters with a range of 0 - 0, or blank named counters
-                out.append(
-                    CustomCounter(None, name, cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
-                                  display_type=display_type, live_id=live_id, desc=desc,
-                                  ddb_source_feature_type=source_feature_type, ddb_source_feature_id=source_feature_id)
-                )
+                out.append(CustomCounter(
+                    None, name, cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
+                    display_type=display_type, live_id=live_id, desc=desc,
+                    ddb_source_feature_type=source_feature_type, ddb_source_feature_id=source_feature_id
+                ))
 
         return [cc.to_dict() for cc in out]
 
@@ -281,41 +286,121 @@ class BeyondSheetParser(SheetLoaderABC):
     def _get_background(self):
         return self.character_data['background']
 
-    def _get_actions(self):
+    def _get_attacks_and_actions(self):
+        """
+        :rtype: tuple[AttackList, Actions]
+        """
+        attacks = self._process_attacks()  # this returns all attacks regardless of their status
+        actions, action_grantor_ids = self._process_actions()  # this skips customized actions with displayAsAttack
+
+        filtered_attacks = [attack for ((id, type_id), attack) in attacks if (id, type_id) not in action_grantor_ids]
+
+        return AttackList(filtered_attacks), actions
+
+    def _process_attacks(self):
+        """
+        :return: list of pairs ((id, typeId), attack)
+        :rtype: list[tuple[tuple[str, str], Attack]]
+        """
+        attacks = []
+        used_names = set()
+
+        def append(processed_attack, attack_data):
+            if processed_attack.name in used_names:
+                num = 2
+                while f"{processed_attack.name}{num}" in used_names:
+                    num += 1
+                processed_attack.name = f"{processed_attack.name}{num}"
+            attacks.append(((str(attack_data['id']), str(attack_data['typeId'])), processed_attack))
+            used_names.add(processed_attack.name)
+
+        for attack in self.character_data['attacks']:
+            append(self._transform_attack(attack), attack)
+
+        return attacks
+
+    def _process_actions(self):
+        """
+        :return: a pair (actions, action ids that granted valid actions (id, typeid))
+        :rtype: tuple[Actions, set[tuple[str, str]]]
+        """
         character_actions = self.character_data['actions']
         character_features = self.character_data['features']
         actions = []
+        seen_feature_ids = set()  # set of tuples (typeid, id)
+        action_ids_with_valid_actions = set()  # set of tuples (id, typeid)
+
+        def add_action_from_gamedata(d_action, g_action):
+            name = g_action.name
+            if d_action.get('isCustomized') and d_action['name'] != g_action.name:
+                # custom name handler: steal any parenthetical from the canonical name and tack it on to the custom name
+                name = d_action['name']
+                g_name_parenthetical = re.search(r'\(.+\)$', g_action.name)
+                if g_name_parenthetical:
+                    name = f"{name} {g_name_parenthetical.group(0)}"
+
+            actions.append(Action(
+                name=name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
+                activation_type=g_action.activation_type, snippet=html_to_md(d_action['snippet'])
+            ))
 
         # actions: save all, regardless of gamedata presence
         for d_action in character_actions:
-            if d_action['typeId'] == '1120657896' and d_action['id'] == '1':  # Unarmed Strike - already in attacks
+            # Unarmed Strike - already in attacks
+            if d_action['typeId'] == '1120657896' and d_action['id'] == '1':
                 continue
-            g_actions = compendium.lookup_actions_for_entity(int(d_action['typeId']), int(d_action['id']))
-            if g_actions:  # save a reference to each gamedata action by UID
-                for g_action in g_actions:
-                    actions.append(Action(
-                        name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                        activation_type=g_action.activation_type, snippet=html_to_md(d_action['snippet'])
-                    ))
-            else:  # just save the action w/ its snippet
-                activation_type = enums.ActivationType(d_action['activationType']) \
-                    if d_action['activationType'] is not None \
-                    else None
+            # display as attack override - fall back to attack system
+            if d_action['isCustomized'] and d_action['displayAsAttack']:
+                continue
+            # racial feature affected by martial arts - fall back to attack system
+            if (d_action['isMartialArts']
+                    and d_action['displayAsAttack']
+                    and int(d_action['componentTypeId']) == gamedata.race.RaceFeature.type_id):
+                continue
+
+            # gamedata for limiteduse
+            try:
+                g_actions = compendium.lookup_actions_for_entity(int(d_action['typeId']), int(d_action['id']))
+            except (TypeError, ValueError):  # weird null typeid/uuid id action, maybe artificer infused item?
+                continue
+
+            # gamedata for component (parent feature)
+            # data might have been entered for the parent feature instead
+            try:
+                parent_type_id, parent_id = int(d_action['componentTypeId']), int(d_action['componentId'])
+                parent_g_actions = compendium.lookup_actions_for_entity(parent_type_id, parent_id)
+                seen_feature_ids.add((parent_type_id, parent_id))
+            except (TypeError, ValueError):
+                parent_g_actions = []
+
+            # if the lu itself has action data, save a reference to each gamedata action by UID
+            for g_action in itertools.chain(g_actions, parent_g_actions):
+                add_action_from_gamedata(d_action, g_action)
+
+            # just save the action w/ its snippet if there is no gamedata
+            if not (g_actions or parent_g_actions):
+                activation_type = (enums.ActivationType(d_action['activationType'])
+                                   if d_action['activationType'] is not None
+                                   else None)
                 actions.append(Action(
                     name=d_action['name'], uid=None, id=int(d_action['id']), type_id=int(d_action['typeId']),
                     activation_type=activation_type, snippet=html_to_md(d_action['snippet'])
                 ))
+            else:
+                # otherwise, either it or its parent successfully added something, so we can save its id
+                # for attack filtering
+                action_ids_with_valid_actions.add((str(d_action['id']), str(d_action['typeId'])))
 
         # features: save only if gamedata references them
         for d_feature in character_features:
-            g_actions = compendium.lookup_actions_for_entity(int(d_feature['typeId']), int(d_feature['id']))
+            d_type_id, d_id = int(d_feature['typeId']), int(d_feature['id'])
+            if (d_type_id, d_id) in seen_feature_ids:
+                continue
+            g_actions = compendium.lookup_actions_for_entity(d_type_id, d_id)
             for g_action in g_actions:
-                actions.append(Action(
-                    name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                    activation_type=g_action.activation_type, snippet=d_feature['snippet']
-                ))
+                add_action_from_gamedata(d_feature, g_action)
 
-        return Actions(actions)
+        return Actions(actions), action_ids_with_valid_actions
 
     # ==== helpers ====
     @staticmethod
@@ -367,4 +452,4 @@ def derive_adv(advs, dises):
 def html_to_md(text):
     if not text:
         return text
-    return html2text.html2text(text, bodywidth=0).strip()
+    return markdownify(text).strip()

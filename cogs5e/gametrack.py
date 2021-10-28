@@ -14,12 +14,12 @@ from discord.ext import commands
 from aliasing import helpers
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument, NoSelectionElements
+from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelectionElements
 from cogs5e.utils import checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
 from utils.argparser import argparse
-from utils.functions import confirm, search, search_and_select, try_delete
+from utils.functions import confirm, maybe_mod, search, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
 
@@ -57,8 +57,12 @@ class GameTrack(commands.Cog):
         await self.spellbook(ctx)
 
     @game.command(name='spellslot', aliases=['ss'])
-    async def game_spellslot(self, ctx, level: int = None, value: str = None):
-        """Views or sets your remaining spell slots."""
+    async def game_spellslot(self, ctx, level: int = None, value: str = None, *args):
+        """
+        Views or sets your remaining spell slots.
+        __Valid Arguments__
+        nopact - Modifies normal spell slots first instead of a Pact Magic slots, if applicable.
+        """
         if level is not None:
             try:
                 assert 0 < level < 10
@@ -74,18 +78,8 @@ class GameTrack(commands.Cog):
                                 f"{character.spellbook.slots_str(level)}"
         else:
             old_slots = character.spellbook.get_slots(level)
-            try:
-                if value.startswith(('+', '-')):
-                    value = old_slots + int(value)
-                else:
-                    value = int(value)
-            except ValueError:
-                return await ctx.send(f"{value} is not a valid integer.")
-            try:
-                assert 0 <= value <= character.spellbook.get_max_slots(level)
-            except AssertionError:
-                raise CounterOutOfBounds()
-            character.spellbook.set_slots(level, value)
+            value = maybe_mod(value, old_slots)
+            character.spellbook.set_slots(level, value, pact='nopact' not in args)
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
                                 f"{character.spellbook.slots_str(level)} ({(value - old_slots):+})"
@@ -338,47 +332,74 @@ class GameTrack(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.group(invoke_without_command=True, name='spellbook', aliases=['sb'])
-    async def spellbook(self, ctx):
-        """Commands to display a character's known spells and metadata."""
+    async def spellbook(self, ctx, *args):
+        """
+        Commands to display a character's known spells and metadata.
+        __Valid Arguments__
+        all - Display all of a character's known spells, including unprepared ones.
+        """
         await ctx.trigger_typing()
 
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
-        embed.description = f"{character.name} knows {len(character.spellbook.spells)} spells."
         embed.add_field(name="DC", value=str(character.spellbook.dc))
         embed.add_field(name="Spell Attack Bonus", value=str(character.spellbook.sab))
         embed.add_field(name="Spell Slots", value=character.spellbook.slots_str() or "None")
 
+        show_unprepared = 'all' in args
+        known_count = len(character.spellbook.spells)
+        prepared_count = sum(1 for spell in character.spellbook.spells if spell.prepared)
+
+        if known_count == prepared_count:
+            embed.description = f"{character.name} knows {known_count} spells."
+        else:
+            embed.description = f"{character.name} has {prepared_count} spells prepared and knows {known_count} spells."
+
         # dynamic help flags
         flag_show_multiple_source_help = False
         flag_show_homebrew_help = False
+        flag_show_prepared_help = False
+        flag_show_prepared_underline_help = False
 
         spells_known = collections.defaultdict(lambda: [])
         choices = await get_spell_choices(ctx)
-        for spell_ in character.spellbook.spells:
-            results, strict = search(choices, spell_.name, lambda sp: sp.name, strict=True)
+        for sb_spell in character.spellbook.spells:
+            if not (sb_spell.prepared or show_unprepared):
+                flag_show_prepared_help = True
+                continue
+
+            # homebrew / multisource formatting
+            results, strict = search(choices, sb_spell.name, lambda sp: sp.name, strict=True)
             if not strict:
+                known_level = 'unknown'
                 if len(results) > 1:
-                    spells_known['unknown'].append(f"*{spell_.name} ({'*' * len(results)})*")
+                    formatted = f"*{sb_spell.name} ({'*' * len(results)})*"
                     flag_show_multiple_source_help = True
                 else:
-                    spells_known['unknown'].append(f"*{spell_.name}*")
+                    formatted = f"*{sb_spell.name}*"
                 flag_show_homebrew_help = True
             else:
                 spell = results
+                known_level = str(spell.level)
                 if spell.homebrew:
                     formatted = f"*{spell.name}*"
                     flag_show_homebrew_help = True
                 else:
                     formatted = spell.name
-                spells_known[str(spell.level)].append(formatted)
+
+            # prepared formatting
+            if show_unprepared and sb_spell.prepared:
+                formatted = f"__{formatted}__"
+                flag_show_prepared_underline_help = True
+
+            spells_known[known_level].append(formatted)
 
         level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
                       '4': '4th Level', '5': '5th Level', '6': '6th Level',
                       '7': '7th Level', '8': '8th Level', '9': '9th Level'}
         for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
             if spells:
-                spells.sort()
+                spells.sort(key=lambda s: s.lstrip('*_'))
                 embed.add_field(name=level_name.get(level, "Unknown"), value=', '.join(spells), inline=False)
 
         # dynamic help
@@ -387,6 +408,10 @@ class GameTrack(commands.Cog):
             footer_out.append("An italicized spell indicates that the spell is homebrew.")
         if flag_show_multiple_source_help:
             footer_out.append("Asterisks after a spell indicates that the spell is being provided by multiple sources.")
+        if flag_show_prepared_help:
+            footer_out.append(f"Unprepared spells were not shown. Use \"{ctx.prefix}spellbook all\" to view them!")
+        if flag_show_prepared_underline_help:
+            footer_out.append("Prepared spells are marked with an underline.")
 
         if footer_out:
             embed.set_footer(text=' '.join(footer_out))
@@ -513,7 +538,7 @@ class GameTrack(commands.Cog):
         """
         Creates a new custom counter.
         __Valid Arguments__
-        `-title <title>` - Sets the title when setting or viewing the counter. `[name]` will be replaced with the player's name.
+        `-title <title>` - Sets the title for the output when modifying the counter. `[name]` will be replaced with the player's name.
         `-desc <desc>` - Sets the description when setting or viewing the counter.
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.
@@ -560,27 +585,28 @@ class GameTrack(commands.Cog):
         await ctx.send(f"Deleted counter {counter.name}.")
 
     @customcounter.command(name='summary', aliases=['list'])
-    async def customcounter_summary(self, ctx, page: int = 0):
+    async def customcounter_summary(self, ctx, page: int = 1):
         """
         Prints a summary of all custom counters.
         Use `!cc list <page>` to view pages if you have more than 25 counters.
         """
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character, title="Custom Counters")
-        # Check that we're not over the field limit
-        total = len(character.consumables)
-        if total > 25:  # Discord Field limit
-            page = max(0, page - 1)  # Humans count from 1
-            maxpage = total // 25
-            start = min(page * 25, total - 25)
-            end = max(start + 25, total)
-            # Build the current page
-            embed.set_footer(text=f"Page [{page + 1}/{maxpage + 1}] | {ctx.prefix}cc list <page>")
-            for counter in character.consumables[start:end]:
+
+        if character.consumables:
+            # paginate if > 25
+            total = len(character.consumables)
+            maxpage = total // 25 + 1
+            page = max(1, min(page, maxpage))
+            pages = [character.consumables[i:i + 25] for i in range(0, total, 25)]
+            for counter in pages[page - 1]:
                 embed.add_field(name=counter.name, value=counter.full_str())
+            if total > 25:
+                embed.set_footer(text=f"Page [{page}/{maxpage}] | {ctx.prefix}cc list <page>")
         else:
-            for counter in character.consumables:
-                embed.add_field(name=counter.name, value=counter.full_str())
+            embed.add_field(name="No Custom Counters",
+                            value=f"Check out `{ctx.prefix}help cc create` to see how to create new ones.")
+
         await ctx.send(embed=embed)
 
     @customcounter.command(name='reset')

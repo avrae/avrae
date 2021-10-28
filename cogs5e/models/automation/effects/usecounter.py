@@ -67,7 +67,7 @@ class UseCounter(Effect):
             if self.error_behaviour == 'warn':
                 autoctx.meta_queue(f"**Warning**: Could not use counter - {e}")
             elif self.error_behaviour == 'raise':
-                raise StopExecution(f"Could not use counter: {e}")
+                raise StopExecution(f"Could not use counter: {e}") from e
 
         autoctx.metavars['lastCounterName'] = result.counter_name
         autoctx.metavars['lastCounterRemaining'] = result.counter_remaining
@@ -150,13 +150,24 @@ class UseCounter(Effect):
         # amount
         amount = stringify_intexpr(evaluator, self.amount)
 
+        # guaranteed metavars
+        evaluator.builtins['lastCounterName'] = str(self.counter)
+        evaluator.builtins['lastCounterRequestedAmount'] = amount
+        evaluator.builtins['lastCounterUsedAmount'] = amount
+
         # counter name
+        plural = abs(amount) != 1
         if isinstance(self.counter, str):
-            charges = 'charge' if amount == 1 else 'charges'
+            charges = 'charges' if plural else 'charge'
             counter_name = f"{charges} of {self.counter}"
         else:
-            counter_name = self.counter.build_str(caster, evaluator, plural=amount != 1)
-        return f"uses {amount} {counter_name}"
+            counter_name = self.counter.build_str(caster, evaluator, plural=plural)
+
+        # uses/restores
+        if amount < 0:
+            return f"restores {-amount} {counter_name}"
+        else:
+            return f"uses {amount} {counter_name}"
 
 
 # ==== helpers ====
@@ -233,6 +244,9 @@ class AbilityReference(_UseCounterTarget):
         entity_name = self.entity.name if self.entity is not None else "Unknown Ability"
         return f"{charges} of {entity_name}"
 
+    def __str__(self):
+        return self.entity.name if self.entity is not None else "Unknown Ability"
+
     def __repr__(self):
         return f"<AbilityReference id={self.id!r} type_id={self.type_id!r} entity={self.entity!r}>"
 
@@ -275,8 +289,11 @@ def abilityreference_counter_discovery(ref, char):
         consumables_by_name[cc.name] = cc
         if char.sheet_type == 'beyond':
             if cc.live_id is not None:
-                lu_id, _ = cc.live_id.split('-', 1)
-                consumables_by_lu_id[int(lu_id)] = cc
+                try:
+                    lu_id, lu_tid = cc.live_id.split('-', 1)
+                    consumables_by_lu_id[int(lu_tid), int(lu_id)] = cc
+                except ValueError:
+                    pass
             if (cc.ddb_source_feature_type and cc.ddb_source_feature_id) is not None:
                 feat_id = (cc.ddb_source_feature_type, cc.ddb_source_feature_id)
                 consumables_by_feature_id[feat_id] = cc
@@ -284,9 +301,9 @@ def abilityreference_counter_discovery(ref, char):
     eid = e.entity_id
     tid = e.type_id
 
-    # 1: cc with same id (if the tid is the cc tid)
-    if tid == gamedata.LimitedUse.type_id:
-        if (limiteduse_cc := consumables_by_lu_id.get(eid)) is not None:
+    # 1: cc with same id (if the referenced entity is a LimitedUse)
+    if isinstance(e, gamedata.LimitedUse):
+        if (limiteduse_cc := consumables_by_lu_id.get((tid, eid))) is not None:
             return limiteduse_cc
         e = e.parent
         eid = e.entity_id

@@ -429,7 +429,7 @@ async def user_from_id(ctx, the_id):
         await ctx.bot.mdb.users.update_one(
             {"id": str(the_user.id)},
             {"$set": {'username': the_user.name, 'discriminator': the_user.discriminator,
-                      'avatar': the_user.avatar, 'bot': the_user.bot}},
+                      'avatar': the_user.display_avatar.url, 'bot': the_user.bot}},
             upsert=True
         )
 
@@ -493,3 +493,9 @@ def reconcile_adv(adv=False, dis=False, ea=False):
     if ea and not dis:
         return 2
     return result
+
+
+def maybe_http_url(url: str):
+    """Returns a url if one found, otherwise blank string."""
+    # Mainly used for embed.set_thumbnail(url=url)
+    return url if 'http' in url else ''

@@ -12,6 +12,7 @@ import re
 from fnmatch import fnmatchcase
 from queue import Queue
 
+import discord
 import pytest
 from discord import DiscordException, Embed
 from discord.ext import commands
@@ -72,6 +73,21 @@ def compare_embeds(request_embed, embed, *, regex: bool = True):
         assert request_embed == embed
 
 
+def embed_assertations(embed):
+    """Checks to ensure that the embed is valid."""
+    assert len(embed) <= 6000
+    assert len(embed.title) <= 256
+    assert len(embed.description) <= 4096
+    assert len(embed.fields) <= 25
+    for field in embed.fields:
+        assert 0 < len(field.name) <= 256
+        assert 0 < len(field.value) <= 1024
+    if embed.footer:
+        assert len(embed.footer.text) <= 2048
+    if embed.author:
+        assert len(embed.author.name) <= 256
+
+
 def message_content_check(request: Request, content: str = None, *, regex: bool = True, embed: Embed = None):
     match = None
     if content:
@@ -81,7 +97,10 @@ def message_content_check(request: Request, content: str = None, *, regex: bool 
         else:
             assert request.data.get('content') == content
     if embed:
-        compare_embeds(request.data.get('embed'), embed.to_dict(), regex=regex)
+        embed_data = request.data.get('embeds')
+        assert embed_data is not None and embed_data
+        embed_assertations(discord.Embed.from_dict(embed_data[0]))
+        compare_embeds(embed_data[0], embed.to_dict(), regex=regex)
     return match
 
 
@@ -119,7 +138,10 @@ class DiscordHTTPProxy(HTTPClient):
         to_wait = set()
         to_cancel = set()
         for task in asyncio.all_tasks():
-            if "ClientEventTask" in repr(task):  # tasks started by d.py in reply to an event
+            # note: we compare to repr(task) instead of the task's name since this contains information
+            # about the function that created the task
+            # if a bunch of tests are suddenly failing, this is often the culprit because of task names changing
+            if "discord.py" in repr(task):  # tasks started by d.py in reply to an event
                 to_wait.add(task)
             elif "Message.delete" in repr(task):  # Messagable.send(..., delete_after=x)
                 to_cancel.add(task)
@@ -235,22 +257,30 @@ def message(self, message_content, as_owner=False, dm=False):
 
     log.info(f"Sending message {message_content}")
     # pretend we just received a message in our testing channel
-    self._connection.parse_message_create({
-        "attachments": [],
-        "tts": False,
-        "embeds": [],
-        "timestamp": "2017-07-11T17:27:07.299000+00:00",
-        "mention_everyone": False,
-        "id": MESSAGE_ID,
-        "pinned": False,
-        "edited_timestamp": None,
-        "author": DEFAULT_USER if not as_owner else OWNER_USER,
-        "mention_roles": [],
-        "content": message_content,
-        "channel_id": str(TEST_CHANNEL_ID) if not dm else str(TEST_DMCHANNEL_ID),
-        "mentions": [],
-        "type": 0
-    })
+    data = {
+        'type': 0,
+        'tts': False,
+        'timestamp': '2021-09-08T20:33:57.337000+00:00',
+        'referenced_message': None,
+        'pinned': False,
+        'nonce': 'blah',
+        'mentions': [],
+        'mention_roles': [],
+        'mention_everyone': False,
+        'id': MESSAGE_ID,
+        'flags': 0,
+        'embeds': [],
+        'edited_timestamp': None,
+        'content': message_content,
+        'components': [],
+        'channel_id': str(TEST_CHANNEL_ID) if not dm else str(TEST_DMCHANNEL_ID),
+        'author': DEFAULT_USER if not as_owner else OWNER_USER,
+        'attachments': []
+    }
+    if not dm:
+        data['guild_id'] = TEST_GUILD_ID
+
+    self._connection.parse_message_create(data)
     return MESSAGE_ID
 
 
@@ -291,11 +321,11 @@ async def avrae(dhttp):
     # noinspection PyProtectedMember
     bot._connection.parse_guild_create(DUMMY_GUILD_CREATE)
     # noinspection PyProtectedMember
-    bot._connection.parse_channel_create(DUMMY_DMCHANNEL_CREATE)
+    bot._connection.add_dm_channel(DUMMY_DMCHANNEL_CREATE)
 
     log.info("Ready for testing")
     yield bot
-    await bot.logout()
+    await bot.close()
 
 
 # ===== Character Fixture =====
@@ -359,9 +389,11 @@ async def end_init(avrae, dhttp):
 
 # ===== Global Fixture =====
 @pytest.fixture(autouse=True, scope="function")
-async def global_fixture(avrae, dhttp):
+async def global_fixture(avrae, dhttp, request):
     """Things to do before and after every test."""
+    log.info(f"Starting test: {request.function.__name__}")
     dhttp.clear()
     random.seed(123)  # we want to make our tests as deterministic as possible, so each one uses the same RNG seed
     yield
     await dhttp.drain()
+    log.info(f"Finished test: {request.function.__name__}")

@@ -319,8 +319,7 @@ class Combat:
         self.sort_combatants()
 
         # reset current turn
-        self._turn = 0
-        self._current_index = None
+        self.end_round()
 
         order = []
         for combatant, init_roll in sorted(rolls.items(), key=lambda r: (r[1].total, int(r[0].init_skill)),
@@ -330,6 +329,13 @@ class Combat:
         order = "\n".join(order)
 
         return order
+
+    def end_round(self):
+        """
+        Moves initiative to just before the next round (no active combatant or group).
+        """
+        self._turn = 0
+        self._current_index = None
 
     async def select_combatant(self, name, choice_message=None, select_group=False):
         """
@@ -521,7 +527,7 @@ class Combat:
     def get_channel(self):
         """Gets the Channel object of the combat."""
         if self.ctx:
-            return self.ctx.message.channel
+            return self.ctx.channel
         else:
             chan = self.ctx.bot.get_channel(int(self.channel))
             if chan:

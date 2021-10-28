@@ -3,10 +3,10 @@ import os
 import discord
 import pytest
 
-from gamedata.compendium import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.initiative import Combat
-from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID
+from gamedata.compendium import compendium
+from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID, TEST_GUILD_ID
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -95,3 +95,11 @@ async def active_combat(avrae):
 class ContextBotProxy:
     def __init__(self, bot):
         self.bot = bot
+
+    @property
+    def channel(self):
+        return self.bot.get_channel(int(TEST_CHANNEL_ID))
+
+    @property
+    def guild(self):
+        return self.bot.get_guild(int(TEST_GUILD_ID))

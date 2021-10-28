@@ -2,10 +2,10 @@ from typing import Optional
 
 from d20 import roll
 
+import cogs5e.models.initiative as init
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
-from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, CombatantType, Effect
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
 
@@ -15,7 +15,7 @@ MAX_METADATA_SIZE = 100000
 # noinspection PyProtectedMember
 class SimpleCombat:
     def __init__(self, combat, me):
-        self._combat: Combat = combat
+        self._combat = combat
 
         self.combatants = [SimpleCombatant(c) for c in combat.get_combatants()]
         self.groups = [SimpleGroup(c) for c in combat.get_groups()]
@@ -27,7 +27,7 @@ class SimpleCombat:
         self.turn_num = self._combat.turn_num
         current = self._combat.current_combatant
         if current:
-            if isinstance(current, CombatantGroup):
+            if current.type == init.CombatantType.GROUP:  # isinstance(current, init.CombatantGroup):
                 self.current = SimpleGroup(current)
             else:
                 self.current = SimpleCombatant(current)
@@ -38,24 +38,27 @@ class SimpleCombat:
     @classmethod
     def from_ctx(cls, ctx):
         try:
-            combat = Combat.from_ctx_sync(ctx)
-        except CombatNotFound:
+            combat = init.Combat.from_ctx_sync(ctx)
+        except init.CombatNotFound:
             return None
         return cls(combat, None)
 
     # public methods
     def get_combatant(self, name):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
+        Gets a combatant by its name or ID.
 
-        :param str name: The name of the combatant to get.
-        :return: The combatant.
-        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
+        If a combatant name is passed, returns the first :class:`~aliasing.api.combat.SimpleCombatant` that matches the name via fuzzy searching (partial match) on name. This cannot return groups.
+
+        If a combatant ID is passed, returns the combatant with the given ID, which may be a :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
         combatant = self._combat.get_combatant(name, False)
         if combatant:
-            return SimpleCombatant(combatant)
+            if combatant.type == init.CombatantType.GROUP:
+                return SimpleGroup(combatant)
+            else:
+                return SimpleCombatant(combatant)
         return None
 
     def get_group(self, name):
@@ -115,6 +118,24 @@ class SimpleCombat:
         """
         return self._combat._metadata.pop(str(k), None)
 
+    def set_round(self, round_num: int):
+        """
+        Sets the current round.
+        Setting the round will not tick any events with durations.
+
+        :param int round_num: the new round number
+        """
+        if not isinstance(round_num, int):
+            raise ValueError("Round_num must be an integer.")
+        self._combat.round_num = round_num
+
+    def end_round(self):
+        """
+        Moves initiative to just before the next round (no active combatant or group).
+        Ending the round will not tick any events with durations.
+        """
+        self._combat.end_round()
+
     # private functions
     def func_set_character(self, character):
         me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
@@ -140,7 +161,7 @@ class SimpleCombatant(AliasStatBlock):
     Represents a combatant in combat.
     """
 
-    def __init__(self, combatant: Combatant, hidestats=True):
+    def __init__(self, combatant, hidestats=True):
         super().__init__(combatant)
         self._combatant = combatant
         self._hidden = hidestats and self._combatant.is_private
@@ -153,13 +174,22 @@ class SimpleCombatant(AliasStatBlock):
         self._race = None
         self._monster_name = None
 
-        if combatant.type == CombatantType.MONSTER:
+        if combatant.type == init.CombatantType.MONSTER:
             self._monster_name = combatant.monster_name
-        elif combatant.type == CombatantType.PLAYER:
+        elif combatant.type == init.CombatantType.PLAYER:
             self._race = combatant.character.race
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
+
+    @property
+    def id(self):
+        """
+        The combatant's unique identifier.
+
+        :rtype: str
+        """
+        return self._combatant.id
 
     @property
     def note(self):
@@ -378,8 +408,9 @@ class SimpleCombatant(AliasStatBlock):
         existing = self._combatant.get_effect(name, True)
         if existing:
             existing.remove()
-        effectObj = Effect.new(self._combatant.combat, self._combatant, duration=duration, name=name, effect_args=args,
-                               concentration=concentration, tick_on_end=end, desc=desc)
+        effectObj = init.Effect.new(
+            self._combatant.combat, self._combatant, duration=duration, name=name,
+            effect_args=args, concentration=concentration, tick_on_end=end, desc=desc)
         if parent:
             effectObj.set_parent(parent._effect)
         self._combatant.add_effect(effectObj)
@@ -469,10 +500,11 @@ class SimpleCombatant(AliasStatBlock):
 
 
 class SimpleGroup:
-    def __init__(self, group: CombatantGroup):
+    def __init__(self, group):
         self._group = group
         self.type = "group"
         self.combatants = [SimpleCombatant(c) for c in self._group.get_combatants()]
+        self.init = self._group.init
 
     @property
     def name(self):
@@ -482,6 +514,15 @@ class SimpleGroup:
         :rtype: str
         """
         return self._group.name
+
+    @property
+    def id(self):
+        """
+        The group's unique identifier.
+
+        :rtype: str
+        """
+        return self._group.id
 
     def get_combatant(self, name):
         """
@@ -497,6 +538,17 @@ class SimpleGroup:
             return combatant
         return None
 
+    def set_init(self, init: int):
+        """
+        Sets the group's initiative roll.
+
+        :param int init: The new initiative.
+        """
+        if not isinstance(init, int):
+            raise ValueError("Initiative must be an integer.")
+        self._group.init = init
+        self._group.combat.sort_combatants()
+
     def __str__(self):
         return str(self._group)
 
@@ -505,7 +557,7 @@ class SimpleGroup:
 
 
 class SimpleEffect:
-    def __init__(self, effect: Effect):
+    def __init__(self, effect):
         self._effect = effect
 
         self.name = self._effect.name

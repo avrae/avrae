@@ -16,11 +16,12 @@ from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import DicecloudClient
 from cogs5e.models.dicecloud.errors import DicecloudException
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet.action import Action, Actions
+from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
+from cogs5e.sheets.utils import get_actions_for_names
 from gamedata.compendium import compendium
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
@@ -42,6 +43,7 @@ class DicecloudParser(SheetLoaderABC):
         super(DicecloudParser, self).__init__(url)
         self.stats = None
         self.levels = None
+        self.args = None
         self.evaluator = DicecloudEvaluator()
         self._cache = {}
 
@@ -51,6 +53,7 @@ class DicecloudParser(SheetLoaderABC):
         :raises ExternalImportError if something went wrong during the import that we can expect
         :raises Exception if something weirder happened
         """
+        self.args = args
         owner_id = str(ctx.author.id)
         try:
             await self.get_character()
@@ -281,12 +284,15 @@ class DicecloudParser(SheetLoaderABC):
                 spell_dc = None
             if spell_mod == scam:
                 spell_mod = None
+            spell_prepared = spell['prepared'] in ('prepared', 'always') or 'noprep' in self.args
 
             result, strict = search(compendium.spells, spell['name'].strip(), lambda sp: sp.name, strict=True)
             if result and strict:
-                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                                        prepared=spell_prepared))
             else:
-                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                             prepared=spell_prepared))
 
         spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level, scam)
 
@@ -341,24 +347,12 @@ class DicecloudParser(SheetLoaderABC):
         return counters
 
     def get_actions(self):
-        # iterate over features and look for actions with the same name, snippet is the feature description?
-        actions = []
-        g_actions_by_name = {a.name: a for a in compendium.actions}
-
-        for f in self.character_data.get('features', []):
-            if not f.get('enabled'):
-                continue
-            if f.get('removed'):
-                continue
-            name = f.get('name')
-            if name not in g_actions_by_name:
-                continue
-            g_action = g_actions_by_name[name]
-            actions.append(Action(
-                name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                activation_type=g_action.activation_type, snippet=f.get('description')
-            ))
-
+        feature_names = [
+            f.get('name')
+            for f in self.character_data.get('features', [])
+            if f.get('enabled') and not f.get('removed')
+        ]
+        actions = get_actions_for_names(feature_names)
         return Actions(actions)
 
     # helper funcs

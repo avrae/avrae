@@ -18,7 +18,7 @@ class GameLogEvent:
         self.user_id = kwargs['userId']  # type: str
         self.event_type = kwargs['eventType']  # type: str
         self.source = kwargs['source']  # type: str
-        self.data = kwargs['data']
+        self.data = kwargs.get('data')
         self.entity_id = kwargs.get('entityId')  # type: str or None
         self.entity_type = kwargs.get('entityType')  # type: str or None
         self.message_scope = kwargs['messageScope']  # type: str

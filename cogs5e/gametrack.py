@@ -18,6 +18,7 @@ from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelecti
 from cogs5e.utils import checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
+from utils import constants
 from utils.argparser import argparse
 from utils.functions import confirm, maybe_mod, search, search_and_select, try_delete
 
@@ -70,7 +71,7 @@ class GameTrack(commands.Cog):
                 return await ctx.send("Invalid spell level.")
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
-        embed.set_footer(text="\u25c9 = Available / \u3007 = Used")
+
         if level is None and value is None:  # show remaining
             embed.description = f"__**Remaining Spell Slots**__\n{character.spellbook.slots_str()}"
         elif value is None:
@@ -83,6 +84,14 @@ class GameTrack(commands.Cog):
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
                                 f"{character.spellbook.slots_str(level)} ({(value - old_slots):+})"
+
+        # footer - pact vs non pact
+        if character.spellbook.max_pact_slots is not None:
+            embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
+                                  f"{constants.FILLED_DIAMOND} / {constants.EMPTY_DIAMOND} = Pact Slot")
+        else:
+            embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used")
+
         await ctx.send(embed=embed)
 
     async def _rest(self, ctx, rest_type, *args):

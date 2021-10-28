@@ -1,4 +1,5 @@
 from cogs5e.models.errors import CounterOutOfBounds, InvalidSpellLevel
+from utils import constants
 from utils.functions import bubble_format
 
 
@@ -40,26 +41,42 @@ class Spellbook:
         return any(spell_name.lower() == s.name.lower() for s in self.spells)
 
     # ===== display helpers =====
+    def _slots_str_minimal(self, level: int):
+        """Returns the slot level string if there are slots of this level, otherwise empty string."""
+        assert 0 < level < 10
+        _max = self.get_max_slots(level)
+        remaining = self.get_slots(level)
+
+        if level == self.pact_slot_level and _max:
+            max_non_pact = _max - self.max_pact_slots
+            remaining_non_pact = remaining - self.num_pact_slots
+            nonpact_slot_bubbles = bubble_format(remaining_non_pact, max_non_pact)
+            pact_slot_bubbles = bubble_format(
+                self.num_pact_slots, self.max_pact_slots,
+                used_char=constants.EMPTY_DIAMOND, unused_char=constants.FILLED_DIAMOND
+            )
+            return f"`{level}` {nonpact_slot_bubbles}{pact_slot_bubbles}"
+
+        return f"`{level}` {bubble_format(remaining, _max)}" if _max else ''
+
     def slots_str(self, level: int = None):
         """
         :param int level: The level of spell slot to return.
         :returns: A string representing the caster's remaining spell slots.
         """
-        out = ''
-        if level:
-            assert 0 < level < 10
-            _max = self.get_max_slots(level)
-            remaining = self.get_slots(level)
-            out += f"`{level}` {bubble_format(remaining, _max)}\n"
-        else:
-            for level in range(1, 10):
-                _max = self.get_max_slots(level)
-                remaining = self.get_slots(level)
-                if _max:
-                    out += f"`{level}` {bubble_format(remaining, _max)}\n"
+        if level is None:
+            return self.all_slots_str()
+        return self._slots_str_minimal(level) or "No spell slots."
+
+    def all_slots_str(self):
+        """Returns a string representing all of the character's spell slots."""
+        out = []
+        for level in range(1, 10):
+            if level_str := self._slots_str_minimal(level):
+                out.append(level_str)
         if not out:
-            out = "No spell slots."
-        return out.strip()
+            return "No spell slots."
+        return '\n'.join(out)
 
     # ===== utils =====
     def get_slots(self, level):

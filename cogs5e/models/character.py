@@ -535,8 +535,12 @@ class Character(StatBlock):
             level: min(v, self.spellbook.get_max_slots(level))
             for level, v in old_character.spellbook.slots.items()
         }
-        if old_character.spellbook.num_pact_slots is not None:
-            self.spellbook.num_pact_slots = min(self.spellbook.max_pact_slots, old_character.spellbook.num_pact_slots)
+        if self.spellbook.num_pact_slots is not None:
+            self.spellbook.num_pact_slots = min(
+                old_character.spellbook.num_pact_slots or 0,  # pact slots before update
+                self.spellbook.max_pact_slots,  # cannot have more then max
+                self.spellbook.get_slots(self.spellbook.pact_slot_level)  # cannot gain slots out of nowhere
+            )
 
         if (self.owner, self.upstream) in Character._cache:
             Character._cache[self.owner, self.upstream] = self

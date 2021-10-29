@@ -525,21 +525,29 @@ class Character(StatBlock):
         )
 
         # overridden spells
-        self.spellbook.spells.extend(self.overrides.spells)
+        sb = self.spellbook
+        sb.spells.extend(self.overrides.spells)
 
         # tracking
         self._hp = old_character._hp
         self._temp_hp = old_character._temp_hp
-        # ensure new slots are within bounds (#1453)
-        self.spellbook.slots = {
-            level: min(v, self.spellbook.get_max_slots(level))
+        sb.slots = {  # ensure new slots are within bounds (#1453)
+            level: min(v, sb.get_max_slots(level))
             for level, v in old_character.spellbook.slots.items()
         }
-        if self.spellbook.num_pact_slots is not None:
-            self.spellbook.num_pact_slots = min(
+        if sb.num_pact_slots is not None:
+            sb.num_pact_slots = min(
                 old_character.spellbook.num_pact_slots or 0,  # pact slots before update
-                self.spellbook.max_pact_slots,  # cannot have more then max
-                self.spellbook.get_slots(self.spellbook.pact_slot_level)  # cannot gain slots out of nowhere
+                sb.max_pact_slots,  # cannot have more then max
+                sb.get_slots(sb.pact_slot_level)  # cannot gain slots out of nowhere
+            )
+
+            # sanity check:             num_non_pact <= max_non_pact
+            # get_slots(pact_level) - num_pact_slots <= get_max(pact_level) - max_pact_slots
+            #                         num_pact_slots >= max_pact_slots - get_max(pact_level) + get_slots(pact_level)
+            sb.num_pact_slots = max(
+                sb.num_pact_slots,
+                sb.max_pact_slots - sb.get_max_slots(sb.pact_slot_level) + sb.get_slots(sb.pact_slot_level)
             )
 
         if (self.owner, self.upstream) in Character._cache:

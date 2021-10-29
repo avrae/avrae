@@ -318,7 +318,7 @@ def trim_str(text, max_len):
     return f"{text[:max_len - 4]}..."
 
 
-def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ' '), chunker_i=0):
+def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ', ', ' '), chunker_i=0):
     """
     Recursively chunks *text* into a list of str, with each element no longer than *max_chunk_size*.
     Prefers splitting on the elements of *chunk_on*, in order.
@@ -342,6 +342,10 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ' '), ch
             chunks[-1] += chunk
         else:
             chunks.append(chunk)
+
+    # if the last chunk is just the split_char, yeet it
+    if chunks[-1] == split_char:
+        chunks.pop()
 
     # remove extra split_char from last chunk
     chunks[-1] = chunks[-1][:-len(split_char)]

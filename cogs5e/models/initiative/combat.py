@@ -265,30 +265,43 @@ class Combat:
         """Gets a combatant by their ID."""
         return self._combatant_id_map.get(combatant_id)
 
-    def get_combatant(self, name, strict=True):
-        """Gets a combatant by their name or ID."""
+    def get_combatant(self, name, strict=None):
+        """Gets a combatant by their name or ID.
+
+        :param name: The name or id of the combatant.
+        :param strict: Whether combatant name must be a full case insensitive match.
+                       None  - strict and then partial match
+                       False - only partial match
+                       True  - only strict match
+        :return: The combatant or None.
+        """
         if name in self._combatant_id_map:
             return self._combatant_id_map[name]
-        if strict:
-            return next((c for c in self.get_combatants() if c.name.lower() == name.lower()), None)
-        else:
-            return next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
+        if strict or strict is None:
+            combatant = next((c for c in self.get_combatants() if name.lower() == c.name.lower()), None)
+        if not combatant and not strict:
+            combatant = next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
+        return combatant
 
-    def get_group(self, name, create=None, strict=True):
+    def get_group(self, name, create=None, strict=None):
         """
         Gets a combatant group by its name or ID.
 
         :rtype: CombatantGroup
         :param name: The name of the combatant group.
         :param create: The initiative to create a group at if a group is not found.
-        :param strict: Whether group name must be a full case insensitive match.
+        :param strict: Whether combatant name must be a full case insensitive match.
+                       None  - strict and then partial match
+                       False - only partial match
+                       True  - only strict match
         :return: The combatant group.
         """
         if name in self._combatant_id_map and isinstance(self._combatant_id_map[name], CombatantGroup):
             return self._combatant_id_map[name]
-        if strict:
+
+        if strict or strict is None:
             grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
-        else:
+        if not grp and not strict:
             grp = next((g for g in self.get_groups() if name.lower() in g.name.lower()), None)
 
         if grp is None and create is not None:

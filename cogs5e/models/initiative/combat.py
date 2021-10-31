@@ -277,6 +277,8 @@ class Combat:
         """
         if name in self._combatant_id_map:
             return self._combatant_id_map[name]
+
+        combatant = None
         if strict or strict is None:
             combatant = next((c for c in self.get_combatants() if name.lower() == c.name.lower()), None)
         if not combatant and not strict:
@@ -299,6 +301,7 @@ class Combat:
         if name in self._combatant_id_map and isinstance(self._combatant_id_map[name], CombatantGroup):
             return self._combatant_id_map[name]
 
+        grp = None
         if strict or strict is None:
             grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
         if not grp and not strict:

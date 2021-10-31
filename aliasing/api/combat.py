@@ -545,6 +545,8 @@ class SimpleGroup:
         :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
         name = str(name)
+        combatant = None
+
         if strict or strict is None:
             combatant = next((c for c in self.get_combatants() if name.lower() == c.name.lower()), None)
         if not combatant and not strict:

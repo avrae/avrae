@@ -270,9 +270,9 @@ class Combat:
 
         :param name: The name or id of the combatant.
         :param strict: Whether combatant name must be a full case insensitive match.
-                       None  - strict and then partial match
-                       False - only partial match
-                       True  - only strict match
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         :return: The combatant or None.
         """
         if name in self._combatant_id_map:
@@ -293,9 +293,9 @@ class Combat:
         :param name: The name of the combatant group.
         :param create: The initiative to create a group at if a group is not found.
         :param strict: Whether combatant name must be a full case insensitive match.
-                       None  - strict and then partial match
-                       False - only partial match
-                       True  - only strict match
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         :return: The combatant group.
         """
         if name in self._combatant_id_map and isinstance(self._combatant_id_map[name], CombatantGroup):

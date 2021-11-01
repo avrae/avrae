@@ -50,9 +50,9 @@ class SimpleCombat:
 
         :param str name: The name or id of the combatant or group to get.
         :param strict: Whether combatant name must be a full case insensitive match.
-                       None  - strict and then partial match. Default.
-                       False - only partial match
-                       True  - only strict match
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         :return: The combatant or group or None.
         :rtype: :class:`~aliasing.api.combat.SimpleCombatant` or `~aliasing.api.combat.SimpleGroup`
         """
@@ -71,9 +71,9 @@ class SimpleCombat:
 
         :param str name: The name of the group to get.
         :param strict: Whether combatant name must be a full case insensitive match.
-                       None  - strict and then partial match. Default.
-                       False - only partial match
-                       True  - only strict match
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         :return: The group or None.
         :rtype: :class:`~aliasing.api.combat.SimpleGroup`
         """
@@ -538,9 +538,9 @@ class SimpleGroup:
 
         :param str name: The name of the combatant to get.
         :param strict: Whether combatant name must be a full case insensitive match.
-                       None  - strict and then partial match. Default.
-                       False - only partial match
-                       True  - only strict match
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         :return: The combatant or None.
         :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """

@@ -6,27 +6,25 @@ class Feat(LimitedUseGrantorMixin, DescribableMixin, Sourced):
     entity_type = 'feat'
     type_id = 1088085227
 
-    def __init__(self, name, desc, prerequisite=None, ability=None, **kwargs):
+    def __init__(self, name, desc, prerequisite=None, hidden=False, **kwargs):
         """
         :type name: str
         :type desc: str
         :type prerequisite: str or None
-        :type ability: list[str]
+        :type hidden: bool
         """
-        if ability is None:
-            ability = []
 
         super().__init__(homebrew=False, **kwargs)
         self.name = name
         self.desc = desc
         self.prerequisite = prerequisite
-        self.ability = ability
+        self.hidden = hidden
 
     @classmethod
     def from_data(cls, d):
         return cls(
             d['name'], d['description'],
-            d.get('prerequisite'), d.get('ability'),
+            d.get('prerequisite'), d.get('hidden', False),
             source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
         ).initialize_limited_use(d)
 

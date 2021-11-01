@@ -7,7 +7,15 @@ from utils.functions import chunk_text, trim_str
 MAX_NUM_FIELDS = 25
 
 
-class EmbedWithAuthor(discord.Embed):
+class EmbedWithColor(discord.Embed):
+    """An embed with a random color."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.colour = random.randint(0, 0xffffff)
+
+
+class EmbedWithAuthor(EmbedWithColor):
     """An embed with author image and nickname set."""
 
     def __init__(self, ctx, **kwargs):
@@ -16,7 +24,6 @@ class EmbedWithAuthor(discord.Embed):
         """
         super().__init__(**kwargs)
         self.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-        self.colour = random.randint(0, 0xffffff)
 
 
 class HomebrewEmbedWithAuthor(EmbedWithAuthor):

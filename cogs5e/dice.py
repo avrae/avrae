@@ -1,11 +1,13 @@
 import random
 import re
+import time
 
 import d20
 import discord
 from discord.ext import commands
 
 from aliasing import helpers
+from cogs5e.models import embeds
 from cogs5e.models.errors import NoSelectionElements
 from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
@@ -16,6 +18,8 @@ from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.dice import PersistentRollContext, VerboseMDStringifier
 from utils.functions import search_and_select, try_delete
+
+INLINE_ROLLING_EMOJI = '\U0001f3b2'  # :game_die:
 
 
 class Dice(commands.Cog):
@@ -293,13 +297,67 @@ class Dice(commands.Cog):
     async def on_message(self, message):
         if message.author.bot:
             return
-        await self.handle_inline_rolls(message)
+        await self.handle_message_inline_rolls(message)
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        if user.bot:
+            return
+        await self.handle_reaction_inline_rolls(reaction, user)
+
+    async def handle_message_inline_rolls(self, message):
+        # find roll expressions
+        roll_exprs = list(_find_inline_exprs(message.content))
+        if not roll_exprs:
+            return
+
+        # todo if inline rolling is disabled on this server (always enabled in pms?), skip
+
+        # todo if inline rolling is set to react only, pop a reaction on it and return (we re-enter from on_reaction)
+        if False:
+            # todo permission handling
+            await message.add_reaction(INLINE_ROLLING_EMOJI)
+            await self.inline_rolling_reaction_onboarding(message.author)
+            return
+
+        # if this is the user's first interaction with inline rolling, send an onboarding message
+        await self.inline_rolling_message_onboarding(message.author)
+
+        # otherwise do the rolls
+        await self.do_inline_rolls(message, roll_exprs)
+
+    async def handle_reaction_inline_rolls(self, reaction, user):
+        if user.id != reaction.message.author.id:
+            return
+        if reaction.emoji != INLINE_ROLLING_EMOJI:
+            return
+        message = reaction.message
+
+        # find roll expressions
+        roll_exprs = list(_find_inline_exprs(message.content))
+        if not roll_exprs:
+            return
+
+        # todo if inline rolling is disabled on this server (always enabled in pms?), skip
+        # todo if inline rolling is set to all-messages on this server, skip
+
+        # if this message has already been processed, skip
+        if await self.bot.rdb.get(f"cog.dice.inline_rolling.messages.{message.id}.processed"):
+            return
+
+        # otherwise save that this message has been processed and do the rolls
+        await self.bot.rdb.setex(
+            f"cog.dice.inline_rolling.messages.{message.id}.processed",
+            str(time.time()),
+            60 * 60 * 24
+        )
+        await self.do_inline_rolls(message, roll_exprs)
 
     @staticmethod
-    async def handle_inline_rolls(message):
+    async def do_inline_rolls(message, roll_exprs):
         out = []
         roller = d20.Roller(context=PersistentRollContext())
-        for expr, context_before, context_after in _find_inline_exprs(message.content):
+        for expr, context_before, context_after in roll_exprs:
             context_before = context_before.replace('\n', ' ')
             context_after = context_after.replace('\n', ' ')
 
@@ -317,6 +375,49 @@ class Dice(commands.Cog):
 
         await message.reply('\n'.join(out))
 
+    async def inline_rolling_message_onboarding(self, user):
+        if await self.bot.rdb.get(f"cog.dice.inline_rolling.users.{user.id}.onboarded.message"):
+            return
+
+        embed = embeds.EmbedWithColor()
+        embed.title = "Inline Rolling"
+        embed.description = f"Hi {user.mention}, it looks like this is your first time using inline rolling with me!"
+        embed.add_field(
+            name="What is Inline Rolling?",
+            value="Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll reply "
+                  "to it with a roll for each one. You can send messages with multiple, too, like this: ```\n"
+                  "I attack the goblin with my shortsword [[1d20 + 6]] for a total of [[1d6 + 3]] piercing damage.\n"
+                  "```"
+        )
+        embed.set_footer(text="You won't see this message again.")
+
+        try:
+            await user.send(embed=embed)
+        except discord.HTTPException:
+            return
+        await self.bot.rdb.set(f"cog.dice.inline_rolling.users.{user.id}.onboarded.message", str(time.time()))
+
+    async def inline_rolling_reaction_onboarding(self, user):
+        if await self.bot.rdb.get(f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction"):
+            return
+
+        embed = embeds.EmbedWithColor()
+        embed.title = "Inline Rolling - Reactions"
+        embed.description = f"Hi {user.mention}, it looks like this is your first time using inline rolling with me!"
+        embed.add_field(
+            name="What is Inline Rolling?",
+            value="Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll react "
+                  f"with the {INLINE_ROLLING_EMOJI} emoji. You can click it to have me roll all of the dice in your "
+                  "message, and I'll reply with my own message!"
+        )
+        embed.set_footer(text="You won't see this message again.")
+
+        try:
+            await user.send(embed=embed)
+        except discord.HTTPException:
+            return
+        await self.bot.rdb.set(f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction", str(time.time()))
+
 
 # ==== helpers ====
 def _string_search_adv(rollstr):
@@ -327,6 +428,7 @@ def _string_search_adv(rollstr):
     return rollstr, adv
 
 
+# todo how fast is this? this seems to be O(n) on length of message
 def _find_inline_exprs(content, context_before=5, context_after=2, max_context_len=128):
     """Returns an iterator of tuples (expr, context_before, context_after)."""
     content_len = len(content)

@@ -279,7 +279,7 @@ class Combat:
             return self._combatant_id_map[name]
 
         combatant = None
-        if strict or strict is None:
+        if strict is not False:
             combatant = next((c for c in self.get_combatants() if name.lower() == c.name.lower()), None)
         if not combatant and not strict:
             combatant = next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
@@ -302,7 +302,7 @@ class Combat:
             return self._combatant_id_map[name]
 
         grp = None
-        if strict or strict is None:
+        if strict is not False:
             grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
         if not grp and not strict:
             grp = next((g for g in self.get_groups() if name.lower() in g.name.lower()), None)

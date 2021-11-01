@@ -183,17 +183,17 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
                 embed.title = "Cannot cast spell!"
                 if not caster.spellbook.get_slots(l):
                     # out of spell slots
-                    err = f"You don't have enough level {l} slots left! Use `-l <level>` to cast at a different level, " \
-                          f"`{ctx.prefix}g lr` to take a long rest, or `-i` to ignore spell slots!"
+                    err = (f"You don't have enough level {l} slots left! Use `-l <level>` to cast at a different "
+                           f"level, `{ctx.prefix}g lr` to take a long rest, or `-i` to ignore spell slots!")
                 elif self.name not in caster.spellbook:
                     # don't know spell
-                    err = f"You don't know this spell! Use `{ctx.prefix}sb add {self.name}` to add it to your spellbook, " \
-                          f"or pass `-i` to ignore restrictions."
+                    err = (f"You don't know this spell! Use `{ctx.prefix}sb add {self.name}` to add it to your "
+                           f"spellbook, or pass `-i` to ignore restrictions.")
                 else:
                     # ?
-                    err = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                          f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, " \
-                          f"or pass `-i` to ignore restrictions."
+                    err = ("Not enough spell slots remaining, or spell not in known spell list!\n"
+                           f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, "
+                           f"or pass `-i` to ignore restrictions.")
                 embed.description = err
                 if l > 0:
                     embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))
@@ -201,8 +201,11 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
 
             # #1000: is this spell prepared (soft check)?
             if not is_prepared:
-                skip_prep_conf = await confirm(ctx, "This spell is not prepared. Do you want to cast it anyway?",
-                                               delete_msgs=True)
+                skip_prep_conf = await confirm(
+                    ctx,
+                    f"{self.name} is not prepared. Do you want to cast it anyway? (Reply with yes/no)",
+                    delete_msgs=True
+                )
                 if not skip_prep_conf:
                     embed = EmbedWithAuthor(
                         ctx, title=f"Cannot cast spell!",

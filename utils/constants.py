@@ -31,3 +31,8 @@ SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'i
 # ---- emojis, icons, other discord things ----
 DDB_LOGO_EMOJI = '<:beyond:783780183559372890>'
 DDB_LOGO_ICON = 'https://cdn.discordapp.com/emojis/783780183559372890.png?v=1'
+EMPTY_BUBBLE = '\u3007'
+FILLED_BUBBLE = '\u25c9'
+# pact slots
+EMPTY_BUBBLE_ALT = '\u25a2'
+FILLED_BUBBLE_ALT = '\u25a3'

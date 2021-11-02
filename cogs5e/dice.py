@@ -20,6 +20,7 @@ from utils.dice import PersistentRollContext, VerboseMDStringifier
 from utils.functions import search_and_select, try_delete
 
 INLINE_ROLLING_EMOJI = '\U0001f3b2'  # :game_die:
+INLINE_ROLLING_RE = re.compile(r'\[\[(.+?]?)]]')
 
 
 class Dice(commands.Cog):
@@ -428,64 +429,65 @@ def _string_search_adv(rollstr):
     return rollstr, adv
 
 
-# todo how fast is this? this seems to be O(n) on length of message
 def _find_inline_exprs(content, context_before=5, context_after=2, max_context_len=128):
     """Returns an iterator of tuples (expr, context_before, context_after)."""
-    content_len = len(content)
 
-    # all content indexes
-    idxs = []
-    for start, expr_start, expr_end, end in _find_roll_expr_indices(content):
-        before_idx = max(0, start - max_context_len)
-        before_fragment = content[before_idx:start]
-        before_bits = before_fragment.rsplit(maxsplit=context_before)
+    # create list alternating (before, expr; text, expr; ...; text, expr; after)
+    segments = INLINE_ROLLING_RE.split(content)
+
+    # want (before, expr, after; ...; before, expr, after)
+    # so split up each pair of (text, expr) by trimming the text into (last_after, before, expr)
+    # with priority on before
+    trimmed_segments = []
+    for text, expr in zip(a := iter(segments), a):  # fun way to take pairs from a list!
+        text_len = len(text)
+
+        # before is always text[before_idx:len(text)]
+        before_idx = 0
+        before_bits = text.rsplit(maxsplit=context_before)
         if len(before_bits) > context_before:
             before_idx += len(before_bits[0])
+        before_idx = max(before_idx, text_len - max_context_len)
+        before = text[before_idx:text_len]
 
-        after_idx = min(content_len, end + max_context_len)
-        after_fragment = content[end:after_idx]
-        after_bits = after_fragment.split(maxsplit=context_after)
+        # last_after is always text[0:last_after_end_idx]
+        last_after_end_idx = text_len
+        after_bits = text.split(maxsplit=context_after)
         if len(after_bits) > context_after:
-            after_idx -= len(after_bits[-1])
+            last_after_end_idx -= len(after_bits[-1])
+        last_after_end_idx = min(last_after_end_idx, before_idx)
+        last_after = text[0:last_after_end_idx]
 
-        idxs.append(((before_idx, start), (expr_start, expr_end), (end, after_idx)))
+        trimmed_segments.extend((last_after, before, expr))
 
-    # start boundaries
-    for i, ((before_idx, start), (expr_start, expr_end), (end, after_idx)) in enumerate(idxs[1:], start=1):
-        clamped_before_idx = max(before_idx, idxs[i - 1][2][0])
-        idxs[i] = (clamped_before_idx, start), (expr_start, expr_end), (end, after_idx)
+    # now we have (junk, before, expr; after, before, expr; ...; after, before, expr)
+    # discard the first junk
+    discarded_before = trimmed_segments.pop(0)
+    # and clean up the last after
+    discarded_after = False
+    last_after = segments[-1]
+    last_after_end_idx = len(last_after)
+    after_bits = last_after.split(maxsplit=context_after)
+    if len(after_bits) > context_after:
+        last_after_end_idx -= len(after_bits[-1])
+        discarded_after = True
+    trimmed_segments.append(last_after[0:last_after_end_idx])
+    # we also use whether or not the chopped-off bits at the very start and end exist for ellipses
 
-    # end boundaries
-    for i, ((before_idx, start), (expr_start, expr_end), (end, after_idx)) in enumerate(idxs[:-1]):
-        clamped_after_idx = min(after_idx, idxs[i + 1][0][0])
-        idxs[i] = (before_idx, start), (expr_start, expr_end), (end, clamped_after_idx)
+    # now we have (before, expr, after; ...)
+    # do ellipses and yield triples (expr, context_before, context_after)
+    num_triples = len(trimmed_segments) // 3
+    for idx, (before, expr, after) in enumerate(zip(a := iter(trimmed_segments), a, a)):
+        context_before = before.lstrip()
+        context_after = after.rstrip()
 
-    # turn into the exprs
-    for ((before_idx, start), (expr_start, expr_end), (end, after_idx)) in idxs:
-        context_before = content[before_idx:start].lstrip()
-        expr = content[expr_start:expr_end].strip()
-        context_after = content[end:after_idx].rstrip()
-
-        # ellipsis handling
-        if before_idx > 0:
+        if idx or discarded_before:  # not the first or something was discarded before first
             context_before = f"...{context_before}"
-        if after_idx < content_len:
+
+        if idx + 1 < num_triples or discarded_after:  # not the last or something was discarded after last
             context_after = f"{context_after}..."
 
-        yield expr, context_before, context_after
-
-
-def _find_roll_expr_indices(content):
-    """
-    Returns an iterator of tuples (start, expr_start, expr_end, end) representing the indices of the roll exprs found
-    (outside and inside the braces).
-    """
-    end = 0
-    while (start := content.find('[[', end)) != -1:
-        end = content.find(']]', start)
-        if end == -1:
-            break
-        yield start, start + 2, end, end + 2
+        yield expr.strip(), context_before, context_after
 
 
 # ==== d.py ====

@@ -351,6 +351,10 @@ class Dice(commands.Cog):
             60 * 60 * 24
         )
         await self.do_inline_rolls(message)
+        try:
+            await reaction.clear()
+        except discord.HTTPException:
+            pass
 
     @staticmethod
     async def do_inline_rolls(message):

@@ -308,8 +308,7 @@ class Dice(commands.Cog):
 
     async def handle_message_inline_rolls(self, message):
         # find roll expressions
-        roll_exprs = list(_find_inline_exprs(message.content))
-        if not roll_exprs:
+        if not INLINE_ROLLING_RE.search(message.content):
             return
 
         # todo if inline rolling is disabled on this server (always enabled in pms?), skip
@@ -325,7 +324,7 @@ class Dice(commands.Cog):
         await self.inline_rolling_message_onboarding(message.author)
 
         # otherwise do the rolls
-        await self.do_inline_rolls(message, roll_exprs)
+        await self.do_inline_rolls(message)
 
     async def handle_reaction_inline_rolls(self, reaction, user):
         if user.id != reaction.message.author.id:
@@ -335,8 +334,7 @@ class Dice(commands.Cog):
         message = reaction.message
 
         # find roll expressions
-        roll_exprs = list(_find_inline_exprs(message.content))
-        if not roll_exprs:
+        if not INLINE_ROLLING_RE.search(message.content):
             return
 
         # todo if inline rolling is disabled on this server (always enabled in pms?), skip
@@ -346,16 +344,18 @@ class Dice(commands.Cog):
         if await self.bot.rdb.get(f"cog.dice.inline_rolling.messages.{message.id}.processed"):
             return
 
-        # otherwise save that this message has been processed and do the rolls
+        # otherwise save that this message has been processed, remove reactions, and do the rolls
         await self.bot.rdb.setex(
             f"cog.dice.inline_rolling.messages.{message.id}.processed",
             str(time.time()),
             60 * 60 * 24
         )
-        await self.do_inline_rolls(message, roll_exprs)
+        await self.do_inline_rolls(message)
 
     @staticmethod
-    async def do_inline_rolls(message, roll_exprs):
+    async def do_inline_rolls(message):
+        roll_exprs = _find_inline_exprs(message.content)
+
         out = []
         roller = d20.Roller(context=PersistentRollContext())
         for expr, context_before, context_after in roll_exprs:
@@ -459,6 +459,9 @@ def _find_inline_exprs(content, context_before=5, context_after=2, max_context_l
         last_after = text[0:last_after_end_idx]
 
         trimmed_segments.extend((last_after, before, expr))
+
+    if not trimmed_segments:
+        return
 
     # now we have (junk, before, expr; after, before, expr; ...; after, before, expr)
     # discard the first junk

@@ -205,12 +205,13 @@ class AutomationTarget:
     def ac(self):
         return self.target.ac
 
-    def get_save_dice(self, save, adv=None):
-        sb = None
+    def get_save_dice(self, save, adv=None, sb=None):
         save_obj = self.target.saves.get(save)
 
         # combatant
-        if self.combatant:
+        if sb and self.combatant:
+            sb += self.combatant.active_effects('sb')
+        elif self.combatant:
             sb = self.combatant.active_effects('sb')
 
         # character-specific arguments (#1443)

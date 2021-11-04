@@ -30,7 +30,8 @@ class DicecloudClient:
             try:
                 cls.instance = cls(debug=config.TESTING)
                 cls.instance.initialize()
-            except:
+            except Exception as e:
+                log.warning(e)
                 return None
         return cls.instance
 

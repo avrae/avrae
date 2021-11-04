@@ -146,3 +146,36 @@ class GameLogEventContext:
     async def get_statblock(self):
         """:rtype: cogs5e.models.sheet.statblock.StatBlock or None"""
         return (await self.get_character()) or (await self.get_monster())
+
+    # ==== misc/notes ====
+    # The below is an implementation to load in combat from a GameLogEventContext. But this is actually terrible.
+    # It's recorded here for posterity, but the right option should really be refactoring init to be better. Hopefully
+    # we don't ever need to use this.
+
+    # @property
+    # def author(self):  # discord.ext.commands.Context compat - CombatantGroup needs this for some reason
+    #     if self._discord_user is _sentinel:
+    #         raise RuntimeError("you must load the author with get_discord_user() at least once before accessing")
+    #     if self._discord_user is None:
+    #         raise ValueError("Discord user could not be loaded")
+    #     return self._discord_user
+
+    # async def get_combat(self):
+    #     """Gets the combat in the channel the event is linked to, or None if not applicable."""
+    #     if self._combat is not _sentinel:
+    #         return self._combat
+    #
+    #     from cogs5e.models.initiative import Combat, CombatNotFound
+    #
+    #     author = await self.get_discord_user()  # ensure author is loaded - combat may access it
+    #     if author is None:  # was not able to load the author, so combat will not be able to be loaded
+    #         log.warning(f"Unable to load author when attempting to access combat for event {self.event.id!r}")
+    #         self._combat = None
+    #         return None
+    #     try:
+    #         combat = await Combat.from_id(str(self.channel.id), self)
+    #         self._combat = combat
+    #         return combat
+    #     except CombatNotFound:
+    #         self._combat = None
+    #         return None

@@ -11,8 +11,11 @@ class EmbedWithAuthor(discord.Embed):
     """An embed with author image and nickname set."""
 
     def __init__(self, ctx, **kwargs):
+        """
+        :type ctx: utils.context.AvraeContext
+        """
         super().__init__(**kwargs)
-        self.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+        self.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
         self.colour = random.randint(0, 0xffffff)
 
 
@@ -105,12 +108,14 @@ class EmbedPaginator:
         """Add a line of text to the last field in the current embed."""
         if not value:
             return
-        chunks = chunk_text(value, max_chunk_size=self.EMBED_FIELD_MAX)
+        chunks = chunk_text(value, max_chunk_size=self.EMBED_FIELD_MAX - 1)
 
+        # if the first chunk is too large to fit in the current field, start a new one
         if self._field_count + len(chunks[0]) + 1 > self.EMBED_FIELD_MAX:
             self.close_field()
             self._current_field_name = self.CONTINUATION_FIELD_TITLE
 
+        # add the rest of the chunks
         for i, chunk in enumerate(chunks):
             self._field_count += len(value) + 1
             self._current_field.append(chunk)

@@ -204,6 +204,7 @@ class InitTracker(commands.Cog):
         -b <condition bonus> - Adds a bonus to the combatant's initiative roll.
         -n <number or dice> - Adds more than one of that monster. Supports dice.
         -p <value> - Places combatant at the given value, instead of rolling.
+        -controller <controller> - Pings a different person on turn.
         -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
         -h - Hides HP, AC, Resists, etc. Default: True.
         -group <group> - Adds the combatant to a group.
@@ -218,7 +219,7 @@ class InitTracker(commands.Cog):
 
         args = argparse(args)
         private = not args.last('h', type_=bool)
-
+        controller = str(ctx.author.id)
         group = args.last('group')
         adv = args.adv(boolwise=True)
         b = args.join('b', '+')
@@ -274,7 +275,12 @@ class InitTracker(commands.Cog):
                     init = check_roll.total
                 else:
                     init = int(p)
-                controller = str(ctx.author.id)
+
+                # -controller (#1368)    
+                if args.last('controller'):
+                    controller_name = args.last('controller')
+                    member = await commands.MemberConverter().convert(ctx, controller_name)
+                    controller = str(member.id) if member is not None and not member.bot else controller
 
                 # -hp
                 rolled_hp = None
@@ -909,7 +915,7 @@ class InitTracker(commands.Cog):
         -dur <duration> - Sets the duration of the effect, in rounds.
         conc - Makes the effect require concentration. Will end any other concentration effects.
         end - Makes the effect duration tick on the end of turn, rather than the beginning.
-        -t <target> - Specifies more combatant's to target, chainable (e.g., "-t or1 -t or2").
+        -t <target> - Specifies more combatants to target, chainable (e.g., "-t or1 -t or2").
         -parent <"[combatant]|[effect]"> - Sets a parent effect from a specified combatant.
         __Attacks__
         adv/dis - Give advantage or disadvantage to all attack rolls.

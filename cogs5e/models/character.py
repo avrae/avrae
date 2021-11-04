@@ -1,8 +1,12 @@
+import asyncio
 import logging
+from collections import namedtuple
 
 import cachetools
+from discord.ext.commands import NoPrivateMessage
 
 import aliasing.evaluators
+from cogs5e.models.ddbsync import DDBSheetSync
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharacter, NoReset
@@ -34,16 +38,19 @@ class Character(StatBlock):
                  cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
                  spellbook: Spellbook,
                  live, race: str, background: str, creature_type: str = None,
-                 ddb_campaign_id: str = None, actions: Actions = None,
+                 ddb_campaign_id: str = None, actions: Actions = None, active_guilds: list = None,
                  **kwargs):
         if kwargs:
             log.warning(f"Unused kwargs: {kwargs}")
         if actions is None:
             actions = Actions()
+        if active_guilds is None:
+            active_guilds = []
         # sheet metadata
         self._owner = owner
         self._upstream = upstream
         self._active = active
+        self._active_guilds = active_guilds
         self._sheet_type = sheet_type
         self._import_version = import_version
 
@@ -65,7 +72,7 @@ class Character(StatBlock):
 
         # ccs
         self.consumables = [CustomCounter.from_dict(self, cons) for cons in consumables]
-        self.death_saves = DeathSaves.from_dict(death_saves)
+        self.death_saves = DeathSaves.from_dict(self, death_saves)
 
         # live sheet resource integrations
         self._live = live
@@ -97,9 +104,14 @@ class Character(StatBlock):
         return inst
 
     @classmethod
-    async def from_ctx(cls, ctx):
+    async def from_ctx(cls, ctx, ignore_guild: bool = False):
         owner_id = str(ctx.author.id)
-        active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
+        active_character = None
+        if ctx.guild is not None and not ignore_guild:
+            guild_id = str(ctx.guild.id)
+            active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
+        if active_character is None:
+            active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
         if active_character is None:
             raise NoCharacter()
 
@@ -152,12 +164,13 @@ class Character(StatBlock):
     def to_dict(self):
         d = super().to_dict()
         d.update({
-            "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
-            "import_version": self._import_version, "description": self._description,
+            "owner": self._owner, "upstream": self._upstream, "active": self._active,
+            "sheet_type": self._sheet_type, "import_version": self._import_version, "description": self._description,
             "image": self._image, "cvars": self.cvars, "options": self.options.to_dict(),
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
-            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict()
+            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict(),
+            "active_guilds": self._active_guilds
         })
         return d
 
@@ -170,11 +183,11 @@ class Character(StatBlock):
             pass
 
     # ---------- Basic CRUD ----------
-    def get_color(self):
+    def get_color(self) -> int:
         return self.options.get('color') or super().get_color()
 
     @property
-    def owner(self):
+    def owner(self) -> str:
         return self._owner
 
     @owner.setter
@@ -183,27 +196,27 @@ class Character(StatBlock):
         self._active = False  # don't have any conflicts
 
     @property
-    def upstream(self):
+    def upstream(self) -> str:
         return self._upstream
 
     @property
-    def upstream_id(self):
+    def upstream_id(self) -> str:
         return self._upstream.split('-', 1)[-1]
 
     @property
-    def sheet_type(self):
+    def sheet_type(self) -> str:
         return self._sheet_type
 
     @property
-    def attacks(self):
+    def attacks(self) -> AttackList:
         return self._attacks + self.overrides.attacks
 
     @property
-    def description(self):
+    def description(self) -> str:
         return self.overrides.desc or self._description
 
     @property
-    def image(self):
+    def image(self) -> str:
         return self.overrides.image or self._image or ''
 
     # ---------- CSETTINGS ----------
@@ -253,46 +266,131 @@ class Character(StatBlock):
         return out
 
     # ---------- DATABASE ----------
-    async def commit(self, ctx):
+    async def commit(self, ctx, do_live_integrations=True):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
         data.pop('active')  # #1472 - may regress when doing atomic commits, be careful
+        data.pop('active_guilds')
         try:
             await ctx.bot.mdb.characters.update_one(
                 {"owner": self._owner, "upstream": self._upstream},
                 {
                     "$set": data,
-                    "$setOnInsert": {'active': self._active}  # also #1472
+                    "$setOnInsert": {'active': self._active, 'active_guilds': self._active_guilds}  # also #1472
                 },
                 upsert=True
             )
         except OverflowError:
             raise ExternalImportError("A number on the character sheet is too large to store.")
+        if self._live_integration is not None and do_live_integrations:
+            self._live_integration.commit_soon(ctx)  # creates a task to commit eventually
 
     async def set_active(self, ctx):
-        """Sets the character as active."""
-        self._active = True
+        """Sets the character as globally active and unsets any server-active character in the current context."""
+        owner_id = str(ctx.author.id)
+        did_unset_server_active = False
+        if ctx.guild is not None:
+            guild_id = str(ctx.guild.id)
+            # for all characters owned by this owner who are active on this guild, make them inactive on this guild
+            result = await ctx.bot.mdb.characters.update_many(
+                {"owner": owner_id, "active_guilds": guild_id},
+                {"$pull": {"active_guilds": guild_id}}
+            )
+            did_unset_server_active = result.modified_count > 0
+            try:
+                self._active_guilds.remove(guild_id)
+            except ValueError:
+                pass
+        # for all characters owned by this owner who are globally active, make them inactive
         await ctx.bot.mdb.characters.update_many(
-            {"owner": str(ctx.author.id), "active": True},
+            {"owner": owner_id, "active": True},
             {"$set": {"active": False}}
         )
+        # make this character active
         await ctx.bot.mdb.characters.update_one(
-            {"owner": str(ctx.author.id), "upstream": self._upstream},
+            {"owner": owner_id, "upstream": self._upstream},
             {"$set": {"active": True}}
         )
+        self._active = True
+        return SetActiveResult(did_unset_server_active=did_unset_server_active)
+
+    async def set_server_active(self, ctx):
+        """
+        Removes all server-active characters and sets the character as active on the current server.
+        Raises NoPrivateMessage() if not in a server.
+        """
+        if ctx.guild is None:
+            raise NoPrivateMessage()
+        guild_id = str(ctx.guild.id)
+        owner_id = str(ctx.author.id)
+        # unset anyone else that might be active on this server
+        unset_result = await ctx.bot.mdb.characters.update_many(
+            {"owner": owner_id, "active_guilds": guild_id},
+            {"$pull": {"active_guilds": guild_id}}
+        )
+        # set us as active on this server
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": owner_id, "upstream": self._upstream},
+            {"$addToSet": {"active_guilds": guild_id}}
+        )
+        if guild_id not in self._active_guilds:
+            self._active_guilds.append(guild_id)
+        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
+
+    async def unset_server_active(self, ctx):
+        """
+        If this character is active on the contextual guild, unset it as the guild active character.
+        Raises NoPrivateMessage() if not in a server.
+        """
+        if ctx.guild is None:
+            raise NoPrivateMessage()
+        guild_id = str(ctx.guild.id)
+        # if and only if this character is active in this server, unset me as active on this server
+        unset_result = await ctx.bot.mdb.characters.update_one(
+            {"owner": str(ctx.author.id), "upstream": self._upstream},
+            {"$pull": {"active_guilds": guild_id}}
+        )
+        try:
+            self._active_guilds.remove(guild_id)
+        except ValueError:
+            pass
+        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
 
     # ---------- HP ----------
     @property
     def hp(self):
-        return self._hp
+        return super().hp
 
     @hp.setter
     def hp(self, value):
-        self._hp = max(0, value)
+        old_hp = self._hp
+        self._hp = max(0, value)  # reimplements the setter, but super().(property) = x doesn't work (py-14965)
         self.on_hp()
-
-        if self._live_integration:
+        if self._live_integration and self._hp != old_hp:
             self._live_integration.sync_hp()
+
+    @property
+    def temp_hp(self):
+        return super().temp_hp
+
+    @temp_hp.setter
+    def temp_hp(self, value):
+        old_temp = self._temp_hp
+        self._temp_hp = max(0, value)
+        if self._live_integration and self._temp_hp != old_temp:
+            self._live_integration.sync_hp()
+
+    @property
+    def max_hp(self):
+        return super().max_hp
+
+    @max_hp.setter
+    def max_hp(self, value):
+        """
+        Sets the character's base/canonical permanent max hp, which can be further modified by effects.
+        To temporarily change the character's max hp (i.e. in combat), use PlayerCombatant.max_hp.
+        """
+        self._max_hp = max(0, value)
 
     # ---------- SPELLBOOK ----------
     def add_known_spell(self, spell, dc: int = None, sab: int = None, mod: int = None):
@@ -364,7 +462,9 @@ class Character(StatBlock):
             reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
         if self.get_setting('srslots', False):
-            self.spellbook.reset_slots()
+            self.spellbook.reset_slots(is_short_rest=False)  # reset as if it was a long rest (legacy)
+        else:
+            self.spellbook.reset_slots(is_short_rest=True)
         return reset
 
     def long_rest(self, cascade=True):
@@ -379,8 +479,8 @@ class Character(StatBlock):
             reset.extend(self.short_rest(cascade=False))
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
-        if not self.get_setting('srslots', False):
-            self.spellbook.reset_slots()
+        if not self.get_setting('srslots', False):  # if srslots is true, the long rest slot reset is handled by sr
+            self.spellbook.reset_slots(is_short_rest=False)
         return reset
 
     def reset_all_consumables(self, cascade=True):
@@ -397,10 +497,14 @@ class Character(StatBlock):
         return reset
 
     # ---------- MISC ----------
+    def sync_death_saves(self):
+        if self._live_integration:
+            self._live_integration.sync_death_saves()
+
     def update(self, old_character):
         """
         Updates certain attributes to match an old character's.
-        Currently updates settings, overrides, cvars, consumables, overriden spellbook spells,
+        Currently updates settings, overrides, cvars, active guilds, consumables, overriden spellbook spells,
         hp, temp hp, death saves, used spell slots
         and caches the new character.
         :type old_character Character
@@ -409,6 +513,7 @@ class Character(StatBlock):
         self.options = old_character.options
         self.overrides = old_character.overrides
         self.cvars = old_character.cvars
+        self._active_guilds = old_character._active_guilds
 
         # consumables: no duplicate name or live (upstream) ids
         new_cc_names = set(con.name.lower() for con in self.consumables)
@@ -420,14 +525,30 @@ class Character(StatBlock):
         )
 
         # overridden spells
-        self.spellbook.spells.extend(self.overrides.spells)
+        sb = self.spellbook
+        sb.spells.extend(self.overrides.spells)
 
         # tracking
         self._hp = old_character._hp
         self._temp_hp = old_character._temp_hp
-        # ensure new slots are within bounds (#1453)
-        self.spellbook.slots = {l: min(v, self.spellbook.get_max_slots(l))
-                                for l, v in old_character.spellbook.slots.items()}
+        sb.slots = {  # ensure new slots are within bounds (#1453)
+            level: min(v, sb.get_max_slots(level))
+            for level, v in old_character.spellbook.slots.items()
+        }
+        if sb.num_pact_slots is not None:
+            sb.num_pact_slots = min(
+                old_character.spellbook.num_pact_slots or 0,  # pact slots before update
+                sb.max_pact_slots,  # cannot have more then max
+                sb.get_slots(sb.pact_slot_level)  # cannot gain slots out of nowhere
+            )
+
+            # sanity check:             num_non_pact <= max_non_pact
+            # get_slots(pact_level) - num_pact_slots <= get_max(pact_level) - max_pact_slots
+            #                         num_pact_slots >= max_pact_slots - get_max(pact_level) + get_slots(pact_level)
+            sb.num_pact_slots = max(
+                sb.num_pact_slots,
+                sb.max_pact_slots - sb.get_max_slots(sb.pact_slot_level) + sb.get_slots(sb.pact_slot_level)
+            )
 
         if (self.owner, self.upstream) in Character._cache:
             Character._cache[self.owner, self.upstream] = self
@@ -480,6 +601,30 @@ class Character(StatBlock):
 
         return embed
 
+    def is_active_global(self):
+        """Returns if a character is active globally."""
+        return self._active
+
+    def is_active_server(self, ctx):
+        """Returns if a character is active on the contextual server."""
+        if ctx.guild is not None:
+            return str(ctx.guild.id) in self._active_guilds
+        return False
+
+    def get_sheet_url(self):
+        """
+        Returns the sheet URL this character lives at, or None if the sheet url could not be created (possible for
+        really old characters).
+        """
+        base_urls = {
+            "beyond": "https://ddb.ac/characters/",
+            "dicecloud": "https://dicecloud.com/character/",
+            "google": "https://docs.google.com/spreadsheets/d/"
+        }
+        if self.sheet_type in base_urls:
+            return f"{base_urls[self.sheet_type]}{self.upstream_id}"
+        return None
+
 
 class CharacterSpellbook(Spellbook):
     """A subclass of spellbook to support live integrations."""
@@ -488,11 +633,13 @@ class CharacterSpellbook(Spellbook):
         super().__init__(*args, **kwargs)
         self._live_integration = None
 
-    def set_slots(self, level: int, value: int):
-        super().set_slots(level, value)
+    def set_slots(self, *args, **kwargs):
+        super().set_slots(*args, **kwargs)
         if self._live_integration:
             self._live_integration.sync_slots()
 
 
-INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
+SetActiveResult = namedtuple('SetActiveResult', 'did_unset_server_active')
+
+INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
 DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions}

@@ -44,30 +44,41 @@ class SimpleCombat:
         return cls(combat, None)
 
     # public methods
-    def get_combatant(self, name):
+    def get_combatant(self, name, strict=None):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
+        Gets a combatant by its name or ID.
 
-        :param str name: The name of the combatant to get.
-        :return: The combatant.
-        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
+        :param str name: The name or id of the combatant or group to get.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The combatant or group or None.
+        :rtype: :class:`~aliasing.api.combat.SimpleCombatant` or `~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
-        combatant = self._combat.get_combatant(name, False)
+        combatant = self._combat.get_combatant(name, strict)
         if combatant:
-            return SimpleCombatant(combatant)
+            if combatant.type == init.CombatantType.GROUP:
+                return SimpleGroup(combatant)
+            else:
+                return SimpleCombatant(combatant)
         return None
 
-    def get_group(self, name):
+    def get_group(self, name, strict=None):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleGroup`, fuzzy searching (partial match) on name.
+        Gets a :class:`~aliasing.api.combat.SimpleGroup` that matches on name.
 
         :param str name: The name of the group to get.
-        :return: The group.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The group or None.
         :rtype: :class:`~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
-        group = self._combat.get_group(name, strict=False)
+        group = self._combat.get_group(name, strict)
         if group:
             return SimpleGroup(group)
         return None
@@ -115,6 +126,24 @@ class SimpleCombat:
         """
         return self._combat._metadata.pop(str(k), None)
 
+    def set_round(self, round_num: int):
+        """
+        Sets the current round.
+        Setting the round will not tick any events with durations.
+
+        :param int round_num: the new round number
+        """
+        if not isinstance(round_num, int):
+            raise ValueError("Round_num must be an integer.")
+        self._combat.round_num = round_num
+
+    def end_round(self):
+        """
+        Moves initiative to just before the next round (no active combatant or group).
+        Ending the round will not tick any events with durations.
+        """
+        self._combat.end_round()
+
     # private functions
     def func_set_character(self, character):
         me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
@@ -160,6 +189,15 @@ class SimpleCombatant(AliasStatBlock):
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
+
+    @property
+    def id(self):
+        """
+        The combatant's unique identifier.
+
+        :rtype: str
+        """
+        return self._combatant.id
 
     @property
     def note(self):
@@ -474,6 +512,7 @@ class SimpleGroup:
         self._group = group
         self.type = "group"
         self.combatants = [SimpleCombatant(c) for c in self._group.get_combatants()]
+        self.init = self._group.init
 
     @property
     def name(self):
@@ -484,19 +523,46 @@ class SimpleGroup:
         """
         return self._group.name
 
-    def get_combatant(self, name):
+    @property
+    def id(self):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
+        The group's unique identifier.
+
+        :rtype: str
+        """
+        return self._group.id
+
+    def get_combatant(self, name, strict=None):
+        """
+       Gets a :class:`~aliasing.api.combat.SimpleCombatant` from the group.
 
         :param str name: The name of the combatant to get.
-        :return: The combatant.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The combatant or None.
         :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
         name = str(name)
-        combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
-        if combatant:
-            return combatant
-        return None
+        combatant = None
+
+        if strict is not False:
+            combatant = next((c for c in self.combatants if name.lower() == c.name.lower()), None)
+        if not combatant and not strict:
+            combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
+        return combatant
+
+    def set_init(self, init: int):
+        """
+        Sets the group's initiative roll.
+
+        :param int init: The new initiative.
+        """
+        if not isinstance(init, int):
+            raise ValueError("Initiative must be an integer.")
+        self._group.init = init
+        self._group.combat.sort_combatants()
 
     def __str__(self):
         return str(self._group)

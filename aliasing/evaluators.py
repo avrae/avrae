@@ -560,13 +560,13 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
     def load_yaml(self, yamlstr):
         """
-        Loads an safe object from a YAML string. See :func:`yaml.load(yamlstr, yaml.BaseLoader)`.
+        Loads an object from a YAML string. See `yaml.safe_load <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
         """
         return yaml.load(str(yamlstr), self._yaml_loader)
 
     def dump_yaml(self, obj, indent=2):
         """
-        Serializes an object to a safe YAML string. See :func:`yaml.safe_dump`.
+        Serializes an object to a YAML string. See `yaml.safe_dump <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
         """
         return yaml.dump(obj, Dumper=self._yaml_dumper, default_flow_style=False, line_break=True, indent=indent)
 

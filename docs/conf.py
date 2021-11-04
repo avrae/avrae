@@ -60,5 +60,7 @@ html_css_files = ['custom.css']
 
 # -- Intersphinx --------
 
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
-                       'd20': ('https://d20.readthedocs.io/en/latest', None)}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'd20': ('https://d20.readthedocs.io/en/latest', None),
+}

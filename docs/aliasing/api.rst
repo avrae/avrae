@@ -424,6 +424,12 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.delete_uvar(name)
 
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_yaml
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.dump_yaml
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
+
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.dump_json
 
 .. autofunction:: aliasing.api.functions.err
@@ -437,6 +443,8 @@ Draconic Functions
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name)
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_yaml
 
 .. function:: randint(stop)
               randint(start, stop[, step])

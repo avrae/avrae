@@ -462,9 +462,9 @@ class Character(StatBlock):
             reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
         if self.get_setting('srslots', False):
-            self.spellbook.reset_slots(is_short_rest=False)  # reset as if it was a long rest (legacy)
+            self.spellbook.reset_slots()  # reset as if it was a long rest (legacy)
         else:
-            self.spellbook.reset_slots(is_short_rest=True)
+            self.spellbook.reset_pact_slots()
         return reset
 
     def long_rest(self, cascade=True):
@@ -479,8 +479,7 @@ class Character(StatBlock):
             reset.extend(self.short_rest(cascade=False))
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
-        if not self.get_setting('srslots', False):  # if srslots is true, the long rest slot reset is handled by sr
-            self.spellbook.reset_slots(is_short_rest=False)
+        self.spellbook.reset_slots()
         return reset
 
     def reset_all_consumables(self, cascade=True):

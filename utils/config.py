@@ -12,6 +12,11 @@ RELOAD_INTERVAL = os.getenv('RELOAD_INTERVAL', '0')  # compendium static data re
 ECS_METADATA_ENDPT = os.getenv('ECS_CONTAINER_METADATA_URI')  # set by ECS
 OWNER_ID = int(os.getenv('DISCORD_OWNER_USER_ID', 0))
 MONSTER_TOKEN_ENDPOINT = os.getenv('MONSTER_TOKEN_ENDPOINT')  # S3: monster tokens
+# slash command test guilds - these only apply in development anyway, so hardcoded
+COMMAND_TEST_GUILD_IDS = [
+    269275778867396608,  # Avrae Development
+    783776775670726661,  # Avrae Constants Guild
+]
 
 # ---- mongo/redis ----
 MONGO_URL = os.getenv('MONGO_URL', "mongodb://localhost:27017")

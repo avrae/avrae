@@ -226,7 +226,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             dc_override = 8 + mod + prof_bonus
             ab_override = mod + prof_bonus
             spell_override = mod
-        elif with_arg is not None:
+        elif with_arg is not None and with_arg != "True":  # Don't give a vague error if someone forgets quotes
             if with_arg not in STAT_ABBREVIATIONS:
                 raise InvalidArgument(f"{with_arg} is not a valid stat to cast with.")
             mod = caster.stats.get_mod(with_arg)

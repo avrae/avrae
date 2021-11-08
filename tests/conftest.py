@@ -9,8 +9,8 @@ import logging
 import os
 import random
 import re
+from asyncio import Queue
 from fnmatch import fnmatchcase
-from queue import Queue
 
 import discord
 import pytest
@@ -119,7 +119,7 @@ class DiscordHTTPProxy(HTTPClient):
     async def request(self, route, *, files=None, header_bypass_delay=None, **kwargs):
         req = Request(route.method, route.url, kwargs.get('data') or kwargs.get('json'))
         log.info(str(req))
-        self._request_check_queue.put(req)
+        await self._request_check_queue.put(req)
 
         request_route = f"{req.method} {req.url.split(Route.BASE)[-1]}"
         try:
@@ -157,11 +157,10 @@ class DiscordHTTPProxy(HTTPClient):
         self.clear()
 
     async def get_request(self):
-        for _ in range(100):
-            if not self._request_check_queue.empty():
-                return self._request_check_queue.get()
-            await asyncio.sleep(0.1)
-        raise TimeoutError("Timed out waiting for Avrae response")
+        try:
+            return await asyncio.wait_for(self._request_check_queue.get(), timeout=10)
+        except asyncio.TimeoutError as e:
+            raise TimeoutError("Timed out waiting for Avrae response") from e
 
     async def receive_message(self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None):
         """

@@ -23,11 +23,11 @@ from dbot import bot
 
 pass  # here to prevent pycharm from moving around my imports >:C
 
-from cogs5e.models.character import Character
-from cogs5e.models.errors import AvraeException
-from cogs5e.models.initiative import Combat
-from tests.setup import *
-from utils.config import DEFAULT_PREFIX
+from cogs5e.models.character import Character  # noqa: E402
+from cogs5e.models.errors import AvraeException  # noqa: E402
+from cogs5e.models.initiative import Combat  # noqa: E402
+from tests.setup import *  # noqa: E4
+from utils.config import DEFAULT_PREFIX  # noqa: E402
 
 SENTINEL = object()
 
@@ -149,7 +149,11 @@ class DiscordHTTPProxy(HTTPClient):
         for task in to_cancel:
             task.cancel()
 
-        await asyncio.wait_for(asyncio.gather(*to_wait), timeout=10)
+        try:
+            await asyncio.wait_for(asyncio.gather(*to_wait), timeout=10)
+        except asyncio.TimeoutError:
+            log.info(f"Tasks we were waiting on when we timed out: {to_wait!r}")
+            raise
         self.clear()
 
     async def get_request(self):
@@ -322,6 +326,9 @@ async def avrae(dhttp):
     bot._connection.parse_guild_create(DUMMY_GUILD_CREATE)
     # noinspection PyProtectedMember
     bot._connection.add_dm_channel(DUMMY_DMCHANNEL_CREATE)
+    # noinspection PyProtectedMember
+    # used to allow the delay_ready task to progress
+    bot._connection.shards_launched.set()
 
     log.info("Ready for testing")
     yield bot

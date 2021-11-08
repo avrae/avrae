@@ -71,16 +71,18 @@ def start_dm_response(data):
 
 RESPONSES = {
     "GET /users/@me": lambda _: ME_USER,
+    "GET /oauth2/applications/@me": lambda _: DUMMY_APPLICATION_INFO,
+    "GET /applications/*/commands": lambda _: [],
     "GET /gateway": lambda _: {'url': 'wss://gateway.discord.gg'},
-    f"POST /channels/*/messages": message_response,
-    f"PATCH /channels/*/messages/*": edit_response,
-    f"DELETE /channels/*/messages/*": lambda _: None,
+    "POST /channels/*/messages": message_response,
+    "PATCH /channels/*/messages/*": edit_response,
+    "DELETE /channels/*/messages/*": lambda _: None,
     "POST /users/@me/channels": start_dm_response,
-    f"PUT /channels/*/pins/*": lambda _: None,
-    f"DELETE /channels/*/pins/*": lambda _: None,
-    f"PUT /channels/*/messages/*/reactions/*/@me": lambda _: None,
-    f"GET /channels/*/messages/*": message_response,
-    f"POST /channels/*/typing": lambda _: None,
+    "PUT /channels/*/pins/*": lambda _: None,
+    "DELETE /channels/*/pins/*": lambda _: None,
+    "PUT /channels/*/messages/*/reactions/*/@me": lambda _: None,
+    "GET /channels/*/messages/*": message_response,
+    "POST /channels/*/typing": lambda _: None,
 }
 
 # initialization
@@ -211,4 +213,40 @@ DUMMY_DMCHANNEL_CREATE = {
     ],
     'last_message_id': None,
     'id': str(TEST_DMCHANNEL_ID)
+}
+DUMMY_APPLICATION_INFO = {
+    'id': '111111111111111111',
+    'name': 'Avrae Test',
+    'icon': None,
+    'description': '',
+    'summary': '',
+    'bot_public': False,
+    'bot_require_code_grant': False,
+    'verify_key': 'foobar',
+    'owner': {
+        'id': '592425568222445573', 'username': 'team592425568222445573', 'avatar': None, 'discriminator': '0000',
+        'public_flags': 1024, 'flags': 1024
+    },
+    'flags': 32768,
+    'team': {
+        'id': '592425568222445573',
+        'icon': None,
+        'name': 'Avrae Team',
+        'owner_user_id': str(config.OWNER_ID),
+        'members': [
+            {
+                'user': {
+                    'id': str(config.OWNER_ID),
+                    'username': 'zhu.exe',
+                    'avatar': None,
+                    'discriminator': '4211',
+                    'public_flags': 131072
+                },
+                'team_id': '592425568222445573',
+                'membership_state': 2,
+                'permissions': ['*']
+            }
+        ]
+    },
+    'rpc_origins': None
 }

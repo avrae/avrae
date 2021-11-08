@@ -141,7 +141,7 @@ class DiscordHTTPProxy(HTTPClient):
             # note: we compare to repr(task) instead of the task's name since this contains information
             # about the function that created the task
             # if a bunch of tests are suddenly failing, this is often the culprit because of task names changing
-            if "discord.py" in repr(task):  # tasks started by d.py in reply to an event
+            if "disnake" in repr(task):  # tasks started by disnake in reply to an event
                 to_wait.add(task)
             elif "Message.delete" in repr(task):  # Messagable.send(..., delete_after=x)
                 to_cancel.add(task)

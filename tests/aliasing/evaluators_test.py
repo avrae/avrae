@@ -102,6 +102,60 @@ async def test_yaml_dumping(draconic_evaluator):
     assert result == [1, 2, 3]
 
 
+async def test_parsing_json(draconic_evaluator):
+    jsonable_data = {"hello": "world", "number": 1, "bool": True, "null": None, "list": [1, "two", 3.0]}
+    draconic_evaluator.builtins['data'] = jsonable_data
+    result = draconic_evaluator.eval("load_yaml(dump_json(data))")
+    assert result == jsonable_data
+
+
+async def test_anchors(draconic_evaluator):
+    # scalar anchors
+    expr = textwrap.dedent("""
+    - &flag Apple
+    - Beachball
+    - Cartoon
+    - Duckface
+    - *flag
+    """)
+    draconic_evaluator.builtins['yaml_string'] = expr
+    result = draconic_evaluator.eval("load_yaml(yaml_string)")
+    assert result == ['Apple', 'Beachball', 'Cartoon', 'Duckface', 'Apple']
+    assert type(result) is draconic_evaluator._list
+
+    # mapping anchors
+    expr = textwrap.dedent("""
+    template: &foo
+      game: Portal 2
+      type: Turret
+      functional: true
+      tags:
+        - 1
+        - 2
+        - 3
+    response: *foo
+    """)
+    draconic_evaluator.builtins['yaml_string'] = expr
+    result = draconic_evaluator.eval("load_yaml(yaml_string)")
+    print(result)
+    assert result == {
+        "template": {
+            "game": "Portal 2",
+            "type": "Turret",
+            "functional": True,
+            "tags": [1, 2, 3]
+        },
+        "response": {
+            "game": "Portal 2",
+            "type": "Turret",
+            "functional": True,
+            "tags": [1, 2, 3]
+        }
+    }
+    assert type(result) is draconic_evaluator._dict
+    assert type(result['template']['tags']) is type(result['response']['tags']) is draconic_evaluator._list
+
+
 async def test_naughty_yaml(draconic_evaluator):
     # taken from pyyaml docs
     ex1 = textwrap.dedent("""

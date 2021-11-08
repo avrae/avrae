@@ -108,22 +108,26 @@ class Spellbook:
         elif level == self.pact_slot_level and self.max_pact_slots is not None:  # make sure pact slots are valid
             self.num_pact_slots = max(min(self.num_pact_slots, value), value - (lmax - self.max_pact_slots))
 
-    def reset_slots(self, is_short_rest=False):
+    def reset_pact_slots(self):
         """
-        Sets the number of remaining spell slots to the max. If *is_short_rest* and there are pact slots, will
-        reset the pact slots.
+        Sets the number of remaining pact slots to the max, leaving non-pact slots untouched.
         """
-        if is_short_rest and self.pact_slot_level is not None:
-            # add number of used pact slots to current value
-            new_value = (self.max_pact_slots - self.num_pact_slots) + self.get_slots(self.pact_slot_level)
-            # overflow sanity check (usually for first rest after v17 to v18 update)
-            new_value = min(new_value, self.get_max_slots(self.pact_slot_level))
-            self.set_slots(self.pact_slot_level, new_value)
-            self.num_pact_slots = self.max_pact_slots
-        else:
-            for level in range(1, 10):
-                self.set_slots(level, self.get_max_slots(level))
-            self.num_pact_slots = self.max_pact_slots
+        if self.pact_slot_level is None:
+            return
+        # add number of used pact slots to current value
+        new_value = (self.max_pact_slots - self.num_pact_slots) + self.get_slots(self.pact_slot_level)
+        # overflow sanity check (usually for first rest after v17 to v18 update)
+        new_value = min(new_value, self.get_max_slots(self.pact_slot_level))
+        self.set_slots(self.pact_slot_level, new_value)
+        self.num_pact_slots = self.max_pact_slots
+
+    def reset_slots(self):
+        """
+        Sets the number of remaining spell slots (including pact slots) to the max.
+        """
+        for level in range(1, 10):
+            self.set_slots(level, self.get_max_slots(level))
+        self.num_pact_slots = self.max_pact_slots
 
     def get_max_slots(self, level: int):
         """

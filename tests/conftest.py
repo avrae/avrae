@@ -9,7 +9,6 @@ import logging
 import os
 import random
 import re
-from asyncio import Queue
 from fnmatch import fnmatchcase
 
 import discord
@@ -111,9 +110,9 @@ class DiscordHTTPProxy(HTTPClient):
     """
 
     def __init__(self, *args, **kwargs):
-        super(DiscordHTTPProxy, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # set up a way for us to track our requests
-        self._request_check_queue = Queue()
+        self._request_check_queue = asyncio.Queue()
 
     # override d.py's request logic to implement our own
     async def request(self, route, *, files=None, header_bypass_delay=None, **kwargs):
@@ -131,7 +130,7 @@ class DiscordHTTPProxy(HTTPClient):
 
     # helper functions
     def clear(self):
-        self._request_check_queue = Queue()
+        self._request_check_queue = asyncio.Queue()
 
     async def drain(self):
         """Waits until all requests have been sent and clears the queue."""

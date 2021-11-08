@@ -764,6 +764,12 @@ class AliasSpellbook:
         """
         return self._spellbook.reset_slots()
 
+    def reset_pact_slots(self):
+        """
+        Resets the number of remaining pact slots to the max, leaving non-pact slots untouched.
+        """
+        return self._spellbook.reset_pact_slots()
+
     def remaining_casts_of(self, spell, level):
         """
         Gets a string representing the remaining casts of a given spell at a given level.

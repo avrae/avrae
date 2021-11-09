@@ -2,11 +2,14 @@ import json
 import re
 import textwrap
 import time
+from functools import cached_property
 from math import ceil, floor, sqrt
 
 import d20
 import draconic
 import json.scanner
+import yaml
+from yaml import composer, constructor, parser, reader, resolver, scanner
 
 import aliasing.api.character as character_api
 import aliasing.api.combat as combat_api
@@ -95,6 +98,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             uvar_exists=self.uvar_exists,
             chanid=self.chanid, servid=self.servid,  # fixme deprecated - use ctx instead
             load_json=self.load_json, dump_json=self.dump_json,
+            load_yaml=self.load_yaml, dump_yaml=self.dump_yaml,
             argparse=argparse, ctx=AliasContext(ctx)
         )
 
@@ -449,6 +453,122 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         if name in self.names:
             return self.names[name]
         return default
+
+    # ==== YAML ====
+    @cached_property
+    def _yaml_dumper(self):
+        class DraconicDumper(yaml.SafeDumper):
+            def safe_dict_representer(self, data):
+                return self.represent_dict(data)
+
+            def safe_list_representer(self, data):
+                return self.represent_sequence(self.DEFAULT_SEQUENCE_TAG, data)
+
+            def safe_str_representer(self, data):
+                return self.represent_str(data)
+
+            def safe_set_representer(self, data):
+                return self.represent_sequence(self.DEFAULT_SEQUENCE_TAG, data)
+
+        DraconicDumper.add_representer(self._dict, DraconicDumper.safe_dict_representer)
+        DraconicDumper.add_representer(self._list, DraconicDumper.safe_list_representer)
+        DraconicDumper.add_representer(self._str, DraconicDumper.safe_str_representer)
+        DraconicDumper.add_representer(self._set, DraconicDumper.safe_set_representer)
+
+        return DraconicDumper
+
+    @cached_property
+    def _yaml_loader(self):
+        # make a subclass of the baseloader and register all the constructors for valid types as SafeConstructor
+        # defines it
+        interpreter = self
+
+        class DraconicConstructor(yaml.constructor.BaseConstructor):
+            bool_values = yaml.constructor.SafeConstructor.bool_values
+
+            def construct_yaml_set(self, node):
+                data = interpreter._set()
+                yield data
+                value = self.construct_mapping(node)
+                data.update(value)
+
+            def construct_yaml_str(self, node):
+                return interpreter._str(self.construct_scalar(node))
+
+            def construct_yaml_seq(self, node):
+                data = interpreter._list()
+                yield data
+                data.extend(self.construct_sequence(node))
+
+            def construct_yaml_map(self, node):
+                data = interpreter._dict()
+                yield data
+                value = self.construct_mapping(node)
+                data.update(value)
+
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:null',
+            yaml.constructor.SafeConstructor.construct_yaml_null)
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:bool',
+            yaml.constructor.SafeConstructor.construct_yaml_bool)
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:int',
+            yaml.constructor.SafeConstructor.construct_yaml_int)
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:float',
+            yaml.constructor.SafeConstructor.construct_yaml_float)
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:omap',
+            yaml.constructor.SafeConstructor.construct_yaml_omap)
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:pairs',
+            yaml.constructor.SafeConstructor.construct_yaml_pairs)
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:set',
+            DraconicConstructor.construct_yaml_set)
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:str',
+            DraconicConstructor.construct_yaml_str)
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:seq',
+            DraconicConstructor.construct_yaml_seq)
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:map',
+            DraconicConstructor.construct_yaml_map)
+        DraconicConstructor.add_constructor(
+            None,
+            DraconicConstructor.construct_yaml_str)
+
+        class DraconicLoader(
+            yaml.reader.Reader,
+            yaml.scanner.Scanner,
+            yaml.parser.Parser,
+            yaml.composer.Composer,
+            DraconicConstructor,
+            yaml.resolver.Resolver
+        ):
+            def __init__(self, stream):
+                yaml.reader.Reader.__init__(self, stream)
+                yaml.scanner.Scanner.__init__(self)
+                yaml.parser.Parser.__init__(self)
+                yaml.composer.Composer.__init__(self)
+                DraconicConstructor.__init__(self)
+                yaml.resolver.Resolver.__init__(self)
+
+        return DraconicLoader
+
+    def load_yaml(self, yamlstr):
+        """
+        Loads an object from a YAML string. See `yaml.safe_load <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
+        """
+        return yaml.load(str(yamlstr), self._yaml_loader)
+
+    def dump_yaml(self, obj, indent=2):
+        """
+        Serializes an object to a YAML string. See `yaml.safe_dump <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
+        """
+        return yaml.dump(obj, Dumper=self._yaml_dumper, default_flow_style=False, line_break=True, indent=indent)
 
     # ==== json ====
     def _json_decoder(self):

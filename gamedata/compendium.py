@@ -4,6 +4,7 @@ import copy
 import json
 import logging
 import os
+from typing import Callable, List, Type, TypeVar
 
 import gamedata.spell
 from gamedata.action import Action
@@ -19,6 +20,7 @@ from gamedata.shared import Sourced
 from utils import config
 
 log = logging.getLogger(__name__)
+T = TypeVar('T')
 
 
 class Compendium:
@@ -133,23 +135,17 @@ class Compendium:
         self._entity_lookup = {}
         self._book_lookup = {}
 
-        def deserialize_and_register_lookups(cls, data_source, **kwargs):
-            out = []
-            for entity_data in data_source:
-                entity = cls.from_data(entity_data, **kwargs)
-                self._register_entity_lookup(entity)
-                out.append(entity)
-            return out
-
-        self.backgrounds = deserialize_and_register_lookups(Background, self.raw_backgrounds)
-        self.classes = deserialize_and_register_lookups(Class, self.raw_classes)
-        self.races = deserialize_and_register_lookups(Race, self.raw_races)
-        self.subraces = deserialize_and_register_lookups(SubRace, self.raw_subraces)
-        self.feats = deserialize_and_register_lookups(Feat, self.raw_feats)
-        self.items = deserialize_and_register_lookups(Item, self.raw_items)
-        self.monsters = deserialize_and_register_lookups(Monster, self.raw_monsters)
-        self.spells = deserialize_and_register_lookups(gamedata.spell.Spell, self.raw_spells)
-        self.books = deserialize_and_register_lookups(Book, self.raw_books)
+        self.backgrounds = self._deserialize_and_register_lookups(Background, self.raw_backgrounds)
+        self.classes = self._deserialize_and_register_lookups(Class, self.raw_classes)
+        self.races = self._deserialize_and_register_lookups(Race, self.raw_races)
+        self.subraces = self._deserialize_and_register_lookups(SubRace, self.raw_subraces)
+        # if a Feat has the hidden attribute, we skip registering it in the lookup list but still register it in
+        # entity lookup so it can grant limiteduse/etc
+        self.feats = self._deserialize_and_register_lookups(Feat, self.raw_feats, skip_out_filter=lambda f: f.hidden)
+        self.items = self._deserialize_and_register_lookups(Item, self.raw_items)
+        self.monsters = self._deserialize_and_register_lookups(Monster, self.raw_monsters)
+        self.spells = self._deserialize_and_register_lookups(gamedata.spell.Spell, self.raw_spells)
+        self.books = self._deserialize_and_register_lookups(Book, self.raw_books)
 
         # generated
         self._load_classfeats()
@@ -245,6 +241,20 @@ class Compendium:
             self.actions.append(action)
             self._actions_by_uid[action.uid] = action
             self._actions_by_eid[(action.type_id, action.id)].append(action)
+
+    def _deserialize_and_register_lookups(
+            self,
+            cls: Type[T],
+            data_source: List[dict],
+            skip_out_filter: Callable[[T], bool] = None,
+            **kwargs) -> List[T]:
+        out = []
+        for entity_data in data_source:
+            entity = cls.from_data(entity_data, **kwargs)
+            self._register_entity_lookup(entity)
+            if skip_out_filter is None or not skip_out_filter(entity):
+                out.append(entity)
+        return out
 
     def _register_entity_lookup(self, entity: Sourced, allow_overwrite=True):
         k = (entity.entity_type, entity.entity_id)

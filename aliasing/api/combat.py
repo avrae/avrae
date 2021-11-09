@@ -44,16 +44,20 @@ class SimpleCombat:
         return cls(combat, None)
 
     # public methods
-    def get_combatant(self, name):
+    def get_combatant(self, name, strict=None):
         """
         Gets a combatant by its name or ID.
 
-        If a combatant name is passed, returns the first :class:`~aliasing.api.combat.SimpleCombatant` that matches the name via fuzzy searching (partial match) on name. This cannot return groups.
-
-        If a combatant ID is passed, returns the combatant with the given ID, which may be a :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
+        :param str name: The name or id of the combatant or group to get.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The combatant or group or None.
+        :rtype: :class:`~aliasing.api.combat.SimpleCombatant` or `~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
-        combatant = self._combat.get_combatant(name, False)
+        combatant = self._combat.get_combatant(name, strict)
         if combatant:
             if combatant.type == init.CombatantType.GROUP:
                 return SimpleGroup(combatant)
@@ -61,16 +65,20 @@ class SimpleCombat:
                 return SimpleCombatant(combatant)
         return None
 
-    def get_group(self, name):
+    def get_group(self, name, strict=None):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleGroup`, fuzzy searching (partial match) on name.
+        Gets a :class:`~aliasing.api.combat.SimpleGroup` that matches on name.
 
         :param str name: The name of the group to get.
-        :return: The group.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The group or None.
         :rtype: :class:`~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
-        group = self._combat.get_group(name, strict=False)
+        group = self._combat.get_group(name, strict)
         if group:
             return SimpleGroup(group)
         return None
@@ -524,19 +532,26 @@ class SimpleGroup:
         """
         return self._group.id
 
-    def get_combatant(self, name):
+    def get_combatant(self, name, strict=None):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
+       Gets a :class:`~aliasing.api.combat.SimpleCombatant` from the group.
 
         :param str name: The name of the combatant to get.
-        :return: The combatant.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The combatant or None.
         :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
         name = str(name)
-        combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
-        if combatant:
-            return combatant
-        return None
+        combatant = None
+
+        if strict is not False:
+            combatant = next((c for c in self.combatants if name.lower() == c.name.lower()), None)
+        if not combatant and not strict:
+            combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
+        return combatant
 
     def set_init(self, init: int):
         """

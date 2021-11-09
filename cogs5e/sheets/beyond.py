@@ -134,7 +134,7 @@ class BeyondSheetParser(SheetLoaderABC):
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = char_id
         self.character_data = character
-        self._is_live = ddb_user.user_id == str(character['ownerId'])
+        self._is_live = (ddb_user is not None) and (ddb_user.user_id == str(character['ownerId']))
         log.debug(character)
         return character
 

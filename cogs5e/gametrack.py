@@ -12,12 +12,14 @@ import d20
 from discord.ext import commands
 
 from aliasing import helpers
+from cogs5e.models import embeds
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelectionElements
 from cogs5e.utils import checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
+from utils import constants
 from utils.argparser import argparse
 from utils.functions import confirm, maybe_mod, search, search_and_select, try_delete
 
@@ -70,7 +72,7 @@ class GameTrack(commands.Cog):
                 return await ctx.send("Invalid spell level.")
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
-        embed.set_footer(text="\u25c9 = Available / \u3007 = Used")
+
         if level is None and value is None:  # show remaining
             embed.description = f"__**Remaining Spell Slots**__\n{character.spellbook.slots_str()}"
         elif value is None:
@@ -83,6 +85,14 @@ class GameTrack(commands.Cog):
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
                                 f"{character.spellbook.slots_str(level)} ({(value - old_slots):+})"
+
+        # footer - pact vs non pact
+        if character.spellbook.max_pact_slots is not None:
+            embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
+                                  f"{constants.FILLED_BUBBLE_ALT} / {constants.EMPTY_BUBBLE_ALT} = Pact Slot")
+        else:
+            embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used")
+
         await ctx.send(embed=embed)
 
     async def _rest(self, ctx, rest_type, *args):
@@ -341,19 +351,19 @@ class GameTrack(commands.Cog):
         await ctx.trigger_typing()
 
         character: Character = await Character.from_ctx(ctx)
-        embed = EmbedWithCharacter(character)
-        embed.add_field(name="DC", value=str(character.spellbook.dc))
-        embed.add_field(name="Spell Attack Bonus", value=str(character.spellbook.sab))
-        embed.add_field(name="Spell Slots", value=character.spellbook.slots_str() or "None")
+        ep = embeds.EmbedPaginator(EmbedWithCharacter(character))
+        ep.add_field(name="DC", value=str(character.spellbook.dc), inline=True)
+        ep.add_field(name="Spell Attack Bonus", value=str(character.spellbook.sab), inline=True)
+        ep.add_field(name="Spell Slots", value=character.spellbook.slots_str() or "None", inline=True)
 
         show_unprepared = 'all' in args
         known_count = len(character.spellbook.spells)
         prepared_count = sum(1 for spell in character.spellbook.spells if spell.prepared)
 
         if known_count == prepared_count:
-            embed.description = f"{character.name} knows {known_count} spells."
+            ep.add_description(f"{character.name} knows {known_count} spells.")
         else:
-            embed.description = f"{character.name} has {prepared_count} spells prepared and knows {known_count} spells."
+            ep.add_description(f"{character.name} has {prepared_count} spells prepared and knows {known_count} spells.")
 
         # dynamic help flags
         flag_show_multiple_source_help = False
@@ -394,13 +404,14 @@ class GameTrack(commands.Cog):
 
             spells_known[known_level].append(formatted)
 
-        level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
-                      '4': '4th Level', '5': '5th Level', '6': '6th Level',
-                      '7': '7th Level', '8': '8th Level', '9': '9th Level'}
+        level_name = {
+            '0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level', '4': '4th Level', '5': '5th Level',
+            '6': '6th Level', '7': '7th Level', '8': '8th Level', '9': '9th Level'
+        }
         for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
             if spells:
                 spells.sort(key=lambda s: s.lstrip('*_'))
-                embed.add_field(name=level_name.get(level, "Unknown"), value=', '.join(spells), inline=False)
+                ep.add_field(name=level_name.get(level, "Unknown"), value=', '.join(spells), inline=False)
 
         # dynamic help
         footer_out = []
@@ -414,9 +425,8 @@ class GameTrack(commands.Cog):
             footer_out.append("Prepared spells are marked with an underline.")
 
         if footer_out:
-            embed.set_footer(text=' '.join(footer_out))
-
-        await ctx.send(embed=embed)
+            ep.set_footer(value=' '.join(footer_out))
+        await ep.send_to(ctx)
 
     @spellbook.command(name='add')
     async def spellbook_add(self, ctx, spell_name, *args):

@@ -86,20 +86,25 @@ INDICES = {
         IndexModel('id', unique=True),
         IndexModel([('username', ASCENDING), ('discriminator', ASCENDING)])
     ],
-    # todo put the existing indices here
     "characters": [
         IndexModel([('owner', ASCENDING), ('upstream', ASCENDING)], unique=True),
         IndexModel([('owner', ASCENDING), ('active', ASCENDING)], background=True),
         IndexModel([('owner', ASCENDING), ('active_guilds', ASCENDING)], background=True),
     ],
+    # todo put the existing indices here
     "combats": [],
-    "lookupsettings": [],
+    "lookupsettings": [  # deprecated in feature/settings-menus branch, replaced by guild_settings
+        IndexModel('server', unique=True)
+    ],
     "static_data": [],
     "user_permissions": [
         IndexModel('id', unique=True)
     ],
     "tutorial_map": [
         IndexModel('user_id', unique=True)
+    ],
+    "guild_settings": [
+        IndexModel('guild_id', unique=True)
     ],
 
     # alias workshop

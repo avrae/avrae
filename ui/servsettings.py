@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 import disnake
 
+from utils.aldclient import discord_user_to_dict
 from utils.settings.guild import InlineRollingType, ServerSettings
 from .menu import MenuBase
 
@@ -22,6 +23,22 @@ class ServerSettingsMenuBase(MenuBase, abc.ABC):
     async def commit_settings(self):
         """Commits any changed guild settings to the db."""
         await self.settings.commit(self.bot.mdb)
+
+    async def get_inline_rolling_desc(self) -> str:
+        flag_enabled = await self.bot.ldclient.variation(
+            "cog.dice.inline_rolling.enabled",
+            user=discord_user_to_dict(self.owner),
+            default=False
+        )
+        if not flag_enabled:
+            return "Inline rolling is currently **globally disabled** for all users. Check back soon!"
+
+        if self.settings.inline_enabled == InlineRollingType.DISABLED:
+            return "Inline rolling is currently **disabled**."
+        elif self.settings.inline_enabled == InlineRollingType.REACTION:
+            return ("Inline rolling is currently set to **react**. I'll look for messages containing `[[dice]]` "
+                    "and react with :game_die: - click the reaction to roll!")
+        return "Inline rolling is currently **enabled**. I'll roll any `[[dice]]` I find in messages!"
 
 
 class ServerSettingsUI(ServerSettingsMenuBase):
@@ -60,7 +77,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         )
         embed.add_field(
             name="Inline Rolling Settings",
-            value=get_inline_rolling_desc(self.settings.inline_enabled),
+            value=await self.get_inline_rolling_desc(),
             inline=False
         )
         return {"embed": embed}
@@ -164,15 +181,6 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Inline Rolling Settings",
             colour=disnake.Colour.blurple(),
-            description=get_inline_rolling_desc(self.settings.inline_enabled)
+            description=await self.get_inline_rolling_desc()
         )
         return {"embed": embed}
-
-
-def get_inline_rolling_desc(inline_enabled: InlineRollingType) -> str:
-    if inline_enabled == InlineRollingType.DISABLED:
-        return "Inline rolling is currently **disabled**."
-    elif inline_enabled == InlineRollingType.REACTION:
-        return ("Inline rolling is currently set to **react**. I'll look for messages containing `[[dice]]` "
-                "and react with :game_die: - click the reaction to roll!")
-    return "Inline rolling is currently **enabled**. I'll roll any `[[dice]]` I find in messages!"

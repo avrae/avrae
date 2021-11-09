@@ -15,6 +15,7 @@ from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata import Monster
 from gamedata.lookuputils import handle_source_footer, select_monster_full, select_spell_full
+from utils.aldclient import discord_user_to_dict
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.dice import PersistentRollContext, VerboseMDStringifier
@@ -312,6 +313,13 @@ class Dice(commands.Cog):
         if not INLINE_ROLLING_RE.search(message.content):
             return
 
+        # inline rolling feature flag
+        if not await self.bot.ldclient.variation(
+                "cog.dice.inline_rolling.enabled",
+                user=discord_user_to_dict(message.author),
+                default=False):
+            return
+
         if message.guild is not None:  # (always enabled in pms)
             guild_settings = await utils.settings.ServerSettings.for_guild(self.bot.mdb, message.guild.id)
 
@@ -347,6 +355,13 @@ class Dice(commands.Cog):
 
         # if the reaction is in PMs (inline rolling always enabled), skip
         if message.guild is None:
+            return
+
+        # inline rolling feature flag
+        if not await self.bot.ldclient.variation(
+                "cog.dice.inline_rolling.enabled",
+                user=discord_user_to_dict(message.author),
+                default=False):
             return
 
         # if inline rolling is not set to reactions, skip

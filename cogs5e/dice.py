@@ -6,6 +6,7 @@ import d20
 import discord
 from discord.ext import commands
 
+import utils.settings
 from aliasing import helpers
 from cogs5e.models import embeds
 from cogs5e.models.errors import NoSelectionElements
@@ -311,14 +312,21 @@ class Dice(commands.Cog):
         if not INLINE_ROLLING_RE.search(message.content):
             return
 
-        # todo if inline rolling is disabled on this server (always enabled in pms?), skip
+        if message.guild is not None:  # (always enabled in pms)
+            guild_settings = await utils.settings.ServerSettings.for_guild(self.bot.mdb, message.guild.id)
 
-        # todo if inline rolling is set to react only, pop a reaction on it and return (we re-enter from on_reaction)
-        if False:
-            # todo permission handling
-            await message.add_reaction(INLINE_ROLLING_EMOJI)
-            await self.inline_rolling_reaction_onboarding(message.author)
-            return
+            # if inline rolling is disabled on this server, skip
+            if guild_settings.inline_enabled is utils.settings.guild.InlineRollingType.DISABLED:
+                return
+
+            # if inline rolling is set to react only, pop a reaction on it and return (we re-enter from on_reaction)
+            if guild_settings.inline_enabled is utils.settings.guild.InlineRollingType.REACTION:
+                try:
+                    await message.add_reaction(INLINE_ROLLING_EMOJI)
+                except discord.HTTPException:
+                    return  # if we can't react, just skip
+                await self.inline_rolling_reaction_onboarding(message.author)
+                return
 
         # if this is the user's first interaction with inline rolling, send an onboarding message
         await self.inline_rolling_message_onboarding(message.author)
@@ -337,8 +345,14 @@ class Dice(commands.Cog):
         if not INLINE_ROLLING_RE.search(message.content):
             return
 
-        # todo if inline rolling is disabled on this server (always enabled in pms?), skip
-        # todo if inline rolling is set to all-messages on this server, skip
+        # if the reaction is in PMs (inline rolling always enabled), skip
+        if message.guild is None:
+            return
+
+        # if inline rolling is not set to reactions, skip
+        guild_settings = await utils.settings.ServerSettings.for_guild(self.bot.mdb, message.guild.id)
+        if guild_settings.inline_enabled is not utils.settings.guild.InlineRollingType.REACTION:
+            return
 
         # if this message has already been processed, skip
         if await self.bot.rdb.get(f"cog.dice.inline_rolling.messages.{message.id}.processed"):

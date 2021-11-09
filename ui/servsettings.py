@@ -45,7 +45,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
     async def exit(self, *_):
         await self.on_timeout()  # todo redirect back to global settings
 
-    def get_content(self):
+    async def get_content(self):
         embed = disnake.Embed(
             title=f"Server Settings for {self.guild.name}",
             colour=disnake.Colour.blurple()
@@ -94,7 +94,7 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
 
-    def get_content(self):
+    async def get_content(self):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Lookup Settings",
             colour=disnake.Colour.blurple(),
@@ -160,7 +160,7 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
 
-    def get_content(self):
+    async def get_content(self):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Inline Rolling Settings",
             colour=disnake.Colour.blurple(),

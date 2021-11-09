@@ -37,14 +37,15 @@ class MenuBase(disnake.ui.View):
         await self.message.edit(view=None)
 
     # ==== content ====
-    def get_content(self) -> Mapping:
+    async def get_content(self) -> Mapping:
         """Return a mapping of kwargs to send when sending the view."""
         return {}
 
     # ==== helpers ====
     async def send_to(self, destination: disnake.abc.Messageable, *args, **kwargs):
         """Sends this menu to a given destination."""
-        message = await destination.send(*args, view=self, **self.get_content(), **kwargs)
+        content_kwargs = await self.get_content()
+        message = await destination.send(*args, view=self, **content_kwargs, **kwargs)
         self.message = message
         return message
 
@@ -53,8 +54,10 @@ class MenuBase(disnake.ui.View):
         view = view_type.from_menu(self)
         if stop:
             self.stop()
-        await interaction.response.edit_message(view=view, **view.get_content())
+        content_kwargs = await view.get_content()
+        await interaction.response.edit_message(view=view, **content_kwargs)
 
     async def refresh_content(self, interaction: disnake.Interaction):
         """Refresh the interaction's message with the current state of the menu."""
-        await interaction.response.edit_message(view=self, **self.get_content())
+        content_kwargs = await self.get_content()
+        await interaction.response.edit_message(view=self, **content_kwargs)

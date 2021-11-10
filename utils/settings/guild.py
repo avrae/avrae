@@ -1,6 +1,6 @@
 import enum
 
-from pydantic import BaseModel
+from . import SettingsBaseModel
 
 
 class InlineRollingType(enum.IntEnum):
@@ -9,7 +9,7 @@ class InlineRollingType(enum.IntEnum):
     ENABLED = 2
 
 
-class ServerSettings(BaseModel):
+class ServerSettings(SettingsBaseModel):
     guild_id: int
     # lookup_dm_role: int = 1234
     lookup_dm_required: bool = True

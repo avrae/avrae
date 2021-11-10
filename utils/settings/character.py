@@ -92,7 +92,7 @@ class CSetting:  # character settings
         return f'\u2139 Your character\'s current {self.description} is {self.default}.'
 
     def reset(self):
-        setattr(self.character.options, self.setting_key, self.default)
+        setattr(self.character.options, self.setting_key, CharacterSettings.__fields__[self.setting_key].default)
         return f"\u2705 {self.description.capitalize()} reset to {self.default}."
 
     def set(self, new_value):
@@ -120,8 +120,8 @@ class CSetting:  # character settings
         try:
             setattr(self.character.options, self.setting_key, val)
         except ValidationError as e:
-            return f"\u274c Invalid {self.description}: {e!s}. Use " \
-                   f"`{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}."
+            return f"\u274c Invalid {self.description}: {e!s}.\n" \
+                   f"Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}."
         return f"\u2705 {self.description.capitalize()} set to {self.display_func(val)}.\n"
 
 

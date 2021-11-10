@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from collections import namedtuple
 
@@ -13,12 +12,13 @@ from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharact
 from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
-from cogs5e.models.sheet.player import CharOptions, CustomCounter, DeathSaves, ManualOverrides
+from cogs5e.models.sheet.player import CustomCounter, DeathSaves, ManualOverrides
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock
 from cogs5e.sheets.abc import SHEET_VERSION
 from utils.functions import search_and_select
+from utils.settings import CharacterSettings
 
 log = logging.getLogger(__name__)
 
@@ -35,17 +35,24 @@ class Character(StatBlock):
     def __init__(self, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
                  name: str, description: str, image: str, stats: BaseStats, levels: Levels, attacks: AttackList,
                  skills: Skills, resistances: Resistances, saves: Saves, ac: int, max_hp: int, hp: int, temp_hp: int,
-                 cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
+                 cvars: dict, overrides: dict, consumables: list, death_saves: dict,
                  spellbook: Spellbook,
-                 live, race: str, background: str, creature_type: str = None,
+                 live, race: str, background: str,
+                 creature_type: str = None,
                  ddb_campaign_id: str = None, actions: Actions = None, active_guilds: list = None,
+                 options_v2: CharacterSettings = None,
                  **kwargs):
-        if kwargs:
-            log.warning(f"Unused kwargs: {kwargs}")
         if actions is None:
             actions = Actions()
         if active_guilds is None:
             active_guilds = []
+        if options_v2 is None:
+            if 'options' in kwargs:  # options v1 -> v2 migration (options rewrite)
+                options_v2 = CharacterSettings.from_old_csettings(kwargs.pop('options'))
+            else:
+                options_v2 = CharacterSettings()
+        if kwargs:
+            log.warning(f"Unused kwargs: {kwargs}")
         # sheet metadata
         self._owner = owner
         self._upstream = upstream
@@ -67,7 +74,7 @@ class Character(StatBlock):
 
         # customization
         self.cvars = cvars
-        self.options = CharOptions.from_dict(options)
+        self.options = options_v2
         self.overrides = ManualOverrides.from_dict(overrides)
 
         # ccs
@@ -166,11 +173,11 @@ class Character(StatBlock):
         d.update({
             "owner": self._owner, "upstream": self._upstream, "active": self._active,
             "sheet_type": self._sheet_type, "import_version": self._import_version, "description": self._description,
-            "image": self._image, "cvars": self.cvars, "options": self.options.to_dict(),
+            "image": self._image, "cvars": self.cvars,
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
             "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict(),
-            "active_guilds": self._active_guilds
+            "active_guilds": self._active_guilds, "options_v2": self.options.dict(),
         })
         return d
 
@@ -218,23 +225,6 @@ class Character(StatBlock):
     @property
     def image(self) -> str:
         return self.overrides.image or self._image or ''
-
-    # ---------- CSETTINGS ----------
-    def get_setting(self, setting, default=None):
-        """Gets the value of a csetting.
-        :returns the csetting's value, or default."""
-        setting = self.options.get(setting)
-        if setting is None:
-            return default
-        return setting
-
-    def set_setting(self, setting, value):
-        """Sets the value of a csetting."""
-        self.options.set(setting, value)
-
-    def delete_setting(self, setting):
-        """Deletes a setting if it exists."""
-        self.options.set(setting, None)
 
     # ---------- SCRIPTING ----------
     def evaluate_math(self, varstr):
@@ -461,7 +451,7 @@ class Character(StatBlock):
         if cascade:
             reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
-        if self.get_setting('srslots', False):
+        if self.options.srslots:
             self.spellbook.reset_slots()  # reset as if it was a long rest (legacy)
         else:
             self.spellbook.reset_pact_slots()
@@ -641,4 +631,4 @@ class CharacterSpellbook(Spellbook):
 SetActiveResult = namedtuple('SetActiveResult', 'did_unset_server_active')
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
-DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions}
+DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions, "options_v2": CharacterSettings}

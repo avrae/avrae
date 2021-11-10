@@ -8,30 +8,6 @@ from .attack import AttackList
 from .spellcasting import SpellbookSpell
 
 
-class CharOptions:
-    def __init__(self, options=None):
-        if options is None:
-            options = {}
-        self.options = options
-
-    @classmethod
-    def from_dict(cls, d):
-        return cls(**d)
-
-    def to_dict(self):
-        return {"options": self.options}
-
-    # ---------- main funcs ----------
-    def get(self, option, default=None):
-        return self.options.get(option, default)
-
-    def set(self, option, value):
-        if value is None and option in self.options:
-            del self.options[option]
-        else:
-            self.options[option] = value
-
-
 class ManualOverrides:
     def __init__(self, desc=None, image=None, attacks=None, spells=None):
         if attacks is None:

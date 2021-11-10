@@ -40,7 +40,7 @@ class LegacyRawCharacter:
 
             "spellbook": self.legacy_spellbook(),
 
-            "settings": self.character.options.options
+            "settings": self.character.options.dict()
         }
         self.result = out
         return out

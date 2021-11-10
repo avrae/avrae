@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 class CharacterSettings(SettingsBaseModel):
     # cosmetic
-    color: Optional[Color] = None
+    color: Optional[conint(ge=0, le=0xffffff)] = None
     embed_image: bool = True
 
     # gameplay
@@ -47,13 +47,6 @@ class CharacterSettings(SettingsBaseModel):
                 "$unset": {"options": True}  # delete any old options - they should have been converted by now
             }
         )
-
-    # override dict() for custom Color serialization
-    def dict(self, *args, **kwargs):
-        d = super().dict(*args, **kwargs)
-        if 'color' in d and d['color'] is not None:
-            d['color'] = self.color.original()
-        return d
 
 
 # ==== legacy csettings ====
@@ -98,7 +91,9 @@ class CSetting:  # character settings
     def set(self, new_value):
         if self.type == 'color':
             try:
-                val = Color(new_value)
+                color_val = Color(new_value)
+                r, g, b = color_val.as_rgb_tuple(alpha=False)
+                val = (r << 16) + (g << 8) + b
             except (ValueError, TypeError):
                 return f'\u274c Invalid {self.description}. ' \
                        f'Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}.'
@@ -126,7 +121,7 @@ class CSetting:  # character settings
 
 
 CHARACTER_SETTINGS = {
-    "color": CSetting("color", "color", default="random", display_func=lambda val: val.as_hex()),
+    "color": CSetting("color", "color", default="random", display_func=lambda val: f"#{val:06X}"),
     "criton": CSetting("crit_on", "number", description="crit range", default=20,
                        display_func=lambda val: f"{val}-20"),
     "reroll": CSetting("reroll", "number"),

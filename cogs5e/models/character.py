@@ -191,11 +191,7 @@ class Character(StatBlock):
 
     # ---------- Basic CRUD ----------
     def get_color(self) -> int:
-        color_option = self.options.color
-        if color_option is None:
-            return super().get_color()
-        r, g, b = color_option.as_rgb_tuple(alpha=False)
-        return (r << 16) + (g << 8) + b
+        return self.options.color if self.options.color is not None else super().get_color()
 
     @property
     def owner(self) -> str:

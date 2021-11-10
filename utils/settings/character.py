@@ -1,9 +1,13 @@
+import logging
 from typing import Optional
 
-from pydantic import conint
+from pydantic import ValidationError, conint
 from pydantic.color import Color
 
+from utils.functions import get_positivity
 from . import SettingsBaseModel
+
+log = logging.getLogger(__name__)
 
 
 class CharacterSettings(SettingsBaseModel):
@@ -24,14 +28,14 @@ class CharacterSettings(SettingsBaseModel):
         """Returns a new CharacterSettings instance with all default options, updated by legacy csettings options."""
         # for each key, get it from old or fall back to class default
         return cls(
-            color=d.get('color', cls.color),
-            embed_image=d.get('embedimage', cls.embed_image),
-            crit_on=d.get('criton', cls.crit_on),
-            extra_crit_dice=d.get('critdice', cls.extra_crit_dice),
-            ignore_crit=d.get('ignorecrit', cls.ignore_crit),
-            reroll=d.get('reroll', cls.reroll),
-            talent=d.get('talent', cls.talent),
-            srslots=d.get('srslots', cls.srslots)
+            color=d.get('color', None),
+            embed_image=d.get('embedimage', True),
+            crit_on=d.get('criton', 20),
+            extra_crit_dice=d.get('critdice', 0),
+            ignore_crit=d.get('ignorecrit', False),
+            reroll=d.get('reroll', None),
+            talent=d.get('talent', False),
+            srslots=d.get('srslots', False)
         )
 
     async def commit(self, mdb, character):
@@ -43,3 +47,96 @@ class CharacterSettings(SettingsBaseModel):
                 "$unset": {"options": True}  # delete any old options - they should have been converted by now
             }
         )
+
+    # override dict() for custom Color serialization
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'color' in d and d['color'] is not None:
+            d['color'] = self.color.original()
+        return d
+
+
+# ==== legacy csettings ====
+# this code lives here to keep the legacy CLI interface working, because I'm not rewriting that
+class CSetting:  # character settings
+    def __init__(self, setting_key, type_, description=None, default=None, display_func=None):
+        self.character = None
+        self.ctx = None
+        if type_ not in ("color", "number", "boolean"):
+            raise ValueError("Setting type must be color, number, or boolean")
+        if description is None:
+            description = setting_key
+        if display_func is None:
+            display_func = lambda val: val
+        self.setting_key = setting_key
+        self.type = type_
+        self.description = description
+        self.default = default
+        self.display_func = display_func
+
+    def run(self, ctx, char, arg):
+        self.character = char
+        self.ctx = ctx
+        if arg is None:
+            return self.info()
+        elif arg in ('reset', self.default):
+            return self.reset()
+        else:
+            return self.set(arg)
+
+    def info(self):
+        old_val = getattr(self.character.options, self.setting_key)
+        if old_val is not None:
+            return f'\u2139 Your character\'s current {self.description} is {self.display_func(old_val)}. ' \
+                   f'Use "{self.ctx.prefix}csettings {self.setting_key} reset" to reset it to {self.default}.'
+        return f'\u2139 Your character\'s current {self.description} is {self.default}.'
+
+    def reset(self):
+        setattr(self.character.options, self.setting_key, self.default)
+        return f"\u2705 {self.description.capitalize()} reset to {self.default}."
+
+    def set(self, new_value):
+        if self.type == 'color':
+            try:
+                val = Color(new_value)
+            except (ValueError, TypeError):
+                return f'\u274c Invalid {self.description}. ' \
+                       f'Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}.'
+        elif self.type == 'number':
+            try:
+                val = int(new_value)
+            except (ValueError, TypeError):
+                return f'\u274c Invalid {self.description}. ' \
+                       f'Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}.'
+        elif self.type == 'boolean':
+            try:
+                val = get_positivity(new_value)
+            except AttributeError:
+                return f'\u274c Invalid {self.description}.' \
+                       f'Use `{self.ctx.prefix}csettings {self.setting_key} false` to reset it.'
+        else:
+            log.warning(f"No setting type for {self.type} found")
+            return
+        try:
+            setattr(self.character.options, self.setting_key, val)
+        except ValidationError as e:
+            return f"\u274c Invalid {self.description}: {e!s}. Use " \
+                   f"`{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}."
+        return f"\u2705 {self.description.capitalize()} set to {self.display_func(val)}.\n"
+
+
+CHARACTER_SETTINGS = {
+    "color": CSetting("color", "color", default="random", display_func=lambda val: val.as_hex()),
+    "criton": CSetting("crit_on", "number", description="crit range", default=20,
+                       display_func=lambda val: f"{val}-20"),
+    "reroll": CSetting("reroll", "number"),
+    "srslots": CSetting("srslots", "boolean", description="short rest slots", default='disabled',
+                        display_func=lambda val: 'enabled' if val else 'disabled'),
+    "embedimage": CSetting("embed_image", "boolean", description="embed image", default='disabled',
+                           display_func=lambda val: 'enabled' if val else 'disabled'),
+    "critdice": CSetting("extra_crit_dice", "number", description="extra crit dice", default=0),
+    "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
+                       display_func=lambda val: 'enabled' if val else 'disabled'),
+    "ignorecrit": CSetting("ignore_crit", "boolean", description="ignore crits", default='disabled',
+                           display_func=lambda val: 'enabled' if val else 'disabled')
+}

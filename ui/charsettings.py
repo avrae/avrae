@@ -176,7 +176,7 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
         if value == 'null':
             self.settings.reroll = None
         else:
-            self.settings.reroll = int(select.values[0])
+            self.settings.reroll = int(value)
         await self.commit_settings()
         await self.refresh_content(interaction)
 

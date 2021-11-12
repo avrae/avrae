@@ -22,7 +22,6 @@ from gamedata.race import RaceFeature
 from utils import checks, img
 from utils.argparser import argparse
 from utils.functions import chunk_text, get_positivity, search_and_select, trim_str
-from utils.settings import ServerSettings
 
 LARGE_THRESHOLD = 200
 
@@ -564,12 +563,13 @@ class Lookup(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def lookup_settings(self, ctx, *args):
         """This command has been replaced by `!settings`. If you're used to it, it still works like before!"""
-        guild_settings = await ServerSettings.for_guild(ctx.bot.mdb, ctx.guild.id)
+        guild_settings = await ctx.get_server_settings()
         if not args:
             settings_ui = ui.ServerSettingsUI.new(ctx.bot, owner=ctx.author, settings=guild_settings, guild=ctx.guild)
             await settings_ui.send_to(ctx)
             return
 
+        # old deprecated CLI behaviour
         args = argparse(args)
         out = []
         if 'req_dm_monster' in args:

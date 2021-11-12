@@ -53,7 +53,7 @@ class Damage(Effect):
 
         # character-specific arguments
         if autoctx.character and 'critdice' not in args:
-            critdice = autoctx.character.get_setting('critdice')
+            critdice = autoctx.character.options.extra_crit_dice
 
         # combat-specific arguments
         if not autoctx.target.is_simple:

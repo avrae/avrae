@@ -20,11 +20,11 @@ def update_csetting_args(char, args, skill=None):
     :return:
     """
     # reliable talent (#654)
-    rt = bool(char.get_setting('talent', 0) and (skill and skill.prof >= 1))
+    rt = bool(char.options.talent and (skill and skill.prof >= 1))
     args['mc'] = args.get('mc') or 10 * rt
 
     # halfling luck
-    args['ro'] = char.get_setting('reroll')
+    args['ro'] = char.options.reroll
 
 
 def run_check(skill_key, caster, args, embed):

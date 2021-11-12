@@ -54,10 +54,13 @@ class MenuBase(disnake.ui.View):
         view = view_type.from_menu(self)
         if stop:
             self.stop()
-        content_kwargs = await view.get_content()
-        await interaction.response.edit_message(view=view, **content_kwargs)
+        await view.refresh_content(interaction)
 
     async def refresh_content(self, interaction: disnake.Interaction):
         """Refresh the interaction's message with the current state of the menu."""
         content_kwargs = await self.get_content()
-        await interaction.response.edit_message(view=self, **content_kwargs)
+        if interaction.response.is_done():
+            # using interaction feels cleaner, but we could probably do self.message.edit too
+            await interaction.edit_original_message(view=self, **content_kwargs)
+        else:
+            await interaction.response.edit_message(view=self, **content_kwargs)

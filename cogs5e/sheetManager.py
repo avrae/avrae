@@ -13,6 +13,7 @@ import yaml
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
+import ui
 from aliasing import helpers
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
@@ -29,26 +30,9 @@ from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete
-from utils.user_settings import CSetting
+from utils.settings.character import CHARACTER_SETTINGS
 
 log = logging.getLogger(__name__)
-
-CHARACTER_SETTINGS = {
-    "color": CSetting("color", "hex", default="random", display_func=lambda val: f"#{val:06X}", min_=0,
-                      max_=0xffffff),
-    "criton": CSetting("criton", "number", description="crit range", default=20,
-                       display_func=lambda val: f"{val}-20", min_=1, max_=20),
-    "reroll": CSetting("reroll", "number", min_=1, max_=20),
-    "srslots": CSetting("srslots", "boolean", description="short rest slots", default='disabled',
-                        display_func=lambda val: 'enabled' if val else 'disabled'),
-    "embedimage": CSetting("embedimage", "boolean", description="embed image", default='disabled',
-                           display_func=lambda val: 'enabled' if val else 'disabled'),
-    "critdice": CSetting("critdice", "number", description="extra crit dice", default=0),
-    "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
-                       display_func=lambda val: 'enabled' if val else 'disabled'),
-    "ignorecrit": CSetting("ignorecrit", "boolean", description="ignore crits", default='disabled',
-                           display_func=lambda val: 'enabled' if val else 'disabled')
-}
 
 
 class SheetManager(commands.Cog):
@@ -486,19 +470,19 @@ class SheetManager(commands.Cog):
             return await loading.edit(content=f"Error loading character: {eep}")
 
         character.update(old_character)
-        
+
         # keeps an old check if the old character was active on the current server
         was_server_active = old_character.is_active_server(ctx)
-        
+
         await character.commit(ctx)
-        
+
         # overwrites the old_character's server active state
         # since character._active_guilds is old_character._active_guilds here
         if old_character.is_active_global():
             await character.set_active(ctx)
         if was_server_active:
             await character.set_server_active(ctx)
-        
+
         await loading.edit(content=f"Updated and saved data for {character.name}!")
         if args.last('v'):
             await ctx.send(embed=character.get_sheet_embed())
@@ -534,21 +518,15 @@ class SheetManager(commands.Cog):
 
     @commands.command()
     async def csettings(self, ctx, *args):
-        """Updates personalization settings for the currently active character.
+        """Updates settings for the currently active character."""
+        char = await ctx.get_character()
 
-        __**Valid Arguments**__
-        Use `<setting> reset` to reset a setting to the default.
+        if not args:
+            settings_ui = ui.CharacterSettingsUI.new(ctx.bot, owner=ctx.author, character=char)
+            await settings_ui.send_to(ctx)
+            return
 
-        `color <hex color>` - Colors all character-based built-in embeds this color. Accessible as the cvar `color`
-        `criton <number>` - Makes attacks crit on something other than a 20.
-        `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
-        `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
-        `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
-        `critdice <number>` - Adds additional damage dice on a critical hit. 
-        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with.
-        `ignorecrit true/false` - Prevents critical hits from applying, for example with adamantine armor."""  # noqa: E501
-        char = await Character.from_ctx(ctx)
-
+        # old deprecated CLI behaviour
         out = []
         skip = False
         for i, arg in enumerate(args):
@@ -559,10 +537,10 @@ class SheetManager(commands.Cog):
                 out.append(CHARACTER_SETTINGS[arg].run(ctx, char, list_get(i + 1, None, args)))
 
         if not out:
-            return await ctx.send(f"No valid settings found. See `{ctx.prefix}help {ctx.invoked_with}` for a list "
-                                  f"of valid settings.")
+            return await ctx.send(f"No valid settings found. Try `{ctx.prefix}csettings` with no arguments to use an "
+                                  f"interactive menu!")
 
-        await char.commit(ctx)
+        await char.options.commit(ctx.bot.mdb, char)
         await ctx.send('\n'.join(out))
 
     async def _confirm_overwrite(self, ctx, _id):

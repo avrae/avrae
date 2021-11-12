@@ -310,7 +310,7 @@ class AliasCharacter(AliasStatBlock):
 
         :rtype: dict
         """
-        return self._character.options.options.copy()
+        return self._character.options.dict()
 
     # --- private helpers ----
     async def func_commit(self, ctx):

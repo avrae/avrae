@@ -52,9 +52,9 @@ class Attack(Effect):
         # character-specific arguments
         if autoctx.character:
             if 'reroll' not in args:
-                reroll = autoctx.character.get_setting('reroll', 0)
+                reroll = autoctx.character.options.reroll
             if 'criton' not in args:
-                criton = autoctx.character.get_setting('criton', 20)
+                criton = autoctx.character.options.crit_on
 
         # check for combatant IEffects
         if autoctx.combatant:
@@ -76,7 +76,7 @@ class Attack(Effect):
         # ==== target options ====
         if autoctx.target.character:
             # 1556
-            nocrit = nocrit or autoctx.target.character.get_setting("ignorecrit", False)
+            nocrit = nocrit or autoctx.target.character.options.ignore_crit
 
         # ==== execution ====
         attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab

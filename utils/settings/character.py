@@ -23,6 +23,10 @@ class CharacterSettings(SettingsBaseModel):
     talent: bool = False
     srslots: bool = False
 
+    # character sync
+    sync_outbound: bool = True  # avrae to upstream
+    sync_inbound: bool = True  # upstream to avrae
+
     @classmethod
     def from_old_csettings(cls, d):
         """Returns a new CharacterSettings instance with all default options, updated by legacy csettings options."""

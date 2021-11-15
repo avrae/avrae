@@ -141,7 +141,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def bestiary_server(self, ctx):
         """Toggles whether the active bestiary should be viewable by anyone on the server.
-        Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
+        Requires __Manage Server__ permissions or a role named "Server Brewer" or "Dragonspeaker" to run."""
         bestiary = await Bestiary.from_ctx(ctx)
         is_server_active = await bestiary.toggle_server_active(ctx)
         if is_server_active:
@@ -264,7 +264,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def pack_server(self, ctx):
         """Toggles whether the active pack should be viewable by anyone on the server.
-        Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
+        Requires __Manage Server__ permissions or a role named "Server Brewer" or "Dragonspeaker" to run."""
         pack = await Pack.from_ctx(ctx)
         is_server_active = await pack.toggle_server_active(ctx)
         if is_server_active:
@@ -386,7 +386,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def tome_server(self, ctx):
         """Toggles whether the active tome should be viewable by anyone on the server.
-        Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
+        Requires __Manage Server__ permissions or a role named "Server Brewer" or "Dragonspeaker" to run."""
         tome = await Tome.from_ctx(ctx)
         is_server_active = await tome.toggle_server_active(ctx)
         if is_server_active:

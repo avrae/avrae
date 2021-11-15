@@ -388,6 +388,7 @@ class InitTracker(commands.Cog):
         """
         Moves to the next turn in initiative order.
         It must be your turn or you must be a DM to use this command.
+        A DM is the person who started combat and anyone with the "DM", "GM", "Dungeon Master" or "Game Master" role.
         """
 
         combat = await Combat.from_ctx(ctx)

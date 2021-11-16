@@ -60,7 +60,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
 
     @disnake.ui.button(label='Exit', style=disnake.ButtonStyle.danger)
     async def exit(self, *_):
-        await self.on_timeout()  # todo redirect back to global settings
+        await self.on_timeout()
 
     async def get_content(self):
         embed = disnake.Embed(

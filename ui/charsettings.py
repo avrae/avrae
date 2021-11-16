@@ -86,7 +86,7 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
 
     @disnake.ui.button(label='Exit', style=disnake.ButtonStyle.danger, row=1)
     async def exit(self, *_):
-        await self.on_timeout()  # todo redirect back to global settings
+        await self.on_timeout()
 
     async def _before_send(self):
         if TYPE_CHECKING:

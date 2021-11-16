@@ -402,7 +402,10 @@ class Dice(commands.Cog):
             except d20.RollError as e:
                 out.append(f"{context_before}({e!s}){context_after}")
             else:
-                out.append(f"{context_before}({result.result}){context_after}")
+                if not result.comment:
+                    out.append(f"{context_before}({result.result}){context_after}")
+                else:
+                    out.append(f"{result.comment}: {result.result}")
 
         if not out:
             return

@@ -156,26 +156,43 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
 
 class _InlineRollingSettingsUI(ServerSettingsMenuBase):
     @disnake.ui.button(label='Disable', style=disnake.ButtonStyle.primary)
-    async def disable(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+    async def disable(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.inline_enabled = InlineRollingType.DISABLED
+        button.disabled = True
+        self.react.disabled = False
+        self.enable.disabled = False
         await self.commit_settings()
         await self.refresh_content(interaction)
 
     @disnake.ui.button(label='React', style=disnake.ButtonStyle.primary)
-    async def react(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+    async def react(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.inline_enabled = InlineRollingType.REACTION
+        button.disabled = True
+        self.disable.disabled = False
+        self.enable.disabled = False
         await self.commit_settings()
         await self.refresh_content(interaction)
 
     @disnake.ui.button(label='Enable', style=disnake.ButtonStyle.primary)
-    async def enable(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+    async def enable(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.inline_enabled = InlineRollingType.ENABLED
+        button.disabled = True
+        self.disable.disabled = False
+        self.react.disabled = False
         await self.commit_settings()
         await self.refresh_content(interaction)
 
     @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=1)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
+
+    async def _before_send(self):
+        if self.settings.inline_enabled is InlineRollingType.DISABLED:
+            self.disable.disabled = True
+        elif self.settings.inline_enabled is InlineRollingType.REACTION:
+            self.react.disabled = True
+        elif self.settings.inline_enabled is InlineRollingType.ENABLED:
+            self.enable.disabled = True
 
     async def get_content(self):
         embed = disnake.Embed(

@@ -405,7 +405,7 @@ class Dice(commands.Cog):
                 if not result.comment:
                     out.append(f"{context_before}({result.result}){context_after}")
                 else:
-                    out.append(f"{result.comment}: {result.result}")
+                    out.append(f"**{result.comment}**: {result.result}")
 
         if not out:
             return

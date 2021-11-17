@@ -223,7 +223,7 @@ class BeyondSheetParser(SheetLoaderABC):
             if spell_mod is not None:
                 mods.append(spell_mod)
 
-            result = next((s for s in compendium.spells if s.entity_id == spell['id']), None)
+            result = compendium.lookup_entity(gamedata.Spell.entity_type, spell['id'])
 
             if result:
                 spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,

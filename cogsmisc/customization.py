@@ -537,7 +537,7 @@ class Customization(commands.Cog):
         invoke_without_command=True,
         help="""
         Adds an alias that the entire server can use.
-        Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
+        Requires __Administrator__ Discord permissions or a role called "Server Aliaser" or "Dragonspeaker".
         If a user and a server have aliases with the same name, the user alias will take priority.
         """,
         checks=[guild_only_check], aliases=['serveralias']
@@ -586,7 +586,7 @@ class Customization(commands.Cog):
         invoke_without_command=True,
         help="""
         Creates a snippet that the entire server can use.
-        Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
+        Requires __Administrator__ Discord permissions or a role called "Server Aliaser" or "Dragonspeaker".
         If a user and a server have snippets with the same name, the user snippet will take priority.
         """,
         checks=[guild_only_check], aliases=['serversnippet']

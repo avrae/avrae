@@ -118,7 +118,7 @@ class AliasChannel:
 
     def __init__(self, channel):
         """
-        :type channel: discord.TextChannel
+        :type channel: discord.TextChannel or discord.DMChannel or discord.Thread
         """
         self._name = str(channel)
         self._id = channel.id

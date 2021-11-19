@@ -324,7 +324,7 @@ async def update_gvar(ctx, gid, value):
 # snippets
 async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
     """
-    Parses user and server snippets, including any inline scipring.
+    Parses user and server snippets, including any inline scripting.
 
     :param args: The string to parse. Will be split automatically
     :param ctx: The Context.
@@ -368,7 +368,9 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
                 )
                 # analytics
                 await the_snippet.log_invocation(ctx, server_invoker)
-            elif ' ' in arg:
+            else:
+                # in case the user is using old-style on the fly templating
+                arg = await evaluator.transformed_str_async(arg, execution_scope=ExecutionScope.PERSONAL_SNIPPET)
                 args[index] = argquote(arg)
     finally:
         await evaluator.run_commits()

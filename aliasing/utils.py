@@ -8,3 +8,4 @@ class ExecutionScope(enum.IntEnum):
     SERVER_ALIAS = 2
     PERSONAL_SNIPPET = 3
     SERVER_SNIPPET = 4
+    COMMAND_TEST = 5

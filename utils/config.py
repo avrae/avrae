@@ -17,6 +17,8 @@ COMMAND_TEST_GUILD_IDS = [
     269275778867396608,  # Avrae Development
     783776775670726661,  # Avrae Constants Guild
 ]
+# secret for the draconic signature() function
+DRACONIC_SIGNATURE_SECRET = os.getenv('DRACONIC_SIGNATURE_SECRET', 'secret').encode()
 
 # ---- mongo/redis ----
 MONGO_URL = os.getenv('MONGO_URL', "mongodb://localhost:27017")

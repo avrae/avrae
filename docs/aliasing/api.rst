@@ -481,6 +481,10 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.set_uvar_nx(name, value)
 
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.signature(data=0)
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.verify_signature(data)
+
 .. autofunction:: aliasing.api.functions.typeof
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.uvar_exists(name)

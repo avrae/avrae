@@ -252,8 +252,7 @@ class GameTrack(commands.Cog):
 
         embed = EmbedWithCharacter(character, name=False)
 
-        args = await helpers.parse_snippets(args, ctx)
-        args = await helpers.parse_with_character(ctx, character, args)
+        args = await helpers.parse_snippets(args, ctx, character=character)
         args = argparse(args)
         checkutils.update_csetting_args(character, args)
         caster, _, _ = await targetutils.maybe_combat(ctx, character, args)
@@ -660,8 +659,7 @@ class GameTrack(commands.Cog):
 
         char: Character = await Character.from_ctx(ctx)
 
-        args = await helpers.parse_snippets(args, ctx)
-        args = await helpers.parse_with_character(ctx, char, args)
+        args = await helpers.parse_snippets(args, ctx, character=char)
         args = argparse(args)
 
         if not args.last('i', type_=bool):

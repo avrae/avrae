@@ -333,8 +333,7 @@ class InitTracker(commands.Cog):
         [user snippet]
         """
         char: Character = await Character.from_ctx(ctx)
-        args = await helpers.parse_snippets(args, ctx)
-        args = await helpers.parse_with_character(ctx, char, args)
+        args = await helpers.parse_snippets(args, ctx, character=char)
         args = argparse(args)
 
         embed = EmbedWithCharacter(char, False)
@@ -1076,15 +1075,14 @@ class InitTracker(commands.Cog):
             )
 
     async def _attack(self, ctx, combatant, atk_name, unparsed_args):
-        args = await helpers.parse_snippets(unparsed_args, ctx)
         combat = await ctx.get_combat()
 
         # argument parsing
         is_player = isinstance(combatant, PlayerCombatant)
         if is_player and combatant.character_owner == str(ctx.author.id):
-            args = await helpers.parse_with_character(ctx, combatant.character, args)
+            args = await helpers.parse_snippets(unparsed_args, ctx, character=combatant.character)
         else:
-            args = await helpers.parse_with_statblock(ctx, combatant, args)
+            args = await helpers.parse_snippets(unparsed_args, ctx, statblock=combatant)
         args = argparse(args)
 
         # attack selection/caster handling
@@ -1239,7 +1237,6 @@ class InitTracker(commands.Cog):
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     async def _cast(self, ctx, combatant_name, spell_name, args):
-        args = await helpers.parse_snippets(args, ctx)
         combat = await Combat.from_ctx(ctx)
 
         if combatant_name is None:
@@ -1256,11 +1253,10 @@ class InitTracker(commands.Cog):
             return await ctx.send("Groups cannot cast spells.")
 
         is_character = isinstance(combatant, PlayerCombatant)
-
         if is_character and combatant.character_owner == str(ctx.author.id):
-            args = await helpers.parse_with_character(ctx, combatant.character, args)
+            args = await helpers.parse_snippets(args, ctx, character=combatant.character)
         else:
-            args = await helpers.parse_with_statblock(ctx, combatant, args)
+            args = await helpers.parse_snippets(args, ctx, statblock=combatant)
         args = argparse(args)
 
         if not args.last('i', type_=bool):

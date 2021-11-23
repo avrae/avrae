@@ -83,13 +83,13 @@ async def test_yaml_dumping(draconic_evaluator):
     draconic_evaluator.eval(
         'data = {"name": "Dice", "age": "old", "languages": 3, "drinks": ["beer", "wine", "apple juice"]}')
     expected_data = textwrap.dedent("""
+    name: Dice
     age: old
+    languages: 3
     drinks:
     - beer
     - wine
     - apple juice
-    languages: 3
-    name: Dice
     """).strip()
 
     result = draconic_evaluator.eval("dump_yaml(data)")

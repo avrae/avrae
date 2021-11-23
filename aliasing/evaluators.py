@@ -590,7 +590,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Serializes an object to a YAML string. See `yaml.safe_dump <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
         """
-        return yaml.dump(obj, Dumper=self._yaml_dumper, default_flow_style=False, line_break=True, indent=indent)
+        return yaml.dump(obj, Dumper=self._yaml_dumper, default_flow_style=False, line_break=True, indent=indent,
+                        sort_keys=False)
 
     # ==== json ====
     def _json_decoder(self):

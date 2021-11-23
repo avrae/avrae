@@ -5,6 +5,7 @@ import draconic
 
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from . import Effect
+from .roll import RollEffectMetaVar
 from .. import utils
 from ..errors import TargetException
 from ..results import DamageResult
@@ -21,9 +22,7 @@ class Damage(Effect):
 
     def to_dict(self):
         out = super().to_dict()
-        out.update({
-            "damage": self.damage, "overheal": self.overheal
-        })
+        out.update({"damage": self.damage, "overheal": self.overheal})
         if self.higher is not None:
             out['higher'] = self.higher
         if self.cantripScale is not None:
@@ -33,8 +32,10 @@ class Damage(Effect):
     def run(self, autoctx):
         super().run(autoctx)
         if autoctx.target is None:
-            raise TargetException("Tried to do damage without a target! Make sure all Damage effects are inside "
-                                  "of a Target effect.")
+            raise TargetException(
+                "Tried to do damage without a target! Make sure all Damage effects are inside "
+                "of a Target effect."
+            )
         # general arguments
         args = autoctx.args
         damage = self.damage
@@ -61,7 +62,7 @@ class Damage(Effect):
         resistances.update(Resistances.from_args(args, ephem=True))
 
         # check if we actually need to run this damage roll (not in combat and roll is redundant)
-        if autoctx.target.is_simple and self.is_meta(autoctx, True):
+        if autoctx.target.is_simple and self.is_meta(autoctx):
             return
 
         # add on combatant damage effects (#224)
@@ -69,7 +70,7 @@ class Damage(Effect):
             d_args.extend(autoctx.combatant.active_effects('d'))
 
         # check if we actually need to care about the -d tag
-        if self.is_meta(autoctx):
+        if self.contains_roll_meta(autoctx):
             d_args = []  # d was likely applied in the Roll effect already
 
         # set up damage AST
@@ -161,10 +162,13 @@ class Damage(Effect):
         autoctx.metavars['lastDamage'] = dmgroll.total
         return DamageResult(damage=dmgroll.total, damage_roll=dmgroll, in_crit=in_crit)
 
-    def is_meta(self, autoctx, strict=False):
-        if not strict:
-            return any(f"{{{v}}}" in self.damage for v in autoctx.metavars)
+    def is_meta(self, autoctx):
+        """Check if the damage string is completely a metavar sub."""
         return any(f"{{{v}}}" == self.damage for v in autoctx.metavars)
+
+    def contains_roll_meta(self, autoctx):
+        """Check if the damage string contains the result of a Roll effect."""
+        return any(f"{{{k}}}" in self.damage for k, v in autoctx.metavars.items() if isinstance(v, RollEffectMetaVar))
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

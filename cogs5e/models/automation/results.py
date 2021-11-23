@@ -102,7 +102,7 @@ class IEffectResult(EffectResult):
 class RollResult(EffectResult):
     result: int
     roll: d20.RollResult
-    simplified: str
+    simplified_expr: d20.Expression
     hidden: bool
 
 

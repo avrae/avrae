@@ -6,6 +6,7 @@ class SheetLoaderABC:
     async def load_character(self, ctx, args):
         raise NotImplemented
 
+
 # gsheet
 # v3: added stat cvars
 # v4: consumables

@@ -1,4 +1,3 @@
-import asyncio
 import traceback
 import uuid
 
@@ -10,6 +9,7 @@ from aliasing.api.functions import AliasException
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT, VAR_NAME_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
+from aliasing.utils import ExecutionScope
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
@@ -61,21 +61,26 @@ async def handle_aliases(ctx):
     # analytics
     await the_alias.log_invocation(ctx, server_invoker)
 
+    # setup
+    execution_scope = ExecutionScope.SERVER_ALIAS if server_invoker else ExecutionScope.PERSONAL_ALIAS
     try:
         command_code = await handle_alias_arguments(the_alias.code, ctx)
     except ArgumentParsingError as e:
         return await ctx.send(f"Error parsing alias arguments: {e}")
-    char = None
     try:
         char = await ctx.get_character()
     except NoCharacter:
-        pass
+        char = None
 
+    # interpret
     try:
-        if char:
-            ctx.message.content = await parse_with_character(ctx, char, command_code)
-        else:
-            ctx.message.content = await parse_no_char(ctx, command_code)
+        ctx.message.content = await parse_draconic(
+            ctx,
+            command_code,
+            character=char,
+            execution_scope=execution_scope,
+            invoking_object=the_alias
+        )
     except EvaluationError as err:
         return await handle_alias_exception(ctx, err)
     except Exception as e:
@@ -124,8 +129,10 @@ async def handle_alias_arguments(command, ctx):
 
 
 # getters
-async def get_collectable_named(ctx, name, personal_cls, workshop_cls, workshop_sub_meth, is_alias,
-                                obj_name, obj_name_pl, obj_command_name):
+async def get_collectable_named(
+    ctx, name, personal_cls, workshop_cls, workshop_sub_meth, is_alias,
+    obj_name, obj_name_pl, obj_command_name
+):
     binding_key = 'alias_bindings' if is_alias else 'snippet_bindings'
 
     personal_obj = await personal_cls.get_named(name, ctx)
@@ -145,13 +152,15 @@ async def get_collectable_named(ctx, name, personal_cls, workshop_cls, workshop_
             f"I found both a personal {obj_name} and {len(subscribed_obj_ids)} workshop {obj_name}(es) "
             f"named {ctx.prefix}{name}. Use `{ctx.prefix}{obj_command_name} autofix` to automatically assign "
             f"all conflicting {obj_name_pl} unique names, or `{ctx.prefix}{obj_command_name} rename {name} <new name>` "
-            f"to manually rename it.")
+            f"to manually rename it."
+        )
     if len(subscribed_obj_ids) > 1:
         raise AliasNameConflict(
             f"I found {len(subscribed_obj_ids)} workshop {obj_name_pl} "
             f"named {ctx.prefix}{name}. Use `{ctx.prefix}{obj_command_name} autofix` to automatically assign "
             f"all conflicting {obj_name_pl} unique names, or `{ctx.prefix}{obj_command_name} rename {name} <new name>` "
-            f"to manually rename it.")
+            f"to manually rename it."
+        )
     # otherwise return the subscribed
     return await workshop_cls.from_id(ctx, subscribed_obj_ids[0])
 
@@ -195,8 +204,10 @@ async def get_server_snippet_named(ctx, name):
 def set_cvar(character, name, value):
     value = str(value)
     if not name.isidentifier():
-        raise InvalidArgument("Cvar names must be identifiers "
-                              "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+        raise InvalidArgument(
+            "Cvar names must be identifiers "
+            "(only contain a-z, A-Z, 0-9, _, and not start with a number)."
+        )
     elif len(name) > VAR_NAME_LIMIT:
         raise InvalidArgument(f'Cvar name must be shorter than {VAR_NAME_LIMIT} characters.')
     elif name in character.get_scope_locals(True):
@@ -218,8 +229,10 @@ async def get_uvars(ctx):
 async def set_uvar(ctx, name, value):
     value = str(value)
     if not name.isidentifier():
-        raise InvalidArgument("Uvar names must be valid identifiers "
-                              "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+        raise InvalidArgument(
+            "Uvar names must be valid identifiers "
+            "(only contain a-z, A-Z, 0-9, _, and not start with a number)."
+        )
     elif len(name) > VAR_NAME_LIMIT:
         raise InvalidArgument(f'Uvar name must be shorter than {VAR_NAME_LIMIT} characters.')
     elif len(value) > UVAR_SIZE_LIMIT:
@@ -227,7 +240,8 @@ async def set_uvar(ctx, name, value):
     await ctx.bot.mdb.uvars.update_one(
         {"owner": str(ctx.author.id), "name": name},
         {"$set": {"value": value}},
-        True)
+        True
+    )
 
 
 async def update_uvars(ctx, uvar_dict, changed=None):
@@ -266,8 +280,10 @@ async def set_svar(ctx, name, value):
         raise NotAllowed("You cannot set a svar in a private message.")
     value = str(value)
     if not name.isidentifier():
-        raise InvalidArgument("Svar names must be valid identifiers "
-                              "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+        raise InvalidArgument(
+            "Svar names must be valid identifiers "
+            "(only contain a-z, A-Z, 0-9, _, and not start with a number)."
+        )
     elif len(name) > VAR_NAME_LIMIT:
         raise InvalidArgument(f'Svar name must be shorter than {VAR_NAME_LIMIT} characters.')
     elif len(value) > SVAR_SIZE_LIMIT:
@@ -275,7 +291,8 @@ async def set_svar(ctx, name, value):
     await ctx.bot.mdb.svars.update_one(
         {"owner": ctx.guild.id, "name": name},
         {"$set": {"value": value}},
-        True)
+        True
+    )
 
 
 # gvars
@@ -305,11 +322,14 @@ async def update_gvar(ctx, gid, value):
 
 
 # snippets
-async def parse_snippets(args, ctx) -> str:
+async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
     """
-    Parses user and server snippets.
+    Parses user and server snippets, including any inline scripting.
+
     :param args: The string to parse. Will be split automatically
     :param ctx: The Context.
+    :param statblock: The statblock to populate locals from.
+    :param character: If passed, provides the base character to use character-scoped functions against.
     :return: The string, with snippets replaced.
     """
     # make args a list of str
@@ -318,57 +338,70 @@ async def parse_snippets(args, ctx) -> str:
     if not isinstance(args, list):
         args = list(args)
 
-    for index, arg in enumerate(args):  # parse snippets
-        server_invoker = False
+    # set up the evaluator
+    evaluator = await evaluators.ScriptingEvaluator.new(ctx)
+    if character is not None:
+        evaluator.with_character(character)
+    elif statblock is not None:
+        evaluator.with_statblock(statblock)
 
-        # personal snippet/servsnippet
-        the_snippet = await get_personal_snippet_named(ctx, arg)
-        if the_snippet is None and ctx.guild is not None:
-            the_snippet = await get_server_snippet_named(ctx, arg)
-            server_invoker = True
+    try:
+        for index, arg in enumerate(args):  # parse snippets
+            server_invoker = False
 
-        if isinstance(the_snippet, WorkshopSnippet):
-            await workshop_entitlements_check(ctx, the_snippet)
+            # personal snippet/servsnippet
+            the_snippet = await get_personal_snippet_named(ctx, arg)
+            if the_snippet is None and ctx.guild is not None:
+                the_snippet = await get_server_snippet_named(ctx, arg)
+                server_invoker = True
 
-        if the_snippet:
-            args[index] = the_snippet.code
-            # analytics
-            await the_snippet.log_invocation(ctx, server_invoker)
-        elif ' ' in arg:
-            args[index] = argquote(arg)
+            if isinstance(the_snippet, WorkshopSnippet):
+                await workshop_entitlements_check(ctx, the_snippet)
+
+            if the_snippet:
+                # enter the evaluator
+                execution_scope = ExecutionScope.SERVER_SNIPPET if server_invoker else ExecutionScope.PERSONAL_SNIPPET
+                args[index] = await evaluator.transformed_str_async(
+                    the_snippet.code,
+                    execution_scope=execution_scope,
+                    invoking_object=the_snippet
+                )
+                # analytics
+                await the_snippet.log_invocation(ctx, server_invoker)
+            else:
+                # in case the user is using old-style on the fly templating
+                arg = await evaluator.transformed_str_async(arg, execution_scope=ExecutionScope.PERSONAL_SNIPPET)
+                args[index] = argquote(arg)
+    finally:
+        await evaluator.run_commits()
     return " ".join(args)
 
 
 # transformers
-async def parse_with_character(ctx, character, string):
-    evaluator = (await evaluators.ScriptingEvaluator.new(ctx)).with_character(character)
-    try:
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
-    finally:
-        await evaluator.run_commits()
-    return out
-
-
-async def parse_with_statblock(ctx, statblock, string):
-    evaluator = (await evaluators.ScriptingEvaluator.new(ctx)).with_statblock(statblock)
-    try:
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
-    finally:
-        await evaluator.run_commits()
-    return out
-
-
-async def parse_no_char(ctx, cstr):
+async def parse_draconic(
+    ctx,
+    program: str,
+    statblock=None,
+    character=None,
+    execution_scope: ExecutionScope = ExecutionScope.UNKNOWN,
+    invoking_object=None
+):
     """
-    Parses cvars and whatnot without an active character.
-    :param cstr: The string to parse.
-    :param ctx: The Context to parse the string in.
-    :return: The parsed string.
-    :rtype: str
+    Parses and executes a singular Draconic program in a new interpreter.
+    If *statblock* or *character* are passed, uses them to initialize statblock-locals and character-methods in the
+    interpreter.
     """
     evaluator = await evaluators.ScriptingEvaluator.new(ctx)
+    if character is not None:
+        evaluator.with_character(character)
+    elif statblock is not None:
+        evaluator.with_statblock(statblock)
     try:
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
+        out = await evaluator.transformed_str_async(
+            program,
+            execution_scope=execution_scope,
+            invoking_object=invoking_object
+        )
     finally:
         await evaluator.run_commits()
     return out
@@ -412,7 +445,8 @@ async def handle_alias_exception(ctx, err):
                 f"{point_to_error}"
                 f"{tb}\n"
                 f"```"
-                f"This is an issue in a user-created command; do *not* report this on the official bug tracker.")
+                f"This is an issue in a user-created command; do *not* report this on the official bug tracker."
+            )
     except:
         pass
     return await ctx.channel.send(err)
@@ -479,8 +513,10 @@ async def handle_alias_required_licenses(ctx, err):
                 "Linking your account means that you'll be able to use everything you own on " \
                 "D&D Beyond in Avrae for free - you can link your accounts " \
                 "[here](https://www.dndbeyond.com/account)."
-            embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
-                                  "link.")
+            embed.set_footer(
+                text="Already linked your account? It may take up to a minute for Avrae to recognize the "
+                     "link."
+            )
     else:
         missing_source_ids = {e.source for e in err.entities}
         if len(err.entities) == 1:  # 1 entity, display entity piecemeal
@@ -505,6 +541,8 @@ async def handle_alias_required_licenses(ctx, err):
             f"[Go to Marketplace]({marketplace_url})"
         embed.url = marketplace_url
 
-        embed.set_footer(text="Already unlocked? It may take up to a minute for Avrae to recognize the "
-                              "purchase.")
+        embed.set_footer(
+            text="Already unlocked? It may take up to a minute for Avrae to recognize the "
+                 "purchase."
+        )
     await ctx.send(embed=embed)

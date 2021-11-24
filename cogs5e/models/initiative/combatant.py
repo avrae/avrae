@@ -132,7 +132,7 @@ class Combatant(BaseCombatant, StatBlock):
         """Returns a string representation of the combatant's HP."""
         out = ''
         if not self.is_private or private:
-            if self.max_hp is not None:
+            if self.max_hp is not None and self.hp is not None:
                 out = f'<{self.hp}/{self.max_hp} HP>'
             elif self.hp is not None:
                 out = f'<{self.hp} HP>'
@@ -406,8 +406,8 @@ class Combatant(BaseCombatant, StatBlock):
 
     def _get_effects_and_notes(self):
         out = []
-        if self.ac is not None and not self.is_private:
-            out.append('AC {}'.format(self.ac))
+        if (self._ac is not None or self.ac) and not self.is_private:
+            out.append(f'AC {self.ac}')
         for e in self.get_effects():
             out.append(e.get_short_str())
         if self.notes:
@@ -418,8 +418,8 @@ class Combatant(BaseCombatant, StatBlock):
 
     def _get_hp_and_ac(self, private: bool = False):
         out = [self.hp_str(private)]
-        if self.ac is not None and (not self.is_private or private):
-            out.append("(AC {})".format(self.ac))
+        if (self._ac is not None or self.ac) and (not self.is_private or private):
+            out.append(f"(AC {self.ac})")
         return ' '.join(out)
 
     def _get_resist_string(self, private: bool = False):

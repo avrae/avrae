@@ -286,14 +286,15 @@ def camel_to_title(string):
     return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
 
 
-def bubble_format(value: int, max_: int, fill_from_right=False):
+def bubble_format(value: int, max_: int, fill_from_right=False, used_char=constants.EMPTY_BUBBLE,
+                  unused_char=constants.FILLED_BUBBLE):
     """Returns a bubble string to represent a counter's value."""
     if max_ > 100:
         return f"{value}/{max_}"
 
     used = max_ - value
-    filled = '\u25c9' * value
-    empty = '\u3007' * used
+    filled = unused_char * value
+    empty = used_char * used
     if fill_from_right:
         return f"{empty}{filled}"
     return f"{filled}{empty}"
@@ -318,7 +319,7 @@ def trim_str(text, max_len):
     return f"{text[:max_len - 4]}..."
 
 
-def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ' '), chunker_i=0):
+def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ', ', ' '), chunker_i=0):
     """
     Recursively chunks *text* into a list of str, with each element no longer than *max_chunk_size*.
     Prefers splitting on the elements of *chunk_on*, in order.
@@ -342,6 +343,10 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ' '), ch
             chunks[-1] += chunk
         else:
             chunks.append(chunk)
+
+    # if the last chunk is just the split_char, yeet it
+    if chunks[-1] == split_char:
+        chunks.pop()
 
     # remove extra split_char from last chunk
     chunks[-1] = chunks[-1][:-len(split_char)]

@@ -8,8 +8,9 @@ import logging
 import re
 
 import aiohttp
-import html2text
+from markdownify import markdownify
 
+import gamedata
 from cogs5e.models import automation
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
@@ -22,6 +23,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from gamedata.compendium import compendium
 from utils import config, constants, enums
+from utils.functions import smart_trim
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +43,8 @@ class BeyondSheetParser(SheetLoaderABC):
     def __init__(self, charId):
         super(BeyondSheetParser, self).__init__(charId)
         self.ctx = None
+        self.args = None
+        self._is_live = None
 
     async def load_character(self, ctx, args):
         """
@@ -49,6 +53,7 @@ class BeyondSheetParser(SheetLoaderABC):
         :raises Exception if something weirder happened
         """
         self.ctx = ctx
+        self.args = args
 
         owner_id = str(ctx.author.id)
         await self._get_character()
@@ -82,7 +87,7 @@ class BeyondSheetParser(SheetLoaderABC):
             consumables = self._get_custom_counters()
 
         spellbook = self._get_spellbook()
-        live = None  # todo
+        live = 'beyond' if self._is_live else None
         race = self._get_race()
         background = self._get_background()
 
@@ -129,6 +134,7 @@ class BeyondSheetParser(SheetLoaderABC):
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = char_id
         self.character_data = character
+        self._is_live = (ddb_user is not None) and (ddb_user.user_id == str(character['ownerId']))
         log.debug(character)
         return character
 
@@ -209,6 +215,7 @@ class BeyondSheetParser(SheetLoaderABC):
             spell_ab = spell['sab']
             spell_dc = spell['dc']
             spell_mod = spell['mod']
+            spell_prepared = spell['prepared'] or 'noprep' in self.args
             if spell_ab is not None:
                 sabs.append(spell_ab)
             if spell_dc is not None:
@@ -216,18 +223,31 @@ class BeyondSheetParser(SheetLoaderABC):
             if spell_mod is not None:
                 mods.append(spell_mod)
 
-            result = next((s for s in compendium.spells if s.entity_id == spell['id']), None)
+            result = compendium.lookup_entity(gamedata.Spell.entity_type, spell['id'])
 
             if result:
-                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                                        prepared=spell_prepared))
             else:
-                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                             prepared=spell_prepared))
 
         dc = max(dcs, key=dcs.count, default=None)
         sab = max(sabs, key=sabs.count, default=None)
         smod = max(mods, key=mods.count, default=None)
 
-        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod)
+        # assumption: a character will only ever have one pact slot level, with a given number of slots of that level
+        pact_slot_level = None
+        num_pact_slots = None
+        max_pact_slots = None
+        if spellbook['pactSlots']:
+            pact_info = spellbook['pactSlots'][0]
+            pact_slot_level = pact_info['level']
+            max_pact_slots = pact_info['available']
+            num_pact_slots = max_pact_slots - pact_info['used']
+
+        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod,
+                         pact_slot_level=pact_slot_level, num_pact_slots=num_pact_slots, max_pact_slots=max_pact_slots)
 
     def _get_custom_counters(self):
         out = []
@@ -237,9 +257,12 @@ class BeyondSheetParser(SheetLoaderABC):
             display_type = 'bubble' if cons['max'] < 7 else None
             reset = RESET_MAP.get(cons['reset'], 'long')
             name = cons['name'].replace('\u2019', "'").strip()
-            desc = cons['desc'].replace('\u2019', "'") if cons['desc'] is not None else None
+            desc = None
             source_feature_type = cons['sourceFeatureType']
             source_feature_id = cons['sourceFeatureId']
+
+            if cons['desc'] is not None:
+                desc = smart_trim(html_to_md(cons['desc'].replace('\u2019', "'")))
 
             source_feature = compendium.lookup_entity(source_feature_type, source_feature_id)
             log.debug(f"Processed counter named {name!r} for feature {source_feature}")
@@ -249,11 +272,11 @@ class BeyondSheetParser(SheetLoaderABC):
                             f"named {name!r}")
 
             if cons['max'] and name:  # don't make counters with a range of 0 - 0, or blank named counters
-                out.append(
-                    CustomCounter(None, name, cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
-                                  display_type=display_type, live_id=live_id, desc=desc,
-                                  ddb_source_feature_type=source_feature_type, ddb_source_feature_id=source_feature_id)
-                )
+                out.append(CustomCounter(
+                    None, name, cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
+                    display_type=display_type, live_id=live_id, desc=desc,
+                    ddb_source_feature_type=source_feature_type, ddb_source_feature_id=source_feature_id
+                ))
 
         return [cc.to_dict() for cc in out]
 
@@ -328,6 +351,11 @@ class BeyondSheetParser(SheetLoaderABC):
                 continue
             # display as attack override - fall back to attack system
             if d_action['isCustomized'] and d_action['displayAsAttack']:
+                continue
+            # racial feature affected by martial arts - fall back to attack system
+            if (d_action['isMartialArts']
+                    and d_action['displayAsAttack']
+                    and int(d_action['componentTypeId']) == gamedata.race.RaceFeature.type_id):
                 continue
 
             # gamedata for limiteduse
@@ -424,4 +452,4 @@ def derive_adv(advs, dises):
 def html_to_md(text):
     if not text:
         return text
-    return html2text.html2text(text, bodywidth=0).strip()
+    return markdownify(text).strip()

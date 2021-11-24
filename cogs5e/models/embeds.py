@@ -110,10 +110,12 @@ class EmbedPaginator:
             return
         chunks = chunk_text(value, max_chunk_size=self.EMBED_FIELD_MAX - 1)
 
+        # if the first chunk is too large to fit in the current field, start a new one
         if self._field_count + len(chunks[0]) + 1 > self.EMBED_FIELD_MAX:
             self.close_field()
             self._current_field_name = self.CONTINUATION_FIELD_TITLE
 
+        # add the rest of the chunks
         for i, chunk in enumerate(chunks):
             self._field_count += len(value) + 1
             self._current_field.append(chunk)

@@ -320,6 +320,10 @@ class WorkshopCollectableObject(abc.ABC):
         return self.docs.split('\n')[0]
 
     @property
+    def collection_id(self) -> ObjectId:
+        return self._collection_id
+
+    @property
     def collection(self):
         if self._collection is None:
             raise AttributeError("Collection is not loaded - run load_collection() first")

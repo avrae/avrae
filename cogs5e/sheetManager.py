@@ -61,8 +61,7 @@ class SheetManager(commands.Cog):
 
     @staticmethod
     async def new_arg_stuff(args, ctx, character):
-        args = await helpers.parse_snippets(args, ctx)
-        args = await helpers.parse_with_character(ctx, character, args)
+        args = await helpers.parse_snippets(args, ctx, character=character)
         args = argparse(args)
         return args
 
@@ -446,10 +445,13 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def update(self, ctx, *args):
-        """Updates the current character sheet, preserving all settings.
+        """
+        Updates the current character sheet, preserving all settings.
         __Valid Arguments__
         `-v` - Shows character sheet after update is complete.
-        `-nocc` - Do not automatically create or update custom counters for class resources and features."""
+        `-nocc` - Do not automatically create or update custom counters for class resources and features.
+        `-noprep` - Import all known spells as prepared.
+        """
         old_character: Character = await Character.from_ctx(ctx)
         url = old_character.upstream
         args = argparse(args)
@@ -483,9 +485,19 @@ class SheetManager(commands.Cog):
             return await loading.edit(content=f"Error loading character: {eep}")
 
         character.update(old_character)
-
+        
+        # keeps an old check if the old character was active on the current server
+        was_server_active = old_character.is_active_server(ctx)
+        
         await character.commit(ctx)
-        await character.set_active(ctx)
+        
+        # overwrites the old_character's server active state
+        # since character._active_guilds is old_character._active_guilds here
+        if old_character.is_active_global():
+            await character.set_active(ctx)
+        if was_server_active:
+            await character.set_server_active(ctx)
+        
         await loading.edit(content=f"Updated and saved data for {character.name}!")
         if args.last('v'):
             await ctx.send(embed=character.get_sheet_embed())
@@ -568,7 +580,7 @@ class SheetManager(commands.Cog):
     @commands.max_concurrency(1, BucketType.user)
     async def import_sheet(self, ctx, url: str, *args):
         """
-        Loads a character sheet in one of the accepted formats:
+        Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
             [Dicecloud](https://dicecloud.com/)
             [GSheet v2.1](https://gsheet2.avrae.io) (auto)
@@ -576,12 +588,15 @@ class SheetManager(commands.Cog):
         
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for class resources and features.
+        `-noprep` - Import all known spells as prepared.
 
         __Sheet-specific Notes__
         D&D Beyond:
             Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
+            
         Dicecloud:
             Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
+        
         Gsheet:
             The sheet must be shared with directly with Avrae or be publicly viewable to anyone with the link.
             Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.

@@ -265,30 +265,46 @@ class Combat:
         """Gets a combatant by their ID."""
         return self._combatant_id_map.get(combatant_id)
 
-    def get_combatant(self, name, strict=True):
-        """Gets a combatant by their name or ID."""
+    def get_combatant(self, name, strict=None):
+        """Gets a combatant by their name or ID.
+
+        :param name: The name or id of the combatant.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The combatant or None.
+        """
         if name in self._combatant_id_map:
             return self._combatant_id_map[name]
-        if strict:
-            return next((c for c in self.get_combatants() if c.name.lower() == name.lower()), None)
-        else:
-            return next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
 
-    def get_group(self, name, create=None, strict=True):
+        combatant = None
+        if strict is not False:
+            combatant = next((c for c in self.get_combatants() if name.lower() == c.name.lower()), None)
+        if not combatant and not strict:
+            combatant = next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
+        return combatant
+
+    def get_group(self, name, create=None, strict=None):
         """
         Gets a combatant group by its name or ID.
 
         :rtype: CombatantGroup
         :param name: The name of the combatant group.
         :param create: The initiative to create a group at if a group is not found.
-        :param strict: Whether group name must be a full case insensitive match.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         :return: The combatant group.
         """
         if name in self._combatant_id_map and isinstance(self._combatant_id_map[name], CombatantGroup):
             return self._combatant_id_map[name]
-        if strict:
+
+        grp = None
+        if strict is not False:
             grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
-        else:
+        if not grp and not strict:
             grp = next((g for g in self.get_groups() if name.lower() in g.name.lower()), None)
 
         if grp is None and create is not None:
@@ -319,8 +335,7 @@ class Combat:
         self.sort_combatants()
 
         # reset current turn
-        self._turn = 0
-        self._current_index = None
+        self.end_round()
 
         order = []
         for combatant, init_roll in sorted(rolls.items(), key=lambda r: (r[1].total, int(r[0].init_skill)),
@@ -330,6 +345,13 @@ class Combat:
         order = "\n".join(order)
 
         return order
+
+    def end_round(self):
+        """
+        Moves initiative to just before the next round (no active combatant or group).
+        """
+        self._turn = 0
+        self._current_index = None
 
     async def select_combatant(self, name, choice_message=None, select_group=False):
         """

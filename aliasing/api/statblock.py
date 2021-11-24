@@ -484,21 +484,22 @@ class AliasSkill:
     def __repr__(self):
         return f"<{self.__class__.__name__} value={self.value!r} prof={self.prof!r} bonus={self.bonus!r} " \
                f"adv={self.adv!r}>"
-    
+
     def __gt__(self, other):
         return self.value > other
-    
+
     def __ge__(self, other):
         return self.value >= other
 
     def __eq__(self, other):
         return self.value == other
-    
+
     def __le__(self, other):
         return self.value <= other
-    
+
     def __lt__(self, other):
         return self.value < other
+
 
 class AliasSkills:
     """
@@ -677,10 +678,47 @@ class AliasSpellbook:
             self._spells = [AliasSpellbookSpell(s) for s in self._spellbook.spells]
         return self._spells
 
+    @property
+    def pact_slot_level(self):
+        """
+        The spellcaster's pact slot level. If the spellcaster has no pact slots, returns None.
+
+        .. note::
+            Only D&D Beyond character sheets support the explicit distinction between pact and non-pact slots.
+
+        :rtype: int or None
+        """
+        return self._spellbook.pact_slot_level
+
+    @property
+    def num_pact_slots(self):
+        """
+        The number of pact slots the spellcaster has remaining. If the spellcaster has no pact slots, returns None.
+
+        .. note::
+            Only D&D Beyond character sheets support the explicit distinction between pact and non-pact slots.
+
+        :rtype: int or None
+        """
+        return self._spellbook.num_pact_slots
+
+    @property
+    def max_pact_slots(self):
+        """
+        The maximum number of pact slots the spellcaster has remaining. If the spellcaster has no pact slots, returns
+        None.
+
+        .. note::
+            Only D&D Beyond character sheets support the explicit distinction between pact and non-pact slots.
+
+        :rtype: int or None
+        """
+        return self._spellbook.max_pact_slots
+
     def slots_str(self, level):
         """
         :param int level: The level of spell slot to return.
-        :returns str: A string representing the caster's remaining spell slots.
+        :returns str: A string representing the caster's remaining spell slots, including pact slots.
         """
         return self._spellbook.slots_str(int(level))
 
@@ -689,7 +727,7 @@ class AliasSpellbook:
         Gets the maximum number of level *level* spell slots available.
 
         :param int level: The spell level [1..9].
-        :returns int: The maximum number of spell slots.
+        :returns int: The maximum number of spell slots, including pact slots.
         """
         return self._spellbook.get_max_slots(int(level))
 
@@ -698,18 +736,19 @@ class AliasSpellbook:
         Gets the remaining number of slots of a given level. Always returns 1 if level is 0.
 
         :param int level: The spell level to get the remaining slots of.
-        :returns int: The number of slots remaining.
+        :returns int: The number of slots remaining, including pact slots.
         """
         return self._spellbook.get_slots(int(level))
 
-    def set_slots(self, level, value):
+    def set_slots(self, level, value, pact=True):
         """
         Sets the remaining number of spell slots of a given level.
 
         :param int level: The spell level to set [1..9].
         :param int value: The remaining number of slots.
+        :param bool pact: Whether to prefer modifying Pact Magic slots (if applicable) or normal spell slots.
         """
-        return self._spellbook.set_slots(int(level), int(value))
+        return self._spellbook.set_slots(int(level), int(value), bool(pact))
 
     def use_slot(self, level):
         """
@@ -724,6 +763,12 @@ class AliasSpellbook:
         Resets the number of remaining spell slots of all levels to the max.
         """
         return self._spellbook.reset_slots()
+
+    def reset_pact_slots(self):
+        """
+        Resets the number of remaining pact slots to the max, leaving non-pact slots untouched.
+        """
+        return self._spellbook.reset_pact_slots()
 
     def remaining_casts_of(self, spell, level):
         """
@@ -807,6 +852,16 @@ class AliasSpellbookSpell:
         :rtype: int or None
         """
         return self._spell.mod
+
+    @property
+    def prepared(self):
+        """
+        Whether or not the spell is prepared. If the spell is always prepared, the caster is not a prepared caster
+        (e.g. Sorcerer), or the spell is a cantrip, this will be True.
+
+        :rtype: bool
+        """
+        return self._spell.prepared
 
     def __str__(self):
         return self.name

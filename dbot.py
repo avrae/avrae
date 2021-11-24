@@ -47,7 +47,10 @@ async def get_prefix(the_bot, message):
 
 class Avrae(commands.AutoShardedBot):
     def __init__(self, prefix, description=None, testing=False, **options):
-        super(Avrae, self).__init__(prefix, help_command=help_command, description=description, **options)
+        test_guilds = None if not testing else config.COMMAND_TEST_GUILD_IDS
+
+        super().__init__(prefix, help_command=help_command, description=description, test_guilds=test_guilds,
+                         sync_commands=False, sync_commands_debug=testing, **options)
         self.testing = testing
         self.state = "init"
 
@@ -129,8 +132,13 @@ class Avrae(commands.AutoShardedBot):
         # set up my shard_ids
         async with clustering.coordination_lock(self.rdb):
             await clustering.coordinate_shards(self)
+            log.info(f"I am cluster {self.cluster_id}.")
             if self.shard_ids is not None:
                 log.info(f"Launching {len(self.shard_ids)} shards! ({self.shard_ids})")
+
+        # if we are cluster 0, we are responsible for handling application command sync
+        if self.is_cluster_0:
+            self._sync_commands = True
 
         # release lock and launch
         await super().launch_shards()
@@ -167,20 +175,17 @@ class Avrae(commands.AutoShardedBot):
         return await super().get_context(*args, cls=context.AvraeContext, **kwargs)
 
     async def close(self):
-        # note: when closing the bot 3 errors are emitted:
+        # note: when closing the bot 2 errors are emitted:
         #
         # ERROR:asyncio: An open stream object is being garbage collected; call "stream.close()" explicitly.
         # ERROR:asyncio: An open stream object is being garbage collected; call "stream.close()" explicitly.
-        # ERROR:asyncio: Unclosed client session
-        # client_session: <aiohttp.client.ClientSession object at 0xblahblah>
         #
-        # The first two are caused by aioredis streams being GC'ed when discord.py cancels the tasks that create them
+        # These are caused by aioredis streams being GC'ed when discord.py cancels the tasks that create them
         # (because of course d.py decides it wants to cancel *all* tasks on its loop...)
-        # The second seems like it's related to a background task in a cog, but it occurs even without cogs loaded
-        # bonus points if you find where it's coming from!
         await super().close()
         await self.ddb.close()
         await self.rdb.close()
+        await self.glclient.close()
         self.mclient.close()
         self.ldclient.close()
 
@@ -196,9 +201,11 @@ intents = discord.Intents(
     bans=False, emojis=False, integrations=False, webhooks=False, invites=False, voice_states=False, presences=False,
     typing=False
 )  # https://discord.com/developers/docs/topics/gateway#gateway-intents
-bot = Avrae(prefix=get_prefix, description=desc, pm_help=True, testing=config.TESTING,
-            activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'),
-            allowed_mentions=discord.AllowedMentions.none(), intents=intents, chunk_guilds_at_startup=False)
+bot = Avrae(
+    prefix=get_prefix, description=desc, pm_help=True, testing=config.TESTING,
+    activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'),
+    allowed_mentions=discord.AllowedMentions.none(), intents=intents, chunk_guilds_at_startup=False
+)
 
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)

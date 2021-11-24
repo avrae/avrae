@@ -204,6 +204,7 @@ class InitTracker(commands.Cog):
         -b <condition bonus> - Adds a bonus to the combatant's initiative roll.
         -n <number or dice> - Adds more than one of that monster. Supports dice.
         -p <value> - Places combatant at the given value, instead of rolling.
+        -controller <controller> - Pings a different person on turn.
         -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
         -h - Hides HP, AC, Resists, etc. Default: True.
         -group <group> - Adds the combatant to a group.
@@ -218,7 +219,7 @@ class InitTracker(commands.Cog):
 
         args = argparse(args)
         private = not args.last('h', type_=bool)
-
+        controller = str(ctx.author.id)
         group = args.last('group')
         adv = args.adv(boolwise=True)
         b = args.join('b', '+')
@@ -274,7 +275,12 @@ class InitTracker(commands.Cog):
                     init = check_roll.total
                 else:
                     init = int(p)
-                controller = str(ctx.author.id)
+
+                # -controller (#1368)    
+                if args.last('controller'):
+                    controller_name = args.last('controller')
+                    member = await commands.MemberConverter().convert(ctx, controller_name)
+                    controller = str(member.id) if member is not None and not member.bot else controller
 
                 # -hp
                 rolled_hp = None
@@ -327,8 +333,7 @@ class InitTracker(commands.Cog):
         [user snippet]
         """
         char: Character = await Character.from_ctx(ctx)
-        args = await helpers.parse_snippets(args, ctx)
-        args = await helpers.parse_with_character(ctx, char, args)
+        args = await helpers.parse_snippets(args, ctx, character=char)
         args = argparse(args)
 
         embed = EmbedWithCharacter(char, False)
@@ -382,6 +387,7 @@ class InitTracker(commands.Cog):
         """
         Moves to the next turn in initiative order.
         It must be your turn or you must be a DM to use this command.
+        A DM is the user who started combat and anyone with the "DM", "GM", "Dungeon Master" or "Game Master" role.
         """
 
         combat = await Combat.from_ctx(ctx)
@@ -909,7 +915,7 @@ class InitTracker(commands.Cog):
         -dur <duration> - Sets the duration of the effect, in rounds.
         conc - Makes the effect require concentration. Will end any other concentration effects.
         end - Makes the effect duration tick on the end of turn, rather than the beginning.
-        -t <target> - Specifies more combatant's to target, chainable (e.g., "-t or1 -t or2").
+        -t <target> - Specifies more combatants to target, chainable (e.g., "-t or1 -t or2").
         -parent <"[combatant]|[effect]"> - Sets a parent effect from a specified combatant.
         __Attacks__
         adv/dis - Give advantage or disadvantage to all attack rolls.
@@ -1069,15 +1075,14 @@ class InitTracker(commands.Cog):
             )
 
     async def _attack(self, ctx, combatant, atk_name, unparsed_args):
-        args = await helpers.parse_snippets(unparsed_args, ctx)
         combat = await ctx.get_combat()
 
         # argument parsing
         is_player = isinstance(combatant, PlayerCombatant)
         if is_player and combatant.character_owner == str(ctx.author.id):
-            args = await helpers.parse_with_character(ctx, combatant.character, args)
+            args = await helpers.parse_snippets(unparsed_args, ctx, character=combatant.character)
         else:
-            args = await helpers.parse_with_statblock(ctx, combatant, args)
+            args = await helpers.parse_snippets(unparsed_args, ctx, statblock=combatant)
         args = argparse(args)
 
         # attack selection/caster handling
@@ -1232,7 +1237,6 @@ class InitTracker(commands.Cog):
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     async def _cast(self, ctx, combatant_name, spell_name, args):
-        args = await helpers.parse_snippets(args, ctx)
         combat = await Combat.from_ctx(ctx)
 
         if combatant_name is None:
@@ -1249,11 +1253,10 @@ class InitTracker(commands.Cog):
             return await ctx.send("Groups cannot cast spells.")
 
         is_character = isinstance(combatant, PlayerCombatant)
-
         if is_character and combatant.character_owner == str(ctx.author.id):
-            args = await helpers.parse_with_character(ctx, combatant.character, args)
+            args = await helpers.parse_snippets(args, ctx, character=combatant.character)
         else:
-            args = await helpers.parse_with_statblock(ctx, combatant, args)
+            args = await helpers.parse_snippets(args, ctx, statblock=combatant)
         args = argparse(args)
 
         if not args.last('i', type_=bool):

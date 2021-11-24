@@ -24,6 +24,10 @@ class CharacterSettingsMenuBase(MenuBase, abc.ABC):
     settings: CharacterSettings
     character: Character  # the character object here may be detached; its settings are kept in sync though
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._can_do_character_sync = None
+
     async def commit_settings(self):
         """
         Commits any changed character settings to the db and the cached character object (if applicable - ours may be
@@ -32,6 +36,31 @@ class CharacterSettingsMenuBase(MenuBase, abc.ABC):
         """
         self.character.options = self.settings
         await self.settings.commit(self.bot.mdb, self.character)
+
+    async def can_do_character_sync(self):
+        """Returns a pair of bools (outbound_possible, inbound_possible)."""
+        if self._can_do_character_sync is not None:
+            return self._can_do_character_sync
+        if self.character.sheet_type == 'dicecloud':
+            self._can_do_character_sync = True, False
+        # ddb sheets: if either of the flags are enabled
+        elif self.character.sheet_type == 'beyond':
+            ddb_user = await self.bot.ddb.get_ddb_user(self, self.owner.id)
+            ddb_user_ld = ddb_user.to_ld_dict()
+            outbound_flag = await self.bot.ldclient.variation(
+                'cog.sheetmanager.sync.send.enabled',
+                ddb_user_ld,
+                default=False
+            )
+            inbound_flag = await self.bot.ldclient.variation(
+                'cog.gamelog.character-update-fulfilled.enabled',
+                ddb_user_ld,
+                default=False
+            )
+            self._can_do_character_sync = outbound_flag, inbound_flag
+        else:
+            self._can_do_character_sync = False, False
+        return self._can_do_character_sync
 
 
 class CharacterSettingsUI(CharacterSettingsMenuBase):
@@ -51,9 +80,23 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
     async def gameplay_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(_GameplaySettingsUI, interaction)
 
-    @disnake.ui.button(label='Exit', style=disnake.ButtonStyle.danger)
+    @disnake.ui.button(label='Character Sync Settings', style=disnake.ButtonStyle.primary)
+    async def character_sync_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        await self.defer_to(_CharacterSyncSettingsUI, interaction)
+
+    @disnake.ui.button(label='Exit', style=disnake.ButtonStyle.danger, row=1)
     async def exit(self, *_):
-        await self.on_timeout()  # todo redirect back to global settings
+        await self.on_timeout()
+
+    async def _before_send(self):
+        if TYPE_CHECKING:
+            # disnake.ui.view#L170 sets the member to the Item instance instead of the method, let the type checker know
+            self.character_sync_settings: disnake.ui.Button
+
+        # character sync
+        outbound, inbound = await self.can_do_character_sync()
+        if not (outbound or inbound):
+            self.remove_item(self.character_sync_settings)
 
     async def get_content(self):
         embed = embeds.EmbedWithCharacter(
@@ -76,6 +119,19 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
                   f"**Reset All Spell Slots on Short Rest**: {self.settings.srslots}",
             inline=False
         )
+
+        outbound, inbound = await self.can_do_character_sync()
+        if inbound or outbound:
+            sync_desc_lines = []
+            if outbound:
+                sync_desc_lines.append(f"**Outbound Sync**: {self.settings.sync_outbound}")
+            if inbound:
+                sync_desc_lines.append(f"**Inbound Sync**: {self.settings.sync_inbound}")
+            embed.add_field(
+                name="Character Sync Settings",
+                value='\n'.join(sync_desc_lines),
+                inline=False
+            )
         return {"embed": embed}
 
 
@@ -249,6 +305,64 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
                   f"rest. Note that pact slots will reset on a short rest even if this setting is disabled.*",
             inline=False
         )
+        return {"embed": embed}
+
+
+class _CharacterSyncSettingsUI(CharacterSettingsMenuBase):
+    @disnake.ui.button(label='Toggle Outbound Sync', style=disnake.ButtonStyle.primary)
+    async def toggle_outbound(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        self.settings.sync_outbound = not self.settings.sync_outbound
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.button(label='Toggle Inbound Sync', style=disnake.ButtonStyle.primary)
+    async def toggle_inbound(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        self.settings.sync_inbound = not self.settings.sync_inbound
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=1)
+    async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        await self.defer_to(CharacterSettingsUI, interaction)
+
+    async def _before_send(self):
+        if TYPE_CHECKING:
+            self.toggle_outbound: disnake.ui.Button
+            self.toggle_inbound: disnake.ui.Button
+        outbound, inbound = await self.can_do_character_sync()
+        if not outbound:
+            self.remove_item(self.toggle_outbound)
+        if not inbound:
+            self.remove_item(self.toggle_inbound)
+
+    async def get_content(self):
+        outbound, inbound = await self.can_do_character_sync()
+        embed = embeds.EmbedWithCharacter(
+            self.character,
+            title=f"Character Settings ({self.character.name}) / Sync Settings"
+        )
+        if outbound:
+            embed.add_field(
+                name="Outbound Sync",
+                value=f"**{self.settings.sync_outbound}**\n"
+                      f"*If this is enabled, updates to your character's HP, spell slots, custom counters, and more "
+                      f"will be sent to your sheet provider live.*",
+                inline=False
+            )
+        if inbound:
+            embed.add_field(
+                name="Inbound Sync",
+                value=f"**{self.settings.sync_inbound}**\n"
+                      f"*If this is enabled, if you change your character's HP, spell slots, custom counters, or more "
+                      f"on your sheet provider, they will be updated here as well.*",
+                inline=False
+            )
+        if not (outbound or inbound):
+            embed.description = (
+                "Character sync is not supported by your sheet provider (and I have no idea how you got to this menu). "
+                "Press the Back button to go back, and come tell us how you got here on the [Development Discord]"
+                "(https://support.avrae.io)."
+            )
         return {"embed": embed}
 
 

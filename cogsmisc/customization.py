@@ -105,9 +105,10 @@ class CollectableManagementGroup(commands.Group):
         self.rename = self.command(
             name='rename',
             help=f'Renames a {self.obj_name} or subscribed workshop {self.obj_name} to a new name.')(self.rename)
-        self.serve = self.command(
-                name='serve',
-                help=f'Sets an alias as a server alias or subscribes the server to a workshop collection.')(self.serve)
+        if not self.is_server:
+            self.serve = self.command(
+                    name='serve',
+                    help=f'Sets an alias as a server alias or subscribes the server to a workshop collection.')(self.serve)
 
 
     # we override the Group copy command since we register commands in __init__
@@ -388,43 +389,39 @@ class CollectableManagementGroup(commands.Group):
             raise NotAllowed("You do not have permission to edit server aliases. Either __Administrator__ "
                              "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                              "is required.")
-        if self.is_server:
-            return ctx.send(f"You can only serve personal {'aliases' if self.is_alias else 'snippets'}.")
 
         # list of (name, (alias or sub doc, collection or None))
-        choices = []
-        if personal_obj := await self.personal_cls.get_named(name, ctx):
-            choices.append((f"{name} ({self.obj_name})",
-                            (personal_obj, None)))
+        if self.is_alias:
+            personal_obj = await helpers.get_personal_alias_named(ctx, name)
+        else:
+            personal_obj = await helpers.get_personal_snippet_named(ctx, name)
 
-        # get list of (subscription object ids, subscription doc)
-        async for subscription_doc in self.workshop_sub_meth(ctx):
-            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
-            for binding in subscription_doc[self.binding_key]:
-                if binding['name'] == name:
-                    choices.append((f"{name} ({the_collection.name})",
-                                    (subscription_doc, the_collection)))
-
-        personal_obj, collection = await get_selection(ctx, choices)
-        embed = None
-        if isinstance(personal_obj, self.personal_cls):
-            if self.is_alias:
-                server_obj = personal.Servalias.new(personal_obj.name, personal_obj.code, ctx.guild.id)
-            else:
-                server_obj = personal.Servsnippet.new(personal_obj.name, personal_obj.code, ctx.guild.id)
-        else:  # We're working with a workshop collection, easy peasy
-            personal_obj.set_server_active(ctx)
+        # If the alias is a workshop alias we need to get the workshopCollection and set it as active.
+        if not isinstance(personal_obj, self.personal_cls):
+            server_obj = personal_obj.collection
+            response = await confirm(
+            ctx, f"You are subsribing the server to the {server_obj.name} workshop collection. " \
+                 f"This will subscirbe the server to {len(server_obj.aliases)} aliases and " \
+                 f"{len(server_obj.snippets)} snippets." \
+                 f"Do you want to continue? (Reply with yes/no)\n" \
+            )
+            if not response:
+                return await ctx.send("Ok, aborting.")
+            await server_obj.set_server_active(ctx)
             embed = EmbedWithAuthor(ctx)
-            embed.title = f"Subscribed to {the_collection.name}"
-            embed.url = the_collection.url
-            embed.description = the_collection.description
-            if the_collection.aliases:
-                embed.add_field(name="Server Aliases" if self.is_server else "Aliases",
-                                value=", ".join(sorted(a.name for a in the_collection.aliases)))
-            if the_collection.snippets:
-                embed.add_field(name="Server Snippets" if self.is_server else "Snippets",
-                                value=", ".join(sorted(a.name for a in the_collection.snippets)))
+            embed.title = f"Subscribed to {server_obj.name}"
+            embed.url = server_obj.url
+            embed.description = server_obj.description
+            if server_obj.aliases:
+                embed.add_field(name="Server Aliases", value=", ".join(sorted(a.name for a in server_obj.aliases)))
+            if personal_obj.snippets:
+                embed.add_field(name="Server Snippets", value=", ".join(sorted(a.name for a in server_obj.snippets)))
             return ctx.send(embed=embed)
+        
+        if self.is_alias:
+            server_obj = personal.Servalias.new(personal_obj.name, personal_obj.code, ctx.guild.id)
+        else:
+            server_obj = personal.Servsnippet.new(personal_obj.name, personal_obj.code, ctx.guild.id)
 
         await server_obj.commit(ctx.bot.mdb)
         out = f'Server {self.obj_name} `{server_obj.name}` added.' \

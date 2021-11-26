@@ -341,7 +341,7 @@ class GoogleSheet(SheetLoaderABC):
         pronoun = "She" if g == "female" else "He" if g == "male" else "They"
         verb1 = "is" if pronoun != "They" else "are"
         verb2 = "has" if pronoun != "They" else "have"
-        desc = "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}." \
+        desc = "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}. " \
                "{4} {12} {8} eyes, {9} hair, and {10} skin."
         desc = desc.format(n,
                            character.value("AL6"),

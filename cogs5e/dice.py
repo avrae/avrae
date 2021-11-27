@@ -80,7 +80,7 @@ class Dice(commands.Cog):
         `!r 2d20kl1-2` - Disadvantage roll, using Keep Lowest format
         `!r 4d6mi2[fire]` - Elemental Adept, Fire
         `!r 10d6ra6` - Wild Magic Sorcerer Spell Bombardment
-        `!r 4d6ro<3` - Great Weapon Master
+        `!r 4d6ro<3` - Great Weapon Fighting
         `!r 2d6e6` - Explode on 6
         `!r (1d6,1d8,1d10)kh2` - Keep 2 highest rolls of a set of dice
 

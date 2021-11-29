@@ -16,8 +16,8 @@ from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
-from gamedata.lookuputils import HOMEBREW_EMOJI, available, can_access, get_item_choices, get_monster_choices, \
-    get_spell_choices, handle_source_footer
+from gamedata.lookuputils import (HOMEBREW_EMOJI, available, can_access, get_item_choices, get_monster_choices,
+    get_spell_choices, handle_source_footer)
 from gamedata.race import RaceFeature
 from utils import checks, img
 from utils.argparser import argparse
@@ -42,8 +42,10 @@ class Lookup(commands.Cog):
                             f"a certain type.\nCategories: {categories}"
 
         for actiontype in compendium.rule_references:
-            embed.add_field(name=actiontype['fullName'], value=', '.join(a['name'] for a in actiontype['items']),
-                            inline=False)
+            embed.add_field(
+                name=actiontype['fullName'], value=', '.join(a['name'] for a in actiontype['items']),
+                inline=False
+            )
 
         await destination.send(embed=embed)
 
@@ -117,7 +119,8 @@ class Lookup(commands.Cog):
         result: RaceFeature = await self._lookup_search3(
             ctx,
             {'race': compendium.rfeats, 'subrace': compendium.subrfeats},
-            name, 'racefeat')
+            name, 'racefeat'
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -133,7 +136,8 @@ class Lookup(commands.Cog):
         result: gamedata.Race = await self._lookup_search3(
             ctx,
             {'race': compendium.races, 'subrace': compendium.subraces},
-            name, 'race')
+            name, 'race'
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -152,7 +156,8 @@ class Lookup(commands.Cog):
         result: ClassFeature = await self._lookup_search3(
             ctx,
             {'class': compendium.cfeats, 'class-feature': compendium.optional_cfeats},
-            name, query_type='classfeat')
+            name, query_type='classfeat'
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -197,8 +202,10 @@ class Lookup(commands.Cog):
             embed.add_field(name="Starting Proficiencies", value=result.proficiencies, inline=False)
             embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
 
-            handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature.",
-                                 add_source_str=False)
+            handle_source_footer(
+                embed, result, f"Use {ctx.prefix}classfeat to look up a feature.",
+                add_source_str=False
+            )
         else:
             embed.title = f"{result.name}, Level {level}"
 
@@ -211,16 +218,20 @@ class Lookup(commands.Cog):
             for f in level_features:
                 embed.add_field(name=f.name, value=trim_str(f.text, 1024), inline=False)
 
-            handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
-                                 add_source_str=False)
+            handle_source_footer(
+                embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
+                add_source_str=False
+            )
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     async def subclass(self, ctx, *, name: str):
         """Looks up a subclass."""
-        result: gamedata.Subclass = await self._lookup_search3(ctx, {'class': compendium.subclasses}, name,
-                                                               query_type='subclass')
+        result: gamedata.Subclass = await self._lookup_search3(
+            ctx, {'class': compendium.subclasses}, name,
+            query_type='subclass'
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -232,8 +243,10 @@ class Lookup(commands.Cog):
                 text = trim_str(feature.text, 1024)
                 embed.add_field(name=feature.name, value=text, inline=False)
 
-        handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
-                             add_source_str=False)
+        handle_source_footer(
+            embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
+            add_source_str=False
+        )
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
@@ -648,14 +661,17 @@ class Lookup(commands.Cog):
 
         result, metadata = await search_and_select(
             ctx, choices, query, lambda e: e[0].name, return_metadata=True,
-            selectkey=selectkey)
+            selectkey=selectkey
+        )
 
         # get the entity
         entity, entity_entitlement_type = result
 
         # log the query
-        await self._add_training_data(query_type, query, entity.name, metadata=metadata, srd=entity.is_free,
-                                      could_view=can_access(entity, available_ids[entity_entitlement_type]))
+        await self._add_training_data(
+            query_type, query, entity.name, metadata=metadata, srd=entity.is_free,
+            could_view=can_access(entity, available_ids[entity_entitlement_type])
+        )
 
         # display error if not srd
         if not can_access(entity, available_ids[entity_entitlement_type]):
@@ -667,7 +683,7 @@ class Lookup(commands.Cog):
     async def on_guild_join(self, guild):
         # This method automatically allows full monster lookup for new large servers.
         # These settings can be changed by any server admin.
-        existing_guild_settings = await self.bot.mdb.guild_settings.find_one({"guild_id": guild.id})
+        existing_guild_settings = await utils.settings.ServerSettings.for_guild(self.bot.mdb, guild.id)
         if existing_guild_settings is not None:
             return
 

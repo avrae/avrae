@@ -136,7 +136,7 @@ async def test_inline_rolling_reaction(avrae, dhttp, mock_ldclient):
             avrae.message("[[1d20]]")
             await dhttp.receive_reaction('\N{game die}')
             # first time interaction
-            # await dhttp.receive_message(dm=True)
+            await dhttp.receive_message(dm=True)
 
             avrae.add_reaction('\N{game die}')
             await dhttp.receive_message(rf'\({D20_PATTERN}\)')

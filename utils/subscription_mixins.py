@@ -26,7 +26,8 @@ class SubscriberMixin(MixinBase, abc.ABC):
     async def is_subscribed(self, ctx):
         """Returns whether the contextual author is subscribed to this object."""
         return (await self.sub_coll(ctx).find_one(
-            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id})) is not None
+            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
+        )) is not None
 
     async def subscribe(self, ctx):
         """Adds the contextual author as a subscriber."""
@@ -91,7 +92,8 @@ class GuildActiveMixin(MixinBase, abc.ABC):
     async def is_server_active(self, ctx):
         """Returns whether the object is active on this server."""
         return (await self.sub_coll(ctx).find_one(
-            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id})) is not None
+            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id}
+        )) is not None
 
     async def toggle_server_active(self, ctx):
         """Toggles whether the object is active in the contextual guild.
@@ -106,12 +108,14 @@ class GuildActiveMixin(MixinBase, abc.ABC):
     async def set_server_active(self, ctx):
         """Sets the object as active for the contextual guild."""
         await self.sub_coll(ctx).insert_one(
-            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id})
+            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id}
+        )
 
     async def unset_server_active(self, ctx):
         """Sets the object as inactive for the contextual guild."""
         await self.sub_coll(ctx).delete_many(
-            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id})
+            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id}
+        )
 
     async def num_server_active(self, ctx):
         """Returns the number of guilds that have this object active."""
@@ -136,7 +140,8 @@ class EditorMixin(MixinBase, abc.ABC):
     async def is_editor(self, ctx, user):
         """Returns whether the given user can edit this object."""
         return (await self.sub_coll(ctx).find_one(
-            {"type": "editor", "subscriber_id": user.id, "object_id": self.id})) is not None
+            {"type": "editor", "subscriber_id": user.id, "object_id": self.id}
+        )) is not None
 
     async def toggle_editor(self, ctx, user):
         """Toggles whether a user is allowed to edit the given object.

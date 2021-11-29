@@ -10,8 +10,10 @@ from ..results import RollResult
 
 
 class Roll(Effect):
-    def __init__(self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, hidden: bool = False,
-                 **kwargs):
+    def __init__(
+        self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, hidden: bool = False,
+        **kwargs
+    ):
         super().__init__("roll", **kwargs)
         self.dice = dice
         self.name = name
@@ -21,9 +23,11 @@ class Roll(Effect):
 
     def to_dict(self):
         out = super().to_dict()
-        out.update({
-            "dice": self.dice, "name": self.name, "hidden": self.hidden
-        })
+        out.update(
+            {
+                "dice": self.dice, "name": self.name, "hidden": self.hidden
+            }
+        )
         if self.higher is not None:
             out['higher'] = self.higher
         if self.cantripScale is not None:
@@ -66,10 +70,9 @@ class Roll(Effect):
 
         simplified_expr = copy.deepcopy(rolled.expr)
         d20.utils.simplify_expr(simplified_expr)
-        simplified = RerollableStringifier().stringify(simplified_expr.roll)
-        autoctx.metavars[self.name] = simplified
+        autoctx.metavars[self.name] = RollEffectMetaVar(simplified_expr)
         autoctx.metavars['lastRoll'] = rolled.total  # #1335
-        return RollResult(result=rolled.total, roll=rolled, simplified=simplified, hidden=self.hidden)
+        return RollResult(result=rolled.total, roll=rolled, simplified_expr=simplified_expr, hidden=self.hidden)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
@@ -79,3 +82,26 @@ class Roll(Effect):
             evaluator.builtins[self.name] = self.dice
         evaluator.builtins['lastRoll'] = 0
         return ""
+
+
+class RollEffectMetaVar:
+    """
+    Proxy type for the rerollable string generated in Roll effects. This is its own class to allow checking if a
+    metavar was generated as the result of a Roll.
+    """
+
+    def __init__(self, simplified_expr: d20.Expression):
+        self._expr = simplified_expr
+        self._str = RerollableStringifier().stringify(simplified_expr.roll)
+
+    def __str__(self):
+        return self._str
+
+    def __int__(self):
+        return int(self._expr)
+
+    def __float__(self):
+        return self._expr.total
+
+    def __eq__(self, other):
+        return self._expr == other

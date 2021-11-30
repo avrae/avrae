@@ -397,15 +397,14 @@ class Dice(commands.Cog):
 
             try:
                 result = roller.roll(expr, allow_comments=True)
-            except d20.RollSyntaxError:
-                continue
-            except d20.RollError as e:
-                out.append(f"{context_before}({e!s}){context_after}")
-            else:
                 if not result.comment:
                     out.append(f"{context_before}({result.result}){context_after}")
                 else:
                     out.append(f"**{result.comment}**: {result.result}")
+            except d20.RollSyntaxError:
+                continue
+            except d20.RollError as e:
+                out.append(f"{context_before}({e!s}){context_after}")
 
         if not out:
             return

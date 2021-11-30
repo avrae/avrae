@@ -158,11 +158,12 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
             await interaction.send("No valid color found. Press `Select Color` to try again.", ephemeral=True)
         except disnake.HTTPException:
             pass
+        else:
+            await self.commit_settings()
+            await interaction.send("Your embed color has been updated.", ephemeral=True)
         finally:
             button.disabled = False
-            await self.commit_settings()
             await self.refresh_content(interaction)
-            await interaction.send("Your embed color has been updated.", ephemeral=True)
 
     @disnake.ui.button(label='Reset Color', style=disnake.ButtonStyle.danger)
     async def reset_color(self, _: disnake.ui.Button, interaction: disnake.Interaction):

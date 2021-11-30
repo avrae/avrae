@@ -4,11 +4,14 @@ namely, it creates the Avrae instance and overrides its http and gateway handler
 and defines a bunch of helper methods
 """
 import asyncio
+import copy
 import json
 import logging
 import os
 import random
 import re
+import urllib.parse
+from contextlib import contextmanager
 from fnmatch import fnmatchcase
 
 import discord
@@ -235,6 +238,19 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "POST"
         assert request.url.endswith(f"/channels/{channel}/typing")
 
+    async def receive_reaction(self, emoji, dm=False):
+        """
+        Assert that the bot sends a reaction.
+
+        For unicode emoji, pass the unicode str; otherwise pass the emoji as ``name:id``
+        """
+        request = await self.get_request()
+        channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
+        encoded_emoji = urllib.parse.quote(emoji)
+
+        assert request.method == "PUT"
+        assert request.url.endswith(f"/channels/{channel}/messages/{MESSAGE_ID}/reactions/{encoded_emoji}/@me")
+
     def queue_empty(self):
         return self._request_check_queue.empty()
 
@@ -247,6 +263,36 @@ def dhttp():
     We use this to check what the bot has sent and make sure it's right
     """
     return DiscordHTTPProxy()
+
+
+class MockAsyncLaunchDarklyClient:
+    def __init__(self):
+        self.flag_store = {}
+
+    @contextmanager
+    def flags(self, flags: dict):
+        """Async context manager that sets the global value of a feature flag in the context."""
+        old_flag_store = copy.deepcopy(self.flag_store)
+        self.flag_store.update(flags)
+        try:
+            yield
+        finally:
+            self.flag_store = old_flag_store
+
+    async def variation(self, key, user, default):
+        return self.flag_store.get(key, default)
+
+    def close(self):
+        pass
+
+
+# the ldclient fixture
+@pytest.fixture(scope="session")
+def mock_ldclient():
+    """
+    We use this to supply feature flags
+    """
+    return MockAsyncLaunchDarklyClient()
 
 
 # methods to monkey-patch in to send messages to the bot without sending
@@ -286,6 +332,23 @@ def message(self, message_content, as_owner=False, dm=False):
     return MESSAGE_ID
 
 
+def add_reaction(self, emoji, as_owner=False, dm=False):
+    log.info(f"Adding reaction {emoji}")
+    data = {
+        'user_id': str(DEFAULT_USER_ID) if not as_owner else str(config.OWNER_ID),
+        'channel_id': str(TEST_CHANNEL_ID) if not dm else str(TEST_DMCHANNEL_ID),
+        'message_id': str(MESSAGE_ID),
+        'emoji': {  # no custom emoji for now
+            'id': None,
+            'name': emoji
+        }
+    }
+    if not dm:
+        data['guild_id'] = TEST_GUILD_ID
+
+    self._connection.parse_message_reaction_add(data)
+
+
 # another error handler so unhandled errors bubble up correctly
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandInvokeError):
@@ -298,10 +361,11 @@ async def on_command_error(ctx, error):
 
 
 @pytest.fixture(scope="session")
-async def avrae(dhttp):
+async def avrae(dhttp, mock_ldclient):
     # set up a way for us to send events to Avrae
-    # monkey-patch in .message
+    # monkey-patch in .message and .add_reaction
     bot.message = message.__get__(bot, type(bot))
+    bot.add_reaction = add_reaction.__get__(bot, type(bot))
 
     # add error event listener
     bot.add_listener(on_command_error, "on_command_error")
@@ -310,6 +374,9 @@ async def avrae(dhttp):
     bot.http = dhttp
     # noinspection PyProtectedMember
     bot._connection.http = dhttp
+
+    # feature flags monkey-patch
+    bot.ldclient = mock_ldclient
 
     bot.state = "run"
     await bot.login(config.TOKEN)  # handled by our http proxy
@@ -334,8 +401,10 @@ async def avrae(dhttp):
 
 
 # ===== Character Fixture =====
-@pytest.fixture(scope="class",
-                params=["ara", "drakro"])
+@pytest.fixture(
+    scope="class",
+    params=["ara", "drakro"]
+)
 def character(request, avrae):
     """Sets up an active character in the user's context, to be used in tests. Cleans up after itself."""
     filename = os.path.join(dir_path, "static", f"char-{request.param}.json")

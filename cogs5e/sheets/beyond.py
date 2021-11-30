@@ -78,7 +78,6 @@ class BeyondSheetParser(SheetLoaderABC):
         max_hp, hp, temp_hp = self._get_hp()
 
         cvars = {}
-        options = {}
         overrides = {}
         death_saves = {}
 
@@ -99,7 +98,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
-            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
+            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
             spellbook, live, race, background,
             ddb_campaign_id=campaign_id, actions=actions
         )

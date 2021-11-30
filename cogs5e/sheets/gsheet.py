@@ -306,7 +306,6 @@ class GoogleSheet(SheetLoaderABC):
         temp_hp = 0
 
         cvars = {}
-        options = {}
         overrides = {}
         death_saves = {}
         consumables = []
@@ -319,7 +318,7 @@ class GoogleSheet(SheetLoaderABC):
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
-            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
+            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
             spellbook, live, race, background, actions=actions
         )
         return character

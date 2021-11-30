@@ -5,6 +5,7 @@ from discord.ext.commands import Context
 
 from cogs5e.models.character import Character
 from cogs5e.models.initiative import Combat
+from utils.settings import ServerSettings
 
 _sentinel = object()
 
@@ -17,6 +18,7 @@ class AvraeContext(Context):
 
         self._character = _sentinel
         self._combat = _sentinel
+        self._server_settings = _sentinel
 
     async def get_character(self, ignore_guild: bool = False):
         """
@@ -45,6 +47,21 @@ class AvraeContext(Context):
         combat = await Combat.from_ctx(self)
         self._combat = combat
         return combat
+
+    async def get_server_settings(self):
+        """
+        Gets the server settings in this context. If the context is not in a guild, returns None.
+
+        :rtype: utils.settings.ServerSettings or None
+        """
+        if self._server_settings is not _sentinel:
+            return self._server_settings
+        if self.guild is None:
+            self._server_settings = None
+            return None
+        server_settings = await ServerSettings.for_guild(self.bot.mdb, self.guild.id)
+        self._server_settings = server_settings
+        return server_settings
 
     # ==== overrides ====
     async def trigger_typing(self):

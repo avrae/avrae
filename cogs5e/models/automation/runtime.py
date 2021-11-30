@@ -217,7 +217,7 @@ class AutomationTarget:
         # character-specific arguments (#1443)
         reroll = None
         if self.character:
-            reroll = self.character.get_setting('reroll', 0)
+            reroll = self.character.options.reroll
 
         boolwise_adv = {-1: False, 0: None, 1: True}.get(adv)
         saveroll = save_obj.d20(base_adv=boolwise_adv, reroll=reroll)

@@ -521,7 +521,9 @@ def _find_inline_exprs(content, context_before=5, context_after=2, max_context_l
     if len(after_bits) > context_after:
         last_after_end_idx -= len(after_bits[-1])
         discarded_after = True
-    last_after_end_idx = min(last_after_end_idx, max_context_len)
+    if last_after_end_idx > max_context_len:
+        last_after_end_idx = max_context_len
+        discarded_after = True
     trimmed_segments.append(last_after[0:last_after_end_idx])
     # we also use whether or not the chopped-off bits at the very start and end exist for ellipses
 

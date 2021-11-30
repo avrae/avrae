@@ -299,11 +299,14 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
                   f"will be treated as a 10 if it rolls 9 or lower.*",
             inline=False
         )
+        sr_slot_note = ""
+        if self.character.spellbook.max_pact_slots is not None:
+            sr_slot_note = " Note that your pact slots will reset on a short rest even if this setting is disabled."
         embed.add_field(
             name="Reset All Spell Slots on Short Rest",
             value=f"**{self.settings.srslots}**\n"
                   f"*If this is enabled, all of your spell slots (including non-pact slots) will reset on a short "
-                  f"rest. Note that pact slots will reset on a short rest even if this setting is disabled.*",
+                  f"rest.{sr_slot_note}*",
             inline=False
         )
         return {"embed": embed}

@@ -166,11 +166,13 @@ class Dice(commands.Cog):
         await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
-    @commands.group(name='monattack', aliases=['ma', 'monster_attack'], invoke_without_command=True, help=f"""
+    @commands.group(
+        name='monattack', aliases=['ma', 'monster_attack'], invoke_without_command=True, help=f"""
     Rolls a monster's attack.
     __**Valid Arguments**__
     {VALID_AUTOMATION_ARGS}
-    """)
+    """
+    )
     async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
         if atk_name is None or atk_name == 'list':
             return await self.monster_atk_list(ctx, monster_name)
@@ -204,10 +206,12 @@ class Dice(commands.Cog):
         monster = await select_monster_full(ctx, monster_name)
         await actionutils.send_action_list(ctx, caster=monster, attacks=monster.attacks)
 
-    @commands.command(name='moncheck', aliases=['mc', 'monster_check'], help=f"""
+    @commands.command(
+        name='moncheck', aliases=['mc', 'monster_check'], help=f"""
     Rolls a check for a monster.
     {VALID_CHECK_ARGS}
-    """)
+    """
+    )
     async def monster_check(self, ctx, monster_name, check, *args):
         monster: Monster = await select_monster_full(ctx, monster_name)
 
@@ -230,10 +234,12 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(name='monsave', aliases=['ms', 'monster_save'], help=f"""
+    @commands.command(
+        name='monsave', aliases=['ms', 'monster_save'], help=f"""
     Rolls a save for a monster.
     {VALID_SAVE_ARGS}
-    """)
+    """
+    )
     async def monster_save(self, ctx, monster_name, save_stat, *args):
         monster: Monster = await select_monster_full(ctx, monster_name)
 
@@ -254,13 +260,15 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(name='moncast', aliases=['mcast', 'monster_cast'], help=f"""
+    @commands.command(
+        name='moncast', aliases=['mcast', 'monster_cast'], help=f"""
     Casts a spell as a monster.
     __**Valid Arguments**__
     {VALID_SPELLCASTING_ARGS}
     
     {VALID_AUTOMATION_ARGS}
-    """)
+    """
+    )
     async def monster_cast(self, ctx, monster_name, spell_name, *args):
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
@@ -273,8 +281,10 @@ class Dice(commands.Cog):
             try:
                 spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
             except NoSelectionElements:
-                return await ctx.send(f"No matching spells found in the creature's spellbook. Cast again "
-                                      f"with the `-i` argument to ignore restrictions!")
+                return await ctx.send(
+                    f"No matching spells found in the creature's spellbook. Cast again "
+                    f"with the `-i` argument to ignore restrictions!"
+                )
         else:
             spell = await select_spell_full(ctx, spell_name)
 
@@ -317,7 +327,8 @@ class Dice(commands.Cog):
         if not await self.bot.ldclient.variation(
                 "cog.dice.inline_rolling.enabled",
                 user=discord_user_to_dict(message.author),
-                default=False):
+                default=False
+        ):
             return
 
         if message.guild is not None:  # (always enabled in pms)
@@ -361,7 +372,8 @@ class Dice(commands.Cog):
         if not await self.bot.ldclient.variation(
                 "cog.dice.inline_rolling.enabled",
                 user=discord_user_to_dict(message.author),
-                default=False):
+                default=False
+        ):
             return
 
         # if inline rolling is not set to reactions, skip

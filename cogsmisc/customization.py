@@ -14,8 +14,8 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType, NoPrivateMessage
 
-from aliasing import helpers, personal, workshop
 import aliasing.utils
+from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
 from aliasing.workshop import WORKSHOP_ADDRESS_RE
 from cogs5e.models import embeds
@@ -24,7 +24,7 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
-from utils.functions import confirm, get_selection, search_and_select, user_from_id
+from utils.functions import a_or_an, confirm, get_selection, search_and_select, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
@@ -104,12 +104,14 @@ class CollectableManagementGroup(commands.Group):
         )(self.autofix)
         self.rename = self.command(
             name='rename',
-            help=f'Renames a {self.obj_name} or subscribed workshop {self.obj_name} to a new name.')(self.rename)
+            help=f'Renames {a_or_an(self.obj_name)} or subscribed workshop {self.obj_name} to a new name.'
+        )(self.rename)
         if not self.is_server:
             self.serve = self.command(
-                    name='serve',
-                    help=f'Sets an alias as a server alias or subscribes the server to a workshop collection.')(self.serve)
-
+                name='serve',
+                help=f'Sets {a_or_an(self.obj_name)} as a server {self.obj_name} or subscribes the server to the '
+                     f'workshop collection it is found in.'
+            )(self.serve)
 
     # we override the Group copy command since we register commands in __init__
     # and Group.copy() tries to reregister commands
@@ -380,48 +382,60 @@ class CollectableManagementGroup(commands.Group):
             update_meth = collection.update_alias_bindings if self.is_alias else collection.update_snippet_bindings
             await update_meth(ctx, sub_doc)
             return await ctx.send(
-                f"Okay, the workshop {self.obj_name} that was bound to {old_name} is now bound to {new_name}.")
+                f"Okay, the workshop {self.obj_name} that was bound to {old_name} is now bound to {new_name}."
+            )
 
     async def serve(self, ctx, name):
-        if self.before_edit_check:
-            self.before_edit_check(ctx, name)
-        if not _can_edit_servaliases(ctx):
-            raise NotAllowed("You do not have permission to edit server aliases. Either __Administrator__ "
-                             "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
-                             "is required.")
-
-        # list of (name, (alias or sub doc, collection or None))
+        # get the personal alias/snippet
         if self.is_alias:
             personal_obj = await helpers.get_personal_alias_named(ctx, name)
+            check_coro = _servalias_before_edit
         else:
             personal_obj = await helpers.get_personal_snippet_named(ctx, name)
+            check_coro = _servsnippet_before_edit
+
+        if personal_obj is None:
+            return await ctx.send(f"You do not have {a_or_an(self.obj_name)} named `{name}`.")
+        await check_coro(ctx, name)
 
         # If the alias is a workshop alias we need to get the workshopCollection and set it as active.
         if not isinstance(personal_obj, self.personal_cls):
-            server_obj = personal_obj.collection
+            await personal_obj.load_collection(ctx)
+            collection = personal_obj.collection
             response = await confirm(
-            ctx, f"You are subsribing the server to the {server_obj.name} workshop collection. " \
-                 f"This will subscirbe the server to {len(server_obj.aliases)} aliases and " \
-                 f"{len(server_obj.snippets)} snippets." \
-                 f"Do you want to continue? (Reply with yes/no)\n" \
+                ctx, f"This action will subscribe the server to the `{collection.name}` workshop collection, found at "
+                     f"<{collection.url}>. This will add {collection.alias_count} aliases and "
+                     f"{collection.snippet_count} snippets to the server. Do you want to continue? (Reply with yes/no)"
             )
             if not response:
                 return await ctx.send("Ok, aborting.")
-            await server_obj.set_server_active(ctx)
+            await collection.set_server_active(ctx)  # this loads the aliases/snippets
+
             embed = EmbedWithAuthor(ctx)
-            embed.title = f"Subscribed to {server_obj.name}"
-            embed.url = server_obj.url
-            embed.description = server_obj.description
-            if server_obj.aliases:
-                embed.add_field(name="Server Aliases", value=", ".join(sorted(a.name for a in server_obj.aliases)))
-            if personal_obj.snippets:
-                embed.add_field(name="Server Snippets", value=", ".join(sorted(a.name for a in server_obj.snippets)))
-            return ctx.send(embed=embed)
-        
+            embed.title = f"Subscribed to {collection.name}"
+            embed.url = collection.url
+            embed.description = collection.description
+            if collection.aliases:
+                embed.add_field(name="Server Aliases", value=", ".join(sorted(a.name for a in collection.aliases)))
+            if collection.snippets:
+                embed.add_field(name="Server Snippets", value=", ".join(sorted(a.name for a in collection.snippets)))
+            return await ctx.send(embed=embed)
+
+        # else it's a personal alias/snippet
         if self.is_alias:
+            existing_server_obj = await personal.Servalias.get_named(personal_obj.name, ctx)
             server_obj = personal.Servalias.new(personal_obj.name, personal_obj.code, ctx.guild.id)
         else:
+            existing_server_obj = await personal.Servsnippet.get_named(personal_obj.name, ctx)
             server_obj = personal.Servsnippet.new(personal_obj.name, personal_obj.code, ctx.guild.id)
+
+        # check if it overwrites anything
+        if existing_server_obj is not None and not await confirm(
+                ctx,
+                f"There is already an existing server {self.obj_name} named `{name}`. Do you want to overwrite it? "
+                f"(Reply with yes/no)"
+        ):
+            return await ctx.send("Ok, aborting.")
 
         await server_obj.commit(ctx.bot.mdb)
         out = f'Server {self.obj_name} `{server_obj.name}` added.' \

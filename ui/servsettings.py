@@ -1,9 +1,13 @@
 import abc
-from typing import TYPE_CHECKING, TypeVar
+import asyncio
+import re
+from contextlib import suppress
+from typing import List, Optional, TYPE_CHECKING, TypeVar
 
 import disnake
 
 from utils.aldclient import discord_user_to_dict
+from utils.functions import natural_join
 from utils.settings.guild import InlineRollingType, ServerSettings
 from .menu import MenuBase
 
@@ -12,6 +16,8 @@ if TYPE_CHECKING:
     from dbot import Avrae
 
     _AvraeT = Avrae
+
+TOO_MANY_ROLES_SENTINEL = "__special:too_many_roles"
 
 
 class ServerSettingsMenuBase(MenuBase, abc.ABC):
@@ -67,9 +73,13 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             title=f"Server Settings for {self.guild.name}",
             colour=disnake.Colour.blurple()
         )
+        if self.settings.dm_roles:
+            dm_roles = natural_join([f'<@&{role_id}>' for role_id in self.settings.dm_roles], 'or')
+        else:
+            dm_roles = "Dungeon Master, DM, Game Master, or GM"
         embed.add_field(
             name="Lookup Settings",
-            value=f"**DM Role**: Dungeon Master, DM, Game Master, or GM\n"  # {self.settings.lookup_dm_role}"
+            value=f"**DM Roles**: {dm_roles}\n"
                   f"**Monsters Require DM**: {self.settings.lookup_dm_required}\n"
                   f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
                   f"**Direct Message Results**: {self.settings.lookup_pm_result}",
@@ -84,32 +94,104 @@ class ServerSettingsUI(ServerSettingsMenuBase):
 
 
 class _LookupSettingsUI(ServerSettingsMenuBase):
-    # @disnake.ui.button(label='Edit DM Role', style=disnake.ButtonStyle.primary)
-    # async def edit_dm_role(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-    #     self.settings.lookup_dm_role += 1  # todo follow-up
-    #     await self.refresh_content(interaction)
+    select_dm_roles: disnake.ui.Select  # make the type checker happy
 
-    @disnake.ui.button(label='Toggle Monsters Require DM', style=disnake.ButtonStyle.primary)
+    # ==== ui ====
+    @disnake.ui.select(placeholder='Select DM Roles', min_values=0)
+    async def select_dm_roles(self, select: disnake.ui.Select, interaction: disnake.Interaction):
+        if len(select.values) == 1 and select.values[0] == TOO_MANY_ROLES_SENTINEL:
+            role_ids = await self._text_select_dm_roles(interaction)
+        else:
+            role_ids = list(map(int, select.values))
+        self.settings.dm_roles = role_ids or None
+        self._refresh_dm_role_select()
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.button(label='Toggle Monsters Require DM', style=disnake.ButtonStyle.primary, row=1)
     async def toggle_dm_required(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.lookup_dm_required = not self.settings.lookup_dm_required
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Toggle Direct Message DMs', style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label='Toggle Direct Message DMs', style=disnake.ButtonStyle.primary, row=1)
     async def toggle_pm_dm(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.lookup_pm_dm = not self.settings.lookup_pm_dm
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Toggle Direct Message Results', style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label='Toggle Direct Message Results', style=disnake.ButtonStyle.primary, row=1)
     async def toggle_pm_result(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.lookup_pm_result = not self.settings.lookup_pm_result
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=1)
+    @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=4)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
+
+    # ==== handlers ====
+    async def _text_select_dm_roles(self, interaction: disnake.Interaction) -> Optional[List[int]]:
+        self.select_dm_roles.disabled = True
+        await self.refresh_content(interaction)
+        await interaction.send(
+            "Choose the DM roles by sending a message to this channel. You can mention the roles, or use a "
+            "comma-separated list of role names or IDs. Type `reset` to reset the role list to the default.",
+            ephemeral=True
+        )
+
+        try:
+            input_msg: disnake.Message = await self.bot.wait_for(
+                'message', timeout=60,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id
+            )
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
+
+            if input_msg.content == 'reset':
+                await interaction.send("The DM roles have been updated.", ephemeral=True)
+                return None
+
+            role_ids = {r.id for r in input_msg.role_mentions}
+            for stmt in input_msg.content.split(','):
+                clean_stmt = stmt.strip()
+                try:  # get role by id
+                    role_id = int(clean_stmt)
+                    maybe_role = self.guild.get_role(role_id)
+                except ValueError:  # get role by name
+                    maybe_role = next((r for r in self.guild.roles if r.name.lower() == clean_stmt.lower()), None)
+                if maybe_role is not None:
+                    role_ids.add(maybe_role.id)
+
+            if role_ids:
+                await interaction.send("The DM roles have been updated.", ephemeral=True)
+                return list(role_ids)
+            await interaction.send("No valid roles found. Use the select menu to try again.", ephemeral=True)
+            return self.settings.dm_roles
+        except asyncio.TimeoutError:
+            await interaction.send("No valid roles found. Use the select menu to try again.", ephemeral=True)
+            return self.settings.dm_roles
+        finally:
+            self.select_dm_roles.disabled = False
+
+    # ==== content ====
+    def _refresh_dm_role_select(self):
+        """Update the options in the DM Role select to reflect the currently selected values."""
+        self.select_dm_roles.options.clear()
+        if len(self.guild.roles) > 25:
+            self.select_dm_roles.add_option(
+                label="Whoa, this server has a lot of roles! Click here to select them.",
+                value=TOO_MANY_ROLES_SENTINEL
+            )
+            return
+
+        for role in reversed(self.guild.roles):  # display highest-first
+            selected = self.settings.dm_roles is not None and role.id in self.settings.dm_roles
+            self.select_dm_roles.add_option(label=role.name, value=str(role.id), emoji=role.emoji, default=selected)
+        self.select_dm_roles.max_values = len(self.select_dm_roles.options)
+
+    async def _before_send(self):
+        self._refresh_dm_role_select()
 
     async def get_content(self):
         embed = disnake.Embed(
@@ -117,19 +199,25 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
             colour=disnake.Colour.blurple(),
             description="These settings affect how lookup results are displayed on this server."
         )
-        # embed.add_field(
-        #     name="DM Role",
-        #     value=f"**{self.settings.lookup_dm_role}**\n"
-        #           f"*If `Monsters Require DM` is enabled, any user with this role will be considered a DM.*",
-        #     inline=False
-        # )
-        embed.add_field(
-            name="DM Roles",
-            value=f"**Dungeon Master, DM, Game Master, or GM**\n"
-                  f"*If `Monsters Require DM` is enabled, any user with a role named one of these will be considered "
-                  f"a DM. In the future, you will be able to select a server DM role.*",
-            inline=False
-        )
+        if not self.settings.dm_roles:
+            embed.add_field(
+                name="DM Roles",
+                value=f"**Dungeon Master, DM, Game Master, or GM**\n"
+                      f"*Any user with a role named one of these will be considered a DM. This lets them look up a "
+                      f"monster's full stat block if `Monsters Require DM` is enabled, skip other players' turns in "
+                      f"initiative, and more.*",
+                inline=False
+            )
+        else:
+            dm_roles = natural_join([f'<@&{role_id}>' for role_id in self.settings.dm_roles], 'or')
+            embed.add_field(
+                name="DM Roles",
+                value=f"**{dm_roles}**\n"
+                      f"*Any user with at least one of these roles will be considered a DM. This lets them look up a "
+                      f"monster's full stat block if `Monsters Require DM` is enabled, skip turns in initiative, and "
+                      f"more.*",
+                inline=False
+            )
         embed.add_field(
             name="Monsters Require DM",
             value=f"**{self.settings.lookup_dm_required}**\n"

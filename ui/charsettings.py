@@ -158,8 +158,6 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
                 await input_msg.delete()
         except (ValueError, asyncio.TimeoutError, pydantic.ValidationError):
             await interaction.send("No valid color found. Press `Select Color` to try again.", ephemeral=True)
-        except disnake.HTTPException:
-            pass
         else:
             await self.commit_settings()
             await interaction.send("Your embed color has been updated.", ephemeral=True)

@@ -306,7 +306,6 @@ class GoogleSheet(SheetLoaderABC):
         temp_hp = 0
 
         cvars = {}
-        options = {}
         overrides = {}
         death_saves = {}
         consumables = []
@@ -319,7 +318,7 @@ class GoogleSheet(SheetLoaderABC):
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
-            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
+            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
             spellbook, live, race, background, actions=actions
         )
         return character
@@ -341,7 +340,7 @@ class GoogleSheet(SheetLoaderABC):
         pronoun = "She" if g == "female" else "He" if g == "male" else "They"
         verb1 = "is" if pronoun != "They" else "are"
         verb2 = "has" if pronoun != "They" else "have"
-        desc = "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}." \
+        desc = "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}. " \
                "{4} {12} {8} eyes, {9} hair, and {10} skin."
         desc = desc.format(n,
                            character.value("AL6"),

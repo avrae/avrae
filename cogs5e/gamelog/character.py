@@ -20,12 +20,15 @@ class CharacterHandler(GameLogCallbackHandler):
     @callback('character-sheet/character-update/fulfilled')
     @feature_flag('cog.gamelog.character-update-fulfilled.enabled')
     async def character_update_fulfilled(
-            self,
-            gctx: GameLogEventContext,
-            data: ddb.character.scds_types.SCDSMessageBrokerData):
+        self,
+        gctx: GameLogEventContext,
+        data: ddb.character.scds_types.SCDSMessageBrokerData
+    ):
         char = await gctx.get_character()
         if char is None:
             raise IgnoreEvent("Character is not imported")
+        if not char.options.sync_inbound:
+            return
 
         character_id = data.character_id
         ddb_user = await self.bot.ddb.get_ddb_user(gctx, gctx.discord_user_id)
@@ -44,8 +47,9 @@ class CharacterHandler(GameLogCallbackHandler):
     # ==== sync handlers ====
     @staticmethod
     def sync_hp(
-            char: Character,
-            hp_info: scds_types.SimplifiedHitPointInfo) -> SyncHPResult:
+        char: Character,
+        hp_info: scds_types.SimplifiedHitPointInfo
+    ) -> SyncHPResult:
         old_hp = new_hp = char.hp
         old_max = new_max = char.max_hp
         old_temp = char.temp_hp
@@ -73,8 +77,9 @@ class CharacterHandler(GameLogCallbackHandler):
 
     @staticmethod
     def sync_death_saves(
-            char: Character,
-            death_save_info: scds_types.SimplifiedDeathSaveInfo) -> SyncDeathSavesResult:
+        char: Character,
+        death_save_info: scds_types.SimplifiedDeathSaveInfo
+    ) -> SyncDeathSavesResult:
         old_successes = char.death_saves.successes
         old_fails = char.death_saves.fails
 
@@ -91,11 +96,12 @@ class CharacterHandler(GameLogCallbackHandler):
 
     # ==== display helpers ====
     async def send_sync_result(
-            self,
-            gctx: GameLogEventContext,
-            char: Character,
-            hp_result: SyncHPResult,
-            death_save_result: SyncDeathSavesResult):
+        self,
+        gctx: GameLogEventContext,
+        char: Character,
+        hp_result: SyncHPResult,
+        death_save_result: SyncDeathSavesResult
+    ):
         embed = embeds.EmbedWithCharacter(char)
 
         # --- hp ---

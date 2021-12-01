@@ -14,6 +14,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType, NoPrivateMessage
 
+import ui
 import aliasing.utils
 from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
@@ -1018,6 +1019,15 @@ class Customization(commands.Cog):
         await ctx.send('Your global variables:{}'.format(say_list[0]))
         for m in say_list[1:]:
             await ctx.send(m)
+
+    @commands.command(aliases=['servsettings'])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def server_settings(self, ctx):
+        """Opens the server settings menu. You must have *Manage Server* permissions to use this command."""
+        guild_settings = await ctx.get_server_settings()
+        settings_ui = ui.ServerSettingsUI.new(ctx.bot, owner=ctx.author, settings=guild_settings, guild=ctx.guild)
+        await settings_ui.send_to(ctx)
 
     # temporary commands to aid testers with lack of dashboard
     # @globalvar.command(name='import', hidden=True)

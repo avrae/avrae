@@ -1,5 +1,6 @@
 import abc
 import asyncio
+from contextlib import suppress
 from typing import TYPE_CHECKING, TypeVar
 
 import disnake
@@ -148,12 +149,13 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
         try:
             input_msg: disnake.Message = await self.bot.wait_for(
                 'message', timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel == interaction.channel
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id
             )
             color_val = pydantic.color.Color(input_msg.content)
             r, g, b = color_val.as_rgb_tuple(alpha=False)
             self.settings.color = (r << 16) + (g << 8) + b
-            await input_msg.delete()
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
         except (ValueError, asyncio.TimeoutError, pydantic.ValidationError):
             await interaction.send("No valid color found. Press `Select Color` to try again.", ephemeral=True)
         except disnake.HTTPException:

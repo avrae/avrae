@@ -194,8 +194,8 @@ class Tutorials(commands.Cog):
                   f"all for free! To get started, try out the D&D Beyond tutorial."
                   f"```\n{prefix}tutorial beyond\n```\n"
                   f"\u203b By default, for servers with less than 250 members, a monster's full stat block will be "
-                  f"hidden unless you have a Discord role named `Dungeon Master`. You can turn this off with "
-                  f"`{prefix}lookup_settings -req_dm_monster false`."
+                  f"hidden unless you have a Discord role named `Dungeon Master`. You can turn this off or change the "
+                  f"DM role with `{prefix}servsettings`."
         )
 
         embed.add_field(

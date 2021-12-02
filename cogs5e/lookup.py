@@ -270,20 +270,23 @@ class Lookup(commands.Cog):
     # ==== monsters ====
     @commands.command()
     async def monster(self, ctx, *, name: str):
-        """Looks up a monster.
-        Generally requires a Game Master role to show full stat block.
-        Game Master Roles: GM, DM, Game Master, Dungeon Master
+        """
+        Looks up a monster.
+        If you are not a Dungeon Master, this command may display partially hidden information. See !servsettings
+        to view which roles on a server count as Dungeon Master roles.
         __Valid Arguments__
-        -h - Shows the obfuscated stat block, even if you can see the full stat block."""
-        guild_settings = await ctx.get_server_settings()
-        pm = guild_settings.lookup_pm_result
-        pm_dm = guild_settings.lookup_pm_dm
-        req_dm_monster = guild_settings.lookup_dm_required
-
-        visible_roles = {'gm', 'game master', 'dm', 'dungeon master'}
-        if req_dm_monster and ctx.guild:
-            visible = True if visible_roles.intersection(set(str(r).lower() for r in ctx.author.roles)) else False
+        -h - Shows the obfuscated stat block, even if you can see the full stat block.
+        """
+        if ctx.guild is not None:
+            guild_settings = await ctx.get_server_settings()
+            pm = guild_settings.lookup_pm_result
+            pm_dm = guild_settings.lookup_pm_dm
+            req_dm_monster = guild_settings.lookup_dm_required
+            visible = (not req_dm_monster) or guild_settings.is_dm(ctx.author)
         else:
+            pm = False
+            pm_dm = False
+            req_dm_monster = False
             visible = True
 
         # #817 -h arg for monster lookup

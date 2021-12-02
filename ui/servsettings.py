@@ -1,6 +1,5 @@
 import abc
 import asyncio
-import re
 from contextlib import suppress
 from typing import List, Optional, TYPE_CHECKING, TypeVar
 

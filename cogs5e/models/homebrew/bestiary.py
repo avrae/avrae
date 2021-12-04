@@ -373,7 +373,7 @@ def parse_critterdb_traits(data, key):
                     for a in conflicts:
                         attacks.remove(a)
                     attacks.extend(attack_yaml)
-                except Exception:
+                except yaml.YAMLError:
                     simple_override = AVRAE_ATTACK_OVERRIDES_SIMPLE_RE.fullmatch(override.group(1))
                     if simple_override:
                         attacks.append({'name': simple_override.group(1) or name,

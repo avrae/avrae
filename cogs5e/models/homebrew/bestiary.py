@@ -6,6 +6,8 @@ from math import floor
 import aiohttp
 from markdownify import markdownify
 
+import yaml
+
 import gamedata.compendium as gd
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
 from cogs5e.models.sheet.attack import AttackList
@@ -260,7 +262,8 @@ async def parse_critterdb_response(resp, sha256_hash):
 
 
 # critterdb -> bestiary helpers
-AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
+AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>([\S\n\t\v ]*?)</avrae>', re.IGNORECASE)
+AVRAE_ATTACK_OVERRIDES_SIMPLE_RE = re.compile(r'(.*?)\|([+-]?\d*)\|(.*?)', re.IGNORECASE)
 ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
                        r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]??'
                        r'(?:in melee, or [+-]?\d+ \((.+?)\) (\w+) damage at range[,.]?)?'
@@ -362,9 +365,24 @@ def parse_critterdb_traits(data, key):
 
         if overrides:
             for override in overrides:
-                attacks.append({'name': override.group(1) or name,
-                                'attackBonus': override.group(2) or None, 'damage': override.group(3) or None,
-                                'details': desc})
+                try:
+                    attack_yaml = yaml.safe_load(override.group(1))
+                    if not isinstance(attack_yaml, list):
+                        attack_yaml = [attack_yaml]
+                    conflicts = [a for a in attacks if a['name'].lower() in [new['name'].lower() for new in attack_yaml]]
+                    for a in conflicts:
+                        attacks.remove(a)
+                    attacks.extend(attack_yaml)
+                except Exception as err:
+                    simple_override = AVRAE_ATTACK_OVERRIDES_SIMPLE_RE.fullmatch(override.group(1))
+                    if simple_override:
+                        attacks.append({'name': simple_override.group(1) or name,
+                                        'attackBonus': simple_override.group(2) or None, 'damage': simple_override.group(3) or None,
+                                        'details': desc})
+                    else:
+                        attacks.append({'name': 'Error',
+                                        'attackBonus': None, 'damage': None,
+                                        'details': str(err) + '\n' + str(attack_yaml)})
         elif raw_atks:
             for atk in raw_atks:
                 if atk.group(6) and atk.group(7):  # versatile

@@ -330,6 +330,14 @@ def _monster_factory(data, bestiary_name):
     legactions, atks = parse_critterdb_traits(data, 'legendaryActions')
     attacks.extend(atks)
 
+    name_duplications = {}
+    for atk in attacks:
+        if atk['name'] in name_duplications:
+            name_duplications[atk['name']] += 1
+            atk['name'] = atk['name'] + str(name_duplications[atk['name']])
+        else:
+            name_duplications[atk['name']] = 1
+
     attacks = AttackList.from_dict(attacks)
     spellcasting = parse_critterdb_spellcasting(traits, ability_scores)
 
@@ -369,13 +377,13 @@ def parse_critterdb_traits(data, key):
                     attack_yaml = yaml.safe_load(override.group(1))
                     if not isinstance(attack_yaml, list):
                         attack_yaml = [attack_yaml]
-                    if not all(isinstance(x, dict) for x in attack_yaml):
-                        raise ValueError('Invalid YAML')
-                    conflicts = [a for a in attacks if a['name'].lower() in [new['name'].lower() for new in attack_yaml]]
-                    for a in conflicts:
-                        attacks.remove(a)
+                    for atk in attack_yaml:
+                        if not isinstance(atk, dict):
+                            raise ValueError('Invalid YAML')
+                        elif 'name' not in atk:
+                            atk['name'] = name
                     attacks.extend(attack_yaml)
-                except (yaml.YAMLError, ValueError, KeyError):
+                except (yaml.YAMLError, ValueError):
                     simple_override = AVRAE_ATTACK_OVERRIDES_SIMPLE_RE.fullmatch(override.group(1))
                     if simple_override:
                         attacks.append({'name': simple_override.group(1) or name,

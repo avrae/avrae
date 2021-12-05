@@ -369,11 +369,13 @@ def parse_critterdb_traits(data, key):
                     attack_yaml = yaml.safe_load(override.group(1))
                     if not isinstance(attack_yaml, list):
                         attack_yaml = [attack_yaml]
+                    if not all(isinstance(x, dict) for x in attack_yaml):
+                        raise ValueError('Invalid YAML')
                     conflicts = [a for a in attacks if a['name'].lower() in [new['name'].lower() for new in attack_yaml]]
                     for a in conflicts:
                         attacks.remove(a)
                     attacks.extend(attack_yaml)
-                except yaml.YAMLError:
+                except (yaml.YAMLError, ValueError, KeyError):
                     simple_override = AVRAE_ATTACK_OVERRIDES_SIMPLE_RE.fullmatch(override.group(1))
                     if simple_override:
                         attacks.append({'name': simple_override.group(1) or name,

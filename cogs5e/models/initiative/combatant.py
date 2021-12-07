@@ -203,6 +203,9 @@ class Combatant(BaseCombatant, StatBlock):
 
     @property
     def index(self):
+        """The combatant's index in the Combat combatant array. If the combatant is in a group, the group's index."""
+        if self._group_id:
+            return self.get_group().index
         return self._index
 
     @index.setter

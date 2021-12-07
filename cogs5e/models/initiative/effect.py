@@ -1,3 +1,6 @@
+import math
+from typing import Optional
+
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
 from utils.argparser import argparse
@@ -24,9 +27,11 @@ class EffectReference:
 
 
 class Effect:
-    def __init__(self, combat, combatant, id: str, name: str, duration: int, remaining: int, effect: dict,
-                 concentration: bool = False, children: list = None, parent: EffectReference = None,
-                 tonend: bool = False, desc: str = None):
+    def __init__(
+        self, combat, combatant, id: str, name: str, duration: int, remaining: int, effect: dict,
+        concentration: bool = False, children: list = None, parent: EffectReference = None,
+        tonend: bool = False, desc: str = None
+    ):
         if children is None:
             children = []
         self.combat = combat
@@ -43,8 +48,10 @@ class Effect:
         self.desc = desc
 
     @classmethod
-    def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None,
-            tick_on_end=False, desc: str = None):
+    def new(
+        cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None,
+        tick_on_end=False, desc: str = None
+    ):
         if isinstance(effect_args, str):
             if (combatant and combatant.type == CombatantType.PLAYER) or character:
                 effect_args = argparse(effect_args, combatant.character or character)
@@ -71,8 +78,10 @@ class Effect:
 
         id = create_effect_id()
 
-        return cls(combat, combatant, id, name, duration, duration, effect_dict, concentration=concentration,
-                   tonend=tick_on_end, desc=desc)
+        return cls(
+            combat, combatant, id, name, duration, duration, effect_dict, concentration=concentration,
+            tonend=tick_on_end, desc=desc
+        )
 
     @classmethod
     def from_dict(cls, raw, combat, combatant):
@@ -125,31 +134,59 @@ class Effect:
             out.append(f"\n - {self.desc}")
         return ' '.join(out).strip()
 
+    def _duration_cmp(self):
+        """
+        Returns a tuple of (remaining_rounds, has_ticked_this_round, turn_index, end?).
+        Find the minimal of all of these in the effect parent hierarchy to find the effect that will end first.
+        """
+        remaining = self.remaining if self.remaining >= 0 else float('inf')
+        index = self.combatant.index
+        has_ticked_this_round = (self.combat.index == index and not self.ticks_on_end) or self.combat.index > index
+        return remaining, int(has_ticked_this_round), index, int(self.ticks_on_end)
+
     def _duration_str(self):
         """Gets a string describing this effect's duration."""
-        if self.remaining < 0:
+        # find minumum duration in parent hierarchy
+        min_duration = self._duration_cmp()
+        parent = self.get_parent_effect()
+        seen_parents = {self.id}
+        while parent is not None and parent.id not in seen_parents:
+            seen_parents.add(parent.id)
+            min_duration = min(min_duration, parent._duration_cmp())
+            parent = parent.get_parent_effect()
+
+        # unpack and build string
+        remaining, _, index, ticks_on_end = min_duration
+        if math.isinf(remaining):
             return ''
-        elif 0 <= self.remaining <= 1:  # effect ends on next tick
-            if self.ticks_on_end:
-                return "[until end of turn]"
-            else:
-                return "[until start of next turn]"
-        elif self.remaining > 5_256_000:  # years
+        elif 0 <= remaining <= 1:  # effect ends on next tick
+            if index == self.combatant.index:  # our turn
+                if ticks_on_end:
+                    return "[until end of turn]"
+                else:
+                    return "[until start of next turn]"
+            else:  # another combatant's turn
+                combatant = self.combat.combatants[index]
+                if ticks_on_end:
+                    return f"[until end of {combatant.name}'s turn]"
+                else:
+                    return f"[until start of {combatant.name}'s next turn]"
+        elif remaining > 5_256_000:  # years
             divisor, unit = 5256000, "year"
-        elif self.remaining > 438_000:  # months
+        elif remaining > 438_000:  # months
             divisor, unit = 438000, "month"
-        elif self.remaining > 100_800:  # weeks
+        elif remaining > 100_800:  # weeks
             divisor, unit = 100800, "week"
-        elif self.remaining > 14_400:  # days
+        elif remaining > 14_400:  # days
             divisor, unit = 14400, "day"
-        elif self.remaining > 600:  # hours
+        elif remaining > 600:  # hours
             divisor, unit = 600, "hour"
-        elif self.remaining > 10:  # minutes
+        elif remaining > 10:  # minutes
             divisor, unit = 10, "minute"
         else:  # rounds
             divisor, unit = 1, "round"
 
-        rounded = round(self.remaining / divisor, 1) if divisor > 1 else self.remaining
+        rounded = round(remaining / divisor, 1) if divisor > 1 else remaining
         return f"[{rounded} {unit}s]"
 
     def _parenthetical_str(self):
@@ -194,7 +231,7 @@ class Effect:
             self.remaining -= num_turns
 
     # parenting
-    def get_parent_effect(self):
+    def get_parent_effect(self) -> Optional['Effect']:
         if self.parent:
             return self._effect_from_reference(self.parent)
         return None

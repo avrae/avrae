@@ -194,6 +194,8 @@ IEffect
         conc?: boolean;
         desc?: AnnotatedString;
         stacking?: boolean;
+        save_as?: string;
+        parent?: string;
     }
 
 Adds an InitTracker Effect to a targeted creature, if the automation target is in combat.
@@ -226,8 +228,30 @@ It must be inside a Target effect.
 
 .. attribute:: stacking
 
-     *optional, default false* - If true, if another effect with the same name is found on the target, instead of
+     *optional, default false* - If true and another effect with the same name is found on the target, instead of
      overwriting, add a child effect with name ``{name} x{count}`` and no description, duration, or concentration.
+
+.. attribute:: save_as
+
+    *optional, default None* - If supplied, saves an :class:`IEffectMetaVar` to the automation runtime, which can be
+    used in another IEffect's ``parent`` key to set its parent to this effect. Must be a valid identifier.
+
+.. attribute:: parent
+
+    *optional, default None* - If supplied, sets the created effect's parent to the given effect. This must be the
+    name of an existing :class:`IEffectMetaVar`.
+
+    If ``parent`` is supplied but the parent effect does not exist, will not set a parent.
+
+    If ``conc`` is true, the given parent effect will take priority over the concentration effect.
+
+    If ``stacking`` is true and a valid stack parent exists, the stack parent will take priority over the given parent.
+
+**Variables**
+
+- ``(supplied save_as)`` (:class:`IEffectMetaVar` or ``None``) A reference to the effect that was added to the target.
+  Use this in another IEffect's ``parent`` key to set that IEffect's parent to the given one.
+
 
 Roll
 ----
@@ -251,7 +275,7 @@ Rolls some dice and saves the result in a variable. Displays the roll and its na
 
 .. attribute:: name
 
-     What to save the result as.
+     The variable name to save the result as.
 
 .. attribute:: higher
 
@@ -263,11 +287,14 @@ Rolls some dice and saves the result in a variable. Displays the roll and its na
 
 .. attribute:: hidden
 
-     *optional* - If ``true``, won't display the roll in the Meta field, or apply any bonuses from -d.
+     *optional* - If ``true``, won't display the roll in the Meta field, or apply any bonuses from the ``-d`` argument.
 
 **Variables**
 
-- ``lastRoll`` (:class:`int`) The total of the roll.
+- ``(supplied name)`` (:class:`RollEffectMetaVar`) The result of the roll. You can use this in an AnnotatedString to
+  retrieve the simplified result of the roll, or in an IntExpression to retrieve the roll total. Note that using this
+  variable in an AnnotatedString will always return a string that itself can be rolled.
+- ``lastRoll`` (:class:`int`) The integer total of the roll.
 
 Text
 ----

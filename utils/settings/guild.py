@@ -1,6 +1,11 @@
 import enum
+from typing import List, Optional
+
+import disnake
 
 from . import SettingsBaseModel
+
+DEFAULT_DM_ROLE_NAMES = {"dm", "gm", "dungeon master", "game master"}
 
 
 class InlineRollingType(enum.IntEnum):
@@ -11,12 +16,13 @@ class InlineRollingType(enum.IntEnum):
 
 class ServerSettings(SettingsBaseModel):
     guild_id: int
-    # lookup_dm_role: int = 1234
+    dm_roles: Optional[List[int]] = None
     lookup_dm_required: bool = True
     lookup_pm_dm: bool = False
     lookup_pm_result: bool = False
     inline_enabled: InlineRollingType = InlineRollingType.DISABLED
 
+    # ==== lifecycle ====
     @classmethod
     async def for_guild(cls, mdb, guild_id: int):
         """Returns the server settings for a given guild."""
@@ -49,3 +55,11 @@ class ServerSettings(SettingsBaseModel):
             {"$set": self.dict()},
             upsert=True
         )
+
+    # ==== helpers ====
+    def is_dm(self, member: disnake.Member):
+        """Returns whether the given member is considered a DM given the DM roles specified in the servsettings."""
+        if not self.dm_roles:
+            return any(r.name.lower() in DEFAULT_DM_ROLE_NAMES for r in member.roles)
+        dm_role_set = set(self.dm_roles)
+        return any(r.id in dm_role_set for r in member.roles)

@@ -166,11 +166,13 @@ class Dice(commands.Cog):
         await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
-    @commands.group(name='monattack', aliases=['ma', 'monster_attack'], invoke_without_command=True, help=f"""
+    @commands.group(
+        name='monattack', aliases=['ma', 'monster_attack'], invoke_without_command=True, help=f"""
     Rolls a monster's attack.
     __**Valid Arguments**__
     {VALID_AUTOMATION_ARGS}
-    """)
+    """
+    )
     async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
         if atk_name is None or atk_name == 'list':
             return await self.monster_atk_list(ctx, monster_name)
@@ -203,10 +205,12 @@ class Dice(commands.Cog):
         monster = await select_monster_full(ctx, monster_name)
         await actionutils.send_action_list(ctx, caster=monster, attacks=monster.attacks)
 
-    @commands.command(name='moncheck', aliases=['mc', 'monster_check'], help=f"""
+    @commands.command(
+        name='moncheck', aliases=['mc', 'monster_check'], help=f"""
     Rolls a check for a monster.
     {VALID_CHECK_ARGS}
-    """)
+    """
+    )
     async def monster_check(self, ctx, monster_name, check, *args):
         monster: Monster = await select_monster_full(ctx, monster_name)
 
@@ -228,10 +232,12 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(name='monsave', aliases=['ms', 'monster_save'], help=f"""
+    @commands.command(
+        name='monsave', aliases=['ms', 'monster_save'], help=f"""
     Rolls a save for a monster.
     {VALID_SAVE_ARGS}
-    """)
+    """
+    )
     async def monster_save(self, ctx, monster_name, save_stat, *args):
         monster: Monster = await select_monster_full(ctx, monster_name)
 
@@ -251,13 +257,15 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(name='moncast', aliases=['mcast', 'monster_cast'], help=f"""
+    @commands.command(
+        name='moncast', aliases=['mcast', 'monster_cast'], help=f"""
     Casts a spell as a monster.
     __**Valid Arguments**__
     {VALID_SPELLCASTING_ARGS}
     
     {VALID_AUTOMATION_ARGS}
-    """)
+    """
+    )
     async def monster_cast(self, ctx, monster_name, spell_name, *args):
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
@@ -269,8 +277,10 @@ class Dice(commands.Cog):
             try:
                 spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
             except NoSelectionElements:
-                return await ctx.send(f"No matching spells found in the creature's spellbook. Cast again "
-                                      f"with the `-i` argument to ignore restrictions!")
+                return await ctx.send(
+                    f"No matching spells found in the creature's spellbook. Cast again "
+                    f"with the `-i` argument to ignore restrictions!"
+                )
         else:
             spell = await select_spell_full(ctx, spell_name)
 
@@ -313,7 +323,8 @@ class Dice(commands.Cog):
         if not await self.bot.ldclient.variation(
                 "cog.dice.inline_rolling.enabled",
                 user=discord_user_to_dict(message.author),
-                default=False):
+                default=False
+        ):
             return
 
         if message.guild is not None:  # (always enabled in pms)
@@ -357,7 +368,8 @@ class Dice(commands.Cog):
         if not await self.bot.ldclient.variation(
                 "cog.dice.inline_rolling.enabled",
                 user=discord_user_to_dict(message.author),
-                default=False):
+                default=False
+        ):
             return
 
         # if inline rolling is not set to reactions, skip
@@ -393,15 +405,14 @@ class Dice(commands.Cog):
 
             try:
                 result = roller.roll(expr, allow_comments=True)
-            except d20.RollSyntaxError:
-                continue
-            except d20.RollError as e:
-                out.append(f"{context_before}({e!s}){context_after}")
-            else:
                 if not result.comment:
                     out.append(f"{context_before}({result.result}){context_after}")
                 else:
                     out.append(f"**{result.comment}**: {result.result}")
+            except d20.RollSyntaxError:
+                continue
+            except d20.RollError as e:
+                out.append(f"{context_before}({e!s}){context_after}")
 
         if not out:
             return
@@ -487,7 +498,7 @@ def _find_inline_exprs(content, context_before=5, context_after=2, max_context_l
         after_bits = text.split(maxsplit=context_after)
         if len(after_bits) > context_after:
             last_after_end_idx -= len(after_bits[-1])
-        last_after_end_idx = min(last_after_end_idx, before_idx)
+        last_after_end_idx = min(last_after_end_idx, before_idx, max_context_len)
         last_after = text[0:last_after_end_idx]
 
         trimmed_segments.extend((last_after, before, expr))
@@ -505,6 +516,9 @@ def _find_inline_exprs(content, context_before=5, context_after=2, max_context_l
     after_bits = last_after.split(maxsplit=context_after)
     if len(after_bits) > context_after:
         last_after_end_idx -= len(after_bits[-1])
+        discarded_after = True
+    if last_after_end_idx > max_context_len:
+        last_after_end_idx = max_context_len
         discarded_after = True
     trimmed_segments.append(last_after[0:last_after_end_idx])
     # we also use whether or not the chopped-off bits at the very start and end exist for ellipses

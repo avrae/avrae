@@ -132,7 +132,7 @@ Deals damage to a targeted creature. It must be inside a Target effect.
 
 .. attribute:: damage
 
-     How much damage to deal. Can use variables defined in a Meta tag.
+     How much damage to deal. 
 
 .. attribute:: overheal
 
@@ -167,7 +167,7 @@ Sets the target's THP. It must be inside a Target effect.
 
 .. attribute:: amount
 
-     How much temp HP the target should have. Can use variables defined in a Meta tag.
+     How much temp HP the target should have. 
 
 .. attribute:: higher
 
@@ -207,12 +207,11 @@ It must be inside a Target effect.
 
 .. attribute:: duration
 
-     The duration of the effect, in rounds of combat. Can use variables defined in a Meta tag.
+     The duration of the effect, in rounds of combat.
 
 .. attribute:: effects
 
-     The effects to add (see :func:`~cogs5e.funcs.scripting.combat.SimpleCombatant.add_effect()`).
-     Can use variables defined in a Meta tag.
+     The effects to add (see :func:`~aliasing.api.combat.SimpleCombatant.add_effect()`).
 
 .. attribute:: end
 

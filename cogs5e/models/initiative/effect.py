@@ -1,5 +1,5 @@
 import math
-from typing import Optional
+from typing import Any, Optional, TYPE_CHECKING, TypeVar
 
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
@@ -7,6 +7,16 @@ from utils.argparser import argparse
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import verbose_stat
 from .utils import CombatantType, create_effect_id
+
+# combat types are only defined when type checking
+_CombatT = Any
+_CombatantT = Any
+if TYPE_CHECKING:
+    from .combat import Combat
+    from .combatant import Combatant
+
+    _CombatT = Combat
+    _CombatantT = Combatant
 
 
 class EffectReference:
@@ -28,9 +38,19 @@ class EffectReference:
 
 class Effect:
     def __init__(
-        self, combat, combatant, id: str, name: str, duration: int, remaining: int, effect: dict,
-        concentration: bool = False, children: list = None, parent: EffectReference = None,
-        tonend: bool = False, desc: str = None
+        self,
+        combat: Optional[_CombatT],
+        combatant: Optional[_CombatantT],
+        id: str,
+        name: str,
+        duration: int,
+        remaining: int,
+        effect: dict,
+        concentration: bool = False,
+        children: list = None,
+        parent: EffectReference = None,
+        tonend: bool = False,
+        desc: str = None
     ):
         if children is None:
             children = []
@@ -49,8 +69,16 @@ class Effect:
 
     @classmethod
     def new(
-        cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None,
-        tick_on_end=False, desc: str = None
+        cls,
+        combat,
+        combatant,
+        name,
+        duration,
+        effect_args,
+        concentration: bool = False,
+        character=None,
+        tick_on_end=False,
+        desc: str = None
     ):
         if isinstance(effect_args, str):
             if (combatant and combatant.type == CombatantType.PLAYER) or character:
@@ -140,6 +168,8 @@ class Effect:
         Find the minimal of all of these in the effect parent hierarchy to find the effect that will end first.
         """
         remaining = self.remaining if self.remaining >= 0 else float('inf')
+        if self.combatant is None or self.combat is None:
+            return remaining, 0, 0, int(self.ticks_on_end)
         index = self.combatant.index
         has_ticked_this_round = (self.combat.index is not None
                                  and ((self.combat.index == index and not self.ticks_on_end)

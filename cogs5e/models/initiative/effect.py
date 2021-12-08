@@ -141,7 +141,9 @@ class Effect:
         """
         remaining = self.remaining if self.remaining >= 0 else float('inf')
         index = self.combatant.index
-        has_ticked_this_round = (self.combat.index == index and not self.ticks_on_end) or self.combat.index > index
+        has_ticked_this_round = (self.combat.index is not None
+                                 and ((self.combat.index == index and not self.ticks_on_end)
+                                      or self.combat.index > index))
         return remaining, int(has_ticked_this_round), index, int(self.ticks_on_end)
 
     def _duration_str(self):

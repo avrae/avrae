@@ -1,5 +1,5 @@
 import math
-from typing import Any, Optional, TYPE_CHECKING, TypeVar
+from typing import Any, Optional, TYPE_CHECKING
 
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
@@ -192,7 +192,7 @@ class Effect:
         if math.isinf(remaining):
             return ''
         elif 0 <= remaining <= 1:  # effect ends on next tick
-            if index == self.combatant.index:  # our turn
+            if self.combatant is None or self.combat is None or index == self.combatant.index:  # our turn
                 if ticks_on_end:
                     return "[until end of turn]"
                 else:
@@ -278,6 +278,8 @@ class Effect:
                 self.children.remove(e)  # effect was removed elsewhere; disown it
 
     def _effect_from_reference(self, e: EffectReference):
+        if self.combat is None:
+            return None
         combatant = self.combat.combatant_by_id(e.combatant_id)
         if combatant is None:
             return None
@@ -294,7 +296,8 @@ class Effect:
             if effect not in removed:  # no infinite recursion please
                 removed.append(effect)
                 effect.remove(removed)
-        self.combatant.remove_effect(self)
+        if self.combatant is not None:
+            self.combatant.remove_effect(self)
 
 
 # ---- attack ieffect ----
@@ -308,7 +311,7 @@ def parse_attack_arg(arg, name):
 def parse_attack_str(atk):
     try:
         return f"{int(atk['attackBonus']):+}|{atk['damage']}"
-    except:
+    except (TypeError, ValueError):
         return f"{atk['attackBonus']}|{atk['damage']}"
 
 

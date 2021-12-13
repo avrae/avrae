@@ -365,9 +365,12 @@ class SheetManager(commands.Cog):
         result = await char.set_active(ctx)
         await try_delete(ctx.message)
         if result.did_unset_server_active:
-            await ctx.send(f"Active character changed to {char.name}. Your server active character has been unset.")
+            await ctx.send(
+                f"Active character changed to {char.name}. Your server active character has been unset.",
+                delete_after=30
+            )
         else:
-            await ctx.send(f"Active character changed to {char.name}.")
+            await ctx.send(f"Active character changed to {char.name}.", delete_after=15)
 
     @character.command(name='server')
     @commands.guild_only()

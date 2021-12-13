@@ -108,7 +108,7 @@ class SimplifiedRace(ApiBaseModel):
 
 class SimplifiedSense(ApiBaseModel):
     name: str
-    value: str
+    distance: str
 
 
 class SimplifiedSkill(ApiBaseModel):

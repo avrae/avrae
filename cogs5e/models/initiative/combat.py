@@ -1,3 +1,5 @@
+from types import MappingProxyType
+
 import cachetools
 import discord
 from d20 import roll
@@ -19,9 +21,11 @@ class Combat:
     # probably won't encounter any scaling issues, since a combat will be shard-specific
     _cache = cachetools.TTLCache(maxsize=50, ttl=10)
 
-    def __init__(self, channel_id, message_id, dm_id, options, ctx,
-                 combatants=None, round_num=0, turn_num=0, current_index=None,
-                 metadata=None):
+    def __init__(
+        self, channel_id, message_id, dm_id, options, ctx,
+        combatants=None, round_num=0, turn_num=0, current_index=None,
+        metadata=None
+    ):
         if combatants is None:
             combatants = []
         if metadata is None:
@@ -62,8 +66,10 @@ class Combat:
 
     @classmethod
     async def from_dict(cls, raw, ctx):
-        inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'], raw.get('metadata'))
+        inst = cls(
+            raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+            raw['turn'], raw['current'], raw.get('metadata')
+        )
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -95,8 +101,10 @@ class Combat:
 
     @classmethod
     def from_dict_sync(cls, raw, ctx):
-        inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-                   raw['turn'], raw['current'], raw.get('metadata'))
+        inst = cls(
+            raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+            raw['turn'], raw['current'], raw.get('metadata')
+        )
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
             if ctype == CombatantType.GENERIC:
@@ -112,9 +120,11 @@ class Combat:
         return inst
 
     def to_dict(self):
-        return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
-                'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-                'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata}
+        return {
+            'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
+            'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
+            'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata
+        }
 
     # members
     @property
@@ -162,6 +172,15 @@ class Combat:
         return {c.id: c for c in self.get_combatants(groups=True)}
 
     # combatants
+    @property
+    def combatants(self):
+        """
+        A read-only copy of the combatant list.
+        Note that this will not update if the underlying combatant list changes.
+        Use this to access a combatant given its index.
+        """
+        return tuple(self._combatants)
+
     @property
     def current_combatant(self):
         """
@@ -338,8 +357,10 @@ class Combat:
         self.end_round()
 
         order = []
-        for combatant, init_roll in sorted(rolls.items(), key=lambda r: (r[1].total, int(r[0].init_skill)),
-                                           reverse=True):
+        for combatant, init_roll in sorted(
+                rolls.items(), key=lambda r: (r[1].total, int(r[0].init_skill)),
+                reverse=True
+        ):
             order.append(f"{init_roll.result}: {combatant.name}")
 
         order = "\n".join(order)
@@ -363,8 +384,10 @@ class Combat:
         :param name: The name of the combatant to search for.
         :return: The selected Combatant, or None if the search failed.
         """
-        return await search_and_select(self.ctx, self.get_combatants(select_group), name, lambda c: c.name,
-                                       message=choice_message)
+        return await search_and_select(
+            self.ctx, self.get_combatants(select_group), name, lambda c: c.name,
+            message=choice_message
+        )
 
     def advance_turn(self):
         """Advances the turn. If any caveats should be noted, returns them in messages."""

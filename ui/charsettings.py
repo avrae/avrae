@@ -47,7 +47,10 @@ class CharacterSettingsMenuBase(MenuBase, abc.ABC):
         # ddb sheets: if either of the flags are enabled
         elif self.character.sheet_type == 'beyond':
             ddb_user = await self.bot.ddb.get_ddb_user(self, self.owner.id)
-            ddb_user_ld = ddb_user.to_ld_dict()
+            if ddb_user is None:
+                ddb_user_ld = {"key": str(self.owner.id), "anonymous": True}
+            else:
+                ddb_user_ld = ddb_user.to_ld_dict()
             outbound_flag = await self.bot.ldclient.variation(
                 'cog.sheetmanager.sync.send.enabled',
                 ddb_user_ld,

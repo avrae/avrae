@@ -31,15 +31,16 @@ class CharacterSettings(SettingsBaseModel):
     def from_old_csettings(cls, d):
         """Returns a new CharacterSettings instance with all default options, updated by legacy csettings options."""
         # for each key, get it from old or fall back to class default
+        old_settings = d.get('options', {})
         return cls(
-            color=d.get('color', None),
-            embed_image=d.get('embedimage', True),
-            crit_on=d.get('criton', 20),
-            extra_crit_dice=d.get('critdice', 0),
-            ignore_crit=d.get('ignorecrit', False),
-            reroll=d.get('reroll', None),
-            talent=d.get('talent', False),
-            srslots=d.get('srslots', False)
+            color=old_settings.get('color', None),
+            embed_image=old_settings.get('embedimage', True),
+            crit_on=old_settings.get('criton', 20),
+            extra_crit_dice=old_settings.get('critdice', 0),
+            ignore_crit=old_settings.get('ignorecrit', False),
+            reroll=old_settings.get('reroll', None),
+            talent=old_settings.get('talent', False),
+            srslots=old_settings.get('srslots', False)
         )
 
     async def commit(self, mdb, character):

@@ -61,10 +61,10 @@ class Effect:
         self.duration = duration
         self.remaining = remaining
         self._effect = effect
-        self.concentration = concentration
+        self.concentration = bool(concentration)
         self.children = children
         self.parent = parent
-        self.ticks_on_end = tonend
+        self.ticks_on_end = bool(tonend)
         self.desc = desc
 
     @classmethod
@@ -169,12 +169,12 @@ class Effect:
         """
         remaining = self.remaining if self.remaining >= 0 else float('inf')
         if self.combatant is None or self.combat is None:
-            return remaining, 0, 0, int(self.ticks_on_end)
+            return remaining, 0, 0, 1 if self.ticks_on_end else 0
         index = self.combatant.index
         has_ticked_this_round = (self.combat.index is not None
                                  and ((self.combat.index == index and not self.ticks_on_end)
                                       or self.combat.index > index))
-        return remaining, int(has_ticked_this_round), index, int(self.ticks_on_end)
+        return remaining, int(has_ticked_this_round), index, 1 if self.ticks_on_end else 0
 
     def _duration_str(self):
         """Gets a string describing this effect's duration."""

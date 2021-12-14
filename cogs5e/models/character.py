@@ -51,6 +51,8 @@ class Character(StatBlock):
                 options_v2 = CharacterSettings.from_old_csettings(kwargs.pop('options'))
             else:
                 options_v2 = CharacterSettings()
+        if kwargs:
+            log.debug(f"Unused kwargs: {kwargs}")
 
         # sheet metadata
         self._owner = owner

@@ -2,7 +2,7 @@ import abc
 import functools
 import inspect
 from types import MappingProxyType
-from typing import Any, Callable, Coroutine, TypeVar, Union
+from typing import Callable, Coroutine, Protocol, Type, TypeVar, Union
 
 from ddb.gamelog import GameLogEventContext
 
@@ -35,9 +35,19 @@ class GameLogCallbackHandler(abc.ABC):
             self.bot.glclient.deregister_callback(event_type)
 
 
+# ==== callback handler decorator ====
+T = TypeVar('T')
+
+
+class SupportsFromDict(Protocol):
+    @classmethod
+    def from_dict(cls: Type[T], data: dict) -> T:
+        ...
+
+
 SelfT = TypeVar('SelfT', bound=GameLogCallbackHandler)
 F1 = Callable[[SelfT, GameLogEventContext], Coroutine]
-F2 = Callable[[SelfT, GameLogEventContext, Any], Coroutine]
+F2 = Callable[[SelfT, GameLogEventContext, SupportsFromDict], Coroutine]
 
 
 def callback(event_name: str) -> Callable[[Union[F1, F2]], F1]:

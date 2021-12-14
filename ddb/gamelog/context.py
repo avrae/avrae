@@ -108,13 +108,13 @@ class GameLogEventContext:
 
     async def send(self, *args, ignore_exc=True, **kwargs):
         """Sends content to the correct destination(s), accounting for message's scope."""
+        destination = await self.destination_channel()
         try:
-            destination = await self.destination_channel()
             return await destination.send(*args, **kwargs)
         except discord.HTTPException as e:
             if not ignore_exc:
                 raise
-            log.info(f"Could not send message to destination: {e}")
+            log.info(f"Could not send message to channel {destination!r}: {e}")
 
     # ==== entity utils ====
     async def get_character(self):

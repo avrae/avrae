@@ -10,6 +10,7 @@ from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter
 from utils import constants
 from utils.aldclient import discord_user_to_dict
 from utils.dice import PersistentRollContext
+from utils.functions import camel_to_title, verbose_stat
 from .utils import string_search_adv
 
 INLINE_ROLLING_EMOJI = '\U0001f3b2'  # :game_die:
@@ -113,13 +114,15 @@ class InlineRoller:
             context_after = context_after.replace('\n', ' ')
 
             try:
-                expr = await char_replacer.replace(expr)
+                expr, char_comment = await char_replacer.replace(expr)
                 expr, adv = string_search_adv(expr)
                 result = roller.roll(expr, advantage=adv, allow_comments=True)
-                if not result.comment:
-                    out.append(f"{context_before}({result.result}){context_after}")
-                else:
+                if result.comment:
                     out.append(f"**{result.comment.strip()}**: {result.result}")
+                elif char_comment:
+                    out.append(f"{context_before}({char_comment}: {result.result}){context_after}")
+                else:
+                    out.append(f"{context_before}({result.result}){context_after}")
             except d20.RollSyntaxError:
                 continue
             except (d20.RollError, AvraeException) as e:
@@ -201,20 +204,23 @@ class CharacterReplacer:
         """Replaces expressions that start with c: or s: with dice expressions for the character's check/save."""
         skill_match = INLINE_SKILL_RE.match(expr)
         if skill_match is None:
-            return expr
+            return expr, None
 
         character = await self._get_character()
         check_search = skill_match.group(2).lower()
         if skill_match.group(1) == 'c':
-            skill = next(
-                (character.skills[c] for c in constants.SKILL_NAMES if c.lower().startswith(check_search)),
+            skill_key = next(
+                (c for c in constants.SKILL_NAMES if c.lower().startswith(check_search)),
                 None
             )
-            if skill is None:
+            if skill_key is None:
                 raise InvalidArgument(f"`{check_search}` is not a valid skill.")
+            skill = character.skills[skill_key]
+            skill_name = f"{camel_to_title(skill_key)} Check"
         else:
             try:
                 skill = character.saves.get(check_search)
+                skill_name = f"{verbose_stat(check_search[:3]).title()} Save"
             except ValueError:
                 raise InvalidArgument(f"`{check_search}` is not a valid save.")
 
@@ -223,7 +229,7 @@ class CharacterReplacer:
             min_val=10 * bool(character.options.talent and skill.prof >= 1)
         )
         rest_of_expr = expr[skill_match.end():]
-        return f"{check_dice}{rest_of_expr}"
+        return f"{check_dice}{rest_of_expr}", skill_name
 
 
 # ==== helpers ====

@@ -154,5 +154,25 @@ async def test_inline_rolling_enabled(avrae, dhttp, mock_ldclient):
             await dhttp.receive_message(rf'one two \({D20_PATTERN}\) three four\.\.\.')
 
 
+async def test_inline_rolling_character(avrae, dhttp, mock_ldclient, character):
+    async with server_settings(avrae, inline_enabled=InlineRollingType.ENABLED):
+        with mock_ldclient.flags({'cog.dice.inline_rolling.enabled': True}):
+            avrae.message("[[1d20]]")
+            await dhttp.drain()  # clear any 1st time interactions
+
+            # checks/saves
+            avrae.message("[[c:arcana]]")
+            await dhttp.receive_message(rf'\(Arcana Check: {D20_PATTERN}\)')
+
+            avrae.message("[[s:dex]]")
+            await dhttp.receive_message(rf'\(Dexterity Save: {D20_PATTERN}\)')
+
+            # invalid
+            avrae.message("[[c:foobar]]")
+            await dhttp.receive_message('(`foobar` is not a valid skill.)', regex=False)
+            avrae.message("[[s:foobar]]")
+            await dhttp.receive_message('(`foobar` is not a valid save.)', regex=False)
+
+
 async def test_roll(avrae, dhttp):
     dhttp.clear()

@@ -6,17 +6,22 @@ import disnake
 
 import utils.settings
 from cogs5e.models import embeds
+from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter
+from utils import constants
 from utils.aldclient import discord_user_to_dict
 from utils.dice import PersistentRollContext
+from .utils import string_search_adv
 
 INLINE_ROLLING_EMOJI = '\U0001f3b2'  # :game_die:
 INLINE_ROLLING_RE = re.compile(r'\[\[(.+?]?)]]')
+_sentinel = object()
 
 
 class InlineRoller:
     def __init__(self, bot):
         self.bot = bot
 
+    # ==== entrypoints ====
     async def handle_message_inline_rolls(self, message):
         # find roll expressions
         if not INLINE_ROLLING_RE.search(message.content):
@@ -96,25 +101,28 @@ class InlineRoller:
         except disnake.HTTPException:
             pass
 
-    @staticmethod
-    async def do_inline_rolls(message):
+    # ==== execution ====
+    async def do_inline_rolls(self, message):
         roll_exprs = _find_inline_exprs(message.content)
 
         out = []
         roller = d20.Roller(context=PersistentRollContext())
+        char_replacer = CharacterReplacer(self.bot, message)
         for expr, context_before, context_after in roll_exprs:
             context_before = context_before.replace('\n', ' ')
             context_after = context_after.replace('\n', ' ')
 
             try:
-                result = roller.roll(expr, allow_comments=True)
+                expr = await char_replacer.replace(expr)
+                expr, adv = string_search_adv(expr)
+                result = roller.roll(expr, advantage=adv, allow_comments=True)
                 if not result.comment:
                     out.append(f"{context_before}({result.result}){context_after}")
                 else:
-                    out.append(f"**{result.comment}**: {result.result}")
+                    out.append(f"**{result.comment.strip()}**: {result.result}")
             except d20.RollSyntaxError:
                 continue
-            except d20.RollError as e:
+            except (d20.RollError, AvraeException) as e:
                 out.append(f"{context_before}({e!s}){context_after}")
 
         if not out:
@@ -122,6 +130,7 @@ class InlineRoller:
 
         await message.reply('\n'.join(out))
 
+    # ==== onboarding ====
     async def inline_rolling_message_onboarding(self, user):
         if await self.bot.rdb.get(f"cog.dice.inline_rolling.users.{user.id}.onboarded.message"):
             return
@@ -166,6 +175,58 @@ class InlineRoller:
         await self.bot.rdb.set(f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction", str(time.time()))
 
 
+# ==== character-aware rolls ====
+INLINE_SKILL_RE = re.compile(r"([cs]):(\w+)")
+
+
+class CharacterReplacer:
+    """Class to handle replacing multiple inline expressions with a character's check/save rolls."""
+
+    def __init__(self, bot, message):
+        self.bot = bot
+        self.message = message
+        self._character = _sentinel
+
+    async def _get_character(self):
+        if self._character is not _sentinel:
+            return self._character
+        elif self._character is None:
+            raise NoCharacter()
+        ctx = await self.bot.get_context(self.message)
+        character = await ctx.get_character()
+        self._character = character
+        return character
+
+    async def replace(self, expr):
+        """Replaces expressions that start with c: or s: with dice expressions for the character's check/save."""
+        skill_match = INLINE_SKILL_RE.match(expr)
+        if skill_match is None:
+            return expr
+
+        character = await self._get_character()
+        check_search = skill_match.group(2).lower()
+        if skill_match.group(1) == 'c':
+            skill = next(
+                (character.skills[c] for c in constants.SKILL_NAMES if c.lower().startswith(check_search)),
+                None
+            )
+            if skill is None:
+                raise InvalidArgument(f"`{check_search}` is not a valid skill.")
+        else:
+            try:
+                skill = character.saves.get(check_search)
+            except ValueError:
+                raise InvalidArgument(f"`{check_search}` is not a valid save.")
+
+        check_dice = skill.d20(
+            reroll=character.options.reroll,
+            min_val=10 * bool(character.options.talent and skill.prof >= 1)
+        )
+        rest_of_expr = expr[skill_match.end():]
+        return f"{check_dice}{rest_of_expr}"
+
+
+# ==== helpers ====
 def _find_inline_exprs(content, context_before=5, context_after=2, max_context_len=128):
     """Returns an iterator of tuples (expr, context_before, context_after)."""
 

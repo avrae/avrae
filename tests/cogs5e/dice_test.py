@@ -57,22 +57,22 @@ async def test_mc(avrae, dhttp):
     dhttp.clear()
 
     avrae.message("!mc kobold acro")
+    await dhttp.receive_delete()
     await dhttp.receive_message(
         embed=discord.Embed(
             title="A Kobold makes an Acrobatics check!",
             description=D20_PATTERN
         )
     )
-    await dhttp.receive_delete()
 
     avrae.message("!mc kobold acro -h")
+    await dhttp.receive_delete()
     await dhttp.receive_message(
         embed=discord.Embed(
             title="An unknown creature makes an Acrobatics check!",
             description=D20_PATTERN
         )
     )
-    await dhttp.receive_delete()
 
 
 @requires_data()
@@ -80,22 +80,22 @@ async def test_ms(avrae, dhttp):
     dhttp.clear()
 
     avrae.message("!ms kobold dex")
+    await dhttp.receive_delete()
     await dhttp.receive_message(
         embed=discord.Embed(
             title="A Kobold makes a Dexterity Save!",
             description=D20_PATTERN
         )
     )
-    await dhttp.receive_delete()
 
     avrae.message("!ms kobold dex -h")
+    await dhttp.receive_delete()
     await dhttp.receive_message(
         embed=discord.Embed(
             title="An unknown creature makes a Dexterity Save!",
             description=D20_PATTERN
         )
     )
-    await dhttp.receive_delete()
 
 
 @requires_data()

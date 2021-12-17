@@ -217,17 +217,18 @@ class CharacterReplacer:
                 raise InvalidArgument(f"`{check_search}` is not a valid skill.")
             skill = character.skills[skill_key]
             skill_name = f"{camel_to_title(skill_key)} Check"
+            check_dice = skill.d20(
+                reroll=character.options.reroll,
+                min_val=10 * bool(character.options.talent and skill.prof >= 1)
+            )
         else:
             try:
                 skill = character.saves.get(check_search)
                 skill_name = f"{verbose_stat(check_search[:3]).title()} Save"
             except ValueError:
                 raise InvalidArgument(f"`{check_search}` is not a valid save.")
+            check_dice = skill.d20(reroll=character.options.reroll)
 
-        check_dice = skill.d20(
-            reroll=character.options.reroll,
-            min_val=10 * bool(character.options.talent and skill.prof >= 1)
-        )
         rest_of_expr = expr[skill_match.end():]
         return f"{check_dice}{rest_of_expr}", skill_name
 

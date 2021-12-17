@@ -2,6 +2,7 @@ import hashlib
 import logging
 import re
 from math import floor
+from copy import deepcopy
 
 import aiohttp
 from markdownify import markdownify
@@ -10,7 +11,7 @@ import yaml
 
 import gamedata.compendium as gd
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
-from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.attack import AttackList, Attack
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
@@ -382,8 +383,9 @@ def parse_critterdb_traits(data, key):
                             raise ValueError('Invalid YAML')
                         elif 'name' not in atk:
                             atk['name'] = name
+                        Attack.from_dict(deepcopy(atk))
                     attacks.extend(attack_yaml)
-                except (yaml.YAMLError, ValueError):
+                except (yaml.YAMLError, ValueError, KeyError):
                     simple_override = AVRAE_ATTACK_OVERRIDES_SIMPLE_RE.fullmatch(override.group(1))
                     if simple_override:
                         attacks.append({'name': simple_override.group(1) or name,

@@ -157,10 +157,17 @@ class Spellbook:
         Returns a SpellbookSpell representing the caster's ability to cast this spell, or None if the spell is
         not in the caster's spellbook.
 
-        :type spell: :class:`~cogs5e.models.spell.Spell`
+        .. note::
+            If the spellcaster has the same spell available multiple times, it will prioritize a prepared version over
+            a non-prepared version, otherwise returning arbitrarily.
+
+        :type spell: :class:`~gamedata.spell.Spell`
         :rtype: :class:`~cogs5e.models.sheet.spellcasting.SpellbookSpell` or None
         """
-        return next((s for s in self.spells if s.name.lower() == spell.name.lower()), None)
+        candidates = [s for s in self.spells if s.name.lower() == spell.name.lower()]
+        if not candidates:
+            return None
+        return next((c for c in candidates if c.prepared), candidates[0])
 
     # ===== cast utils =====
     def cast(self, spell, level, pact=True):

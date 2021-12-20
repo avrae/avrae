@@ -58,7 +58,8 @@ class GameLogEventContext:
             # necessary duck typing
             # regardless, we should probably be aware that this is happening
             log.warning(
-                f"No guild found when getting discord user for event {self.event.id!r}, falling back to user fetch")
+                f"No guild found when getting discord user for event {self.event.id!r}, falling back to user fetch"
+            )
             user = await user_from_id(self, self.discord_user_id)
 
         self._discord_user = user
@@ -103,12 +104,17 @@ class GameLogEventContext:
         try:
             await destination.trigger_typing()
         except discord.HTTPException as e:
-            log.warning(f"Could not trigger typing in channel {destination!r}: {e}")
+            log.info(f"Could not trigger typing in channel {destination!r}: {e}")
 
-    async def send(self, *args, **kwargs):
+    async def send(self, *args, ignore_exc=True, **kwargs):
         """Sends content to the correct destination(s), accounting for message's scope."""
         destination = await self.destination_channel()
-        return await destination.send(*args, **kwargs)
+        try:
+            return await destination.send(*args, **kwargs)
+        except discord.HTTPException as e:
+            if not ignore_exc:
+                raise
+            log.info(f"Could not send message to channel {destination!r}: {e}")
 
     # ==== entity utils ====
     async def get_character(self):
@@ -127,8 +133,10 @@ class GameLogEventContext:
 
         ddb_character_upstream = f"beyond-{self.event.entity_id}"
         try:
-            self._character = await Character.from_bot_and_ids(self.bot, str(self.discord_user_id),
-                                                               ddb_character_upstream)
+            self._character = await Character.from_bot_and_ids(
+                self.bot, str(self.discord_user_id),
+                ddb_character_upstream
+            )
         except NoCharacter:
             self._character = None
         return self._character

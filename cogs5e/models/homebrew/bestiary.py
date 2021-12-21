@@ -392,7 +392,7 @@ def parse_critterdb_traits(data, key):
                             atk['name'] = atk_name = atk.get('name') or name
                             try:
                                 attacks.append(Attack.from_dict(atk))
-                            except KeyError:
+                            except Exception:
                                 raise ExternalImportError(
                                     f"An automation YAML contained an invalid attack ({data['name']}: {atk_name})")
                         else:

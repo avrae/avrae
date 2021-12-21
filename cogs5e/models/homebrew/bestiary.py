@@ -2,7 +2,6 @@ import hashlib
 import logging
 import re
 from math import floor
-from copy import deepcopy
 
 import aiohttp
 from markdownify import markdownify
@@ -263,8 +262,8 @@ async def parse_critterdb_response(resp, sha256_hash):
 
 
 # critterdb -> bestiary helpers
-AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>([\S\n\t\v ]*?)</avrae>', re.IGNORECASE)
-AVRAE_ATTACK_OVERRIDES_SIMPLE_RE = re.compile(r'(.*?)\|([+-]?\d*)\|(.*?)', re.IGNORECASE)
+AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(?:(?P<simple>(.*?)\|([+-]?\d*)\|(.*?))|'
+                                       r'(?P<freeform>.*?))</avrae>', re.IGNORECASE | re.DOTALL)
 ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
                        r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]??'
                        r'(?:in melee, or [+-]?\d+ \((.+?)\) (\w+) damage at range[,.]?)?'
@@ -321,7 +320,7 @@ def _monster_factory(data, bestiary_name):
             save_updates[name] = mod
     saves.update(save_updates)
 
-    attacks = []
+    attacks = AttackList()
     traits, atks = parse_critterdb_traits(data, 'additionalAbilities')
     attacks.extend(atks)
     actions, atks = parse_critterdb_traits(data, 'actions')
@@ -333,14 +332,13 @@ def _monster_factory(data, bestiary_name):
 
     name_duplications = {}
     for atk in attacks:
-        if atk['name'] in name_duplications:
-            name_duplications[atk['name']] += 1
-            atk['name'] = atk['name'] + str(name_duplications[atk['name']])
+        if atk.name in name_duplications:
+            name_duplications[atk.name] += 1
+            atk.name += str(name_duplications[atk.name])
         else:
-            name_duplications[atk['name']] = 1
+            name_duplications[atk.name] = 1
 
-    attacks = AttackList.from_dict(attacks)
-    spellcasting = parse_critterdb_spellcasting(traits, ability_scores)
+    spellcasting = parse_critterdb_spellcasting(traits + actions, ability_scores)
 
     resistances = Resistances.from_dict(dict(vuln=data['stats']['damageVulnerabilities'],
                                              resist=data['stats']['damageResistances'],
@@ -374,47 +372,73 @@ def parse_critterdb_traits(data, key):
 
         if overrides:
             for override in overrides:
-                try:
-                    attack_yaml = yaml.safe_load(override.group(1))
+                if override.group('simple'):
+                    attacks.append(Attack.from_dict({
+                        'name': override.group(2) or name,
+                        'attackBonus': override.group(3) or None,
+                        'damage': override.group(4) or None,
+                        'details': desc
+                    }))
+                elif (freeform_override := override.group('freeform')):
+                    try:
+                        attack_yaml = yaml.safe_load(freeform_override)
+                    except yaml.YAMLError:
+                        raise ExternalImportError(
+                            f"Monster had an invalid automation YAML ({data['name']}: {name})")
                     if not isinstance(attack_yaml, list):
                         attack_yaml = [attack_yaml]
                     for atk in attack_yaml:
-                        if not isinstance(atk, dict):
-                            raise ValueError('Invalid YAML')
-                        elif 'name' not in atk:
-                            atk['name'] = name
-                        Attack.from_dict(deepcopy(atk))
-                    attacks.extend(attack_yaml)
-                except (yaml.YAMLError, ValueError, KeyError):
-                    simple_override = AVRAE_ATTACK_OVERRIDES_SIMPLE_RE.fullmatch(override.group(1))
-                    if simple_override:
-                        attacks.append({'name': simple_override.group(1) or name,
-                                        'attackBonus': simple_override.group(2) or None, 'damage': simple_override.group(3) or None,
-                                        'details': desc})
+                        if isinstance(atk, dict):
+                            atk['name'] = atk_name = atk.get('name') or name
+                            try:
+                                attacks.append(Attack.from_dict(atk))
+                            except KeyError:
+                                raise ExternalImportError(
+                                    f"An automation YAML contained an invalid attack ({data['name']}: {atk_name})")
+                        else:
+                            raise ExternalImportError(
+                                f"An automation YAML contained an invalid attack ({data['name']}: {name})")
+                # else: empty override, so skip this attack.
         elif raw_atks:
             for atk in raw_atks:
                 if atk.group(6) and atk.group(7):  # versatile
                     damage = f"{atk.group(6)}[{atk.group(7)}]"
                     if atk.group(8) and atk.group(8):  # bonus damage
                         damage += f"+{atk.group(8)}[{atk.group(9)}]"
-                    attacks.append(
-                        {'name': f"2 Handed {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
-                         'details': desc})
+                    attacks.append(Attack.from_dict({
+                        'name': f"2 Handed {name}",
+                        'attackBonus': atk.group(1).lstrip('+'),
+                        'damage': damage,
+                        'details': desc
+                    }))
                 if atk.group(4) and atk.group(5):  # ranged
                     damage = f"{atk.group(4)}[{atk.group(5)}]"
                     if atk.group(8) and atk.group(8):  # bonus damage
                         damage += f"+{atk.group(8)}[{atk.group(9)}]"
-                    attacks.append({'name': f"Ranged {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
-                                    'details': desc})
+                    attacks.append(Attack.from_dict({
+                        'name': f"Ranged {name}",
+                        'attackBonus': atk.group(1).lstrip('+'),
+                        'damage': damage,
+                        'details': desc
+                    }))
                 damage = f"{atk.group(2)}[{atk.group(3)}]"
                 if atk.group(8) and atk.group(9):  # bonus damage
                     damage += f"+{atk.group(8)}[{atk.group(9)}]"
-                attacks.append(
-                    {'name': name, 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage, 'details': desc})
+                attacks.append(Attack.from_dict({
+                    'name': name,
+                    'attackBonus': atk.group(1).lstrip('+'),
+                    'damage': damage,
+                    'details': desc
+                }))
         else:
             for dmg in raw_damage:
                 damage = f"{dmg.group(1)}[{dmg.group(2)}]"
-                attacks.append({'name': name, 'attackBonus': None, 'damage': damage, 'details': desc})
+                attacks.append(Attack.from_dict({
+                    'name': name,
+                    'attackBonus': None,
+                    'damage': damage,
+                    'details': desc
+                }))
 
         traits.append(Trait(name, desc))
     return traits, attacks

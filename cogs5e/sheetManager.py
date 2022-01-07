@@ -520,7 +520,12 @@ class SheetManager(commands.Cog):
 
     @commands.command()
     async def csettings(self, ctx, *args):
-        """Updates settings for the currently active character."""
+        """
+        Opens the Character Settings menu.
+
+        In this menu, you can change your character's cosmetic and gameplay settings, such as their embed color,
+        crit range, extra crit dice, and more.
+        """
         char = await ctx.get_character()
 
         if not args:

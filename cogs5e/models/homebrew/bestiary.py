@@ -503,7 +503,7 @@ def parse_critterdb_spellcasting(traits, base_stats):
             extracted = extract_spells(type_will_spells.group("spells"))
             will_spells.extend(s.name for s in extracted)
 
-        for type_daily_spells in re.finditer(r"(?P<times>\d+)/day: (?P<spells>.+)$", desc, re.MULTILINE):
+        for type_daily_spells in re.finditer(r"(?P<times>\d+)/day(?: each)?: (?P<spells>.+)$", desc, re.MULTILINE):
             extracted = extract_spells(type_daily_spells.group("spells"))
             times_per_day = int(type_daily_spells.group("times"))
             for ts in extracted:

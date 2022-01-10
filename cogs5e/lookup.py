@@ -578,7 +578,7 @@ class Lookup(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def lookup_settings(self, ctx, *args):
-        """This command has been replaced by `!settings`. If you're used to it, it still works like before!"""
+        """This command has been replaced by `!servsettings`. If you're used to it, it still works like before!"""
         guild_settings = await ctx.get_server_settings()
         if not args:
             settings_ui = ui.ServerSettingsUI.new(ctx.bot, owner=ctx.author, settings=guild_settings, guild=ctx.guild)

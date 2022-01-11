@@ -85,6 +85,9 @@ class Homebrew(commands.Cog):
 
         If your attacks don't seem to be importing properly, you can add a hidden line to the description to set it:
         `<avrae hidden>NAME|TOHITBONUS|DAMAGE</avrae>`
+
+        For more complex automation, you can create an attack on the Avrae Dashboard and copy the exported YAML into the CritterDB attack description as follows:
+        `<avrae hidden>YAML</avrae>`
         """
 
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890

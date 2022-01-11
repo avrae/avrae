@@ -6,9 +6,11 @@ from math import floor
 import aiohttp
 from markdownify import markdownify
 
+import yaml
+
 import gamedata.compendium as gd
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
-from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.attack import AttackList, Attack
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
@@ -260,7 +262,8 @@ async def parse_critterdb_response(resp, sha256_hash):
 
 
 # critterdb -> bestiary helpers
-AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
+AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(?:(?P<simple>(.*?)\|([+-]?\d*)\|(.*?))|'
+                                       r'(?P<freeform>.*?))</avrae>', re.IGNORECASE | re.DOTALL)
 ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
                        r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]??'
                        r'(?:in melee, or [+-]?\d+ \((.+?)\) (\w+) damage at range[,.]?)?'
@@ -317,7 +320,7 @@ def _monster_factory(data, bestiary_name):
             save_updates[name] = mod
     saves.update(save_updates)
 
-    attacks = []
+    attacks = AttackList()
     traits, atks = parse_critterdb_traits(data, 'additionalAbilities')
     attacks.extend(atks)
     actions, atks = parse_critterdb_traits(data, 'actions')
@@ -327,8 +330,15 @@ def _monster_factory(data, bestiary_name):
     legactions, atks = parse_critterdb_traits(data, 'legendaryActions')
     attacks.extend(atks)
 
-    attacks = AttackList.from_dict(attacks)
-    spellcasting = parse_critterdb_spellcasting(traits, ability_scores)
+    name_duplications = {}
+    for atk in attacks:
+        if atk.name in name_duplications:
+            name_duplications[atk.name] += 1
+            atk.name += str(name_duplications[atk.name])
+        else:
+            name_duplications[atk.name] = 1
+
+    spellcasting = parse_critterdb_spellcasting(traits + actions, ability_scores)
 
     resistances = Resistances.from_dict(dict(vuln=data['stats']['damageVulnerabilities'],
                                              resist=data['stats']['damageResistances'],
@@ -362,33 +372,73 @@ def parse_critterdb_traits(data, key):
 
         if overrides:
             for override in overrides:
-                attacks.append({'name': override.group(1) or name,
-                                'attackBonus': override.group(2) or None, 'damage': override.group(3) or None,
-                                'details': desc})
+                if override.group('simple'):
+                    attacks.append(Attack.from_dict({
+                        'name': override.group(2) or name,
+                        'attackBonus': override.group(3) or None,
+                        'damage': override.group(4) or None,
+                        'details': desc
+                    }))
+                elif (freeform_override := override.group('freeform')):
+                    try:
+                        attack_yaml = yaml.safe_load(freeform_override)
+                    except yaml.YAMLError:
+                        raise ExternalImportError(
+                            f"Monster had an invalid automation YAML ({data['name']}: {name})")
+                    if not isinstance(attack_yaml, list):
+                        attack_yaml = [attack_yaml]
+                    for atk in attack_yaml:
+                        if isinstance(atk, dict):
+                            atk['name'] = atk_name = atk.get('name') or name
+                            try:
+                                attacks.append(Attack.from_dict(atk))
+                            except Exception:
+                                raise ExternalImportError(
+                                    f"An automation YAML contained an invalid attack ({data['name']}: {atk_name})")
+                        else:
+                            raise ExternalImportError(
+                                f"An automation YAML contained an invalid attack ({data['name']}: {name})")
+                # else: empty override, so skip this attack.
         elif raw_atks:
             for atk in raw_atks:
                 if atk.group(6) and atk.group(7):  # versatile
                     damage = f"{atk.group(6)}[{atk.group(7)}]"
                     if atk.group(8) and atk.group(8):  # bonus damage
                         damage += f"+{atk.group(8)}[{atk.group(9)}]"
-                    attacks.append(
-                        {'name': f"2 Handed {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
-                         'details': desc})
+                    attacks.append(Attack.from_dict({
+                        'name': f"2 Handed {name}",
+                        'attackBonus': atk.group(1).lstrip('+'),
+                        'damage': damage,
+                        'details': desc
+                    }))
                 if atk.group(4) and atk.group(5):  # ranged
                     damage = f"{atk.group(4)}[{atk.group(5)}]"
                     if atk.group(8) and atk.group(8):  # bonus damage
                         damage += f"+{atk.group(8)}[{atk.group(9)}]"
-                    attacks.append({'name': f"Ranged {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
-                                    'details': desc})
+                    attacks.append(Attack.from_dict({
+                        'name': f"Ranged {name}",
+                        'attackBonus': atk.group(1).lstrip('+'),
+                        'damage': damage,
+                        'details': desc
+                    }))
                 damage = f"{atk.group(2)}[{atk.group(3)}]"
                 if atk.group(8) and atk.group(9):  # bonus damage
                     damage += f"+{atk.group(8)}[{atk.group(9)}]"
-                attacks.append(
-                    {'name': name, 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage, 'details': desc})
+                attacks.append(Attack.from_dict({
+                    'name': name,
+                    'attackBonus': atk.group(1).lstrip('+'),
+                    'damage': damage,
+                    'details': desc
+                }))
         else:
             for dmg in raw_damage:
                 damage = f"{dmg.group(1)}[{dmg.group(2)}]"
-                attacks.append({'name': name, 'attackBonus': None, 'damage': damage, 'details': desc})
+                attacks.append(Attack.from_dict({
+                    'name': name,
+                    'attackBonus': None,
+                    'damage': damage,
+                    'details': desc
+                }))
 
         traits.append(Trait(name, desc))
     return traits, attacks
@@ -453,7 +503,7 @@ def parse_critterdb_spellcasting(traits, base_stats):
             extracted = extract_spells(type_will_spells.group("spells"))
             will_spells.extend(s.name for s in extracted)
 
-        for type_daily_spells in re.finditer(r"(?P<times>\d+)/day: (?P<spells>.+)$", desc, re.MULTILINE):
+        for type_daily_spells in re.finditer(r"(?P<times>\d+)/day(?: each)?: (?P<spells>.+)$", desc, re.MULTILINE):
             extracted = extract_spells(type_daily_spells.group("spells"))
             times_per_day = int(type_daily_spells.group("times"))
             for ts in extracted:

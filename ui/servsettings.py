@@ -301,7 +301,7 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
 class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
     # ==== ui ====
     @disnake.ui.button(label='Toggle DDB Campaign Message', style=disnake.ButtonStyle.primary, row=1)
-    async def toggle_campaign_cts(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+    async def toggle_campaign_cta(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.show_campaign_cta = not self.settings.show_campaign_cta
         await self.commit_settings()
         await self.refresh_content(interaction)

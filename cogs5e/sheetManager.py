@@ -703,6 +703,10 @@ async def send_ddb_ctas(ctx, character):
         ld_dict = {"key": str(ctx.author.id), "anonymous": True}
     gamelog_flag = await ctx.bot.ldclient.variation('cog.gamelog.cta.enabled', ld_dict, False)
 
+    # get server settings for whether to pull up campaign settings
+    guild_settings = await ctx.get_server_settings()
+    show_campaign_cta = guild_settings.show_campaign_cta
+
     # has the user seen this cta within the last 7d?
     if await ctx.bot.rdb.get(f"cog.sheetmanager.cta.seen.{ctx.author.id}"):
         return
@@ -721,7 +725,7 @@ async def send_ddb_ctas(ctx, character):
             inline=False
         )
     # game log
-    if character.ddb_campaign_id and gamelog_flag:
+    if character.ddb_campaign_id and gamelog_flag and show_campaign_cta:
         try:
             await CampaignLink.from_id(ctx.bot.mdb, character.ddb_campaign_id)
         except NoCampaignLink:

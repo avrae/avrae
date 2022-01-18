@@ -547,8 +547,14 @@ class InitTracker(commands.Cog):
 
     @init.command(name="meta", aliases=['metaset'])
     async def metasetting(self, ctx, *settings):
-        """Changes the settings of the active combat.
-`"""
+        """
+        Changes the settings of the active combat.
+        __Valid Settings__
+        `dyn` - Dynamic initiative; Rerolls all initiatves at the start of a round.
+        `turnnotif` - Notifies the controller of the next combatant in initiative.
+        `deathdelete` - Toggles removing monsters below 0 HP.
+        `-name <name>` - Sets a name for the combat instance
+        """
         args = argparse(settings)
         combat = await Combat.from_ctx(ctx)
         options = combat.options

@@ -315,7 +315,6 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Miscellaneous Settings",
             colour=disnake.Colour.blurple(),
-            description="These settings affect less significant parts of Avrae."
         )
         embed.add_field(
             name="Show DDB Campaign Message",

@@ -319,8 +319,7 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Show DDB Campaign Message",
             value=f"**{self.settings.show_campaign_cta}**\n"
-                  f"*If this is enabled, every week a reminder about D&D Beyond's Campaign integration "
-                  f"will be shown after a character updates.*",
+                  f"*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when you import a character in an unlinked campaign.*",
             inline=False
         )
         return {"embed": embed}

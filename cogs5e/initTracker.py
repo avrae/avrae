@@ -102,18 +102,18 @@ class InitTracker(commands.Cog):
         If you are adding monsters to combat, you can use !init madd instead.
 
         __Valid Arguments__
-        -h - Hides HP, AC, resistances, and attack list.
-        -p - Places combatant at the given modifier, instead of rolling
-        -controller <controller> - Pings a different person on turn.
-        -group <group> - Adds the combatant to a group.
-        -hp <hp> - Sets starting HP. Default: None.
-        -thp <thp> - Sets starting THP. Default: 0.
-        -ac <ac> - Sets the combatant' AC. Default: None.
-        -resist <damage type> - Gives the combatant resistance to the given damage type.
-        -immune <damage type> - Gives the combatant immunity to the given damage type.
-        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
-        adv/dis - Rolls the initiative check with advantage/disadvantage.
-        -note <note> - Sets the combatant's note.
+        `-h` - Hides HP, AC, resistances, and attack list.
+        `-p` - Places combatant at the given modifier, instead of rolling
+        `-controller <controller>` - Pings a different person on turn.
+        `-group <group>` - Adds the combatant to a group.
+        `-hp <hp>` - Sets starting HP. Default: None.
+        `-thp <thp>` - Sets starting THP. Default: 0.`
+        `-ac <ac>` - Sets the combatant' AC. Default: None.
+        `-resist` <damage type> - Gives the combatant resistance to the given damage type.
+        `-immune` <damage type> - Gives the combatant immunity to the given damage type.
+        `-vuln` <damage type> - Gives the combatant vulnerability to the given damage type.
+        `adv`/`dis` - Rolls the initiative check with advantage/disadvantage.
+        `-note <note>` - Sets the combatant's note.
         """
         private = False
         place = None
@@ -201,19 +201,19 @@ class InitTracker(commands.Cog):
     async def madd(self, ctx, monster_name: str, *args):
         """Adds a monster to combat.
         __Valid Arguments__
-        adv/dis - Give advantage or disadvantage to the initiative roll.
-        -b <condition bonus> - Adds a bonus to the combatant's initiative roll.
-        -n <number or dice> - Adds more than one of that monster. Supports dice.
-        -p <value> - Places combatant at the given value, instead of rolling.
-        -controller <controller> - Pings a different person on turn.
-        -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
-        -h - Hides HP, AC, Resists, etc. Default: True.
-        -group <group> - Adds the combatant to a group.
-        -rollhp - Rolls the monsters HP, instead of using the default value.
-        -hp <hp> - Sets starting HP.
-        -thp <thp> - Sets starting THP.
-        -ac <ac> - Sets the combatant's starting AC.
-        -note <note> - Sets the combatant's note.
+        `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
+        `-b <condition bonus>` - Adds a bonus to the combatant's initiative roll.
+        `-n <number or dice>` - Adds more than one of that monster. Supports dice.
+        `-p <value>` - Places combatant at the given value, instead of rolling.
+        `-controller <controller>` - Pings a different person on turn.
+        `-name <name>` - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
+        `-h` - Hides HP, AC, Resists, etc. Default: True.
+        `-group <group>` - Adds the combatant to a group.
+        `-rollhp` - Rolls the monsters HP, instead of using the default value.
+        `-hp <hp>` - Sets starting HP.
+        `-thp <thp>` - Sets starting THP.
+        `-ac <ac>` - Sets the combatant's starting AC.
+        `-note <note>` - Sets the combatant's note.
         """
 
         monster = await select_monster_full(ctx, monster_name, pm=True)
@@ -325,14 +325,14 @@ class InitTracker(commands.Cog):
         """
         Adds the current active character to combat. A character must be loaded through the SheetManager module first.
         __Valid Arguments__
-        adv/dis - Give advantage or disadvantage to the initiative roll.
-        -b <condition bonus> - Adds a bonus to the combatants' Initiative roll.
-        -phrase <phrase> - Adds flavor text.
-        -thumb <thumbnail URL> - Adds flavor image.
-        -p <value> - Places combatant at the given value, instead of rolling.
-        -h - Hides HP, AC, Resists, etc.
-        -group <group> - Adds the combatant to a group.
-        -note <note> - Sets the combatant's note.
+        `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
+        `-b <condition bonus>` - Adds a bonus to the combatants' Initiative roll.
+        `-phrase <phrase>` - Adds flavor text.
+        `-thumb <thumbnail URL>` - Adds flavor image.
+        `-p <value>` - Places combatant at the given value, instead of rolling.
+        `-h` - Hides HP, AC, Resists, etc.
+        `-group <group>` - Adds the combatant to a group.
+        `-note <note>` - Sets the combatant's note.
         [user snippet]
         """
         char: Character = await Character.from_ctx(ctx)
@@ -521,7 +521,7 @@ class InitTracker(commands.Cog):
         """
         Rerolls initiative for all combatants, and starts a new round of combat.
         __Valid Arguments__
-        -restart - Resets the round counter (effectively restarting initiative).
+        `-restart` - Resets the round counter (effectively restarting initiative).
         """
         combat = await Combat.from_ctx(ctx)
         a = argparse(args)
@@ -548,11 +548,7 @@ class InitTracker(commands.Cog):
     @init.command(name="meta", aliases=['metaset'])
     async def metasetting(self, ctx, *settings):
         """Changes the settings of the active combat.
-        __Valid Settings__
-        dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
-        turnnotif - Notifies the controller of the next combatant in initiative.
-        deathdelete - Toggles removing monsters below 0 HP.
-        -name <name> - Sets a name for the combat instance"""
+`"""
         args = argparse(settings)
         combat = await Combat.from_ctx(ctx)
         options = combat.options
@@ -611,18 +607,18 @@ class InitTracker(commands.Cog):
         """
         Edits the options of a combatant.
         __Valid Arguments__
-        -h - Hides HP, AC, Resists, etc.
-        -p <value> - Changes the combatants' placement in the Initiative. Adds if starts with +/- or sets otherwise.
-        -name <name> - Changes the combatants' name.
-        -controller <controller> - Pings a different person on turn.
-        -ac <ac> - Modifies combatants' AC. Adds if starts with +/- or sets otherwise.
-        -resist <damage type> - Gives the combatant resistance to the given damage type.
-        -immune <damage type> - Gives the combatant immunity to the given damage type.
-        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
-        -neutral <damage type> - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
-        -group <group> - Adds the combatant to a group. To remove them from group, use -group None.
-        -max <maxhp> - Modifies the combatants' Max HP. Adds if starts with +/- or sets otherwise.
-        -hp <hp> - Modifies current HP. Adds if starts with +/- or sets otherwise.
+        `-h` - Hides HP, AC, Resists, etc.
+        `-p <value>` - Changes the combatants' placement in the Initiative. Adds if starts with +/- or sets otherwise.
+        `-name <name>` - Changes the combatants' name.
+        `-controller <controller>` - Pings a different person on turn.
+        `-ac <ac>` - Modifies combatants' AC. Adds if starts with +/- or sets otherwise.
+        `-resist <damage type>` - Gives the combatant resistance to the given damage type.
+        `-immune <damage type>` - Gives the combatant immunity to the given damage type.
+        `-vuln <damage type>` - Gives the combatant vulnerability to the given damage type.
+        `-neutral <damage type>` - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
+        `-group <group>` - Adds the combatant to a group. To remove them from group, use -group None.
+        `-max <maxhp>` - Modifies the combatants' Max HP. Adds if starts with +/- or sets otherwise.
+        `-hp <hp>` - Modifies current HP. Adds if starts with +/- or sets otherwise.
         """  # noqa: E501
         combat = await Combat.from_ctx(ctx)
 
@@ -784,7 +780,7 @@ class InitTracker(commands.Cog):
         """Gets the status of a combatant or group.
         If no name is specified, it will default to current combatant.
         __Valid Arguments__
-        private - PMs the controller of the combatant a more detailed status."""
+        `private` - PMs the controller of the combatant a more detailed status."""
 
         combat = await Combat.from_ctx(ctx)
 
@@ -893,7 +889,7 @@ class InitTracker(commands.Cog):
     async def thp(self, ctx, name: str, *, thp: str):
         """
         Modifies the temporary HP of a combatant.
-        Usage: !init thp <NAME> <HP>
+        Usage: `!init thp <NAME> <HP>`
         Sets the combatants' THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP).
         """  # noqa: E501
         combat = await Combat.from_ctx(ctx)
@@ -924,30 +920,30 @@ class InitTracker(commands.Cog):
         [args] is a set of args that affects a combatant in combat.
         See `!help init re` to remove effects.
         __**Valid Arguments**__
-        -dur <duration> - Sets the duration of the effect, in rounds.
-        conc - Makes the effect require concentration. Will end any other concentration effects.
-        end - Makes the effect duration tick on the end of turn, rather than the beginning.
-        -t <target> - Specifies more combatants to target, chainable (e.g., "-t or1 -t or2").
-        -parent <"[combatant]|[effect]"> - Sets a parent effect from a specified combatant.
+        `-dur <duration>` - Sets the duration of the effect, in rounds.
+        `conc` - Makes the effect require concentration. Will end any other concentration effects.
+        `end` - Makes the effect duration tick on the end of turn, rather than the beginning.
+        `-t <target>` - Specifies more combatants to target, chainable (e.g., "-t or1 -t or2").
+        `-parent <"[combatant]|[effect]">` - Sets a parent effect from a specified combatant.
         __Attacks__
-        adv/dis - Give advantage or disadvantage to all attack rolls.
-        -b <bonus> - Adds a bonus to hit.
-        -d <damage> - Adds additional damage.
-        -attack <"[hit]|[damage]|[description]"> - Adds an attack to the combatant. The effect name will be the name of the attack. No [hit] will autohit (e.g., -attack "|1d6[fire]|")
+        `adv`/`dis` - Give advantage or disadvantage to all attack rolls.
+        `-b <bonus>` - Adds a bonus to hit.
+        `-d <damage>` - Adds additional damage.
+        `-attack <"[hit]|[damage]|[description]">` - Adds an attack to the combatant. The effect name will be the name of the attack. No [hit] will autohit (e.g., `-attack "|1d6[fire]|You just got burned!"`)
         __Resists__
-        -resist <damage type> - Gives the combatant resistance to the given damage type.
-        -immune <damage type> - Gives the combatant immunity to the given damage type.
-        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
-        -neutral <damage type> - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
-        magical - Makes all damage from the combatant magical.
-        silvered - Makes all damage from the combatant silvered.
+        `-resist <damage type>` - Gives the combatant resistance to the given damage type.
+        `-immune <damage type>` - Gives the combatant immunity to the given damage type.
+        `-vuln <damage type>` - Gives the combatant vulnerability to the given damage type.
+        `-neutral <damage type>` - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
+        `magical` - Makes all damage from the combatant magical.
+        `silvered` - Makes all damage from the combatant silvered.
         __General__
-        -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
-        -sb <save bonus> - Adds a bonus to all saving throws.
-        -cb <check bonus> - Adds a bonus to all ability checks.
-        -sadv/sdis <ability> - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
-        -maxhp <hp> - modifies maximum hp temporarily; adds if starts with +/- or sets otherwise.
-        -desc <description> - Adds a description of the effect.
+        `-ac <ac>` - modifies ac temporarily; adds if starts with +/- or sets otherwise.
+        `-sb <save bonus>` - Adds a bonus to all saving throws.
+        `-cb <check bonus>` - Adds a bonus to all ability checks.
+        `-sadv/sdis <ability>` - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
+        `-maxhp <hp>` - modifies maximum hp temporarily; adds if starts with +/- or sets otherwise.
+        `-desc <description>` - Adds a description of the effect.
         """  # noqa: E501
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
@@ -1323,7 +1319,7 @@ class InitTracker(commands.Cog):
     @init.command(name='remove')
     async def remove_combatant(self, ctx, *, name: str):
         """Removes a combatant or group from the combat.
-        Usage: !init remove <NAME>"""
+        Usage: `!init remove <NAME>`"""
         combat = await Combat.from_ctx(ctx)
 
         combatant = await combat.select_combatant(name, select_group=True)
@@ -1347,7 +1343,7 @@ class InitTracker(commands.Cog):
     async def end(self, ctx, args=None):
         """Ends combat in the channel.
         __Valid Arguments__
-        -force - Forces an init to end, in case it's erroring."""
+        `-force` - Forces an init to end, in case it's erroring."""
 
         to_end = await confirm(ctx, 'Are you sure you want to end combat? (Reply with yes/no)', True)
 

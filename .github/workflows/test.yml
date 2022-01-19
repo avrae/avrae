@@ -49,7 +49,9 @@ jobs:
           mkdir shared
 
       - name: Run Tests
-        run: pytest --cov=cogs5e --cov=cogsmisc --cov=utils --cov-report=xml:shared/coverage.xml tests/ -- test
+        run: pytest --cov=cogs5e --cov=cogsmisc --cov=utils --cov-report=xml:shared/coverage.xml tests/
+        env:
+          TESTING: 1
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v1

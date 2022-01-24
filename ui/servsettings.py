@@ -298,6 +298,7 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
         )
         return {"embed": embed}
 
+
 class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
     # ==== ui ====
     @disnake.ui.button(label='Toggle DDB Campaign Message', style=disnake.ButtonStyle.primary, row=1)
@@ -319,7 +320,8 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Show DDB Campaign Message",
             value=f"**{self.settings.show_campaign_cta}**\n"
-                  f"*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when you import a character in an unlinked campaign.*",
+                  f"*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when "
+                  f"you import a character in an unlinked campaign.*",
             inline=False
         )
         return {"embed": embed}

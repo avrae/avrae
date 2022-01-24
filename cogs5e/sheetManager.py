@@ -736,8 +736,8 @@ async def send_ddb_ctas(ctx, character):
                 name="Link Your D&D Beyond Campaign",
                 value=f"Sync rolls between a Discord channel and your D&D Beyond character sheet by linking your "
                       f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
-                      f"{character.ddb_campaign_id}` in the Discord channel you want to link it to."
-                      f"This message can be disabled in {ctx.prefix}server_settings.",
+                      f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.\n"
+                      f"This message can be disabled in `{ctx.prefix}server_settings`.",
                 inline=False
             )
 

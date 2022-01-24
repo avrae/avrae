@@ -63,6 +63,10 @@ class ServerSettingsUI(ServerSettingsMenuBase):
     async def inline_rolling_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(_InlineRollingSettingsUI, interaction)
 
+    @disnake.ui.button(label='Miscellaneous Settings', style=disnake.ButtonStyle.primary)
+    async def miscellaneous_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        await self.defer_to(_MiscellaneousSettingsUI, interaction)
+
     @disnake.ui.button(label='Exit', style=disnake.ButtonStyle.danger)
     async def exit(self, *_):
         await self.on_timeout()
@@ -87,6 +91,11 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Inline Rolling Settings",
             value=await self.get_inline_rolling_desc(),
+            inline=False
+        )
+        embed.add_field(
+            name="Miscellaneous Settings",
+            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}",
             inline=False
         )
         return {"embed": embed}
@@ -286,5 +295,33 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
             title=f"Server Settings ({self.guild.name}) / Inline Rolling Settings",
             colour=disnake.Colour.blurple(),
             description=await self.get_inline_rolling_desc()
+        )
+        return {"embed": embed}
+
+
+class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
+    # ==== ui ====
+    @disnake.ui.button(label='Toggle DDB Campaign Message', style=disnake.ButtonStyle.primary, row=1)
+    async def toggle_campaign_cta(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        self.settings.show_campaign_cta = not self.settings.show_campaign_cta
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=4)
+    async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        await self.defer_to(ServerSettingsUI, interaction)
+
+    # ==== content ====
+    async def get_content(self):
+        embed = disnake.Embed(
+            title=f"Server Settings ({self.guild.name}) / Miscellaneous Settings",
+            colour=disnake.Colour.blurple(),
+        )
+        embed.add_field(
+            name="Show DDB Campaign Message",
+            value=f"**{self.settings.show_campaign_cta}**\n"
+                  f"*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when "
+                  f"you import a character in an unlinked campaign.*",
+            inline=False
         )
         return {"embed": embed}

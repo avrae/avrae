@@ -21,6 +21,7 @@ class ServerSettings(SettingsBaseModel):
     lookup_pm_dm: bool = False
     lookup_pm_result: bool = False
     inline_enabled: InlineRollingType = InlineRollingType.DISABLED
+    show_campaign_cta: bool = True
 
     # ==== lifecycle ====
     @classmethod

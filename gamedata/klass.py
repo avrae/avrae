@@ -7,7 +7,7 @@ class Class(Sourced):
     type_id = 789467139
 
     def __init__(self, name, hit_points, proficiencies, equipment, table, levels, subclasses, subclass_title,
-                 subclass_feature_levels, optional_features,
+                 subclass_feature_levels, optional_features, description=None,
                  **kwargs):
         """
         :type name: str
@@ -20,9 +20,11 @@ class Class(Sourced):
         :type subclass_title: str
         :type subclass_feature_levels: list[int]
         :type optional_features: list[ClassFeature]
+        :type description: str
         """
         super().__init__(False, **kwargs)
         self.name = name
+        self.description = description
         self.hit_points = hit_points
         self.proficiencies = proficiencies
         self.equipment = equipment
@@ -40,6 +42,7 @@ class Class(Sourced):
             d['name'], d['hit_points'], d['proficiencies'], d['equipment'],
             ClassTable.from_data(d['table']), levels, subclasses=[], subclass_title=d['subclass_title'],
             subclass_feature_levels=d['subclass_feature_levels'], optional_features=[],
+            description=d.get('description'),
             source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
         )
         inst.subclasses = [Subclass.from_data(s, inst) for s in d['subclasses']]
@@ -73,15 +76,17 @@ class Subclass(Sourced):
     entity_type = 'class'
     type_id = 789467139
 
-    def __init__(self, name, levels, optional_features, parent=None, **kwargs):
+    def __init__(self, name, levels, optional_features, parent=None, description=None, **kwargs):
         """
         :type name: str
         :type levels: list[list[ClassFeature]]
         :type optional_features: list[ClassFeature]
         :type parent: Class
+        :type description: str
         """
         super().__init__(False, **kwargs)
         self.name = name
+        self.description = description
         self.levels = levels
         self.optional_features = optional_features
         self.parent = parent
@@ -92,7 +97,7 @@ class Subclass(Sourced):
         inst = cls(
             d['name'], levels, [],
             source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'],
-            parent=parent_class
+            parent=parent_class, description=d.get('description')
         )
         inst.levels = [[ClassFeature.from_data(cf, source_class=inst) for cf in lvl] for lvl in d['levels']]
         inst.optional_features = [ClassFeature.from_data(ocf, source_class=inst) for ocf in d['optional_features']]

@@ -107,7 +107,7 @@ class InitTracker(commands.Cog):
         `-controller <controller>` - Pings a different person on turn.
         `-group <group>` - Adds the combatant to a group.
         `-hp <hp>` - Sets starting HP. Default: None.
-        `-thp <thp>` - Sets starting THP. Default: 0.`
+        `-thp <thp>` - Sets starting THP. Default: 0.
         `-ac <ac>` - Sets the combatant' AC. Default: None.
         `-resist` <damage type> - Gives the combatant resistance to the given damage type.
         `-immune` <damage type> - Gives the combatant immunity to the given damage type.

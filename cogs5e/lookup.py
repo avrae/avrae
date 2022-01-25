@@ -21,7 +21,7 @@ from gamedata.lookuputils import (HOMEBREW_EMOJI, available, can_access, get_ite
 from gamedata.race import RaceFeature
 from utils import checks, img
 from utils.argparser import argparse
-from utils.functions import chunk_text, get_positivity, search_and_select, trim_str
+from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str
 
 LARGE_THRESHOLD = 200
 
@@ -236,16 +236,16 @@ class Lookup(commands.Cog):
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
         embed.title = result.name
-        embed.description = f"*Source: {result.source_str()}*"
+        embed.description = smart_trim(result.description, 2048)
 
         for level in result.levels:
             for feature in level:
-                text = trim_str(feature.text, 1024)
+                text = smart_trim(feature.text, 1024)
                 embed.add_field(name=feature.name, value=text, inline=False)
 
         handle_source_footer(
-            embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
-            add_source_str=False
+            embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off",
+            add_source_str=True
         )
 
         await (await self._get_destination(ctx)).send(embed=embed)

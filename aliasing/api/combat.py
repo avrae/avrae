@@ -280,8 +280,8 @@ class SimpleCombatant(AliasStatBlock):
         :return: Dictionary representing the results of the Damage Automation.
         :rtype: dict
         """
-        from cogs5e.models.automation import AutomationContext, AutomationTarget, \
-            Damage  # this has to be here to avoid circular imports
+        # this has to be here to avoid circular imports
+        from cogs5e.models.automation import AutomationContext, AutomationTarget, Damage
 
         dice_str, critdice = str(dice_str), int(critdice)
         if d is not None:
@@ -296,10 +296,7 @@ class SimpleCombatant(AliasStatBlock):
                 self.target = AutomationTarget(target)
 
         args = ParsedArguments.from_dict({
-            'critdice': [critdice],
-            'resist': self._combatant.resistances['resist'],
-            'immune': self._combatant.resistances['immune'],
-            'vuln': self._combatant.resistances['vuln']
+            'critdice': [critdice]
         })
         if d:
             args['d'] = d

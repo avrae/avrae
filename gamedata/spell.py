@@ -100,8 +100,9 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             if 'round' in unit:
                 return num
             elif 'minute' in unit:
-                if num == 1:  # anything over 1 minute can be indefinite, really
-                    return 10
+                return 10 * num
+            elif 'hour' in unit:
+                return 600 * num
         return -1
 
     def to_dicecloud(self):

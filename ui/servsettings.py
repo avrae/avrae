@@ -95,7 +95,8 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         )
         embed.add_field(
             name="Miscellaneous Settings",
-            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}",
+            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}\n"
+                  f"**Contribute Message Data to NLP Training**: {self.settings.upenn_nlp_opt_in}",
             inline=False
         )
         return {"embed": embed}
@@ -307,6 +308,12 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
+    @disnake.ui.button(label='Toggle NLP Opt In', style=disnake.ButtonStyle.primary, row=1)
+    async def toggle_upenn_nlp_opt_in(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        self.settings.upenn_nlp_opt_in = not self.settings.upenn_nlp_opt_in
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
     @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=4)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
@@ -322,6 +329,17 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
             value=f"**{self.settings.show_campaign_cta}**\n"
                   f"*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when "
                   f"you import a character in an unlinked campaign.*",
+            inline=False
+        )
+        embed.add_field(
+            name="Contribute Message Data to Natural Language AI Training",
+            value=f"**{self.settings.upenn_nlp_opt_in}**\n"
+                  f"*If this is enabled, the contents of messages, anonymised user IDs, character names, and snapshots "
+                  f"of a character's resources will be recorded in channels **with an active combat.***\n"
+                  f"*This data will be used in a project to make advances in interactive fiction and text generation "
+                  f"using artificial intelligence at the University of Pennsylvania.*\n"
+                  f"*Read more about the project [here](https://avrae.io), and our data handling and Privacy Policy "
+                  f"[here](https://avrae.io).*",  # todo link
             inline=False
         )
         return {"embed": embed}

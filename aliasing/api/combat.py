@@ -3,7 +3,6 @@ from typing import Optional
 from d20 import roll
 
 import cogs5e.initiative as init
-import cogs5e.initiative.types
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
@@ -28,7 +27,7 @@ class SimpleCombat:
         self.turn_num = self._combat.turn_num
         current = self._combat.current_combatant
         if current:
-            if current.type == cogs5e.initiative.types.CombatantType.GROUP:  # isinstance(current, init.CombatantGroup):
+            if current.type == init.CombatantType.GROUP:  # isinstance(current, init.CombatantGroup):
                 self.current = SimpleGroup(current)
             else:
                 self.current = SimpleCombatant(current)
@@ -60,7 +59,7 @@ class SimpleCombat:
         name = str(name)
         combatant = self._combat.get_combatant(name, strict)
         if combatant:
-            if combatant.type == cogs5e.initiative.types.CombatantType.GROUP:
+            if combatant.type == init.CombatantType.GROUP:
                 return SimpleGroup(combatant)
             else:
                 return SimpleCombatant(combatant)
@@ -185,9 +184,9 @@ class SimpleCombatant(AliasStatBlock):
         self._race = None
         self._monster_name = None
 
-        if combatant.type == cogs5e.initiative.types.CombatantType.MONSTER:
+        if combatant.type == init.CombatantType.MONSTER:
             self._monster_name = combatant.monster_name
-        elif combatant.type == cogs5e.initiative.types.CombatantType.PLAYER:
+        elif combatant.type == init.CombatantType.PLAYER:
             self._race = combatant.character.race
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead

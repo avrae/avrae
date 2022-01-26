@@ -1,5 +1,3 @@
-from types import MappingProxyType
-
 import cachetools
 import discord
 from d20 import roll
@@ -8,7 +6,7 @@ from utils.functions import search_and_select
 from .combatant import Combatant, MonsterCombatant, PlayerCombatant
 from .errors import *
 from .group import CombatantGroup
-from .utils import CombatantType
+from .types import CombatantType
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 

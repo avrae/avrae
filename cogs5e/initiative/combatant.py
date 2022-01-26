@@ -12,24 +12,26 @@ from utils.constants import RESIST_TYPES
 from utils.functions import combine_maybe_mods, get_guild_member, search_and_select
 from .effect import Effect
 from .errors import CombatException, RequiresContext
-from .types import BaseCombatant
-from .utils import CombatantType, create_combatant_id
+from .types import BaseCombatant, CombatantType
+from .utils import create_combatant_id
 
 
 class Combatant(BaseCombatant, StatBlock):
     DESERIALIZE_MAP = DESERIALIZE_MAP  # allow making class-specific deser maps
     type = CombatantType.GENERIC
 
-    def __init__(self,
-                 # init metadata
-                 ctx, combat, id: str, name: str, controller_id: str, private: bool, init: int, index: int = None,
-                 notes: str = None, effects: list = None, group_id: str = None,
-                 # statblock info
-                 stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
-                 skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
-                 spellbook: Spellbook = None, ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
-                 creature_type: str = None,
-                 **_):
+    def __init__(
+        self,
+        # init metadata
+        ctx, combat, id: str, name: str, controller_id: str, private: bool, init: int, index: int = None,
+        notes: str = None, effects: list = None, group_id: str = None,
+        # statblock info
+        stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
+        skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
+        spellbook: Spellbook = None, ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+        creature_type: str = None,
+        **_
+    ):
         super().__init__(
             name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
             spellbook=spellbook, ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
@@ -51,14 +53,18 @@ class Combatant(BaseCombatant, StatBlock):
         self._cache = {}
 
     @classmethod
-    def new(cls, name: str, controller_id: str, init: int, init_skill: Skill, max_hp: int, ac: int, private: bool,
-            resists: Resistances, ctx, combat):
+    def new(
+        cls, name: str, controller_id: str, init: int, init_skill: Skill, max_hp: int, ac: int, private: bool,
+        resists: Resistances, ctx, combat
+    ):
         skills = Skills.default()
         skills.update({"initiative": init_skill})
         levels = Levels({"Monster": 0})
         id = create_combatant_id()
-        return cls(ctx, combat, id, name, controller_id, private, init,
-                   levels=levels, resistances=resists, skills=skills, max_hp=max_hp, ac=ac)
+        return cls(
+            ctx, combat, id, name, controller_id, private, init,
+            levels=levels, resistances=resists, skills=skills, max_hp=max_hp, ac=ac
+        )
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
@@ -73,11 +79,13 @@ class Combatant(BaseCombatant, StatBlock):
 
     def to_dict(self):
         d = super().to_dict()
-        d.update({
-            'controller_id': self.controller, 'init': self.init, 'private': self.is_private,
-            'index': self.index, 'notes': self.notes, 'effects': [e.to_dict() for e in self._effects],
-            'group_id': self._group_id, 'type': self.type.value, 'id': self.id
-        })
+        d.update(
+            {
+                'controller_id': self.controller, 'init': self.init, 'private': self.is_private,
+                'index': self.index, 'notes': self.notes, 'effects': [e.to_dict() for e in self._effects],
+                'group_id': self._group_id, 'type': self.type.value, 'id': self.id
+            }
+        )
         return d
 
     @property
@@ -449,22 +457,25 @@ class MonsterCombatant(Combatant):
     DESERIALIZE_MAP = {**DESERIALIZE_MAP, "spellbook": MonsterCastableSpellbook}
     type = CombatantType.MONSTER
 
-    def __init__(self,
-                 # init metadata
-                 ctx, combat, id: str, name: str, controller_id: str, private: bool, init: int, index: int = None,
-                 notes: str = None, effects: list = None, group_id: str = None,
-                 # statblock info
-                 stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
-                 skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
-                 spellbook: Spellbook = None,
-                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
-                 # monster specific
-                 monster_name=None, monster_id=None, creature_type=None,
-                 **_):
+    def __init__(
+        self,
+        # init metadata
+        ctx, combat, id: str, name: str, controller_id: str, private: bool, init: int, index: int = None,
+        notes: str = None, effects: list = None, group_id: str = None,
+        # statblock info
+        stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
+        skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
+        spellbook: Spellbook = None,
+        ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+        # monster specific
+        monster_name=None, monster_id=None, creature_type=None,
+        **_
+    ):
         super(MonsterCombatant, self).__init__(
             ctx, combat, id, name, controller_id, private, init, index, notes, effects, group_id,
             stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp,
-            creature_type=creature_type)
+            creature_type=creature_type
+        )
         self._monster_name = monster_name
         self._monster_id = monster_id
 
@@ -484,13 +495,15 @@ class MonsterCombatant(Combatant):
         # copy resistances (#1134)
         resistances = monster.resistances.copy()
 
-        return cls(ctx, combat, id, name, controller_id, private, init,
-                   # statblock info
-                   stats=monster.stats, levels=monster.levels, attacks=monster.attacks,
-                   skills=monster.skills, saves=monster.saves, resistances=resistances,
-                   spellbook=spellbook, ac=ac, max_hp=hp,
-                   # monster specific
-                   monster_name=monster_name, monster_id=monster.entity_id, creature_type=creature_type)
+        return cls(
+            ctx, combat, id, name, controller_id, private, init,
+            # statblock info
+            stats=monster.stats, levels=monster.levels, attacks=monster.attacks,
+            skills=monster.skills, saves=monster.saves, resistances=resistances,
+            spellbook=spellbook, ac=ac, max_hp=hp,
+            # monster specific
+            monster_name=monster_name, monster_id=monster.entity_id, creature_type=creature_type
+        )
 
     # ser/deser
     @classmethod
@@ -502,9 +515,11 @@ class MonsterCombatant(Combatant):
 
     def to_dict(self):
         raw = super().to_dict()
-        raw.update({
-            'monster_name': self._monster_name, 'monster_id': self._monster_id
-        })
+        raw.update(
+            {
+                'monster_name': self._monster_name, 'monster_id': self._monster_id
+            }
+        )
         return raw
 
     # members
@@ -520,16 +535,18 @@ class MonsterCombatant(Combatant):
 class PlayerCombatant(Combatant):
     type = CombatantType.PLAYER
 
-    def __init__(self,
-                 # init metadata
-                 ctx, combat, id: str, name: str, controller_id: str, private: bool, init: int, index: int = None,
-                 notes: str = None, effects: list = None, group_id: str = None,
-                 # statblock info
-                 attacks: AttackList = None, resistances: Resistances = None,
-                 ac: int = None, max_hp: int = None,
-                 # character specific
-                 character_id=None, character_owner=None,
-                 **_):
+    def __init__(
+        self,
+        # init metadata
+        ctx, combat, id: str, name: str, controller_id: str, private: bool, init: int, index: int = None,
+        notes: str = None, effects: list = None, group_id: str = None,
+        # statblock info
+        attacks: AttackList = None, resistances: Resistances = None,
+        ac: int = None, max_hp: int = None,
+        # character specific
+        character_id=None, character_owner=None,
+        **_
+    ):
         # note that the player combatant doesn't initialize the statblock
         # because we want the combatant statblock attrs to reference the character attrs
         super().__init__(
@@ -544,11 +561,13 @@ class PlayerCombatant(Combatant):
     @classmethod
     async def from_character(cls, character, ctx, combat, controller_id, init, private):
         id = create_combatant_id()
-        inst = cls(ctx, combat, id, character.name, controller_id, private, init,
-                   # statblock copies
-                   resistances=character.resistances.copy(),
-                   # character specific
-                   character_id=character.upstream, character_owner=character.owner)
+        inst = cls(
+            ctx, combat, id, character.name, controller_id, private, init,
+            # statblock copies
+            resistances=character.resistances.copy(),
+            # character specific
+            character_id=character.upstream, character_owner=character.owner
+        )
         inst._character = character
         return inst
 
@@ -561,10 +580,13 @@ class PlayerCombatant(Combatant):
 
         try:
             inst._character = await cogs5e.models.character.Character.from_bot_and_ids(
-                ctx.bot, inst.character_owner, inst.character_id)
+                ctx.bot, inst.character_owner, inst.character_id
+            )
         except NoCharacter:
-            raise CombatException(f"A character in combat was deleted. "
-                                  f"Please run `{ctx.prefix}init end -force` to end combat.")
+            raise CombatException(
+                f"A character in combat was deleted. "
+                f"Please run `{ctx.prefix}init end -force` to end combat."
+            )
 
         return inst
 
@@ -576,10 +598,13 @@ class PlayerCombatant(Combatant):
 
         try:
             inst._character = cogs5e.models.character.Character.from_bot_and_ids_sync(
-                ctx.bot, inst.character_owner, inst.character_id)
+                ctx.bot, inst.character_owner, inst.character_id
+            )
         except NoCharacter:
-            raise CombatException(f"A character in combat was deleted. "
-                                  f"Please run `{ctx.prefix}init end -force` to end combat.")
+            raise CombatException(
+                f"A character in combat was deleted. "
+                f"Please run `{ctx.prefix}init end -force` to end combat."
+            )
         return inst
 
     def to_dict(self):
@@ -587,9 +612,11 @@ class PlayerCombatant(Combatant):
         raw = super().to_dict()
         for attr in ignored_attributes:
             del raw[attr]
-        raw.update({
-            'character_id': self.character_id, 'character_owner': self.character_owner
-        })
+        raw.update(
+            {
+                'character_id': self.character_id, 'character_owner': self.character_owner
+            }
+        )
         return raw
 
     # ==== helpers ====
@@ -608,7 +635,8 @@ class PlayerCombatant(Combatant):
 
         # retrieve from character constructor
         self._character = await cogs5e.models.character.Character.from_bot_and_ids(
-            ctx.bot, self.character_owner, self.character_id)
+            ctx.bot, self.character_owner, self.character_id
+        )
 
     # ==== members ====
     @property

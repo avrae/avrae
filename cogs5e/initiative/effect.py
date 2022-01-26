@@ -1,12 +1,14 @@
-import math
 from typing import Any, Optional, TYPE_CHECKING
+
+import math
 
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
 from utils.argparser import argparse
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import verbose_stat
-from .utils import CombatantType, create_effect_id
+from .types import CombatantType
+from .utils import create_effect_id
 
 # combat types are only defined when type checking
 _CombatT = Any

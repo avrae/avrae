@@ -2,7 +2,8 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import Skill
 from .combatant import Combatant, MonsterCombatant, PlayerCombatant
 from .errors import CombatException
-from .utils import CombatantType, create_combatant_id
+from .types import CombatantType
+from .utils import create_combatant_id
 
 
 class CombatantGroup(Combatant):
@@ -10,7 +11,8 @@ class CombatantGroup(Combatant):
 
     def __init__(self, ctx, combat, id, combatants, name, init, index=None, **_):
         super(CombatantGroup, self).__init__(
-            ctx, combat, id, name=name, controller_id=str(ctx.author.id), private=False, init=init, index=index)
+            ctx, combat, id, name=name, controller_id=str(ctx.author.id), private=False, init=init, index=index
+        )
         self._combatants = combatants
 
     # noinspection PyMethodOverriding
@@ -54,8 +56,10 @@ class CombatantGroup(Combatant):
         return cls(ctx, combat, combatants=combatants, **raw)
 
     def to_dict(self):
-        return {'name': self._name, 'init': self._init, 'combatants': [c.to_dict() for c in self.get_combatants()],
-                'index': self._index, 'type': 'group', 'id': self.id}
+        return {
+            'name': self._name, 'init': self._init, 'combatants': [c.to_dict() for c in self.get_combatants()],
+            'index': self._index, 'type': 'group', 'id': self.id
+        }
 
     # members
     @property

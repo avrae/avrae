@@ -3,7 +3,7 @@ from .combatant import Combatant, MonsterCombatant, PlayerCombatant
 from .effect import Effect
 from .errors import *
 from .group import CombatantGroup
-from .utils import CombatantType
+from .types import CombatantType
 
 pass  # don't move my imports, pycharm - the cog has to be imported last
 

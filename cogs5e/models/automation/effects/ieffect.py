@@ -1,4 +1,4 @@
-from cogs5e.models import initiative as init
+from cogs5e import initiative as init
 from cogs5e.models.errors import InvalidArgument
 from . import Effect
 from ..errors import AutomationException, TargetException

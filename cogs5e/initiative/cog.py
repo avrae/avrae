@@ -6,23 +6,24 @@ import traceback
 import discord
 from d20 import roll
 from discord.ext import commands
-from discord.ext.commands import NoPrivateMessage
+from disnake.ext.commands import NoPrivateMessage
 
 from aliasing import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
-from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
-from cogs5e.utils.help_constants import *
+from cogs5e.utils.help_constants import (VALID_AUTOMATION_ARGS, VALID_CHECK_ARGS, VALID_SAVE_ARGS,
+    VALID_SPELLCASTING_ARGS)
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import constants
 from utils.argparser import argparse
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
+from . import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 
 log = logging.getLogger(__name__)
 
@@ -277,7 +278,7 @@ class InitTracker(commands.Cog):
                 else:
                     init = int(p)
 
-                # -controller (#1368)    
+                # -controller (#1368)
                 if args.last('controller'):
                     controller_name = args.last('controller')
                     member = await commands.MemberConverter().convert(ctx, controller_name)
@@ -1379,7 +1380,3 @@ class InitTracker(commands.Cog):
             await self.bot.mdb.combats.delete_one({"channel": str(ctx.channel.id)})
 
         await msg.edit(content="Combat ended.")
-
-
-def setup(bot):
-    bot.add_cog(InitTracker(bot))

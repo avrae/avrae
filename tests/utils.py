@@ -3,8 +3,8 @@ from contextlib import asynccontextmanager
 
 import pytest
 
+from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
-from cogs5e.models.initiative import Combat
 from gamedata.compendium import compendium
 from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID, TEST_GUILD_ID
 from utils.settings import ServerSettings

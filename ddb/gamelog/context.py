@@ -173,7 +173,7 @@ class GameLogEventContext:
     #     if self._combat is not _sentinel:
     #         return self._combat
     #
-    #     from cogs5e.models.initiative import Combat, CombatNotFound
+    #     from cogs5e.initiative import Combat, CombatNotFound
     #
     #     author = await self.get_discord_user()  # ensure author is loaded - combat may access it
     #     if author is None:  # was not able to load the author, so combat will not be able to be loaded

@@ -390,6 +390,11 @@ class MonsterSpellbook(Spellbook):
         })
         return d
 
+    def reset_slots(self):
+        super().reset_slots()
+        for spell, max in self.daily_max.items():
+            self.daily[spell] = max
+
     # ===== utils =====
     def slots_str(self, level: int = None):
         if level is not None:

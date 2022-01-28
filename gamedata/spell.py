@@ -271,9 +271,10 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             if phrase:
                 embed.description = f"*{phrase}*"
             embed.add_field(name="Description", value=smart_trim(self.description), inline=False)
-            if l != self.level and self.higherlevels:
-                embed.add_field(name="At Higher Levels", value=smart_trim(self.higherlevels), inline=False)
             embed.set_footer(text="No spell automation found.")
+
+        if l != self.level and self.higherlevels:
+            embed.add_field(name="At Higher Levels", value=smart_trim(self.higherlevels), inline=False)
 
         if l > 0 and not i:
             embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))

@@ -1,7 +1,12 @@
+from typing import List, Optional
+
 import cachetools
 import discord
+import disnake.ext.commands
+from bson import ObjectId
 from d20 import roll
 
+from cogs5e.models.errors import NoCharacter
 from utils.functions import search_and_select
 from .combatant import Combatant, MonsterCombatant, PlayerCombatant
 from .errors import *
@@ -20,14 +25,24 @@ class Combat:
     _cache = cachetools.TTLCache(maxsize=50, ttl=10)
 
     def __init__(
-        self, channel_id, message_id, dm_id, options, ctx,
-        combatants=None, round_num=0, turn_num=0, current_index=None,
-        metadata=None
+        self,
+        combat_id: Optional[ObjectId],
+        channel_id: str,
+        message_id: int,
+        dm_id: str,
+        options: dict,
+        ctx: disnake.ext.commands.Context,
+        combatants: List[Combatant] = None,
+        round_num: int = 0,
+        turn_num: int = 0,
+        current_index: Optional[int] = None,
+        metadata: dict = None
     ):
         if combatants is None:
             combatants = []
         if metadata is None:
             metadata = {}
+        self.id = combat_id
         self._channel = str(channel_id)  # readonly
         self._summary = int(message_id)  # readonly
         self._dm = str(dm_id)
@@ -41,7 +56,7 @@ class Combat:
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
-        return cls(channel_id, message_id, dm_id, options, ctx)
+        return cls(None, channel_id, message_id, dm_id, options, ctx)
 
     # async deser
     @classmethod
@@ -65,21 +80,11 @@ class Combat:
     @classmethod
     async def from_dict(cls, raw, ctx):
         inst = cls(
-            raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+            raw['_id'], raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
             raw['turn'], raw['current'], raw.get('metadata')
         )
         for c in raw['combatants']:
-            ctype = CombatantType(c['type'])
-            if ctype == CombatantType.GENERIC:
-                inst._combatants.append(Combatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.MONSTER:
-                inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.PLAYER:
-                inst._combatants.append(await PlayerCombatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.GROUP:
-                inst._combatants.append(await CombatantGroup.from_dict(c, ctx, inst))
-            else:
-                raise CombatException(f"Unknown combatant type: {c['type']}")
+            inst._combatants.append(await deserialize_combatant(c, ctx, inst))
         return inst
 
     # sync deser/ser
@@ -100,21 +105,11 @@ class Combat:
     @classmethod
     def from_dict_sync(cls, raw, ctx):
         inst = cls(
-            raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+            raw['_id'], raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
             raw['turn'], raw['current'], raw.get('metadata')
         )
         for c in raw['combatants']:
-            ctype = CombatantType(c['type'])
-            if ctype == CombatantType.GENERIC:
-                inst._combatants.append(Combatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.MONSTER:
-                inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.PLAYER:
-                inst._combatants.append(PlayerCombatant.from_dict_sync(c, ctx, inst))
-            elif ctype == CombatantType.GROUP:
-                inst._combatants.append(CombatantGroup.from_dict_sync(c, ctx, inst))
-            else:
-                raise CombatException(f"Unknown combatant type: {c['type']}")
+            inst._combatants.append(deserialize_combatant_sync(c, ctx, inst))
         return inst
 
     def to_dict(self):
@@ -578,3 +573,43 @@ class Combat:
 
     def __str__(self):
         return f"Initiative in <#{self.channel}>"
+
+
+async def deserialize_combatant(raw_combatant, ctx, combat):
+    ctype = CombatantType(raw_combatant['type'])
+    if ctype == CombatantType.GENERIC:
+        return Combatant.from_dict(raw_combatant, ctx, combat)
+    elif ctype == CombatantType.MONSTER:
+        return MonsterCombatant.from_dict(raw_combatant, ctx, combat)
+    elif ctype == CombatantType.PLAYER:
+        try:
+            return await PlayerCombatant.from_dict(raw_combatant, ctx, combat)
+        except NoCharacter:
+            # if the character was deleted, make a best effort to restore what we know
+            # note: PlayerCombatant.from_dict mutates raw_combatant so we don't have to call the normal from_dict
+            # operations here (this is hacky)
+            return Combatant(ctx, combat, **raw_combatant)
+    elif ctype == CombatantType.GROUP:
+        return await CombatantGroup.from_dict(raw_combatant, ctx, combat)
+    else:
+        raise CombatException(f"Unknown combatant type: {raw_combatant['type']}")
+
+
+def deserialize_combatant_sync(raw_combatant, ctx, combat):
+    ctype = CombatantType(raw_combatant['type'])
+    if ctype == CombatantType.GENERIC:
+        return Combatant.from_dict(raw_combatant, ctx, combat)
+    elif ctype == CombatantType.MONSTER:
+        return MonsterCombatant.from_dict(raw_combatant, ctx, combat)
+    elif ctype == CombatantType.PLAYER:
+        try:
+            return PlayerCombatant.from_dict_sync(raw_combatant, ctx, combat)
+        except NoCharacter:
+            # if the character was deleted, make a best effort to restore what we know
+            # note: PlayerCombatant.from_dict mutates raw_combatant so we don't have to call the normal from_dict
+            # operations here (this is hacky)
+            return Combatant(ctx, combat, **raw_combatant)
+    elif ctype == CombatantType.GROUP:
+        return CombatantGroup.from_dict_sync(raw_combatant, ctx, combat)
+    else:
+        raise CombatException(f"Unknown combatant type: {raw_combatant['type']}")

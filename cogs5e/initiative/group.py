@@ -1,7 +1,6 @@
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import Skill
-from .combatant import Combatant, MonsterCombatant, PlayerCombatant
-from .errors import CombatException
+from .combatant import Combatant
 from .types import CombatantType
 from .utils import create_combatant_id
 
@@ -10,7 +9,7 @@ class CombatantGroup(Combatant):
     type = CombatantType.GROUP
 
     def __init__(self, ctx, combat, id, combatants, name, init, index=None, **_):
-        super(CombatantGroup, self).__init__(
+        super().__init__(
             ctx, combat, id, name=name, controller_id=str(ctx.author.id), private=False, init=init, index=index
         )
         self._combatants = combatants
@@ -23,34 +22,22 @@ class CombatantGroup(Combatant):
 
     @classmethod
     async def from_dict(cls, raw, ctx, combat):
+        # this import is here because Combat imports CombatantGroup - it's a 1-time cost on first call but
+        # practically free afterwards (<1us)
+        from .combat import deserialize_combatant
         combatants = []
         for c in raw.pop('combatants'):
-            ctype = CombatantType(c['type'])
-            if ctype == CombatantType.GENERIC:
-                combatant = Combatant.from_dict(c, ctx, combat)
-            elif ctype == CombatantType.MONSTER:
-                combatant = MonsterCombatant.from_dict(c, ctx, combat)
-            elif ctype == CombatantType.PLAYER:
-                combatant = await PlayerCombatant.from_dict(c, ctx, combat)
-            else:
-                raise CombatException(f"Unknown combatant type when deserializing group: {c['type']}")
+            combatant = await deserialize_combatant(c, ctx, combat)
             combatants.append(combatant)
 
         return cls(ctx, combat, combatants=combatants, **raw)
 
     @classmethod
     def from_dict_sync(cls, raw, ctx, combat):
+        from .combat import deserialize_combatant_sync
         combatants = []
         for c in raw.pop('combatants'):
-            ctype = CombatantType(c['type'])
-            if ctype == CombatantType.GENERIC:
-                combatant = Combatant.from_dict(c, ctx, combat)
-            elif ctype == CombatantType.MONSTER:
-                combatant = MonsterCombatant.from_dict(c, ctx, combat)
-            elif ctype == CombatantType.PLAYER:
-                combatant = PlayerCombatant.from_dict_sync(c, ctx, combat)
-            else:
-                raise CombatException(f"Unknown combatant type when deserializing group: {c['type']}")
+            combatant = deserialize_combatant_sync(c, ctx, combat)
             combatants.append(combatant)
 
         return cls(ctx, combat, combatants=combatants, **raw)
@@ -84,8 +71,8 @@ class CombatantGroup(Combatant):
     @property
     def init_skill(self):
         # groups: if all combatants are the same type, return the first one's skill, otherwise +0
-        if all(isinstance(c, MonsterCombatant) for c in self._combatants) \
-                and len(set(c.monster_name for c in self._combatants)) == 1:
+        if (all(c.type == CombatantType.MONSTER for c in self._combatants)
+                and len(set(c.monster_name for c in self._combatants)) == 1):
             return self._combatants[0].init_skill
         return Skill(0)
 

@@ -2,10 +2,11 @@ import collections
 import functools
 import logging
 import traceback
+from contextlib import suppress
 
-import discord
+import disnake
 from d20 import roll
-from discord.ext import commands
+from disnake.ext import commands
 from disnake.ext.commands import NoPrivateMessage
 
 from aliasing import helpers
@@ -43,11 +44,7 @@ class InitTracker(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group(aliases=['i'], invoke_without_command=True)
-    async def init(self, ctx):
-        """Commands to help track initiative."""
-        await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
-
+    # ==== special methods ====
     async def cog_check(self, ctx):
         if ctx.guild is None:
             raise NoPrivateMessage()
@@ -55,6 +52,19 @@ class InitTracker(commands.Cog):
 
     async def cog_before_invoke(self, ctx):
         await try_delete(ctx.message)
+
+    # ==== listeners ====
+    @commands.Cog.listener()
+    async def on_message(self, message: disnake.Message):
+        if message.guild is None:
+            return
+        await self.nlp.on_guild_message(message)
+
+    # ==== commands ====
+    @commands.group(aliases=['i'], invoke_without_command=True)
+    async def init(self, ctx):
+        """Commands to help track initiative."""
+        await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
 
     @init.command()
     async def begin(self, ctx, *args):
@@ -159,7 +169,7 @@ class InitTracker(commands.Cog):
         for k in ('resist', 'immune', 'vuln'):
             resists[k] = args.get(k)
 
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         if combat.get_combatant(name) is not None:
             await ctx.send("Combatant already exists.")
@@ -235,7 +245,7 @@ class InitTracker(commands.Cog):
         name_template = args.last('name', monster.name[:2].upper() + '#')
         init_skill = monster.skills.initiative
 
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         out = ''
         to_pm = ''
@@ -361,7 +371,7 @@ class InitTracker(commands.Cog):
         controller = str(ctx.author.id)
         private = args.last('h', type_=bool)
 
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         if combat.get_combatant(char.name) is not None:
             await ctx.send("Combatant already exists.")
@@ -394,7 +404,7 @@ class InitTracker(commands.Cog):
         A DM is the user who started combat and anyone with the "DM", "GM", "Dungeon Master" or "Game Master" role.
         """
 
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         servsettings = await ctx.get_server_settings()
 
         if len(combat.get_combatants()) == 0:
@@ -454,7 +464,7 @@ class InitTracker(commands.Cog):
     async def init_prev(self, ctx):
         """Moves to the previous turn in initiative order."""
 
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         if len(combat.get_combatants()) == 0:
             await ctx.send("There are no combatants.")
@@ -470,7 +480,7 @@ class InitTracker(commands.Cog):
         """Moves to a certain initiative.
         `target` can be either a number, to go to that initiative, or a name.
         If not supplied, goes to the first combatant that the user controls."""
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         if len(combat.get_combatants()) == 0:
             await ctx.send("There are no combatants.")
@@ -495,7 +505,7 @@ class InitTracker(commands.Cog):
     @init.command(name="skipround", aliases=['round', 'skiprounds'])
     async def skipround(self, ctx, numrounds: int = 1):
         """Skips one or more rounds of initiative."""
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         to_remove = []
         for co in combat.get_combatants():
@@ -524,7 +534,7 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         `-restart` - Resets the round counter (effectively restarting initiative).
         """
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         a = argparse(args)
 
         new_order = combat.reroll_dynamic()
@@ -541,7 +551,7 @@ class InitTracker(commands.Cog):
         try:
             await new_summary.pin()
             await old_summary.unpin()
-        except discord.HTTPException:
+        except disnake.HTTPException:
             pass
 
         await combat.final()
@@ -557,7 +567,7 @@ class InitTracker(commands.Cog):
         `-name <name>` - Sets a name for the combat instance
         """
         args = argparse(settings)
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         options = combat.options
         out = ""
 
@@ -584,7 +594,7 @@ class InitTracker(commands.Cog):
         """Lists the combatants.
         __Valid Arguments__
         private - Sends the list in a private message."""
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         private = 'private' in args
         destination = ctx if not private else ctx.author
         if private and str(ctx.author.id) == combat.dm:
@@ -596,7 +606,7 @@ class InitTracker(commands.Cog):
     @init.command()
     async def note(self, ctx, name: str, *, note: str = ''):
         """Attaches a note to a combatant."""
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         combatant = await combat.select_combatant(name)
         if combatant is None:
@@ -627,7 +637,7 @@ class InitTracker(commands.Cog):
         `-max <maxhp>` - Modifies the combatants' Max HP. Adds if starts with +/- or sets otherwise.
         `-hp <hp>` - Modifies current HP. Adds if starts with +/- or sets otherwise.
         """  # noqa: E501
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         comb = await combat.select_combatant(name, select_group=True)
         if comb is None:
@@ -776,7 +786,7 @@ class InitTracker(commands.Cog):
             for destination, messages in out.items():
                 await destination.send(
                     '\n'.join(messages),
-                    allowed_mentions=discord.AllowedMentions(users=list(allowed_mentions))
+                    allowed_mentions=disnake.AllowedMentions(users=list(allowed_mentions))
                 )
             await combat.final()
         else:
@@ -789,7 +799,7 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         `private` - PMs the controller of the combatant a more detailed status."""
 
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         if name == 'private' or name == '':
             combatant = combat.current_combatant
@@ -820,7 +830,7 @@ class InitTracker(commands.Cog):
     @init.group(invoke_without_command=True)
     async def hp(self, ctx, name: str, *, hp: str = None):
         """Modifies the HP of a combatant."""
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         combatant = await combat.select_combatant(name)
         if combatant is None:
             return await ctx.send("Combatant not found.")
@@ -854,7 +864,7 @@ class InitTracker(commands.Cog):
     @hp.command(name='max')
     async def init_hp_max(self, ctx, name, *, hp: str = None):
         """Sets a combatant's max HP, or sets HP to max if no max is given."""
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         combatant = await combat.select_combatant(name)
         if combatant is None:
             return await ctx.send("Combatant not found.")
@@ -881,7 +891,7 @@ class InitTracker(commands.Cog):
     @hp.command(name='set')
     async def init_hp_set(self, ctx, name, *, hp):
         """Sets a combatant's HP to a certain value."""
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         combatant = await combat.select_combatant(name)
         if combatant is None:
             return await ctx.send("Combatant not found.")
@@ -899,7 +909,7 @@ class InitTracker(commands.Cog):
         Usage: `!init thp <NAME> <HP>`
         Sets the combatants' THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP).
         """  # noqa: E501
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         combatant = await combat.select_combatant(name)
         if combatant is None:
             await ctx.send("Combatant not found.")
@@ -952,7 +962,7 @@ class InitTracker(commands.Cog):
         `-maxhp <hp>` - modifies maximum hp temporarily; adds if starts with +/- or sets otherwise.
         `-desc <description>` - Adds a description of the effect.
         """  # noqa: E501
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         args = argparse(args)
 
         targets = []
@@ -1003,7 +1013,7 @@ class InitTracker(commands.Cog):
     @init.command(name='re')
     async def remove_effect(self, ctx, name: str, effect: str = None):
         """Removes a status effect from a combatant or group. Removes all if effect is not passed."""
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         targets = []
 
@@ -1144,7 +1154,7 @@ class InitTracker(commands.Cog):
         targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
 
         # embed setup
-        embed = discord.Embed(color=combatant.get_color())
+        embed = disnake.Embed(color=combatant.get_color())
 
         # run
         if isinstance(attack, Attack):
@@ -1175,7 +1185,7 @@ class InitTracker(commands.Cog):
         return await self._check(ctx, combatant_name, check, args)
 
     async def _check(self, ctx, combatant_name, check, args):
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
@@ -1192,7 +1202,7 @@ class InitTracker(commands.Cog):
             return await ctx.send("Groups cannot make checks.")
 
         skill_key = await search_and_select(ctx, constants.SKILL_NAMES, check, lambda s: s)
-        embed = discord.Embed(color=combatant.get_color())
+        embed = disnake.Embed(color=combatant.get_color())
 
         args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
@@ -1223,7 +1233,7 @@ class InitTracker(commands.Cog):
         return await self._save(ctx, combatant_name, save, args)
 
     async def _save(self, ctx, combatant_name, save, args):
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
@@ -1239,7 +1249,7 @@ class InitTracker(commands.Cog):
         if isinstance(combatant, CombatantGroup):
             return await ctx.send("Groups cannot make saves.")
 
-        embed = discord.Embed(color=combatant.get_color())
+        embed = disnake.Embed(color=combatant.get_color())
         args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
 
@@ -1276,7 +1286,7 @@ class InitTracker(commands.Cog):
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     async def _cast(self, ctx, combatant_name, spell_name, args):
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         if combatant_name is None:
             combatant = combat.current_combatant
@@ -1327,7 +1337,7 @@ class InitTracker(commands.Cog):
     async def remove_combatant(self, ctx, *, name: str):
         """Removes a combatant or group from the combat.
         Usage: `!init remove <NAME>`"""
-        combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
         combatant = await combat.select_combatant(name, select_group=True)
         if combatant is None:
@@ -1348,9 +1358,7 @@ class InitTracker(commands.Cog):
 
     @init.command()
     async def end(self, ctx, args=None):
-        """Ends combat in the channel.
-        __Valid Arguments__
-        `-force` - Forces an init to end, in case it's erroring."""
+        """Ends combat in the channel."""
 
         to_end = await confirm(ctx, 'Are you sure you want to end combat? (Reply with yes/no)', True)
 
@@ -1360,23 +1368,16 @@ class InitTracker(commands.Cog):
             return await ctx.send('OK, cancelling.', delete_after=10)
 
         msg = await ctx.send("OK, ending...")
-        if args != '-force':
-            combat = await Combat.from_ctx(ctx)
+        combat = await ctx.get_combat()
 
-            try:
-                await ctx.author.send(
-                    f"End of combat report: {combat.round_num} rounds "
-                    f"{combat.get_summary(True)}"
-                )
+        with suppress(disnake.HTTPException):
+            await ctx.author.send(
+                f"End of combat report: {combat.round_num} rounds "
+                f"{combat.get_summary(True)}"
+            )
+            summary = combat.get_summary_msg()
+            await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
+            await summary.unpin()
 
-                summary = combat.get_summary_msg()
-                await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
-                await summary.unpin()
-            except discord.HTTPException:
-                pass
-
-            await combat.end()
-        else:
-            await self.bot.mdb.combats.delete_one({"channel": str(ctx.channel.id)})
-
+        await combat.end()
         await msg.edit(content="Combat ended.")

@@ -25,6 +25,7 @@ from utils import constants
 from utils.argparser import argparse
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
 from . import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
+from .upenn_nlp import NLPRecorder
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class InitTracker(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.nlp = NLPRecorder(bot)
 
     # ==== special methods ====
     async def cog_check(self, ctx):
@@ -76,6 +78,7 @@ class InitTracker(commands.Cog):
         deathdelete - Disables deleting monsters below 0 hp.
         -name <name> - Sets a name for the combat instance."""
         await Combat.ensure_unique_chan(ctx)
+        guild_settings = await ctx.get_server_settings()
 
         options = {}
 
@@ -94,16 +97,18 @@ class InitTracker(commands.Cog):
         combat = Combat.new(str(ctx.channel.id), temp_summary_msg.id, str(ctx.author.id), options, ctx)
         await combat.final()
 
-        try:
+        with suppress(disnake.HTTPException):
             await temp_summary_msg.pin()
-        except discord.HTTPException:
-            pass
-        await ctx.send(
+        out = (
             f"Everyone roll for initiative!\n"
             f"If you have a character set up with SheetManager: `{ctx.prefix}init join`\n"
             f"If it's a 5e monster: `{ctx.prefix}init madd <monster name>`\n"
             f"Otherwise: `{ctx.prefix}init add <modifier> <name>`"
         )
+        if guild_settings.upenn_nlp_opt_in:
+            out = f"{out}\nMessages sent in this channel during combat will be recorded."
+            await self.nlp.on_combat_start(combat)
+        await ctx.send(out)
 
     @init.command()
     async def add(self, ctx, modifier: int, name: str, *args):

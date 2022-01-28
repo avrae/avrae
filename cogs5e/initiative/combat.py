@@ -1,4 +1,6 @@
-from typing import List, Optional
+import asyncio
+from functools import cached_property
+from typing import Any, List, Optional, TYPE_CHECKING
 
 import cachetools
 import discord
@@ -15,7 +17,16 @@ from .types import CombatantType
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
+# ==== typing ====
+_NLPRecorderT = Any
+if TYPE_CHECKING:
+    import cogs5e.initiative
+    from .upenn_nlp import NLPRecorder
 
+    _NLPRecorderT = NLPRecorder
+
+
+# ==== code ====
 class Combat:
     # cache combats for 10 seconds to avoid race conditions
     # this makes sure that multiple calls to Combat.from_ctx() in the same invocation or two simultaneous ones
@@ -36,7 +47,8 @@ class Combat:
         round_num: int = 0,
         turn_num: int = 0,
         current_index: Optional[int] = None,
-        metadata: dict = None
+        metadata: dict = None,
+        is_recorded: bool = False,
     ):
         if combatants is None:
             combatants = []
@@ -53,6 +65,7 @@ class Combat:
         self._current_index = current_index
         self.ctx = ctx
         self._metadata = metadata
+        self.is_recorded = is_recorded
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
@@ -81,7 +94,7 @@ class Combat:
     async def from_dict(cls, raw, ctx):
         inst = cls(
             raw['_id'], raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-            raw['turn'], raw['current'], raw.get('metadata')
+            raw['turn'], raw['current'], raw.get('metadata'), raw.get('is_recorded', False)
         )
         for c in raw['combatants']:
             inst._combatants.append(await deserialize_combatant(c, ctx, inst))
@@ -106,7 +119,7 @@ class Combat:
     def from_dict_sync(cls, raw, ctx):
         inst = cls(
             raw['_id'], raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-            raw['turn'], raw['current'], raw.get('metadata')
+            raw['turn'], raw['current'], raw.get('metadata'), raw.get('is_recorded', False)
         )
         for c in raw['combatants']:
             inst._combatants.append(deserialize_combatant_sync(c, ctx, inst))
@@ -116,7 +129,8 @@ class Combat:
         return {
             'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
             'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-            'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata
+            'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata,
+            'is_recorded': self.is_recorded
         }
 
     # members
@@ -197,6 +211,15 @@ class Combat:
         else:
             index = self.index + 1
         return self._combatants[index]
+
+    @cached_property
+    def nlp_recorder(self) -> Optional[_NLPRecorderT]:
+        if not self.is_recorded or self.ctx is None:
+            return None
+        combat_cog = self.ctx.bot.get_cog("InitTracker")  # type: Optional[cogs5e.initiative.InitTracker]
+        if combat_cog is None:
+            return None
+        return combat_cog.nlp
 
     def get_combatants(self, groups=False):
         """
@@ -542,9 +565,18 @@ class Combat:
         )
 
     async def final(self):
-        """Final commit/update."""
-        await self.commit()
-        await self.update_summary()
+        """Commit, update the summary message, and fire any recorder events in parallel."""
+        if self.nlp_recorder is None:
+            await asyncio.gather(
+                self.commit(),
+                self.update_summary()
+            )
+        else:
+            await asyncio.gather(
+                self.commit(),
+                self.update_summary(),
+                self.nlp_recorder.on_combat_commit(self)
+            )
 
     # misc
     @staticmethod

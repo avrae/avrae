@@ -17,8 +17,7 @@ from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
-from cogs5e.utils.help_constants import (VALID_AUTOMATION_ARGS, VALID_CHECK_ARGS, VALID_SAVE_ARGS,
-    VALID_SPELLCASTING_ARGS)
+from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import constants
@@ -95,7 +94,6 @@ class InitTracker(commands.Cog):
         temp_summary_msg = await ctx.send("```Awaiting combatants...```")
 
         combat = Combat.new(str(ctx.channel.id), temp_summary_msg.id, str(ctx.author.id), options, ctx)
-        await combat.final()
 
         with suppress(disnake.HTTPException):
             await temp_summary_msg.pin()
@@ -107,7 +105,10 @@ class InitTracker(commands.Cog):
         )
         if guild_settings.upenn_nlp_opt_in:
             out = f"{out}\nMessages sent in this channel during combat will be recorded."
+            combat.is_recorded = True
             await self.nlp.on_combat_start(combat)
+
+        await combat.final()
         await ctx.send(out)
 
     @init.command()
@@ -1386,3 +1387,5 @@ class InitTracker(commands.Cog):
 
         await combat.end()
         await msg.edit(content="Combat ended.")
+        if combat.is_recorded:
+            await self.nlp.on_combat_end(combat)

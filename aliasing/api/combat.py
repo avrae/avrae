@@ -2,7 +2,7 @@ from typing import Optional
 
 from d20 import roll
 
-import cogs5e.models.initiative as init
+import cogs5e.initiative as init
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
@@ -146,8 +146,10 @@ class SimpleCombat:
 
     # private functions
     def func_set_character(self, character):
-        me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
-                  None)
+        me = next(
+            (c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
+            None
+        )
         if not me:
             return
         me._character = character  # set combatant character instance
@@ -295,9 +297,11 @@ class SimpleCombatant(AliasStatBlock):
                 self.in_crit = crit
                 self.target = AutomationTarget(target)
 
-        args = ParsedArguments.from_dict({
-            'critdice': [critdice]
-        })
+        args = ParsedArguments.from_dict(
+            {
+                'critdice': [critdice]
+            }
+        )
         if d:
             args['d'] = d
         if c:
@@ -307,8 +311,10 @@ class SimpleCombatant(AliasStatBlock):
 
         result = damage.run(autoctx)
         roll_for = "Damage" if not result.in_crit else "Damage (CRIT!)"
-        return {'damage': f"**{roll_for}**: {result.damage_roll.result}", 'total': result.damage,
-                'roll': SimpleRollResult(result.damage_roll)}
+        return {
+            'damage': f"**{roll_for}**: {result.damage_roll.result}", 'total': result.damage,
+            'roll': SimpleRollResult(result.damage_roll)
+        }
 
     def set_ac(self, ac: int):
         """
@@ -392,8 +398,10 @@ class SimpleCombatant(AliasStatBlock):
             return SimpleEffect(effect)
         return None
 
-    def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False, parent=None,
-                   end: bool = False, desc: str = None):
+    def add_effect(
+        self, name: str, args: str, duration: int = -1, concentration: bool = False, parent=None,
+        end: bool = False, desc: str = None
+    ):
         """
         Adds an effect to the combatant.
 
@@ -415,7 +423,8 @@ class SimpleCombatant(AliasStatBlock):
             existing.remove()
         effectObj = init.Effect.new(
             self._combatant.combat, self._combatant, duration=duration, name=name,
-            effect_args=args, concentration=concentration, tick_on_end=end, desc=desc)
+            effect_args=args, concentration=concentration, tick_on_end=end, desc=desc
+        )
         if parent:
             effectObj.set_parent(parent._effect)
         self._combatant.add_effect(effectObj)

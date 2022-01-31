@@ -7,8 +7,8 @@ import discord
 import gamedata.lookuputils
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException, InvalidArgument
-from cogs5e.models.initiative.effect import Effect
-from cogs5e.models.initiative.types import BaseCombatant
+from cogs5e.initiative.effect import Effect
+from cogs5e.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import confirm, maybe_http_url, smart_trim, verbose_stat
 from .mixins import AutomatibleMixin, DescribableMixin

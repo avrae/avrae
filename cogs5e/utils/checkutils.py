@@ -2,12 +2,12 @@ from collections import namedtuple
 
 from d20 import roll
 
-import cogs5e.models.initiative as init
+import cogs5e.initiative as init
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.base import Skill
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS
-from utils.functions import a_or_an, camel_to_title, verbose_stat, maybe_http_url
+from utils.functions import a_or_an, camel_to_title, maybe_http_url, verbose_stat
 
 
 def update_csetting_args(char, args, skill=None):

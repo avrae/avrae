@@ -1,4 +1,4 @@
-from cogs5e.models.initiative import Combatant
+from cogs5e.initiative import Combatant
 
 
 async def send_hp_result(ctx, caster, delta=None):

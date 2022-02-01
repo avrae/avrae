@@ -45,6 +45,9 @@ class RedisIO:
     async def setnx(self, key, value):
         return await self._db.setnx(key, value)
 
+    async def ttl(self, key):
+        return await self._db.ttl(key)
+
     # ==== hashmaps ====
     async def set_dict(self, key, dictionary):
         return await self._db.hmset_dict(key, **dictionary)

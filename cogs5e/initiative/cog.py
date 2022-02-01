@@ -1386,6 +1386,6 @@ class InitTracker(commands.Cog):
             await summary.unpin()
 
         await combat.end()
-        await msg.edit(content="Combat ended.")
         if combat.is_recorded:
             await self.nlp.on_combat_end(combat)
+        await msg.edit(content="Combat ended.")

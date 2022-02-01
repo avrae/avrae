@@ -383,8 +383,8 @@ class Combat:
         :return: The selected Combatant, or None if the search failed.
         """
         return await search_and_select(
-            self.ctx, self.get_combatants(select_group), name, lambda c: f"{c.name} {c.hp_str()}",
-            message=choice_message
+            self.ctx, self.get_combatants(select_group), name, lambda c: c.name,
+            message=choice_message, selectkey=lambda c: f"{c.name} {c.hp_str()}
         )
 
     def advance_turn(self):

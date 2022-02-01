@@ -1,7 +1,7 @@
 from cogs5e.models.errors import AvraeException
 
 __all__ = ('GameLogException',
-           'CampaignLinkException', 'LinkNotAllowed', 'NoCampaignLink', 'CampaignAlreadyLinked')
+           'CampaignLinkException', 'LinkNotAllowed', 'NoCampaignLink', 'CampaignAlreadyLinked', 'IgnoreEvent')
 
 
 class GameLogException(AvraeException):

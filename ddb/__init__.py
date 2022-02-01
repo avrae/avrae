@@ -1,2 +1,2 @@
-from . import errors, gamelog
+from . import character, errors, gamelog
 from .client import BeyondClient, BeyondClientBase

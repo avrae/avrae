@@ -1,12 +1,13 @@
 import os
+from contextlib import asynccontextmanager
 
-import discord
 import pytest
 
+from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
-from cogs5e.models.initiative import Combat
 from gamedata.compendium import compendium
 from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID, TEST_GUILD_ID
+from utils.settings import ServerSettings
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -83,7 +84,6 @@ def requires_data():
 async def active_character(avrae):
     """Gets the character active in this test."""
     fakectx = ContextBotProxy(avrae)
-    fakectx.author = discord.Object(id=DEFAULT_USER_ID)
     return await Character.from_ctx(fakectx)
 
 
@@ -92,9 +92,24 @@ async def active_combat(avrae):
     return await Combat.from_id(str(TEST_CHANNEL_ID), ContextBotProxy(avrae))
 
 
+@asynccontextmanager
+async def server_settings(avrae, **settings):
+    """Async context manager that sets certain server settings in the context."""
+    old_servsettings = await ServerSettings.for_guild(avrae.mdb, TEST_GUILD_ID)
+    try:
+        new_servsettings = ServerSettings(guild_id=int(TEST_GUILD_ID), **settings)
+        await new_servsettings.commit(avrae.mdb)
+        yield
+    finally:
+        await old_servsettings.commit(avrae.mdb)
+
+
 class ContextBotProxy:
     def __init__(self, bot):
         self.bot = bot
+        # to make draconic tests work
+        self.prefix = '!'
+        self.invoked_with = 'foo'
 
     @property
     def channel(self):
@@ -103,3 +118,7 @@ class ContextBotProxy:
     @property
     def guild(self):
         return self.bot.get_guild(int(TEST_GUILD_ID))
+
+    @property
+    def author(self):
+        return self.guild.get_member(int(DEFAULT_USER_ID))

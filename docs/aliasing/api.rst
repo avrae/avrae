@@ -424,6 +424,12 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.delete_uvar(name)
 
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_yaml
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.dump_yaml
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
+
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.dump_json
 
 .. autofunction:: aliasing.api.functions.err
@@ -437,6 +443,8 @@ Draconic Functions
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name)
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_yaml
 
 .. function:: randint(stop)
               randint(start, stop[, step])
@@ -472,6 +480,10 @@ Draconic Functions
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.set_uvar(name, value)
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.set_uvar_nx(name, value)
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.signature(data=0)
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.verify_signature(data)
 
 .. autofunction:: aliasing.api.functions.typeof
 
@@ -905,6 +917,10 @@ SimpleCombat
 
         The :class:`~aliasing.api.combat.SimpleCombatant` representing the active character in combat, or ``None``
         if the character is not in the combat.
+
+    .. attribute:: name
+
+        The name of the combat (:class:`str`), or ``None`` if no custom name is set.
 
     .. attribute:: round_num
 

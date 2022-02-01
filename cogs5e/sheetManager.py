@@ -13,6 +13,7 @@ import yaml
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
+import ui
 from aliasing import helpers
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
@@ -29,26 +30,9 @@ from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete
-from utils.user_settings import CSetting
+from utils.settings.character import CHARACTER_SETTINGS
 
 log = logging.getLogger(__name__)
-
-CHARACTER_SETTINGS = {
-    "color": CSetting("color", "hex", default="random", display_func=lambda val: f"#{val:06X}", min_=0,
-                      max_=0xffffff),
-    "criton": CSetting("criton", "number", description="crit range", default=20,
-                       display_func=lambda val: f"{val}-20", min_=1, max_=20),
-    "reroll": CSetting("reroll", "number", min_=1, max_=20),
-    "srslots": CSetting("srslots", "boolean", description="short rest slots", default='disabled',
-                        display_func=lambda val: 'enabled' if val else 'disabled'),
-    "embedimage": CSetting("embedimage", "boolean", description="embed image", default='disabled',
-                           display_func=lambda val: 'enabled' if val else 'disabled'),
-    "critdice": CSetting("critdice", "number", description="extra crit dice", default=0),
-    "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
-                       display_func=lambda val: 'enabled' if val else 'disabled'),
-    "ignorecrit": CSetting("ignorecrit", "boolean", description="ignore crits", default='disabled',
-                           display_func=lambda val: 'enabled' if val else 'disabled')
-}
 
 
 class SheetManager(commands.Cog):
@@ -61,8 +45,7 @@ class SheetManager(commands.Cog):
 
     @staticmethod
     async def new_arg_stuff(args, ctx, character):
-        args = await helpers.parse_snippets(args, ctx)
-        args = await helpers.parse_with_character(ctx, character, args)
+        args = await helpers.parse_snippets(args, ctx, character=character)
         args = argparse(args)
         return args
 
@@ -382,9 +365,12 @@ class SheetManager(commands.Cog):
         result = await char.set_active(ctx)
         await try_delete(ctx.message)
         if result.did_unset_server_active:
-            await ctx.send(f"Active character changed to {char.name}. Your server active character has been unset.")
+            await ctx.send(
+                f"Active character changed to {char.name}. Your server active character has been unset.",
+                delete_after=30
+            )
         else:
-            await ctx.send(f"Active character changed to {char.name}.")
+            await ctx.send(f"Active character changed to {char.name}.", delete_after=15)
 
     @character.command(name='server')
     @commands.guild_only()
@@ -446,10 +432,13 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def update(self, ctx, *args):
-        """Updates the current character sheet, preserving all settings.
+        """
+        Updates the current character sheet, preserving all settings.
         __Valid Arguments__
         `-v` - Shows character sheet after update is complete.
-        `-nocc` - Do not automatically create or update custom counters for class resources and features."""
+        `-nocc` - Do not automatically create or update custom counters for class resources and features.
+        `-noprep` - Import all known spells as prepared.
+        """
         old_character: Character = await Character.from_ctx(ctx)
         url = old_character.upstream
         args = argparse(args)
@@ -484,8 +473,18 @@ class SheetManager(commands.Cog):
 
         character.update(old_character)
 
+        # keeps an old check if the old character was active on the current server
+        was_server_active = old_character.is_active_server(ctx)
+
         await character.commit(ctx)
-        await character.set_active(ctx)
+
+        # overwrites the old_character's server active state
+        # since character._active_guilds is old_character._active_guilds here
+        if old_character.is_active_global():
+            await character.set_active(ctx)
+        if was_server_active:
+            await character.set_server_active(ctx)
+
         await loading.edit(content=f"Updated and saved data for {character.name}!")
         if args.last('v'):
             await ctx.send(embed=character.get_sheet_embed())
@@ -521,21 +520,20 @@ class SheetManager(commands.Cog):
 
     @commands.command()
     async def csettings(self, ctx, *args):
-        """Updates personalization settings for the currently active character.
+        """
+        Opens the Character Settings menu.
 
-        __**Valid Arguments**__
-        Use `<setting> reset` to reset a setting to the default.
+        In this menu, you can change your character's cosmetic and gameplay settings, such as their embed color,
+        crit range, extra crit dice, and more.
+        """
+        char = await ctx.get_character()
 
-        `color <hex color>` - Colors all character-based built-in embeds this color. Accessible as the cvar `color`
-        `criton <number>` - Makes attacks crit on something other than a 20.
-        `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
-        `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
-        `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
-        `critdice <number>` - Adds additional damage dice on a critical hit. 
-        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with.
-        `ignorecrit true/false` - Prevents critical hits from applying, for example with adamantine armor."""  # noqa: E501
-        char = await Character.from_ctx(ctx)
+        if not args:
+            settings_ui = ui.CharacterSettingsUI.new(ctx.bot, owner=ctx.author, character=char)
+            await settings_ui.send_to(ctx)
+            return
 
+        # old deprecated CLI behaviour
         out = []
         skip = False
         for i, arg in enumerate(args):
@@ -546,10 +544,10 @@ class SheetManager(commands.Cog):
                 out.append(CHARACTER_SETTINGS[arg].run(ctx, char, list_get(i + 1, None, args)))
 
         if not out:
-            return await ctx.send(f"No valid settings found. See `{ctx.prefix}help {ctx.invoked_with}` for a list "
-                                  f"of valid settings.")
+            return await ctx.send(f"No valid settings found. Try `{ctx.prefix}csettings` with no arguments to use an "
+                                  f"interactive menu!")
 
-        await char.commit(ctx)
+        await char.options.commit(ctx.bot.mdb, char)
         await ctx.send('\n'.join(out))
 
     async def _confirm_overwrite(self, ctx, _id):
@@ -568,7 +566,7 @@ class SheetManager(commands.Cog):
     @commands.max_concurrency(1, BucketType.user)
     async def import_sheet(self, ctx, url: str, *args):
         """
-        Loads a character sheet in one of the accepted formats:
+        Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
             [Dicecloud](https://dicecloud.com/)
             [GSheet v2.1](https://gsheet2.avrae.io) (auto)
@@ -576,12 +574,15 @@ class SheetManager(commands.Cog):
         
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for class resources and features.
+        `-noprep` - Import all known spells as prepared.
 
         __Sheet-specific Notes__
         D&D Beyond:
             Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
+            
         Dicecloud:
             Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
+        
         Gsheet:
             The sheet must be shared with directly with Avrae or be publicly viewable to anyone with the link.
             Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
@@ -702,6 +703,13 @@ async def send_ddb_ctas(ctx, character):
         ld_dict = {"key": str(ctx.author.id), "anonymous": True}
     gamelog_flag = await ctx.bot.ldclient.variation('cog.gamelog.cta.enabled', ld_dict, False)
 
+    # get server settings for whether to pull up campaign settings
+    if ctx.guild is not None:
+        guild_settings = await ctx.get_server_settings()
+        show_campaign_cta = guild_settings.show_campaign_cta
+    else:
+        show_campaign_cta = False
+
     # has the user seen this cta within the last 7d?
     if await ctx.bot.rdb.get(f"cog.sheetmanager.cta.seen.{ctx.author.id}"):
         return
@@ -720,7 +728,7 @@ async def send_ddb_ctas(ctx, character):
             inline=False
         )
     # game log
-    if character.ddb_campaign_id and gamelog_flag:
+    if character.ddb_campaign_id and gamelog_flag and show_campaign_cta:
         try:
             await CampaignLink.from_id(ctx.bot.mdb, character.ddb_campaign_id)
         except NoCampaignLink:
@@ -728,7 +736,8 @@ async def send_ddb_ctas(ctx, character):
                 name="Link Your D&D Beyond Campaign",
                 value=f"Sync rolls between a Discord channel and your D&D Beyond character sheet by linking your "
                       f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
-                      f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.",
+                      f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.\n"
+                      f"This message can be disabled in `{ctx.prefix}server_settings`.",
                 inline=False
             )
 

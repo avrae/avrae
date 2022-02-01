@@ -43,6 +43,8 @@ class BeyondSheetParser(SheetLoaderABC):
     def __init__(self, charId):
         super(BeyondSheetParser, self).__init__(charId)
         self.ctx = None
+        self.args = None
+        self._is_live = None
 
     async def load_character(self, ctx, args):
         """
@@ -51,6 +53,7 @@ class BeyondSheetParser(SheetLoaderABC):
         :raises Exception if something weirder happened
         """
         self.ctx = ctx
+        self.args = args
 
         owner_id = str(ctx.author.id)
         await self._get_character()
@@ -75,7 +78,6 @@ class BeyondSheetParser(SheetLoaderABC):
         max_hp, hp, temp_hp = self._get_hp()
 
         cvars = {}
-        options = {}
         overrides = {}
         death_saves = {}
 
@@ -84,7 +86,7 @@ class BeyondSheetParser(SheetLoaderABC):
             consumables = self._get_custom_counters()
 
         spellbook = self._get_spellbook()
-        live = None  # todo
+        live = 'beyond' if self._is_live else None
         race = self._get_race()
         background = self._get_background()
 
@@ -96,7 +98,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
-            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
+            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
             spellbook, live, race, background,
             ddb_campaign_id=campaign_id, actions=actions
         )
@@ -131,6 +133,7 @@ class BeyondSheetParser(SheetLoaderABC):
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = char_id
         self.character_data = character
+        self._is_live = (ddb_user is not None) and (ddb_user.user_id == str(character['ownerId']))
         log.debug(character)
         return character
 
@@ -166,7 +169,9 @@ class BeyondSheetParser(SheetLoaderABC):
 
         # ability skills (base strength, dex, etc checks)
         for stat_key, skill in zip(constants.STAT_ABBREVIATIONS, constants.STAT_NAMES):
-            out[skill] = Skill(self.character_data['stats'][stat_key]['modifier'])
+            stat_obj = self.character_data['stats'][stat_key]
+            prof_type = {1: 0, 2: 0.5, 3: 1, 4: 2}.get(stat_obj['modifierProficiency'], 0)
+            out[skill] = Skill(stat_obj['modifier'], prof_type)
 
         return Skills(out)
 
@@ -211,6 +216,7 @@ class BeyondSheetParser(SheetLoaderABC):
             spell_ab = spell['sab']
             spell_dc = spell['dc']
             spell_mod = spell['mod']
+            spell_prepared = spell['prepared'] or 'noprep' in self.args
             if spell_ab is not None:
                 sabs.append(spell_ab)
             if spell_dc is not None:
@@ -218,18 +224,31 @@ class BeyondSheetParser(SheetLoaderABC):
             if spell_mod is not None:
                 mods.append(spell_mod)
 
-            result = next((s for s in compendium.spells if s.entity_id == spell['id']), None)
+            result = compendium.lookup_entity(gamedata.Spell.entity_type, spell['id'])
 
             if result:
-                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                                        prepared=spell_prepared))
             else:
-                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                             prepared=spell_prepared))
 
         dc = max(dcs, key=dcs.count, default=None)
         sab = max(sabs, key=sabs.count, default=None)
         smod = max(mods, key=mods.count, default=None)
 
-        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod)
+        # assumption: a character will only ever have one pact slot level, with a given number of slots of that level
+        pact_slot_level = None
+        num_pact_slots = None
+        max_pact_slots = None
+        if spellbook['pactSlots']:
+            pact_info = spellbook['pactSlots'][0]
+            pact_slot_level = pact_info['level']
+            max_pact_slots = pact_info['available']
+            num_pact_slots = max_pact_slots - pact_info['used']
+
+        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod,
+                         pact_slot_level=pact_slot_level, num_pact_slots=num_pact_slots, max_pact_slots=max_pact_slots)
 
     def _get_custom_counters(self):
         out = []

@@ -8,30 +8,6 @@ from .attack import AttackList
 from .spellcasting import SpellbookSpell
 
 
-class CharOptions:
-    def __init__(self, options=None):
-        if options is None:
-            options = {}
-        self.options = options
-
-    @classmethod
-    def from_dict(cls, d):
-        return cls(**d)
-
-    def to_dict(self):
-        return {"options": self.options}
-
-    # ---------- main funcs ----------
-    def get(self, option, default=None):
-        return self.options.get(option, default)
-
-    def set(self, option, value):
-        if value is None and option in self.options:
-            del self.options[option]
-        else:
-            self.options[option] = value
-
-
 class ManualOverrides:
     def __init__(self, desc=None, image=None, attacks=None, spells=None):
         if attacks is None:
@@ -53,13 +29,14 @@ class ManualOverrides:
 
 
 class DeathSaves:
-    def __init__(self, successes=0, fails=0):
+    def __init__(self, character, successes=0, fails=0):
+        self._character = character
         self.successes = successes
         self.fails = fails
 
     @classmethod
-    def from_dict(cls, d):
-        return cls(**d)
+    def from_dict(cls, character, d):
+        return cls(character, **d)
 
     def to_dict(self):
         return {"successes": self.successes, "fails": self.fails}
@@ -67,9 +44,13 @@ class DeathSaves:
     # ---------- main funcs ----------
     def succeed(self, num=1):
         self.successes = min(3, self.successes + num)
+        if num:
+            self._character.sync_death_saves()
 
     def fail(self, num=1):
         self.fails = min(3, self.fails + num)
+        if num:
+            self._character.sync_death_saves()
 
     def is_stable(self):
         return self.successes == 3
@@ -78,8 +59,11 @@ class DeathSaves:
         return self.fails == 3
 
     def reset(self):
+        did_change = self.successes or self.fails
         self.successes = 0
         self.fails = 0
+        if did_change:
+            self._character.sync_death_saves()
 
     def __str__(self):
         successes = bubble_format(self.successes, 3)
@@ -231,10 +215,11 @@ class CustomCounter:
             elif new_value > maxv:
                 raise CounterOutOfBounds(f"{self.name} cannot be set to {new_value} (max {maxv}).")
 
-        new_value = min(max(minv, new_value), maxv)
-        self._value = int(new_value)
+        new_value = int(min(max(minv, new_value), maxv))
+        old_value = self._value
+        self._value = new_value
 
-        if self.live_id:
+        if self.live_id and new_value != old_value:
             self._character.sync_consumable(self)
         return self._value
 

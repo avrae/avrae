@@ -39,6 +39,7 @@ class Save(Effect):
 
         # ==== args ====
         save = autoctx.args.last('save') or self.stat
+        sb = autoctx.args.get('sb', ephem=True)
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
         hide = autoctx.args.last('h', type_=bool)
@@ -97,7 +98,7 @@ class Save(Effect):
                 is_success = False
                 autoctx.queue(f"**{save_blurb}:** Automatic failure!")
             else:
-                save_dice = autoctx.target.get_save_dice(save_skill, adv=adv)
+                save_dice = autoctx.target.get_save_dice(save_skill, adv=adv, sb=sb)
                 save_roll = d20.roll(save_dice)
                 is_success = save_roll.total >= dc
 

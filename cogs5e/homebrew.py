@@ -85,6 +85,9 @@ class Homebrew(commands.Cog):
 
         If your attacks don't seem to be importing properly, you can add a hidden line to the description to set it:
         `<avrae hidden>NAME|TOHITBONUS|DAMAGE</avrae>`
+
+        For more complex automation, you can create an attack on the Avrae Dashboard and copy the exported YAML into the CritterDB attack description as follows:
+        `<avrae hidden>YAML</avrae>`
         """
 
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
@@ -92,7 +95,8 @@ class Homebrew(commands.Cog):
         # https://critterdb.com:443/#/bestiary/view/5acfe382de482a4d0ed57b46
         if not (match := re.match(
                 r'https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)',
-                url)):
+                url
+        )):
             return await ctx.send("This is not a CritterDB link.")
 
         loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")
@@ -120,7 +124,8 @@ class Homebrew(commands.Cog):
             active_bestiary = await Bestiary.from_ctx(ctx)
         except NoActiveBrew:
             return await ctx.send(
-                f"You don't have a bestiary active. Add one with `{ctx.prefix}bestiary import` first!")
+                f"You don't have a bestiary active. Add one with `{ctx.prefix}bestiary import` first!"
+            )
         loading = await ctx.send("Updating bestiary (this may take a while for large bestiaries)...")
 
         old_server_subs = await active_bestiary.server_subscriptions(ctx)
@@ -141,7 +146,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def bestiary_server(self, ctx):
         """Toggles whether the active bestiary should be viewable by anyone on the server.
-        Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
+        Requires __Manage Server__ permissions or a role named "Server Brewer" or "Dragonspeaker" to run."""
         bestiary = await Bestiary.from_ctx(ctx)
         is_server_active = await bestiary.toggle_server_active(ctx)
         if is_server_active:
@@ -181,7 +186,8 @@ class Homebrew(commands.Cog):
 
         if not num_visible:
             return await ctx.send(
-                "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!")
+                "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!"
+            )
 
         if name is None:
             pack = await Pack.from_ctx(ctx)
@@ -190,7 +196,8 @@ class Homebrew(commands.Cog):
                 pack = await Pack.select(ctx, name)
             except NoActiveBrew:
                 return await ctx.send(
-                    "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!")
+                    "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!"
+                )
             except NoSelectionElements:
                 return await ctx.send("Pack not found.")
             await pack.set_active(ctx)
@@ -218,7 +225,7 @@ class Homebrew(commands.Cog):
     async def pack_editor(self, ctx, user: discord.Member):
         """Allows another user to edit your active pack."""
         pack = await Pack.from_ctx(ctx)
-        if not pack.is_owned_by(ctx.author):
+        if not await can_edit_editor(pack, ctx, user):
             return await ctx.send("You do not have permission to add editors to this pack.")
         elif pack.is_owned_by(user):
             return await ctx.send("You already own this pack.")
@@ -246,8 +253,10 @@ class Homebrew(commands.Cog):
 
         await pack.subscribe(ctx)
         pack_owner = await user_from_id(ctx, pack.owner)
-        await ctx.send(f"Subscribed to {pack.name} by {pack_owner}. "
-                       f"Use `{ctx.prefix}pack {pack.name}` to select it.")
+        await ctx.send(
+            f"Subscribed to {pack.name} by {pack_owner}. "
+            f"Use `{ctx.prefix}pack {pack.name}` to select it."
+        )
 
     @pack.command(name='unsubscribe', aliases=['unsub'])
     async def pack_unsub(self, ctx, name):
@@ -264,7 +273,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def pack_server(self, ctx):
         """Toggles whether the active pack should be viewable by anyone on the server.
-        Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
+        Requires __Manage Server__ permissions or a role named "Server Brewer" or "Dragonspeaker" to run."""
         pack = await Pack.from_ctx(ctx)
         is_server_active = await pack.toggle_server_active(ctx)
         if is_server_active:
@@ -303,7 +312,8 @@ class Homebrew(commands.Cog):
 
         if not num_visible:
             return await ctx.send(
-                "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!")
+                "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!"
+            )
 
         if name is None:
             tome = await Tome.from_ctx(ctx)
@@ -312,7 +322,8 @@ class Homebrew(commands.Cog):
                 tome = await Tome.select(ctx, name)
             except NoActiveBrew:
                 return await ctx.send(
-                    "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!")
+                    "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!"
+                )
             except NoSelectionElements:
                 return await ctx.send("Tome not found.")
             await tome.set_active(ctx)
@@ -340,7 +351,7 @@ class Homebrew(commands.Cog):
     async def tome_editor(self, ctx, user: discord.Member):
         """Allows another user to edit your active tome."""
         tome = await Tome.from_ctx(ctx)
-        if not tome.is_owned_by(ctx.author):
+        if not await can_edit_editor(tome, ctx, user):
             return await ctx.send("You do not have permission to add editors to this tome.")
         elif tome.is_owned_by(user):
             return await ctx.send("You already own this tome.")
@@ -368,8 +379,10 @@ class Homebrew(commands.Cog):
 
         await tome.subscribe(ctx)
         tome_owner = await user_from_id(ctx, tome.owner)
-        await ctx.send(f"Subscribed to {tome.name} by {tome_owner}. "
-                       f"Use `{ctx.prefix}tome {tome.name}` to select it.")
+        await ctx.send(
+            f"Subscribed to {tome.name} by {tome_owner}. "
+            f"Use `{ctx.prefix}tome {tome.name}` to select it."
+        )
 
     @tome.command(name='unsubscribe', aliases=['unsub'])
     async def tome_unsub(self, ctx, name):
@@ -386,7 +399,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def tome_server(self, ctx):
         """Toggles whether the active tome should be viewable by anyone on the server.
-        Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
+        Requires __Manage Server__ permissions or a role named "Server Brewer" or "Dragonspeaker" to run."""
         tome = await Tome.from_ctx(ctx)
         is_server_active = await tome.toggle_server_active(ctx)
         if is_server_active:
@@ -415,6 +428,15 @@ class Homebrew(commands.Cog):
 
         await tome.toggle_server_active(ctx)
         await ctx.send(f"Ok, {tome.name} is no longer active on {ctx.guild.name}.")
+
+
+async def can_edit_editor(container, ctx, user):
+    """
+    Returns whether the author in the context is allowed to toggle the editor status of the given user.
+    (i.e. if the author is the owner or they are an editor and trying to remove themself)
+    """
+    return (container.is_owned_by(ctx.author)
+            or (await container.is_editor(ctx, ctx.author) and user.id == ctx.author.id))
 
 
 def setup(bot):

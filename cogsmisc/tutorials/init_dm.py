@@ -1,6 +1,6 @@
 import asyncio
 
-from cogs5e.models.initiative import CombatNotFound, MonsterCombatant
+from cogs5e.initiative import CombatNotFound, MonsterCombatant
 from gamedata import Monster
 from gamedata.compendium import compendium
 from utils.functions import confirm

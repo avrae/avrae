@@ -140,7 +140,7 @@ async def select_action(ctx, name, attacks, actions=None, allow_no_automation=Fa
     if actions is None:
         actions = []
     elif not allow_no_automation:
-        actions = filter(lambda action: action.uid is not None, actions)
+        actions = filter(lambda action: action.automation is not None, actions)
 
     return await search_and_select(
         ctx,
@@ -206,7 +206,7 @@ async def send_action_list(ctx, caster, destination=None, attacks=None, actions=
         nonlocal non_automated_count, non_e10s_count  # eh
         action_texts = []
         for action in sorted(action_source, key=lambda a: a.name):
-            has_automation = action.uid is not None
+            has_automation = action.gamedata is not None
             has_e10s = True
             # entitlement stuff
             if has_automation:

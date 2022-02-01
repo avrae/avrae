@@ -7,10 +7,10 @@ import discord
 import gamedata.lookuputils
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException, InvalidArgument
-from cogs5e.models.initiative.effect import Effect
-from cogs5e.models.initiative.types import BaseCombatant
+from cogs5e.initiative.effect import Effect
+from cogs5e.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
-from utils.functions import maybe_http_url, smart_trim, verbose_stat
+from utils.functions import confirm, maybe_http_url, smart_trim, verbose_stat
 from .mixins import AutomatibleMixin, DescribableMixin
 from .shared import Sourced
 
@@ -100,8 +100,9 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             if 'round' in unit:
                 return num
             elif 'minute' in unit:
-                if num == 1:  # anything over 1 minute can be indefinite, really
-                    return 10
+                return 10 * num
+            elif 'hour' in unit:
+                return 600 * num
         return -1
 
     def to_dicecloud(self):
@@ -146,6 +147,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         l = args.last('l', self.level, int)
         i = args.last('i', type_=bool)
         title = args.last('title')
+        nopact = args.last('nopact', type_=bool)
 
         # meta checks
         if not self.level <= l <= 9:
@@ -155,20 +157,25 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         dc_override = None
         ab_override = None
         spell_override = None
+        is_prepared = True
         spellbook_spell = caster.spellbook.get_spell(self)
         if spellbook_spell is not None:
             dc_override = spellbook_spell.dc
             ab_override = spellbook_spell.sab
             spell_override = spellbook_spell.mod
+            is_prepared = spellbook_spell.prepared
 
         if not i:
             # if I'm a warlock, and I didn't have any slots of this level anyway (#655)
-            # automatically scale up to the next level s.t. our slots are not 0
+            # automatically scale up to our pact slot level (or the next available level s.t. max > 0)
             if l > 0 \
                     and l == self.level \
                     and not caster.spellbook.get_max_slots(l) \
                     and not caster.spellbook.can_cast(self, l):
-                l = next((sl for sl in range(l, 6) if caster.spellbook.get_max_slots(sl)), l)  # only scale up to l5
+                if caster.spellbook.pact_slot_level is not None:
+                    l = caster.spellbook.pact_slot_level
+                else:
+                    l = next((sl for sl in range(l, 6) if caster.spellbook.get_max_slots(sl)), l)  # only scale up to l5
                 args['l'] = l
 
             # can I cast this spell?
@@ -177,24 +184,38 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
                 embed.title = "Cannot cast spell!"
                 if not caster.spellbook.get_slots(l):
                     # out of spell slots
-                    err = f"You don't have enough level {l} slots left! Use `-l <level>` to cast at a different level, " \
-                          f"`{ctx.prefix}g lr` to take a long rest, or `-i` to ignore spell slots!"
+                    err = (f"You don't have enough level {l} slots left! Use `-l <level>` to cast at a different "
+                           f"level, `{ctx.prefix}g lr` to take a long rest, or `-i` to ignore spell slots!")
                 elif self.name not in caster.spellbook:
                     # don't know spell
-                    err = f"You don't know this spell! Use `{ctx.prefix}sb add {self.name}` to add it to your spellbook, " \
-                          f"or pass `-i` to ignore restrictions."
+                    err = (f"You don't know this spell! Use `{ctx.prefix}sb add {self.name}` to add it to your "
+                           f"spellbook, or pass `-i` to ignore restrictions.")
                 else:
                     # ?
-                    err = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                          f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, " \
-                          f"or pass `-i` to ignore restrictions."
+                    err = ("Not enough spell slots remaining, or spell not in known spell list!\n"
+                           f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, "
+                           f"or pass `-i` to ignore restrictions.")
                 embed.description = err
                 if l > 0:
                     embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))
                 return CastResult(embed=embed, success=False, automation_result=None)
 
+            # #1000: is this spell prepared (soft check)?
+            if not is_prepared:
+                skip_prep_conf = await confirm(
+                    ctx,
+                    f"{self.name} is not prepared. Do you want to cast it anyway? (Reply with yes/no)",
+                    delete_msgs=True
+                )
+                if not skip_prep_conf:
+                    embed = EmbedWithAuthor(
+                        ctx, title=f"Cannot cast spell!",
+                        description=f"{self.name} is not prepared! Prepare it on your character sheet and use "
+                                    f"`{ctx.prefix}update` to mark it as prepared, or use `-i` to ignore restrictions.")
+                    return CastResult(embed=embed, success=False, automation_result=None)
+
             # use resource
-            caster.spellbook.cast(self, l)
+            caster.spellbook.cast(self, l, pact=not nopact)
 
         # base stat stuff
         mod_arg = args.last("mod", type_=int)

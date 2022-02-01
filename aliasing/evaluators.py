@@ -1,21 +1,30 @@
+import asyncio
 import json
 import re
 import textwrap
 import time
+from functools import cached_property
 from math import ceil, floor, sqrt
+from typing import Optional, Union
 
 import d20
 import draconic
 import json.scanner
+import yaml
+from yaml import composer, constructor, parser, reader, resolver, scanner
 
 import aliasing.api.character as character_api
 import aliasing.api.combat as combat_api
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.context import AliasContext
-from aliasing.api.functions import _roll, _vroll, err, rand, randchoice, randint, roll, safe_range, typeof, vroll
+from aliasing.api.functions import (_roll, _vroll, create_signature, err, rand, randchoice, randint, roll, safe_range,
+    typeof, verify_signature, vroll)
 from aliasing.api.legacy import LegacyRawCharacter
 from aliasing.errors import EvaluationError, FunctionRequiresCharacter
+from aliasing.personal import _CustomizationBase
+from aliasing.utils import ExecutionScope
+from aliasing.workshop import WorkshopCollectableObject
 from cogs5e.models.errors import ConsumableException, InvalidArgument
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
@@ -36,6 +45,8 @@ SCRIPTING_RE = re.compile(
     r'|<(?P<lookup>[^\s]+?)>'  # <lookup>
     r')'
 )
+# an alias/snippet that can invoke draconic code
+_CodeInvokerT = Optional[Union[_CustomizationBase, WorkshopCollectableObject]]
 
 
 class MathEvaluator(draconic.SimpleInterpreter):
@@ -71,7 +82,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     """Evaluator with compound types, comprehensions, and assignments exposed."""
 
     def __init__(self, ctx, *args, **kwargs):
-        super(ScriptingEvaluator, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.builtins.update(  # fixme character-only functions, all deprecated now
             get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
@@ -95,7 +106,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             uvar_exists=self.uvar_exists,
             chanid=self.chanid, servid=self.servid,  # fixme deprecated - use ctx instead
             load_json=self.load_json, dump_json=self.dump_json,
-            argparse=argparse, ctx=AliasContext(ctx)
+            load_yaml=self.load_yaml, dump_yaml=self.dump_yaml,
+            argparse=argparse, ctx=AliasContext(ctx),
+            signature=self.signature, verify_signature=self.verify_signature
         )
 
         # roll limiting
@@ -115,6 +128,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         self.character_changed = False
         self.combat_changed = False
         self.uvars_changed = set()
+        self.execution_scope: ExecutionScope = ExecutionScope.UNKNOWN
+        self.invoking_object: _CodeInvokerT = None
 
     @classmethod
     async def new(cls, ctx):
@@ -171,8 +186,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             character.consumables.remove(to_delete)
             self.character_changed = True
 
-        def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
-                         dispType: str = None):
+        def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None, dispType: str = None):
             if minVal is not None:
                 minVal = str(minVal)
             if maxVal is not None:
@@ -450,8 +464,138 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             return self.names[name]
         return default
 
+    # ==== YAML ====
+    @cached_property
+    def _yaml_dumper(self):
+        class DraconicDumper(yaml.SafeDumper):
+            def safe_dict_representer(self, data):
+                return self.represent_dict(data)
+
+            def safe_list_representer(self, data):
+                return self.represent_sequence(self.DEFAULT_SEQUENCE_TAG, data)
+
+            def safe_str_representer(self, data):
+                return self.represent_str(data)
+
+            def safe_set_representer(self, data):
+                return self.represent_sequence(self.DEFAULT_SEQUENCE_TAG, data)
+
+        DraconicDumper.add_representer(self._dict, DraconicDumper.safe_dict_representer)
+        DraconicDumper.add_representer(self._list, DraconicDumper.safe_list_representer)
+        DraconicDumper.add_representer(self._str, DraconicDumper.safe_str_representer)
+        DraconicDumper.add_representer(self._set, DraconicDumper.safe_set_representer)
+
+        return DraconicDumper
+
+    @cached_property
+    def _yaml_loader(self):
+        # make a subclass of the baseloader and register all the constructors for valid types as SafeConstructor
+        # defines it
+        interpreter = self
+
+        class DraconicConstructor(yaml.constructor.BaseConstructor):
+            bool_values = yaml.constructor.SafeConstructor.bool_values
+
+            def construct_yaml_set(self, node):
+                data = interpreter._set()
+                yield data
+                value = self.construct_mapping(node)
+                data.update(value)
+
+            def construct_yaml_str(self, node):
+                # noinspection PyArgumentList
+                return interpreter._str(self.construct_scalar(node))
+
+            def construct_yaml_seq(self, node):
+                data = interpreter._list()
+                yield data
+                data.extend(self.construct_sequence(node))
+
+            def construct_yaml_map(self, node):
+                data = interpreter._dict()
+                yield data
+                value = self.construct_mapping(node)
+                data.update(value)
+
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:null',
+            yaml.constructor.SafeConstructor.construct_yaml_null
+        )
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:bool',
+            yaml.constructor.SafeConstructor.construct_yaml_bool
+        )
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:int',
+            yaml.constructor.SafeConstructor.construct_yaml_int
+        )
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:float',
+            yaml.constructor.SafeConstructor.construct_yaml_float
+        )
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:omap',
+            yaml.constructor.SafeConstructor.construct_yaml_omap
+        )
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:pairs',
+            yaml.constructor.SafeConstructor.construct_yaml_pairs
+        )
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:set',
+            DraconicConstructor.construct_yaml_set
+        )
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:str',
+            DraconicConstructor.construct_yaml_str
+        )
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:seq',
+            DraconicConstructor.construct_yaml_seq
+        )
+        DraconicConstructor.add_constructor(
+            'tag:yaml.org,2002:map',
+            DraconicConstructor.construct_yaml_map
+        )
+        DraconicConstructor.add_constructor(
+            None,
+            DraconicConstructor.construct_yaml_str
+        )
+
+        class DraconicLoader(
+            yaml.reader.Reader,
+            yaml.scanner.Scanner,
+            yaml.parser.Parser,
+            yaml.composer.Composer,
+            DraconicConstructor,
+            yaml.resolver.Resolver
+        ):
+            def __init__(self, stream):
+                yaml.reader.Reader.__init__(self, stream)
+                yaml.scanner.Scanner.__init__(self)
+                yaml.parser.Parser.__init__(self)
+                yaml.composer.Composer.__init__(self)
+                DraconicConstructor.__init__(self)
+                yaml.resolver.Resolver.__init__(self)
+
+        return DraconicLoader
+
+    def load_yaml(self, yamlstr):
+        """
+        Loads an object from a YAML string. See `yaml.safe_load <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
+        """
+        return yaml.load(str(yamlstr), self._yaml_loader)
+
+    def dump_yaml(self, obj, indent=2):
+        """
+        Serializes an object to a YAML string. See `yaml.safe_dump <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
+        """
+        return yaml.dump(obj, Dumper=self._yaml_dumper, default_flow_style=False, line_break=True, indent=indent,
+                        sort_keys=False)
+
     # ==== json ====
     def _json_decoder(self):
+        # noinspection PyUnresolvedReferences,PyArgumentList
         class MyDecoder(json.JSONDecoder):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
@@ -472,6 +616,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         return MyDecoder
 
+    # noinspection PyTypeChecker,PyUnresolvedReferences
     def _dump_json_default(self, obj):
         if isinstance(obj, self._list):
             return obj.data
@@ -497,13 +642,98 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         dice = str(dice)
         return _roll(dice, roller=self._roller)
 
+    # ==== audit functions ====
+    def signature(self, data=0):
+        """
+        Returns a unique signature encoding the time the alias was invoked, the channel it was invoked in, the invoker,
+        the id of the workshop collection the alias originates from (if applicable), and whether the caller was a
+        personal/server alias/snippet.
+
+        This signature is signed with a secret that guarantees that valid signatures cannot be spoofed; use this when
+        it is necessary to audit the invocations of an alias (e.g. to ensure that a server version of the alias is being
+        used over a personal version).
+
+        Use :meth:`verify_signature` in a separate alias to verify the integrity of a generated signature and unpack
+        the encoded data.
+
+        :param int data: Some user-supplied data to encode in the signature. This must be an unsigned integer that fits
+            within 5 bits (i.e. a value [0..31]). Default 0.
+        :rtype: str
+        """
+        data = int(data)
+        workshop_collection_id = (
+            self.invoking_object.collection_id
+            if isinstance(self.invoking_object, WorkshopCollectableObject)
+            else None
+        )
+        return create_signature(
+            self.ctx,
+            execution_scope=self.execution_scope,
+            user_data=data,
+            workshop_collection_id=workshop_collection_id
+        )
+
+    def verify_signature(self, data):
+        """
+        Verifies that a given signature is valid. The signature should have been generated by :func:`signature`.
+
+        If the signature is not valid, raises a ValueError. Otherwise, returns a dict with the following keys
+        representing the context the given signature was generated in:
+
+        .. code:: text
+
+            {
+                "message_id": int,
+                "channel_id": int,
+                "author_id": int,
+                "timestamp": float,
+                "workshop_collection_id": str?,  # None if the caller was not a workshop object
+                "scope": str,  # one of UNKNOWN, PERSONAL_ALIAS, SERVER_ALIAS, PERSONAL_SNIPPET, SERVER_SNIPPET, COMMAND_TEST
+                "user_data": int,
+                "guild_id": int?,  # may be None
+                "guild": AliasGuild?,  # may be None
+                "channel": AliasChannel?,  # may be None
+                "author": AliasAuthor?,  # may be None
+            }
+
+        :param str data: The signature to verify.
+        :rtype: dict
+        """
+        data = str(data)
+        return verify_signature(self.ctx, data)
+
     # evaluation
     def _preflight(self):
         """We don't want limits to reset."""
         pass
 
-    def transformed_str(self, string):
-        """Parses a scripting string (evaluating text in {{}})."""
+    async def transformed_str_async(
+        self,
+        string,
+        execution_scope: ExecutionScope = ExecutionScope.UNKNOWN,
+        invoking_object: _CodeInvokerT = None
+    ):
+        """Async convenience method around :meth:`ScriptingEvaluator.transformed_str`."""
+        return await asyncio.get_event_loop().run_in_executor(
+            None,
+            self.transformed_str,
+            string,
+            execution_scope,
+            invoking_object
+        )
+
+    def transformed_str(
+        self,
+        string,
+        execution_scope: ExecutionScope = ExecutionScope.UNKNOWN,
+        invoking_object: _CodeInvokerT = None
+    ):
+        """
+        Parses a scripting string (evaluating text in {{}}). The caller should pass the execution scope and invoking
+        object in order to populate metadata about the call context.
+        """
+        self.execution_scope = execution_scope
+        self.invoking_object = invoking_object
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):

@@ -7,6 +7,7 @@ import aiohttp
 from pymongo.errors import DuplicateKeyError
 
 import ddb
+from ddb.baseclient import BaseClient
 from ddb.gamelog.constants import AVRAE_EVENT_SOURCE, GAME_LOG_PUBSUB_CHANNEL
 from ddb.gamelog.context import GameLogEventContext
 from ddb.gamelog.errors import CampaignAlreadyLinked, CampaignLinkException, IgnoreEvent, LinkNotAllowed, NoCampaignLink
@@ -18,27 +19,26 @@ from utils.config import DDB_GAMELOG_ENDPOINT
 log = logging.getLogger(__name__)
 
 
-class GameLogClient:
+class GameLogClient(BaseClient):
+    SERVICE_BASE = DDB_GAMELOG_ENDPOINT
+    logger = log
+
     def __init__(self, bot):
         """
         :param bot: Avrae instance
         """
+        super().__init__(aiohttp.ClientSession(loop=bot.loop))
         self.bot = bot
         self.ddb = bot.ddb  # type: ddb.BeyondClient
         self.rdb = bot.rdb
         self.loop = bot.loop
         self._event_handlers = {}
 
-        self.http = None
-        self.loop.run_until_complete(self._initialize())
-
     def init(self):
         self.loop.create_task(self.main_loop())
 
-    async def _initialize(self):
-        """Initialize our async resources: aiohttp"""
-        self.http = aiohttp.ClientSession()  # this wants to run in a coroutine
-        log.info("Game Log client initialized")
+    async def close(self):
+        await self.http.close()
 
     # ==== campaign helpers ====
     async def create_campaign_link(self, ctx, campaign_id: str, overwrite=False):
@@ -55,7 +55,7 @@ class GameLogClient:
         if ddb_user is None:
             raise CampaignLinkException("You do not have a D&D Beyond account connected to your Discord account. "
                                         "Connect your accounts at <https://www.dndbeyond.com/account>!")
-        active_campaigns = await self.ddb.get_active_campaigns(ctx, ddb_user)
+        active_campaigns = await self.ddb.waterdeep.get_active_campaigns(ddb_user)
         the_campaign = next((c for c in active_campaigns if c.id == campaign_id), None)
 
         if the_campaign is None:  # the user is not in the campaign
@@ -91,14 +91,7 @@ class GameLogClient:
         try:
             data = message.to_dict()
             log.debug(f"Sending gamelog event {message.id!r}: {data}")
-            async with self.http.post(f"{DDB_GAMELOG_ENDPOINT}/postMessage",
-                                      headers={"Authorization": f"Bearer {ddb_user.token}"},
-                                      json=data) as resp:
-                log.debug(f"Game Log returned {resp.status} for request ID {message.id!r}")
-                if not 199 < resp.status < 300:
-                    log.warning(f"Game Log returned {resp.status}: {await resp.text()}")
-        except aiohttp.ServerTimeoutError:
-            log.warning("Timed out connecting to Game Log")
+            await self.post(ddb_user, '/postMessage', json=data)
         except Exception as e:
             self.bot.log_exception(e)
 
@@ -128,6 +121,7 @@ class GameLogClient:
 
         # check: is this event from us (ignore it)?
         if event.source == AVRAE_EVENT_SOURCE:
+            log.debug(f"Event ID {event.id!r} is from avrae - ignoring")
             return
 
         # check: do we have a callback for this event?
@@ -139,6 +133,7 @@ class GameLogClient:
         try:
             campaign = await CampaignLink.from_id(self.bot.mdb, event.game_id)
         except NoCampaignLink:
+            log.debug(f"Campaign {event.game_id} is not linked to Discord - ignoring")
             return
 
         # check: is this campaign id for an event that is handled by this cluster?
@@ -167,7 +162,7 @@ class GameLogClient:
         try:
             await self._event_handlers[event.event_type](gctx)
         except IgnoreEvent as e:
-            log.info(f"Event ID {event.id!r} was ignored: {e}")
+            log.debug(f"Event ID {event.id!r} was ignored: {e}")
             return
         except Exception as e:
             traceback.print_exc()

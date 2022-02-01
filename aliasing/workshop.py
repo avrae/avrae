@@ -87,10 +87,18 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         return self._aliases
 
     @property
+    def alias_count(self):
+        return len(self._alias_ids)
+
+    @property
     def snippets(self):
         if self._snippets is None:
             raise AttributeError("Snippets are not loaded yet - run load_snippets() first")
         return self._snippets
+
+    @property
+    def snippet_count(self):
+        return len(self._snippet_ids)
 
     async def load_aliases(self, ctx):
         self._aliases = []
@@ -318,6 +326,10 @@ class WorkshopCollectableObject(abc.ABC):
     @property
     def short_docs(self):
         return self.docs.split('\n')[0]
+
+    @property
+    def collection_id(self) -> ObjectId:
+        return self._collection_id
 
     @property
     def collection(self):

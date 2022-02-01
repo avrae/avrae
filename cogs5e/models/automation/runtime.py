@@ -1,7 +1,7 @@
 import aliasing.api
 import aliasing.api.statblock
 import aliasing.evaluators
-import cogs5e.models.initiative.combatant as init
+import cogs5e.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
 from .errors import AutomationEvaluationException, InvalidIntExpression
 from .utils import maybe_alias_statblock
@@ -205,18 +205,19 @@ class AutomationTarget:
     def ac(self):
         return self.target.ac
 
-    def get_save_dice(self, save, adv=None):
-        sb = None
+    def get_save_dice(self, save, adv=None, sb=None):
         save_obj = self.target.saves.get(save)
 
         # combatant
-        if self.combatant:
+        if sb and self.combatant:
+            sb += self.combatant.active_effects('sb')
+        elif self.combatant:
             sb = self.combatant.active_effects('sb')
 
         # character-specific arguments (#1443)
         reroll = None
         if self.character:
-            reroll = self.character.get_setting('reroll', 0)
+            reroll = self.character.options.reroll
 
         boolwise_adv = {-1: False, 0: None, 1: True}.get(adv)
         saveroll = save_obj.d20(base_adv=boolwise_adv, reroll=reroll)

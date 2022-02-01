@@ -43,6 +43,50 @@ IGNORED_SPELL_VALUES = {
     '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL', '\u25c9', '\u25cd',
     "You can hide each level of spells individually by hiding the rows (on the left)."
 }
+SPELL_RANGES = [  # list of (col, prep col, rownums)
+    # cantrips
+    ("N", None, range(96, 99)), ("X", None, range(96, 99)), ("AH", None, range(96, 99)),
+    # l1
+    ("D", "C", range(100, 105)), ("N", "M", range(100, 105)), ("X", "W", range(100, 105)),
+    # l2
+    ("N", "M", range(106, 111)), ("X", "W", range(106, 111)), ("AH", "AG", range(106, 111)),
+    # l3
+    ("D", "C", range(112, 117)), ("N", "M", range(112, 117)), ("X", "W", range(112, 117)),
+    # l4
+    ("N", "M", range(118, 122)), ("X", "W", range(118, 122)), ("AH", "AG", range(118, 122)),
+    # l5
+    ("D", "C", range(123, 127)), ("N", "M", range(123, 127)), ("X", "W", range(123, 127)),
+    # l6
+    ("N", "M", range(128, 132)), ("X", "W", range(128, 132)), ("AH", "AG", range(128, 132)),
+    # l7
+    ("D", "C", range(133, 136)), ("N", "M", range(133, 136)), ("X", "W", range(133, 136)),
+    # l8
+    ("N", "M", range(137, 140)), ("X", "W", range(137, 140)), ("AH", "AG", range(137, 140)),
+    # l9
+    ("D", "C", range(141, 144)), ("N", "M", range(141, 144)), ("X", "W", range(141, 144))
+]
+SPELL_RANGES_ADDITIONAL = [
+    # cantrips
+    ("N", None, range(17, 20)), ("X", None, range(17, 20)), ("AH", None, range(17, 20)),
+    # l1
+    ("D", "C", range(21, 26)), ("N", "M", range(21, 26)), ("X", "W", range(21, 26)),
+    # l2
+    ("N", "M", range(27, 32)), ("X", "W", range(27, 32)), ("AH", "AG", range(27, 32)),
+    # l3
+    ("D", "C", range(33, 38)), ("N", "M", range(33, 38)), ("X", "W", range(33, 38)),
+    # l4
+    ("N", "M", range(39, 43)), ("X", "W", range(39, 43)), ("AH", "AG", range(39, 43)),
+    # l5
+    ("D", "C", range(44, 48)), ("N", "M", range(44, 48)), ("X", "W", range(44, 48)),
+    # l6
+    ("N", "M", range(49, 53)), ("X", "W", range(49, 53)), ("AH", "AG", range(49, 53)),
+    # l7
+    ("D", "C", range(54, 57)), ("N", "M", range(54, 57)), ("X", "W", range(54, 57)),
+    # l8
+    ("N", "M", range(58, 61)), ("X", "W", range(58, 61)), ("AH", "AG", range(58, 61)),
+    # l9
+    ("D", "C", range(62, 65)), ("N", "M", range(62, 65)), ("X", "W", range(62, 65))
+]
 BASE_ABILITY_CHECKS = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
     ('C13', 'strength', None), ('C18', 'dexterity', None), ('C23', 'constitution', None),
     ('C33', 'wisdom', None), ('C28', 'intelligence', None), ('C38', 'charisma', None)
@@ -148,6 +192,7 @@ class GoogleSheet(SheetLoaderABC):
 
     def __init__(self, url):
         super(GoogleSheet, self).__init__(url)
+        self.args = None
         self.additional = None
         self.version = (1, 0)  # major, minor
 
@@ -228,6 +273,7 @@ class GoogleSheet(SheetLoaderABC):
         :raises ExternalImportError if something went wrong during the import that we can expect
         :raises Exception if something weirder happened
         """
+        self.args = args
         owner_id = str(ctx.author.id)
         try:
             await self.get_character()
@@ -260,7 +306,6 @@ class GoogleSheet(SheetLoaderABC):
         temp_hp = 0
 
         cvars = {}
-        options = {}
         overrides = {}
         death_saves = {}
         consumables = []
@@ -273,7 +318,7 @@ class GoogleSheet(SheetLoaderABC):
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
-            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
+            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
             spellbook, live, race, background, actions=actions
         )
         return character
@@ -295,7 +340,7 @@ class GoogleSheet(SheetLoaderABC):
         pronoun = "She" if g == "female" else "He" if g == "male" else "They"
         verb1 = "is" if pronoun != "They" else "are"
         verb2 = "has" if pronoun != "They" else "have"
-        desc = "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}." \
+        desc = "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}. " \
                "{4} {12} {8} eyes, {9} hair, and {10} skin."
         desc = desc.format(n,
                            character.value("AL6"),
@@ -502,21 +547,18 @@ class GoogleSheet(SheetLoaderABC):
             '9': int(self.character_data.value("AK142") or 0)
         }
 
-        # spells C96:AH143
-        potential_spells = self.character_data.value_range("D96:AH143")
-        if self.additional:
-            potential_spells.extend(self.additional.value_range("D17:AH64"))
+        potential_spells = self._get_potential_spells()
 
         spells = []
-        for value in potential_spells:
-            value = value.strip()
-            if len(value) > 2 and value not in IGNORED_SPELL_VALUES:
-                log.debug(f"Searching for spell {value}")
-                result, strict = search(compendium.spells, value, lambda sp: sp.name, strict=True)
+        for spell_name, prepared in potential_spells:
+            spell_name = spell_name.strip()
+            if len(spell_name) > 2 and spell_name not in IGNORED_SPELL_VALUES:
+                log.debug(f"Searching for spell {spell_name}")
+                result, strict = search(compendium.spells, spell_name, lambda sp: sp.name, strict=True)
                 if result and strict:
-                    spells.append(SpellbookSpell(result.name, True))
+                    spells.append(SpellbookSpell(result.name, True, prepared=prepared))
                 else:
-                    spells.append(SpellbookSpell(value.strip()))
+                    spells.append(SpellbookSpell(spell_name.strip(), prepared=prepared))
 
         # dc
         try:
@@ -599,3 +641,35 @@ class GoogleSheet(SheetLoaderABC):
 
         attack = Attack.new(name, bonus, damage, details)
         return attack
+
+    def _get_potential_spells(self):
+        """Return a list of tuples of (spell_name, prepared)"""
+        if 'noprep' in self.args:
+            # spells C96:AH143
+            potential_spells = [(sn, True) for sn in self.character_data.value_range("D96:AH143")]
+            if self.additional:
+                potential_spells.extend((sn, True) for sn in self.additional.value_range("D17:AH64"))
+        else:
+            potential_spells = []
+            for spell_col, prep_col, rows in SPELL_RANGES:
+                potential_spells.extend(self._process_spell_range(spell_col, prep_col, rows, self.character_data))
+
+            if self.additional:
+                for spell_col, prep_col, rows in SPELL_RANGES_ADDITIONAL:
+                    potential_spells.extend(self._process_spell_range(spell_col, prep_col, rows, self.additional))
+
+        return potential_spells
+
+    def _process_spell_range(self, spell_col, prep_col, rows, worksheet):
+        for row in rows:
+            cell = f"{spell_col}{row}"
+            spell_name = worksheet.value(cell)
+            if not spell_name:
+                continue
+            if prep_col is None:
+                prepared = True
+            else:
+                prepared_cell = f"{prep_col}{row}"
+                val = worksheet.unformatted_value(prepared_cell)
+                prepared = val and val != '0'
+            yield spell_name, prepared

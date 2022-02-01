@@ -9,17 +9,19 @@ import discord
 from discord.ext import commands
 
 import gamedata
+import ui
+import utils.settings
 from cogs5e.models import errors
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
-from gamedata.lookuputils import HOMEBREW_EMOJI, available, can_access, get_item_choices, get_monster_choices, \
-    get_spell_choices, handle_source_footer
+from gamedata.lookuputils import (HOMEBREW_EMOJI, available, can_access, get_item_choices, get_monster_choices,
+    get_spell_choices, handle_source_footer)
 from gamedata.race import RaceFeature
 from utils import checks, img
 from utils.argparser import argparse
-from utils.functions import chunk_text, get_positivity, search_and_select, trim_str
+from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str
 
 LARGE_THRESHOLD = 200
 
@@ -40,8 +42,10 @@ class Lookup(commands.Cog):
                             f"a certain type.\nCategories: {categories}"
 
         for actiontype in compendium.rule_references:
-            embed.add_field(name=actiontype['fullName'], value=', '.join(a['name'] for a in actiontype['items']),
-                            inline=False)
+            embed.add_field(
+                name=actiontype['fullName'], value=', '.join(a['name'] for a in actiontype['items']),
+                inline=False
+            )
 
         await destination.send(embed=embed)
 
@@ -115,7 +119,8 @@ class Lookup(commands.Cog):
         result: RaceFeature = await self._lookup_search3(
             ctx,
             {'race': compendium.rfeats, 'subrace': compendium.subrfeats},
-            name, 'racefeat')
+            name, 'racefeat'
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -131,7 +136,8 @@ class Lookup(commands.Cog):
         result: gamedata.Race = await self._lookup_search3(
             ctx,
             {'race': compendium.races, 'subrace': compendium.subraces},
-            name, 'race')
+            name, 'race'
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -150,7 +156,8 @@ class Lookup(commands.Cog):
         result: ClassFeature = await self._lookup_search3(
             ctx,
             {'class': compendium.cfeats, 'class-feature': compendium.optional_cfeats},
-            name, query_type='classfeat')
+            name, query_type='classfeat'
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -195,8 +202,10 @@ class Lookup(commands.Cog):
             embed.add_field(name="Starting Proficiencies", value=result.proficiencies, inline=False)
             embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
 
-            handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature.",
-                                 add_source_str=False)
+            handle_source_footer(
+                embed, result, f"Use {ctx.prefix}classfeat to look up a feature.",
+                add_source_str=False
+            )
         else:
             embed.title = f"{result.name}, Level {level}"
 
@@ -209,29 +218,35 @@ class Lookup(commands.Cog):
             for f in level_features:
                 embed.add_field(name=f.name, value=trim_str(f.text, 1024), inline=False)
 
-            handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
-                                 add_source_str=False)
+            handle_source_footer(
+                embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
+                add_source_str=False
+            )
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     async def subclass(self, ctx, *, name: str):
         """Looks up a subclass."""
-        result: gamedata.Subclass = await self._lookup_search3(ctx, {'class': compendium.subclasses}, name,
-                                                               query_type='subclass')
+        result: gamedata.Subclass = await self._lookup_search3(
+            ctx, {'class': compendium.subclasses}, name,
+            query_type='subclass'
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
         embed.title = result.name
-        embed.description = f"*Source: {result.source_str()}*"
+        embed.description = smart_trim(result.description, 2048)
 
         for level in result.levels:
             for feature in level:
-                text = trim_str(feature.text, 1024)
+                text = smart_trim(feature.text, 1024)
                 embed.add_field(name=feature.name, value=text, inline=False)
 
-        handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
-                             add_source_str=False)
+        handle_source_footer(
+            embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off",
+            add_source_str=True
+        )
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
@@ -255,20 +270,23 @@ class Lookup(commands.Cog):
     # ==== monsters ====
     @commands.command()
     async def monster(self, ctx, *, name: str):
-        """Looks up a monster.
-        Generally requires a Game Master role to show full stat block.
-        Game Master Roles: GM, DM, Game Master, Dungeon Master
+        """
+        Looks up a monster.
+        If you are not a Dungeon Master, this command may display partially hidden information. See !servsettings
+        to view which roles on a server count as Dungeon Master roles.
         __Valid Arguments__
-        -h - Shows the obfuscated stat block, even if you can see the full stat block."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-        pm_dm = guild_settings.get("pm_dm", False)
-        req_dm_monster = guild_settings.get("req_dm_monster", True)
-
-        visible_roles = {'gm', 'game master', 'dm', 'dungeon master'}
-        if req_dm_monster and ctx.guild:
-            visible = True if visible_roles.intersection(set(str(r).lower() for r in ctx.author.roles)) else False
+        -h - Shows the obfuscated stat block, even if you can see the full stat block.
+        """
+        if ctx.guild is not None:
+            guild_settings = await ctx.get_server_settings()
+            pm = guild_settings.lookup_pm_result
+            pm_dm = guild_settings.lookup_pm_dm
+            req_dm_monster = guild_settings.lookup_dm_required
+            visible = (not req_dm_monster) or guild_settings.is_dm(ctx.author)
         else:
+            pm = False
+            pm_dm = False
+            req_dm_monster = False
             visible = True
 
         # #817 -h arg for monster lookup
@@ -556,59 +574,40 @@ class Lookup(commands.Cog):
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== server settings ====
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def lookup_settings(self, ctx, *args):
-        """Changes settings for the lookup module.
-        __Valid Settings__
-        -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
-            -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
-        -pm_result [True/False] - PMs the result of the lookup to reduce spam.
-        """
-        guild_id = str(ctx.guild.id)
-        guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
-        if guild_settings is None:
-            guild_settings = {}
-        out = ""
-        if '-req_dm_monster' in args:
-            try:
-                setting = args[args.index('-req_dm_monster') + 1]
-            except IndexError:
-                setting = 'True'
-            setting = get_positivity(setting)
-            guild_settings['req_dm_monster'] = setting if setting is not None else True
-            out += 'req_dm_monster set to {}!\n'.format(str(guild_settings['req_dm_monster']))
-        if '-pm_dm' in args:
-            try:
-                setting = args[args.index('-pm_dm') + 1]
-            except IndexError:
-                setting = 'True'
-            setting = get_positivity(setting)
-            guild_settings['pm_dm'] = setting if setting is not None else True
-            out += 'pm_dm set to {}!\n'.format(str(guild_settings['pm_dm']))
-        if '-pm_result' in args:
-            try:
-                setting = args[args.index('-pm_result') + 1]
-            except IndexError:
-                setting = 'False'
-            setting = get_positivity(setting)
-            guild_settings['pm_result'] = setting if setting is not None else False
-            out += 'pm_result set to {}!\n'.format(str(guild_settings['pm_result']))
+        """This command has been replaced by `!servsettings`. If you're used to it, it still works like before!"""
+        guild_settings = await ctx.get_server_settings()
+        if not args:
+            settings_ui = ui.ServerSettingsUI.new(ctx.bot, owner=ctx.author, settings=guild_settings, guild=ctx.guild)
+            await settings_ui.send_to(ctx)
+            return
 
-        if guild_settings:
-            await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
-            await ctx.send("Lookup settings set:\n" + out)
+        # old deprecated CLI behaviour
+        args = argparse(args)
+        out = []
+        if 'req_dm_monster' in args:
+            setting = get_positivity(args.last('req_dm_monster', True))
+            guild_settings.lookup_dm_required = setting
+            out.append(f'req_dm_monster set to {setting}!')
+        if 'pm_dm' in args:
+            setting = get_positivity(args.last('pm_dm', True))
+            guild_settings.lookup_pm_dm = setting
+            out.append(f'pm_dm set to {setting}!')
+        if 'pm_result' in args:
+            setting = get_positivity(args.last('pm_result', True))
+            guild_settings.lookup_pm_result = setting
+            out.append(f'pm_result set to {setting}!')
+
+        if out:
+            await guild_settings.commit(ctx.bot.mdb)
+            await ctx.send("Lookup settings set:\n" + '\n'.join(out))
         else:
-            await ctx.send("No settings found. Make sure your syntax is correct.")
+            await ctx.send(f"No settings found. Try using `{ctx.prefix}lookup_settings` to open an interactive menu.")
 
     # ==== helpers ====
-    async def get_settings(self, guild):
-        settings = {}  # default PM settings
-        if guild is not None:
-            settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
-        return settings or {}
-
     async def _add_training_data(self, lookup_type, query, result_name, metadata=None, srd=True, could_view=True):
         data = {"type": lookup_type, "query": query, "result": result_name, "srd": srd, "could_view": could_view}
         if metadata:
@@ -617,10 +616,12 @@ class Lookup(commands.Cog):
             data['homebrew'] = metadata.get('homebrew', False)
         await self.bot.mdb.nn_training.insert_one(data)
 
-    async def _get_destination(self, ctx):
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-        return ctx.author if pm else ctx.channel
+    @staticmethod
+    async def _get_destination(ctx):
+        guild_settings = await ctx.get_server_settings()
+        if guild_settings is None:
+            return ctx
+        return ctx.author if guild_settings.lookup_pm_result else ctx
 
     async def _lookup_search3(self, ctx, entities, query, query_type=None):
         """
@@ -663,33 +664,35 @@ class Lookup(commands.Cog):
 
         result, metadata = await search_and_select(
             ctx, choices, query, lambda e: e[0].name, return_metadata=True,
-            selectkey=selectkey)
+            selectkey=selectkey
+        )
 
         # get the entity
         entity, entity_entitlement_type = result
 
         # log the query
-        await self._add_training_data(query_type, query, entity.name, metadata=metadata, srd=entity.is_free,
-                                      could_view=can_access(entity, available_ids[entity_entitlement_type]))
+        await self._add_training_data(
+            query_type, query, entity.name, metadata=metadata, srd=entity.is_free,
+            could_view=can_access(entity, available_ids[entity_entitlement_type])
+        )
 
         # display error if not srd
         if not can_access(entity, available_ids[entity_entitlement_type]):
             raise errors.RequiresLicense(entity, available_ids[entity_entitlement_type] is not None)
         return entity
 
-    # ==== various listeners ====
+    # ==== listeners ====
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         # This method automatically allows full monster lookup for new large servers.
         # These settings can be changed by any server admin.
-        existing_guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
+        existing_guild_settings = await utils.settings.ServerSettings.for_guild(self.bot.mdb, guild.id)
         if existing_guild_settings is not None:
             return
 
         if guild.member_count >= LARGE_THRESHOLD:
-            default_guild_settings = {"req_dm_monster": False}
-            await self.bot.mdb.lookupsettings.update_one({"server": str(guild.id)}, {"$set": default_guild_settings},
-                                                         upsert=True)
+            guild_settings = utils.settings.ServerSettings(guild_id=guild.id, lookup_dm_required=False)
+            await guild_settings.commit(self.bot.mdb)
 
 
 def setup(bot):

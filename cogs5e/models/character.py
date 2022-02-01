@@ -5,18 +5,20 @@ import cachetools
 from discord.ext.commands import NoPrivateMessage
 
 import aliasing.evaluators
+from cogs5e.models.ddbsync import DDBSheetSync
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharacter, NoReset
 from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
-from cogs5e.models.sheet.player import CharOptions, CustomCounter, DeathSaves, ManualOverrides
+from cogs5e.models.sheet.player import CustomCounter, DeathSaves, ManualOverrides
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock
 from cogs5e.sheets.abc import SHEET_VERSION
 from utils.functions import search_and_select
+from utils.settings import CharacterSettings
 
 log = logging.getLogger(__name__)
 
@@ -33,17 +35,25 @@ class Character(StatBlock):
     def __init__(self, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
                  name: str, description: str, image: str, stats: BaseStats, levels: Levels, attacks: AttackList,
                  skills: Skills, resistances: Resistances, saves: Saves, ac: int, max_hp: int, hp: int, temp_hp: int,
-                 cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
+                 cvars: dict, overrides: dict, consumables: list, death_saves: dict,
                  spellbook: Spellbook,
-                 live, race: str, background: str, creature_type: str = None,
+                 live, race: str, background: str,
+                 creature_type: str = None,
                  ddb_campaign_id: str = None, actions: Actions = None, active_guilds: list = None,
+                 options_v2: CharacterSettings = None,
                  **kwargs):
-        if kwargs:
-            log.warning(f"Unused kwargs: {kwargs}")
         if actions is None:
             actions = Actions()
         if active_guilds is None:
             active_guilds = []
+        if options_v2 is None:
+            if 'options' in kwargs:  # options v1 -> v2 migration (options rewrite)
+                options_v2 = CharacterSettings.from_old_csettings(kwargs.pop('options'))
+            else:
+                options_v2 = CharacterSettings()
+        if kwargs:
+            log.debug(f"Unused kwargs: {kwargs}")
+
         # sheet metadata
         self._owner = owner
         self._upstream = upstream
@@ -65,12 +75,12 @@ class Character(StatBlock):
 
         # customization
         self.cvars = cvars
-        self.options = CharOptions.from_dict(options)
+        self.options = options_v2
         self.overrides = ManualOverrides.from_dict(overrides)
 
         # ccs
         self.consumables = [CustomCounter.from_dict(self, cons) for cons in consumables]
-        self.death_saves = DeathSaves.from_dict(death_saves)
+        self.death_saves = DeathSaves.from_dict(self, death_saves)
 
         # live sheet resource integrations
         self._live = live
@@ -164,11 +174,11 @@ class Character(StatBlock):
         d.update({
             "owner": self._owner, "upstream": self._upstream, "active": self._active,
             "sheet_type": self._sheet_type, "import_version": self._import_version, "description": self._description,
-            "image": self._image, "cvars": self.cvars, "options": self.options.to_dict(),
+            "image": self._image, "cvars": self.cvars,
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
             "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict(),
-            "active_guilds": self._active_guilds
+            "active_guilds": self._active_guilds, "options_v2": self.options.dict(),
         })
         return d
 
@@ -181,11 +191,11 @@ class Character(StatBlock):
             pass
 
     # ---------- Basic CRUD ----------
-    def get_color(self):
-        return self.options.get('color') or super().get_color()
+    def get_color(self) -> int:
+        return self.options.color if self.options.color is not None else super().get_color()
 
     @property
-    def owner(self):
+    def owner(self) -> str:
         return self._owner
 
     @owner.setter
@@ -194,45 +204,28 @@ class Character(StatBlock):
         self._active = False  # don't have any conflicts
 
     @property
-    def upstream(self):
+    def upstream(self) -> str:
         return self._upstream
 
     @property
-    def upstream_id(self):
+    def upstream_id(self) -> str:
         return self._upstream.split('-', 1)[-1]
 
     @property
-    def sheet_type(self):
+    def sheet_type(self) -> str:
         return self._sheet_type
 
     @property
-    def attacks(self):
+    def attacks(self) -> AttackList:
         return self._attacks + self.overrides.attacks
 
     @property
-    def description(self):
+    def description(self) -> str:
         return self.overrides.desc or self._description
 
     @property
-    def image(self):
+    def image(self) -> str:
         return self.overrides.image or self._image or ''
-
-    # ---------- CSETTINGS ----------
-    def get_setting(self, setting, default=None):
-        """Gets the value of a csetting.
-        :returns the csetting's value, or default."""
-        setting = self.options.get(setting)
-        if setting is None:
-            return default
-        return setting
-
-    def set_setting(self, setting, value):
-        """Sets the value of a csetting."""
-        self.options.set(setting, value)
-
-    def delete_setting(self, setting):
-        """Deletes a setting if it exists."""
-        self.options.set(setting, None)
 
     # ---------- SCRIPTING ----------
     def evaluate_math(self, varstr):
@@ -264,7 +257,7 @@ class Character(StatBlock):
         return out
 
     # ---------- DATABASE ----------
-    async def commit(self, ctx):
+    async def commit(self, ctx, do_live_integrations=True):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
         data.pop('active')  # #1472 - may regress when doing atomic commits, be careful
@@ -280,6 +273,8 @@ class Character(StatBlock):
             )
         except OverflowError:
             raise ExternalImportError("A number on the character sheet is too large to store.")
+        if self._live_integration is not None and do_live_integrations and self.options.sync_outbound:
+            self._live_integration.commit_soon(ctx)  # creates a task to commit eventually
 
     async def set_active(self, ctx):
         """Sets the character as globally active and unsets any server-active character in the current context."""
@@ -312,7 +307,7 @@ class Character(StatBlock):
 
     async def set_server_active(self, ctx):
         """
-        Removes all server-active characters and sets the character as active on the current server. 
+        Removes all server-active characters and sets the character as active on the current server.
         Raises NoPrivateMessage() if not in a server.
         """
         if ctx.guild is None:
@@ -355,15 +350,38 @@ class Character(StatBlock):
     # ---------- HP ----------
     @property
     def hp(self):
-        return self._hp
+        return super().hp
 
     @hp.setter
     def hp(self, value):
-        self._hp = max(0, value)
+        old_hp = self._hp
+        self._hp = max(0, value)  # reimplements the setter, but super().(property) = x doesn't work (py-14965)
         self.on_hp()
-
-        if self._live_integration:
+        if self._live_integration and self._hp != old_hp:
             self._live_integration.sync_hp()
+
+    @property
+    def temp_hp(self):
+        return super().temp_hp
+
+    @temp_hp.setter
+    def temp_hp(self, value):
+        old_temp = self._temp_hp
+        self._temp_hp = max(0, value)
+        if self._live_integration and self._temp_hp != old_temp:
+            self._live_integration.sync_hp()
+
+    @property
+    def max_hp(self):
+        return super().max_hp
+
+    @max_hp.setter
+    def max_hp(self, value):
+        """
+        Sets the character's base/canonical permanent max hp, which can be further modified by effects.
+        To temporarily change the character's max hp (i.e. in combat), use PlayerCombatant.max_hp.
+        """
+        self._max_hp = max(0, value)
 
     # ---------- SPELLBOOK ----------
     def add_known_spell(self, spell, dc: int = None, sab: int = None, mod: int = None):
@@ -434,8 +452,10 @@ class Character(StatBlock):
         if cascade:
             reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
-        if self.get_setting('srslots', False):
-            self.spellbook.reset_slots()
+        if self.options.srslots:
+            self.spellbook.reset_slots()  # reset as if it was a long rest (legacy)
+        else:
+            self.spellbook.reset_pact_slots()
         return reset
 
     def long_rest(self, cascade=True):
@@ -450,8 +470,7 @@ class Character(StatBlock):
             reset.extend(self.short_rest(cascade=False))
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
-        if not self.get_setting('srslots', False):
-            self.spellbook.reset_slots()
+        self.spellbook.reset_slots()
         return reset
 
     def reset_all_consumables(self, cascade=True):
@@ -468,10 +487,14 @@ class Character(StatBlock):
         return reset
 
     # ---------- MISC ----------
+    def sync_death_saves(self):
+        if self._live_integration:
+            self._live_integration.sync_death_saves()
+
     def update(self, old_character):
         """
         Updates certain attributes to match an old character's.
-        Currently updates settings, overrides, cvars, consumables, overriden spellbook spells,
+        Currently updates settings, overrides, cvars, active guilds, consumables, overriden spellbook spells,
         hp, temp hp, death saves, used spell slots
         and caches the new character.
         :type old_character Character
@@ -480,6 +503,7 @@ class Character(StatBlock):
         self.options = old_character.options
         self.overrides = old_character.overrides
         self.cvars = old_character.cvars
+        self._active_guilds = old_character._active_guilds
 
         # consumables: no duplicate name or live (upstream) ids
         new_cc_names = set(con.name.lower() for con in self.consumables)
@@ -491,14 +515,30 @@ class Character(StatBlock):
         )
 
         # overridden spells
-        self.spellbook.spells.extend(self.overrides.spells)
+        sb = self.spellbook
+        sb.spells.extend(self.overrides.spells)
 
         # tracking
         self._hp = old_character._hp
         self._temp_hp = old_character._temp_hp
-        # ensure new slots are within bounds (#1453)
-        self.spellbook.slots = {l: min(v, self.spellbook.get_max_slots(l))
-                                for l, v in old_character.spellbook.slots.items()}
+        sb.slots = {  # ensure new slots are within bounds (#1453)
+            level: min(v, sb.get_max_slots(level))
+            for level, v in old_character.spellbook.slots.items()
+        }
+        if sb.num_pact_slots is not None:
+            sb.num_pact_slots = min(
+                old_character.spellbook.num_pact_slots or 0,  # pact slots before update
+                sb.max_pact_slots,  # cannot have more then max
+                sb.get_slots(sb.pact_slot_level)  # cannot gain slots out of nowhere
+            )
+
+            # sanity check:             num_non_pact <= max_non_pact
+            # get_slots(pact_level) - num_pact_slots <= get_max(pact_level) - max_pact_slots
+            #                         num_pact_slots >= max_pact_slots - get_max(pact_level) + get_slots(pact_level)
+            sb.num_pact_slots = max(
+                sb.num_pact_slots,
+                sb.max_pact_slots - sb.get_max_slots(sb.pact_slot_level) + sb.get_slots(sb.pact_slot_level)
+            )
 
         if (self.owner, self.upstream) in Character._cache:
             Character._cache[self.owner, self.upstream] = self
@@ -583,13 +623,13 @@ class CharacterSpellbook(Spellbook):
         super().__init__(*args, **kwargs)
         self._live_integration = None
 
-    def set_slots(self, level: int, value: int):
-        super().set_slots(level, value)
+    def set_slots(self, *args, **kwargs):
+        super().set_slots(*args, **kwargs)
         if self._live_integration:
             self._live_integration.sync_slots()
 
 
 SetActiveResult = namedtuple('SetActiveResult', 'did_unset_server_active')
 
-INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
-DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions}
+INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
+DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions, "options_v2": CharacterSettings}

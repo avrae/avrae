@@ -230,7 +230,9 @@
   "temp_hp": 0,
   "cvars": {},
   "options": {
-    "options": {}
+    "options": {
+      "color": 16711935
+    }
   },
   "overrides": {
     "desc": null,

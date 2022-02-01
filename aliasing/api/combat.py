@@ -2,7 +2,7 @@ from typing import Optional
 
 from d20 import roll
 
-import cogs5e.models.initiative as init
+import cogs5e.initiative as init
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
@@ -44,16 +44,20 @@ class SimpleCombat:
         return cls(combat, None)
 
     # public methods
-    def get_combatant(self, name):
+    def get_combatant(self, name, strict=None):
         """
         Gets a combatant by its name or ID.
 
-        If a combatant name is passed, returns the first :class:`~aliasing.api.combat.SimpleCombatant` that matches the name via fuzzy searching (partial match) on name. This cannot return groups.
-
-        If a combatant ID is passed, returns the combatant with the given ID, which may be a :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
+        :param str name: The name or id of the combatant or group to get.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The combatant or group or None.
+        :rtype: :class:`~aliasing.api.combat.SimpleCombatant` or `~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
-        combatant = self._combat.get_combatant(name, False)
+        combatant = self._combat.get_combatant(name, strict)
         if combatant:
             if combatant.type == init.CombatantType.GROUP:
                 return SimpleGroup(combatant)
@@ -61,16 +65,20 @@ class SimpleCombat:
                 return SimpleCombatant(combatant)
         return None
 
-    def get_group(self, name):
+    def get_group(self, name, strict=None):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleGroup`, fuzzy searching (partial match) on name.
+        Gets a :class:`~aliasing.api.combat.SimpleGroup` that matches on name.
 
         :param str name: The name of the group to get.
-        :return: The group.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The group or None.
         :rtype: :class:`~aliasing.api.combat.SimpleGroup`
         """
         name = str(name)
-        group = self._combat.get_group(name, strict=False)
+        group = self._combat.get_group(name, strict)
         if group:
             return SimpleGroup(group)
         return None
@@ -138,8 +146,10 @@ class SimpleCombat:
 
     # private functions
     def func_set_character(self, character):
-        me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
-                  None)
+        me = next(
+            (c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
+            None
+        )
         if not me:
             return
         me._character = character  # set combatant character instance
@@ -272,8 +282,8 @@ class SimpleCombatant(AliasStatBlock):
         :return: Dictionary representing the results of the Damage Automation.
         :rtype: dict
         """
-        from cogs5e.models.automation import AutomationContext, AutomationTarget, \
-            Damage  # this has to be here to avoid circular imports
+        # this has to be here to avoid circular imports
+        from cogs5e.models.automation import AutomationContext, AutomationTarget, Damage
 
         dice_str, critdice = str(dice_str), int(critdice)
         if d is not None:
@@ -287,12 +297,11 @@ class SimpleCombatant(AliasStatBlock):
                 self.in_crit = crit
                 self.target = AutomationTarget(target)
 
-        args = ParsedArguments.from_dict({
-            'critdice': [critdice],
-            'resist': self._combatant.resistances['resist'],
-            'immune': self._combatant.resistances['immune'],
-            'vuln': self._combatant.resistances['vuln']
-        })
+        args = ParsedArguments.from_dict(
+            {
+                'critdice': [critdice]
+            }
+        )
         if d:
             args['d'] = d
         if c:
@@ -302,8 +311,10 @@ class SimpleCombatant(AliasStatBlock):
 
         result = damage.run(autoctx)
         roll_for = "Damage" if not result.in_crit else "Damage (CRIT!)"
-        return {'damage': f"**{roll_for}**: {result.damage_roll.result}", 'total': result.damage,
-                'roll': SimpleRollResult(result.damage_roll)}
+        return {
+            'damage': f"**{roll_for}**: {result.damage_roll.result}", 'total': result.damage,
+            'roll': SimpleRollResult(result.damage_roll)
+        }
 
     def set_ac(self, ac: int):
         """
@@ -387,8 +398,10 @@ class SimpleCombatant(AliasStatBlock):
             return SimpleEffect(effect)
         return None
 
-    def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False, parent=None,
-                   end: bool = False, desc: str = None):
+    def add_effect(
+        self, name: str, args: str, duration: int = -1, concentration: bool = False, parent=None,
+        end: bool = False, desc: str = None
+    ):
         """
         Adds an effect to the combatant.
 
@@ -410,7 +423,8 @@ class SimpleCombatant(AliasStatBlock):
             existing.remove()
         effectObj = init.Effect.new(
             self._combatant.combat, self._combatant, duration=duration, name=name,
-            effect_args=args, concentration=concentration, tick_on_end=end, desc=desc)
+            effect_args=args, concentration=concentration, tick_on_end=end, desc=desc
+        )
         if parent:
             effectObj.set_parent(parent._effect)
         self._combatant.add_effect(effectObj)
@@ -524,19 +538,26 @@ class SimpleGroup:
         """
         return self._group.id
 
-    def get_combatant(self, name):
+    def get_combatant(self, name, strict=None):
         """
-        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
+       Gets a :class:`~aliasing.api.combat.SimpleCombatant` from the group.
 
         :param str name: The name of the combatant to get.
-        :return: The combatant.
+        :param strict: Whether combatant name must be a full case insensitive match.
+            If this is ``None`` (default), attempts a strict match with fallback to partial match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
+        :return: The combatant or None.
         :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
         name = str(name)
-        combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
-        if combatant:
-            return combatant
-        return None
+        combatant = None
+
+        if strict is not False:
+            combatant = next((c for c in self.combatants if name.lower() == c.name.lower()), None)
+        if not combatant and not strict:
+            combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
+        return combatant
 
     def set_init(self, init: int):
         """

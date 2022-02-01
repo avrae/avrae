@@ -58,7 +58,8 @@ class GameLogEventContext:
             # necessary duck typing
             # regardless, we should probably be aware that this is happening
             log.warning(
-                f"No guild found when getting discord user for event {self.event.id!r}, falling back to user fetch")
+                f"No guild found when getting discord user for event {self.event.id!r}, falling back to user fetch"
+            )
             user = await user_from_id(self, self.discord_user_id)
 
         self._discord_user = user
@@ -103,12 +104,17 @@ class GameLogEventContext:
         try:
             await destination.trigger_typing()
         except discord.HTTPException as e:
-            log.warning(f"Could not trigger typing in channel {destination!r}: {e}")
+            log.info(f"Could not trigger typing in channel {destination!r}: {e}")
 
-    async def send(self, *args, **kwargs):
+    async def send(self, *args, ignore_exc=True, **kwargs):
         """Sends content to the correct destination(s), accounting for message's scope."""
         destination = await self.destination_channel()
-        return await destination.send(*args, **kwargs)
+        try:
+            return await destination.send(*args, **kwargs)
+        except discord.HTTPException as e:
+            if not ignore_exc:
+                raise
+            log.info(f"Could not send message to channel {destination!r}: {e}")
 
     # ==== entity utils ====
     async def get_character(self):
@@ -127,8 +133,10 @@ class GameLogEventContext:
 
         ddb_character_upstream = f"beyond-{self.event.entity_id}"
         try:
-            self._character = await Character.from_bot_and_ids(self.bot, str(self.discord_user_id),
-                                                               ddb_character_upstream)
+            self._character = await Character.from_bot_and_ids(
+                self.bot, str(self.discord_user_id),
+                ddb_character_upstream
+            )
         except NoCharacter:
             self._character = None
         return self._character
@@ -146,3 +154,36 @@ class GameLogEventContext:
     async def get_statblock(self):
         """:rtype: cogs5e.models.sheet.statblock.StatBlock or None"""
         return (await self.get_character()) or (await self.get_monster())
+
+    # ==== misc/notes ====
+    # The below is an implementation to load in combat from a GameLogEventContext. But this is actually terrible.
+    # It's recorded here for posterity, but the right option should really be refactoring init to be better. Hopefully
+    # we don't ever need to use this.
+
+    # @property
+    # def author(self):  # discord.ext.commands.Context compat - CombatantGroup needs this for some reason
+    #     if self._discord_user is _sentinel:
+    #         raise RuntimeError("you must load the author with get_discord_user() at least once before accessing")
+    #     if self._discord_user is None:
+    #         raise ValueError("Discord user could not be loaded")
+    #     return self._discord_user
+
+    # async def get_combat(self):
+    #     """Gets the combat in the channel the event is linked to, or None if not applicable."""
+    #     if self._combat is not _sentinel:
+    #         return self._combat
+    #
+    #     from cogs5e.initiative import Combat, CombatNotFound
+    #
+    #     author = await self.get_discord_user()  # ensure author is loaded - combat may access it
+    #     if author is None:  # was not able to load the author, so combat will not be able to be loaded
+    #         log.warning(f"Unable to load author when attempting to access combat for event {self.event.id!r}")
+    #         self._combat = None
+    #         return None
+    #     try:
+    #         combat = await Combat.from_id(str(self.channel.id), self)
+    #         self._combat = combat
+    #         return combat
+    #     except CombatNotFound:
+    #         self._combat = None
+    #         return None

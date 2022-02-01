@@ -26,6 +26,7 @@
 - `New Application`, give it a cool name, `Create`.
 - Copy the `Client ID` from `General Information`, you'll need this shortly.
 - `Bot` > `Add Bot`.
+- Scroll down to `Privileged Gateway Intents`, and enable the switch to the right of `Server Members Intent`.
 - `Click to reveal token`, this is your `DISCORD_BOT_TOKEN` below.
 - Invite your bot to your server: `https://discordapp.com/oauth2/authorize?permissions=388160&scope=bot&client_id=1234`, replacing `1234` with your bot's `Client ID`. Make sure you select the correct server!
 

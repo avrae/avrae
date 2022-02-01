@@ -67,7 +67,7 @@ class EntityEntitlements:
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d['entityType'], d['entityID'], d['isFree'], d['licenseIDs'])
+        return cls(d['entityType'], int(d['entityID']), d['isFree'], d['licenseIDs'])
 
     def to_dict(self):
         return {

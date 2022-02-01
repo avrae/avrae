@@ -65,14 +65,25 @@ INDICES = {
         IndexModel('key', unique=True)
     ],
 
-    # personal aliases
-    # todo put the existing indices here
-    "aliases": [],
-    "gvars": [],
-    "snippets": [],
-    "servaliases": [],
-    "servsnippets": [],
-    "uvars": [],
+    # aliases
+    "aliases": [
+        IndexModel([('owner', ASCENDING), ('name', ASCENDING)], unique=True)
+    ],
+    "gvars": [
+        IndexModel('key', unique=True)
+    ],
+    "snippets": [
+        IndexModel([('owner', ASCENDING), ('name', ASCENDING)], unique=True)
+    ],
+    "servaliases": [
+        IndexModel([('server', ASCENDING), ('name', ASCENDING)], unique=True)
+    ],
+    "servsnippets": [
+        IndexModel([('server', ASCENDING), ('name', ASCENDING)], unique=True)
+    ],
+    "uvars": [
+        IndexModel([('owner', ASCENDING), ('name', ASCENDING)], unique=True)
+    ],
     "svars": [
         IndexModel('owner'),
         IndexModel([('owner', ASCENDING), ('name', ASCENDING)], unique=True)
@@ -91,8 +102,10 @@ INDICES = {
         IndexModel([('owner', ASCENDING), ('active', ASCENDING)], background=True),
         IndexModel([('owner', ASCENDING), ('active_guilds', ASCENDING)], background=True),
     ],
-    # todo put the existing indices here
-    "combats": [],
+    "combats": [
+        IndexModel('channel', unique=True),
+        IndexModel('lastchanged', expireAfterSeconds=2592000)
+    ],
     "lookupsettings": [  # deprecated in feature/settings-menus branch, replaced by guild_settings
         IndexModel('server', unique=True)
     ],

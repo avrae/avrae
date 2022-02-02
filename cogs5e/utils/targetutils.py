@@ -26,7 +26,7 @@ async def maybe_combat_caster(ctx, caster, combat=None):
             await combatant.update_character_ref(ctx, inst=caster)
             caster = combatant
 
-    combat.ctx.nlp_caster = caster  # NLP: save a reference to the caster
+    ctx.nlp_caster = caster  # NLP: save a reference to the caster
     return caster
 
 

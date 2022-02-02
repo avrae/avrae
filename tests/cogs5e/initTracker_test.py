@@ -4,7 +4,7 @@ import pytest
 from cogs5e.models.sheet.resistance import Resistance
 from gamedata.compendium import compendium
 from tests.conftest import end_init, start_init
-from tests.utils import D20_PATTERN, active_character, active_combat
+from tests.utils import D20_PATTERN, active_character, active_combat, server_settings
 
 pytestmark = pytest.mark.asyncio
 
@@ -17,11 +17,15 @@ class TestInitiativeSimple:
         await dhttp.receive_delete()
         await dhttp.receive_message("```Awaiting combatants...```")
         await dhttp.receive_pin()
-        await dhttp.receive_edit("```md\nCurrent initiative: 0 (round 0)\n===============================\n```",
-                                 regex=False)
-        await dhttp.receive_message("Everyone roll for initiative!\nIf you have a character set up with SheetManager: "
-                                    "`!init join`\nIf it's a 5e monster: `!init madd <monster name>`\nOtherwise: "
-                                    "`!init add <modifier> <name>`", regex=False)
+        await dhttp.receive_edit(
+            "```md\nCurrent initiative: 0 (round 0)\n===============================\n```",
+            regex=False
+        )
+        await dhttp.receive_message(
+            "Everyone roll for initiative!\nIf you have a character set up with SheetManager: "
+            "`!init join`\nIf it's a 5e monster: `!init madd <monster name>`\nOtherwise: "
+            "`!init add <modifier> <name>`", regex=False
+        )
 
     async def test_init_end(self, avrae, dhttp):
         dhttp.clear()
@@ -32,9 +36,11 @@ class TestInitiativeSimple:
         await dhttp.receive_delete()
         await dhttp.receive_delete()
         await dhttp.receive_message("OK, ending...")
-        await dhttp.receive_message(r"End of combat report: \d+ rounds "
-                                    r"```md\nCurrent initiative: \d+ \(round \d+\)\n"
-                                    r"===============================\n```.*", dm=True)
+        await dhttp.receive_message(
+            r"End of combat report: \d+ rounds "
+            r"```md\nCurrent initiative: \d+ \(round \d+\)\n"
+            r"===============================\n```.*", dm=True
+        )
         await dhttp.receive_edit(r"[\s\S]*```-----COMBAT ENDED-----```")
         await dhttp.receive_unpin()
         await dhttp.receive_edit("Combat ended.")
@@ -246,55 +252,57 @@ class TestInitiativeStatBlockCopying:
         await end_init(avrae, dhttp)
 
 
+standard_init_commands = [
+    "!init begin",
+    "!init madd kobold -n 3",
+    "!init madd mage"
+    # test round tracking
+    "!init next",  # KO1
+    "!init next",  # KO2
+    "!init next",  # KO3
+    "!init next",  # MA1
+    "!init next",  # KO1
+    # test cast
+    "!i goto MA1",
+    '!i cast "fire bolt" -t ko1 -t ko2',
+    '!i hp ko1 set 0',
+    # test autoremove
+    "!init next",
+    "!init next",
+    "!init next",
+    "!init next",
+    "!init next",
+    # test attacking
+    "!i goto ko3",
+    '!i a "dagger" -t ma1',
+    # test effect parenting
+    "!i effect ko3 teffect",
+    "!i effect ma1 teffect2 -dur 2 -parent ko3|teffect",
+    "!i skipround 3",
+    # test effect parenting with renames
+    "!i effect ko3 teffect2",
+    "!i effect ma1 teffect22 -dur 2 -parent ko3|teffect2",
+    "!i opt ma1 -name mage1",
+    "!i opt ko3 -name kobold3",
+    "!i skipround 3",
+    # test removing combatant with child effects
+    "!i effect kobold3 teffect22",
+    "!i effect mage1 teffect222 -dur 2 -parent kobold3|teffect22",
+    "!i remove kobold3",
+    "!i skipround 3",
+]
+
+
 @pytest.mark.usefixtures("init_fixture")
 async def test_commands_no_error(avrae, dhttp):
     """
     Runs through a gauntlet of init commands and just checks that there are no errors, without any assertations on the
     state
     """
-    commands = [
-        "!init begin",
-        "!init madd kobold -n 3",
-        "!init madd mage"
-        # test round tracking
-        "!init next",  # KO1
-        "!init next",  # KO2
-        "!init next",  # KO3
-        "!init next",  # MA1
-        "!init next",  # KO1
-        # test cast
-        "!i goto MA1",
-        '!i cast "fire bolt" -t ko1 -t ko2',
-        '!i hp ko1 set 0',
-        # test autoremove
-        "!init next",
-        "!init next",
-        "!init next",
-        "!init next",
-        "!init next",
-        # test attacking
-        "!i goto ko3",
-        '!i a "dagger" -t ma1',
-        # test effect parenting
-        "!i effect ko3 teffect",
-        "!i effect ma1 teffect2 -dur 2 -parent ko3|teffect",
-        "!i skipround 3",
-        # test effect parenting with renames
-        "!i effect ko3 teffect2",
-        "!i effect ma1 teffect22 -dur 2 -parent ko3|teffect2",
-        "!i opt ma1 -name mage1",
-        "!i opt ko3 -name kobold3",
-        "!i skipround 3",
-        # test removing combatant with child effects
-        "!i effect kobold3 teffect22",
-        "!i effect mage1 teffect222 -dur 2 -parent kobold3|teffect22",
-        "!i remove kobold3",
-        "!i skipround 3",
-    ]
-
-    for command in commands:
+    for command in standard_init_commands:
         avrae.message(command)
         await dhttp.drain()
+    await end_init(avrae, dhttp)
 
 
 @pytest.mark.usefixtures("init_fixture")
@@ -313,3 +321,12 @@ async def test_assign_groups(avrae, dhttp):
     for command in commands:
         avrae.message(command)
         await dhttp.drain()
+
+
+@pytest.mark.usefixtures("init_fixture")
+async def test_commands_nlp_recording(avrae, dhttp):
+    async with server_settings(avrae, upenn_nlp_opt_in=True):
+        for command in standard_init_commands:
+            avrae.message(command)
+            await dhttp.drain()
+        await end_init(avrae, dhttp)

@@ -1,3 +1,5 @@
+from contextlib import suppress
+
 from cogs5e.initiative import CombatNotFound, CombatantGroup
 from cogs5e.models.character import Character
 from cogs5e.models.errors import InvalidArgument, SelectionException
@@ -10,12 +12,10 @@ async def maybe_combat_caster(ctx, caster, combat=None):
     or current channel if combat is not passed.
     """
     if combat is None:
-        try:
+        with suppress(CombatNotFound):
             combat = await ctx.get_combat()
-        except CombatNotFound:
-            return caster
 
-    if isinstance(caster, Character):
+    if combat is not None and isinstance(caster, Character):
         combatant = next(
             (c for c in combat.get_combatants()
              if getattr(c, 'character_id', None) == caster.upstream
@@ -24,7 +24,9 @@ async def maybe_combat_caster(ctx, caster, combat=None):
         )
         if combatant is not None:
             await combatant.update_character_ref(ctx, inst=caster)
-            return combatant
+            caster = combatant
+
+    combat.ctx.nlp_caster = caster  # NLP: save a reference to the caster
     return caster
 
 
@@ -80,4 +82,5 @@ async def definitely_combat(combat, args, allow_groups=True):
                 args.add_context(target, contextargs)
             targets.append(target)
 
+    combat.ctx.nlp_targets = targets  # NLP: save a reference to the targets list
     return targets

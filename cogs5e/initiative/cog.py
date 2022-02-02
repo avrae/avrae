@@ -25,6 +25,7 @@ from utils.argparser import argparse
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
 from . import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from .upenn_nlp import NLPRecorder
+from .utils import create_nlp_record_session_id
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +47,9 @@ class InitTracker(commands.Cog):
         self.nlp = NLPRecorder(bot)
 
     # ==== special methods ====
+    async def cog_load(self):
+        self.nlp.register_listeners()
+
     async def cog_check(self, ctx):
         if ctx.guild is None:
             raise NoPrivateMessage()
@@ -54,12 +58,8 @@ class InitTracker(commands.Cog):
     async def cog_before_invoke(self, ctx):
         await try_delete(ctx.message)
 
-    # ==== listeners ====
-    @commands.Cog.listener()
-    async def on_message(self, message: disnake.Message):
-        if message.guild is None:
-            return
-        await self.nlp.on_guild_message(message)
+    def cog_unload(self):
+        self.nlp.deregister_listeners()
 
     # ==== commands ====
     @commands.group(aliases=['i'], invoke_without_command=True)
@@ -105,7 +105,7 @@ class InitTracker(commands.Cog):
         )
         if guild_settings.upenn_nlp_opt_in:
             out = f"{out}\nMessages sent in this channel during combat will be recorded."
-            combat.is_recorded = True
+            combat.nlp_record_session_id = create_nlp_record_session_id()
             await self.nlp.on_combat_start(combat)
 
         await combat.final()
@@ -1386,6 +1386,6 @@ class InitTracker(commands.Cog):
             await summary.unpin()
 
         await combat.end()
-        if combat.is_recorded:
+        if combat.nlp_record_session_id is not None:
             await self.nlp.on_combat_end(combat)
         await msg.edit(content="Combat ended.")

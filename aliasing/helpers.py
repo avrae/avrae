@@ -90,8 +90,10 @@ async def handle_aliases(ctx):
     except Exception as e:
         return await ctx.send(e)
 
-    # send it back around to be reprocessed
-    await ctx.bot.process_commands(message_copy)
+    # use a reimplementation of await ctx.bot.process_commands(message_copy) to set additional metadata
+    new_ctx = await ctx.bot.get_context(message_copy)
+    new_ctx.nlp_is_alias = True
+    await ctx.bot.invoke(new_ctx)
 
 
 async def handle_alias_arguments(command, ctx):

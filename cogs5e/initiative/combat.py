@@ -5,7 +5,6 @@ from typing import Any, List, Optional, TYPE_CHECKING
 import cachetools
 import discord
 import disnake.ext.commands
-from bson import ObjectId
 from d20 import roll
 
 from cogs5e.models.errors import NoCharacter
@@ -37,7 +36,6 @@ class Combat:
 
     def __init__(
         self,
-        combat_id: Optional[ObjectId],
         channel_id: str,
         message_id: int,
         dm_id: str,
@@ -48,13 +46,12 @@ class Combat:
         turn_num: int = 0,
         current_index: Optional[int] = None,
         metadata: dict = None,
-        is_recorded: bool = False,
+        nlp_record_session_id: str = None,
     ):
         if combatants is None:
             combatants = []
         if metadata is None:
             metadata = {}
-        self.id = combat_id
         self._channel = str(channel_id)  # readonly
         self._summary = int(message_id)  # readonly
         self._dm = str(dm_id)
@@ -65,11 +62,11 @@ class Combat:
         self._current_index = current_index
         self.ctx = ctx
         self._metadata = metadata
-        self.is_recorded = is_recorded
+        self.nlp_record_session_id = nlp_record_session_id
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
-        return cls(None, channel_id, message_id, dm_id, options, ctx)
+        return cls(channel_id, message_id, dm_id, options, ctx)
 
     # async deser
     @classmethod
@@ -93,8 +90,8 @@ class Combat:
     @classmethod
     async def from_dict(cls, raw, ctx):
         inst = cls(
-            raw['_id'], raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-            raw['turn'], raw['current'], raw.get('metadata'), raw.get('is_recorded', False)
+            raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+            raw['turn'], raw['current'], raw.get('metadata'), raw.get('nlp_record_session_id')
         )
         for c in raw['combatants']:
             inst._combatants.append(await deserialize_combatant(c, ctx, inst))
@@ -118,8 +115,8 @@ class Combat:
     @classmethod
     def from_dict_sync(cls, raw, ctx):
         inst = cls(
-            raw['_id'], raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-            raw['turn'], raw['current'], raw.get('metadata'), raw.get('is_recorded', False)
+            raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+            raw['turn'], raw['current'], raw.get('metadata'), raw.get('nlp_record_session_id')
         )
         for c in raw['combatants']:
             inst._combatants.append(deserialize_combatant_sync(c, ctx, inst))
@@ -130,7 +127,7 @@ class Combat:
             'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
             'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
             'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata,
-            'is_recorded': self.is_recorded
+            'nlp_record_session_id': self.nlp_record_session_id
         }
 
     # members
@@ -214,7 +211,7 @@ class Combat:
 
     @cached_property
     def nlp_recorder(self) -> Optional[_NLPRecorderT]:
-        if not self.is_recorded or self.ctx is None:
+        if self.nlp_record_session_id is None or self.ctx is None:
             return None
         combat_cog = self.ctx.bot.get_cog("InitTracker")  # type: Optional[cogs5e.initiative.InitTracker]
         if combat_cog is None:

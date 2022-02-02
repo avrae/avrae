@@ -19,6 +19,11 @@ class AvraeContext(Context):
         self._character = _sentinel
         self._combat = _sentinel
         self._server_settings = _sentinel
+        # NLP metadata
+        self.nlp_is_alias = False  # set in aliasing.helpers
+        self.nlp_character = None  # set just below
+        self.nlp_caster = None  # set in targetutils to provide caster or character info to NLP
+        self.nlp_targets = None
 
     async def get_character(self, ignore_guild: bool = False):
         """
@@ -33,6 +38,7 @@ class AvraeContext(Context):
         character = await Character.from_ctx(self, ignore_guild=ignore_guild)
         if not ignore_guild:
             self._character = character
+        self.nlp_character = character
         return character
 
     async def get_combat(self):

@@ -43,7 +43,7 @@ class GameTrack(commands.Cog):
     @game.command(name='status', aliases=['summary'])
     async def game_status(self, ctx):
         """Prints the status of the current active character."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         embed = EmbedWithCharacter(character)
         embed.add_field(name="Hit Points", value=character.hp_str())
         embed.add_field(name="Spell Slots", value=character.spellbook.slots_str())
@@ -70,7 +70,7 @@ class GameTrack(commands.Cog):
                 assert 0 < level < 10
             except AssertionError:
                 return await ctx.send("Invalid spell level.")
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         embed = EmbedWithCharacter(character)
 
         if level is None and value is None:  # show remaining
@@ -88,8 +88,10 @@ class GameTrack(commands.Cog):
 
         # footer - pact vs non pact
         if character.spellbook.max_pact_slots is not None:
-            embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
-                                  f"{constants.FILLED_BUBBLE_ALT} / {constants.EMPTY_BUBBLE_ALT} = Pact Slot")
+            embed.set_footer(
+                text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
+                     f"{constants.FILLED_BUBBLE_ALT} / {constants.EMPTY_BUBBLE_ALT} = Pact Slot"
+            )
         else:
             embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used")
 
@@ -104,7 +106,7 @@ class GameTrack(commands.Cog):
         :param rest_type: "long", "short", "all"
         :param args: a list of args.
         """
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         old_hp = character.hp
         old_slots = {lvl: character.spellbook.get_slots(lvl) for lvl in range(1, 10)}
 
@@ -123,7 +125,8 @@ class GameTrack(commands.Cog):
 
         if '-h' in args:
             values = ', '.join(
-                set(ctr.name for ctr, _ in reset_counters) | {"Hit Points", "Death Saves", "Spell Slots"})
+                set(ctr.name for ctr, _ in reset_counters) | {"Hit Points", "Death Saves", "Spell Slots"}
+            )
             embed.add_field(name="Reset Values", value=values)
         else:
             # hp
@@ -175,7 +178,7 @@ class GameTrack(commands.Cog):
     @game.group(name='hp', invoke_without_command=True)
     async def game_hp(self, ctx, *, hp: str = None):
         """Modifies the HP of a the current active character."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         caster = await targetutils.maybe_combat_caster(ctx, character)
 
         if hp is None:
@@ -193,7 +196,7 @@ class GameTrack(commands.Cog):
     @game_hp.command(name='max')
     async def game_hp_max(self, ctx):
         """Sets the character's HP to their maximum."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         caster = await targetutils.maybe_combat_caster(ctx, character)
 
         before = caster.hp
@@ -209,7 +212,7 @@ class GameTrack(commands.Cog):
     @game_hp.command(name='set')
     async def game_hp_set(self, ctx, *, hp):
         """Sets the character's HP to a certain value."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         caster = await targetutils.maybe_combat_caster(ctx, character)
 
         before = caster.hp
@@ -222,7 +225,7 @@ class GameTrack(commands.Cog):
     async def game_thp(self, ctx, *, thp: str = None):
         """Modifies the temp HP of a the current active character.
         If positive, assumes set; if negative, assumes mod."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         caster = await targetutils.maybe_combat_caster(ctx, character)
 
         if thp is None:
@@ -248,7 +251,7 @@ class GameTrack(commands.Cog):
         """Commands to manage character death saves.
         __Valid Arguments__
         See `!help save`."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
 
         embed = EmbedWithCharacter(character, name=False)
 
@@ -294,7 +297,7 @@ class GameTrack(commands.Cog):
     @game_deathsave.command(name='success', aliases=['s', 'save'])
     async def game_deathsave_save(self, ctx):
         """Adds a successful death save."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
 
         embed = EmbedWithCharacter(character)
         embed.title = f'{character.name} succeeds a Death Save!'
@@ -312,7 +315,7 @@ class GameTrack(commands.Cog):
     @game_deathsave.command(name='fail', aliases=['f'])
     async def game_deathsave_fail(self, ctx):
         """Adds a failed death save."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
 
         embed = EmbedWithCharacter(character)
         embed.title = f'{character.name} fails a Death Save!'
@@ -330,7 +333,7 @@ class GameTrack(commands.Cog):
     @game_deathsave.command(name='reset')
     async def game_deathsave_reset(self, ctx):
         """Resets all death saves."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         character.death_saves.reset()
         await character.commit(ctx)
 
@@ -349,7 +352,7 @@ class GameTrack(commands.Cog):
         """
         await ctx.trigger_typing()
 
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         ep = embeds.EmbedPaginator(EmbedWithCharacter(character))
         ep.add_field(name="DC", value=str(character.spellbook.dc), inline=True)
         ep.add_field(name="Spell Attack Bonus", value=str(character.spellbook.sab), inline=True)
@@ -439,7 +442,7 @@ class GameTrack(commands.Cog):
         -mod <mod> - When cast, this spell always uses this as the value of its casting stat (usually for healing spells).
         """  # noqa: E501
         spell = await select_spell_full(ctx, spell_name)
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         args = argparse(args)
 
         dc = args.last('dc', type_=int)
@@ -454,7 +457,7 @@ class GameTrack(commands.Cog):
         """
         Removes a spell from the spellbook override.
         """
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
 
         spell_to_remove = await search_and_select(
             ctx, character.overrides.spells, spell_name, lambda s: s.name,
@@ -483,7 +486,7 @@ class GameTrack(commands.Cog):
         """
         if name is None:
             return await self.customcounter_summary(ctx)
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         counter = await character.select_consumable(ctx, name)
 
         cc_embed_title = counter.title if counter.title is not None else counter.name
@@ -514,7 +517,8 @@ class GameTrack(commands.Cog):
                 roll_text = f"\nRoll: {roll_result}"
             except d20.RollSyntaxError:
                 raise InvalidArgument(
-                    f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string.")
+                    f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string."
+                )
 
         old_value = counter.value
         result_embed = EmbedWithCharacter(character)
@@ -556,7 +560,7 @@ class GameTrack(commands.Cog):
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
         `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
         """  # noqa: E501
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
 
         conflict = next((c for c in character.consumables if c.name.lower() == name.lower()), None)
         if conflict:
@@ -575,8 +579,10 @@ class GameTrack(commands.Cog):
         title = args.last('title')
         desc = args.last('desc')
         try:
-            new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
-                                            reset_to=reset_to, reset_by=reset_by, title=title, desc=desc)
+            new_counter = CustomCounter.new(
+                character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
+                reset_to=reset_to, reset_by=reset_by, title=title, desc=desc
+            )
             character.consumables.append(new_counter)
             await character.commit(ctx)
         except InvalidArgument as e:
@@ -587,7 +593,7 @@ class GameTrack(commands.Cog):
     @customcounter.command(name='delete', aliases=['remove'])
     async def customcounter_delete(self, ctx, name):
         """Deletes a custom counter."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         counter = await character.select_consumable(ctx, name)
         character.consumables.remove(counter)
         await character.commit(ctx)
@@ -599,7 +605,7 @@ class GameTrack(commands.Cog):
         Prints a summary of all custom counters.
         Use `!cc list <page>` to view pages if you have more than 25 counters.
         """
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         embed = EmbedWithCharacter(character, title="Custom Counters")
 
         if character.consumables:
@@ -613,8 +619,10 @@ class GameTrack(commands.Cog):
             if total > 25:
                 embed.set_footer(text=f"Page [{page}/{maxpage}] | {ctx.prefix}cc list <page>")
         else:
-            embed.add_field(name="No Custom Counters",
-                            value=f"Check out `{ctx.prefix}help cc create` to see how to create new ones.")
+            embed.add_field(
+                name="No Custom Counters",
+                value=f"Check out `{ctx.prefix}help cc create` to see how to create new ones."
+            )
 
         await ctx.send(embed=embed)
 
@@ -635,7 +643,7 @@ class GameTrack(commands.Cog):
                 name = None
 
         if name:
-            character: Character = await Character.from_ctx(ctx)
+            character: Character = await ctx.get_character()
             counter = await character.select_consumable(ctx, name)
             try:
                 result = counter.reset()
@@ -647,17 +655,19 @@ class GameTrack(commands.Cog):
         else:
             await self._rest(ctx, 'all', *args)
 
-    @commands.command(pass_context=True, help=f"""
+    @commands.command(
+        pass_context=True, help=f"""
     Casts a spell.
     __**Valid Arguments**__
     {VALID_SPELLCASTING_ARGS}
 
     {VALID_AUTOMATION_ARGS}
-    """)
+    """
+    )
     async def cast(self, ctx, spell_name, *, args=''):
         await try_delete(ctx.message)
 
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
 
         args = await helpers.parse_snippets(args, ctx, character=char)
         args = argparse(args)
@@ -668,7 +678,8 @@ class GameTrack(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send(
                     f"No matching spells found. Make sure this spell is in your "
-                    f"`{ctx.prefix}spellbook`, or cast with the `-i` argument to ignore restrictions!")
+                    f"`{ctx.prefix}spellbook`, or cast with the `-i` argument to ignore restrictions!"
+                )
         else:
             spell = await select_spell_full(ctx, spell_name)
 

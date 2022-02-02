@@ -352,7 +352,7 @@ class InitTracker(commands.Cog):
         `-note <note>` - Sets the combatant's note.
         [user snippet]
         """
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         args = await helpers.parse_snippets(args, ctx, character=char)
         args = argparse(args)
 

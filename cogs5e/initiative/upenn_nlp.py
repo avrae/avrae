@@ -10,7 +10,7 @@ recording.
 import datetime
 import logging
 import time
-from typing import Any, Collection, List, Optional, Tuple
+from typing import Any, Collection, List, MutableMapping, Optional, Tuple
 
 import cachetools
 import disnake
@@ -106,7 +106,7 @@ class RecordedCombatState(RecordedEvent):
 # ==== recorder ====
 class NLPRecorder:
     # cache: channel id -> (when channels are recorded until, combat id); (0, None) if not recorded
-    _recorded_channel_cache: cachetools.TTLCache[int, Tuple[int, Optional[str]]] = cachetools.TTLCache(
+    _recorded_channel_cache: MutableMapping[int, Tuple[int, Optional[str]]] = cachetools.TTLCache(
         maxsize=100000,
         ttl=120
     )

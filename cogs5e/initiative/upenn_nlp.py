@@ -10,7 +10,7 @@ recording.
 import datetime
 import logging
 import time
-from typing import Any, Collection, List, MutableMapping, Optional, Tuple
+from typing import Any, Iterable, List, MutableMapping, Optional, Tuple
 
 import cachetools
 import disnake
@@ -145,7 +145,15 @@ class NLPRecorder:
             combat_id=combat.nlp_record_session_id
         )
         # record cached messages less than X minutes old for pre-combat context
-        # todo
+        await self._record_events(
+            combat.nlp_record_session_id,
+            [
+                RecordedMessage.from_message(message)
+                for message in self.bot.cached_messages
+                if (message.channel.id == int(combat.channel)
+                    and message.created_at > disnake.utils.utcnow() - datetime.timedelta(minutes=15))
+            ][-25:]
+        )
         # record combat start meta event
         await self._record_event(combat.nlp_record_session_id, RecordedEvent(event_type='combat_start'))
 
@@ -266,17 +274,18 @@ class NLPRecorder:
             }
         )
 
-    async def _record_events(self, combat_id: str, events: Collection[RecordedEvent]):
+    async def _record_events(self, combat_id: str, events: Iterable[RecordedEvent]):
         """Saves many events to the recording for the given combat ID."""
-        log.debug(f"saving {len(events)} events to {combat_id=}")
         now = datetime.datetime.now()
-        await self.bot.mdb.nlp_recordings.insert_many(
-            [
-                {
-                    "combat_id": combat_id,
-                    "timestamp": now,
-                    **event.dict()
-                }
-                for event in events
-            ]
-        )
+        documents = [
+            {
+                "combat_id": combat_id,
+                "timestamp": now,
+                **event.dict()
+            }
+            for event in events
+        ]
+        if not documents:
+            return
+        log.debug(f"saving {len(documents)} events to {combat_id=}")
+        await self.bot.mdb.nlp_recordings.insert_many(documents)

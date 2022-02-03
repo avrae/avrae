@@ -491,7 +491,7 @@ def parse_critterdb_spellcasting(traits, base_stats):
 
         for type_leveled_spells in re.finditer(
                 r"(?:"
-                r"(?:(?P<level>\d)[stndrh]{2}\slevel \((?P<slots>\d+) slots\))"
+                r"(?:(?P<level>\d)[stndrh]{2}\slevel \((?P<slots>\d+) slots?\))"
                 r"|(?:Cantrip \(at will\))): "
                 r"(?P<spells>.+)$",
                 desc, re.MULTILINE):

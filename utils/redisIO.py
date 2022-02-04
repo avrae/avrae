@@ -24,10 +24,14 @@ class RedisIO:
         encoded_data = await self._db.get(key)
         return encoded_data.decode() if encoded_data is not None else default
 
-    async def set(self, key, value, *, ex=0, nx=False):
+    async def set(self, key, value, *, ex=0, nx=False, xx=False):
         exist = None
+        if nx and xx:
+            raise ValueError("'nx' and 'xx' args are mutually exclusive")
         if nx:
             exist = self._db.SET_IF_NOT_EXIST
+        elif xx:
+            exist = self._db.SET_IF_EXIST
         return await self._db.set(key, value, expire=ex, exist=exist)
 
     async def incr(self, key):
@@ -47,6 +51,10 @@ class RedisIO:
 
     async def ttl(self, key):
         return await self._db.ttl(key)
+
+    async def iscan(self, match=None, count=None):
+        async for key_bin in self._db.iscan(match=match, count=count):
+            yield key_bin.decode()
 
     # ==== hashmaps ====
     async def set_dict(self, key, dictionary):

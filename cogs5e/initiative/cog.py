@@ -1389,3 +1389,71 @@ class InitTracker(commands.Cog):
         if combat.nlp_record_session_id is not None:
             await self.nlp.on_combat_end(combat)
         await msg.edit(content="Combat ended.")
+
+    # ==== nlp commands ====
+    @init.group(name="nlp", hidden=True, invoke_without_command=True)
+    async def init_nlp(self, ctx):
+        """
+        Commands to manage the server's contributions to the Natural Language AI Training project.
+        When run without a subcommand, displays the server's contribution status.
+        """
+        server_settings = await ctx.get_server_settings()
+        if server_settings.upenn_nlp_opt_in:
+            await ctx.send(
+                "This server is contributing data to the Natural Language AI Training project! "
+                "To opt out, ask a server administrator to disable "
+                "`Contribute Message Data to Natural Language AI Training` in the "
+                f"`{ctx.clean_prefix}servsettings` command."
+            )
+        else:
+            await ctx.send(
+                "This server has not opted in to contribute data to the Natural Language AI Training project. "
+                "To contribute data, ask a server administrator to opt in by enabling "
+                "`Contribute Message Data to Natural Language AI Training` in the "
+                f"`{ctx.clean_prefix}servsettings` command."
+            )
+
+    @init_nlp.command(name="list")
+    async def init_nlp_list(self, ctx):
+        """
+        Displays a list of all channels in this server with active combat recordings.
+        """
+        server_settings = await ctx.get_server_settings()
+        if not server_settings.upenn_nlp_opt_in:
+            return await ctx.send(
+                "This server has not opted in to contribute data to the Natural Language AI Training project. "
+                "To contribute data, ask a server administrator to opt in by enabling "
+                "`Contribute Message Data to Natural Language AI Training` in the "
+                f"`{ctx.clean_prefix}servsettings` command."
+            )
+
+        recording_channels = await self.nlp.get_recording_channels(ctx.guild.id)
+        channel_list = '\n'.join(f"<#{channel_id}>" for channel_id in recording_channels)
+        await ctx.send(
+            "The following channels are currently recording messages to contribute to the Natural Language AI "
+            f"Training project:\n{channel_list}"
+        )
+
+    @init_nlp.command(name="stopall")
+    @commands.has_guild_permissions(manage_messages=True)
+    async def init_nlp_stopall(self, ctx):
+        """
+        Stops the recording of messages in any currently active combats immediately.
+        Requires the *Manage Messages* Discord permission.
+        """
+        server_settings = await ctx.get_server_settings()
+        if not server_settings.upenn_nlp_opt_in:
+            return await ctx.send(
+                "This server has not opted in to contribute data to the Natural Language AI Training project. "
+                "To contribute data, ask a server administrator to opt in by enabling "
+                "`Contribute Message Data to Natural Language AI Training` in the "
+                f"`{ctx.clean_prefix}servsettings` command."
+            )
+
+        stopped_recordings = await self.nlp.stop_all_recordings(ctx.guild)
+        await ctx.send(
+            f"Ok, I have stopped recording messages in {stopped_recordings} channels.\n"
+            f"Starting new combats will still begin a new recording - to opt out of contributing data to this project, "
+            f"ask a server administrator to disable `Contribute Message Data to Natural Language AI Training` in the "
+            f"`{ctx.clean_prefix}servsettings` command."
+        )

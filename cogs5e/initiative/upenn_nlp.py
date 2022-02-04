@@ -9,6 +9,7 @@ recording.
 """
 import datetime
 import logging
+import re
 import time
 from typing import Any, Iterable, List, MutableMapping, Optional, Tuple
 
@@ -142,7 +143,8 @@ class NLPRecorder:
         await self._update_channel_recording_until(
             guild_id=combat.ctx.guild.id,
             channel_id=int(combat.channel),
-            combat_id=combat.nlp_record_session_id
+            combat_id=combat.nlp_record_session_id,
+            insert_if_not_exist=True
         )
         # record cached messages less than X minutes old for pre-combat context
         await self._record_events(
@@ -201,6 +203,37 @@ class NLPRecorder:
         # record a combat end meta marker
         await self._record_event(combat.nlp_record_session_id, RecordedEvent(event_type='combat_end'))
 
+    # ==== management ====
+    async def get_recording_channels(self, guild_id: int):
+        """
+        Returns a list of channel IDs in the given guild that have an active recording.
+        """
+        channels = []
+        async for key in self.bot.rdb.iscan(match=f"cog.initiative.upenn_nlp.{guild_id}.*"):
+            channel_id_match = re.match(r"cog\.initiative\.upenn_nlp\.(\d+)\.(\d+)\.recorded_combat_id", key)
+            if channel_id_match is None:
+                continue
+            channels.append(int(channel_id_match.group(2)))
+        return channels
+
+    async def stop_all_recordings(self, guild: disnake.Guild):
+        """
+        Immediately stop all message recording in a given guild. Returns number of channels recording was stopped in.
+        """
+        guild_id = guild.id
+
+        # delete all recording keys
+        keys_to_delete = {key async for key in self.bot.rdb.iscan(match=f"cog.initiative.upenn_nlp.{guild_id}.*")}
+        if keys_to_delete:
+            await self.bot.rdb.delete(*keys_to_delete)
+        log.debug(f"deleted {len(keys_to_delete)} recording keys for {guild_id=}")
+
+        # remove all channel entries from cache
+        for channel in guild.channels:
+            self._recorded_channel_cache.pop(channel.id, None)
+
+        return len(keys_to_delete)
+
     # ==== helpers ====
     async def _recording_info(self, guild_id: int, channel_id: int) -> Tuple[bool, Optional[str]]:
         """
@@ -242,24 +275,30 @@ class NLPRecorder:
         guild_id: int,
         channel_id: int,
         combat_id: str,
-        record_duration: int = ONE_MONTH_SECS
+        record_duration: int = ONE_MONTH_SECS,
+        insert_if_not_exist: bool = False
     ) -> int:
         """
         Refreshes or sets the time a channel is recording to *record_duration* from when this method is called.
         Returns the UNIX timestamp when the channel will stop recording.
         """
-        recording_until = int(time.time()) + record_duration
+        now = time.time()
+        recording_until = int(now) + record_duration
         # mark the channel as recorded in cache so we start listening for messages
-        self._recorded_channel_cache[channel_id] = (recording_until, combat_id)
+        if (insert_if_not_exist
+                or ((cache_entry := self._recorded_channel_cache.get(channel_id)) is not None
+                    and cache_entry[0] >= now)):
+            self._recorded_channel_cache[channel_id] = (recording_until, combat_id)
+            log.debug(
+                f"{channel_id}: recording_until updated in cache to {recording_until!r} "
+                f"(cache size: {len(self._recorded_channel_cache)})"
+            )
         # set the channel as recorded in redis so we don't have to do a mongo roundtrip to check
         await self.bot.rdb.set(
             f"cog.initiative.upenn_nlp.{guild_id}.{channel_id}.recorded_combat_id",
             combat_id,
-            ex=record_duration
-        )
-        log.debug(
-            f"{channel_id}: recording_until updated to {recording_until!r} "
-            f"(cache size: {len(self._recorded_channel_cache)})"
+            ex=record_duration,
+            xx=not insert_if_not_exist
         )
         return recording_until
 

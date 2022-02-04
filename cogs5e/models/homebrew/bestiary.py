@@ -264,11 +264,14 @@ async def parse_critterdb_response(resp, sha256_hash):
 # critterdb -> bestiary helpers
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(?:(?P<simple>(.*?)\|([+-]?\d*)\|(.*?))|'
                                        r'(?P<freeform>.*?))</avrae>', re.IGNORECASE | re.DOTALL)
-ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
-                       r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]??'
-                       r'(?:in melee, or [+-]?\d+ \((.+?)\) (\w+) damage at range[,.]?)?'
-                       r'(?: or [+-]?\d+ \((.+?)\) (\w+) damage .*?[.,]?)?'
-                       r'(?: (?:plus|and) [+-]?\d+ \((.+?)\) (\w+) damage.)?', re.IGNORECASE)
+ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? (?P<attackBonus>[+-]?\d+) to hit, .*?(?:<i>)?'
+                       r'Hit:(?:</i>)? [+-]?(?:\d+ \((?P<damageDiceBase>.+?)\)|(?P<damageIntBase>\d+)) '
+                       r'(?P<damageTypeBase>[aA-zZ ]+) damage[., ]??(?: in melee[.,]?? or [+-]?(?:\d+ '
+                       r'\((?P<damageRangedDice>.+?)\)|(?P<damageRangedInt>\d+)) (?P<damageTypeRanged>[aA-zZ ]+) '
+                       r'damage at range[,.]?)?(?:,? or [+-]?(?:\d+ \((?P<damageDiceVers>.+?)\)|(?P<damageIntVers>\d+))'
+                       r' (?P<damageTypeVers>[aA-zZ ]+) damage if used with two hands to make a melee attack)?'
+                       r'(?:,? (?:plus|and) [+-]?(?:\d+ \((?P<damageBonusDice>.+?)\)|(?P<damageBonusInt>\d+)) '
+                       r'(?P<damageTypeBonus>[aA-zZ ]+) damage)?', re.IGNORECASE)
 JUST_DAMAGE_RE = re.compile(r'[+-]?\d+ \((.+?)\) (\w+) damage', re.IGNORECASE)
 
 
@@ -401,32 +404,42 @@ def parse_critterdb_traits(data, key):
                 # else: empty override, so skip this attack.
         elif raw_atks:
             for atk in raw_atks:
-                if atk.group(6) and atk.group(7):  # versatile
-                    damage = f"{atk.group(6)}[{atk.group(7)}]"
-                    if atk.group(8) and atk.group(8):  # bonus damage
-                        damage += f"+{atk.group(8)}[{atk.group(9)}]"
+                attack_bonus = atk.group('attackBonus').lstrip('+')
+
+                # Bonus damage
+                bonus = ""
+                if (bonus_damage_type := atk.group('damageTypeBonus')) and \
+                        (bonus_damage := atk.group('damageBonusInt') or atk.group('damageBonusDice')):
+                    bonus = f" + {bonus_damage} [{bonus_damage_type}]"
+
+                # Versatile Attacks
+                if (vers_damage_type := atk.group('damageTypeVers')) and \
+                        (verse_damage := atk.group('damageIntVers') or atk.group('damageDiceVers')):
+                    damage = f"{verse_damage} [{vers_damage_type}]" + bonus
                     attacks.append(Attack.from_dict({
                         'name': f"2 Handed {name}",
-                        'attackBonus': atk.group(1).lstrip('+'),
+                        'attackBonus': attack_bonus,
                         'damage': damage,
                         'details': desc
                     }))
-                if atk.group(4) and atk.group(5):  # ranged
-                    damage = f"{atk.group(4)}[{atk.group(5)}]"
-                    if atk.group(8) and atk.group(8):  # bonus damage
-                        damage += f"+{atk.group(8)}[{atk.group(9)}]"
+
+                # Ranged Attacks
+                if (ranged_damage_type := atk.group('damageTypeRanged')) and \
+                        (ranged_damage := atk.group('damageRangedInt') or atk.group('damageRangedDice')):  # ranged
+                    damage = f"{ranged_damage}[{ranged_damage_type}]" + bonus
                     attacks.append(Attack.from_dict({
                         'name': f"Ranged {name}",
-                        'attackBonus': atk.group(1).lstrip('+'),
+                        'attackBonus': attack_bonus,
                         'damage': damage,
                         'details': desc
                     }))
-                damage = f"{atk.group(2)}[{atk.group(3)}]"
-                if atk.group(8) and atk.group(9):  # bonus damage
-                    damage += f"+{atk.group(8)}[{atk.group(9)}]"
+
+                # Base Attack
+                base_damage = atk.group('damageIntBase') or atk.group('damageDiceBase')
+                damage = f"{base_damage} [{atk.group('damageTypeBase')}]" + bonus
                 attacks.append(Attack.from_dict({
                     'name': name,
-                    'attackBonus': atk.group(1).lstrip('+'),
+                    'attackBonus': attack_bonus,
                     'damage': damage,
                     'details': desc
                 }))

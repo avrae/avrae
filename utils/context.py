@@ -3,8 +3,8 @@ import logging
 import discord
 from discord.ext.commands import Context
 
+from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
-from cogs5e.models.initiative import Combat
 from utils.settings import ServerSettings
 
 _sentinel = object()

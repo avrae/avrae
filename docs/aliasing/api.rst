@@ -918,6 +918,10 @@ SimpleCombat
         The :class:`~aliasing.api.combat.SimpleCombatant` representing the active character in combat, or ``None``
         if the character is not in the combat.
 
+    .. attribute:: name
+
+        The name of the combat (:class:`str`), or ``None`` if no custom name is set.
+
     .. attribute:: round_num
 
         An :class:`int` representing the round number of the combat.

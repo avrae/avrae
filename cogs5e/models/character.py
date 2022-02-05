@@ -52,7 +52,8 @@ class Character(StatBlock):
             else:
                 options_v2 = CharacterSettings()
         if kwargs:
-            log.warning(f"Unused kwargs: {kwargs}")
+            log.debug(f"Unused kwargs: {kwargs}")
+
         # sheet metadata
         self._owner = owner
         self._upstream = upstream

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 import d20
 
-import cogs5e.models.initiative
+import cogs5e.initiative
 import cogs5e.models.sheet.statblock
 import gamedata
 
@@ -94,8 +94,8 @@ class TempHPResult(EffectResult):
 
 @dataclass(frozen=True)
 class IEffectResult(EffectResult):
-    effect: 'cogs5e.models.initiative.Effect'
-    conc_conflict: typing.List['cogs5e.models.initiative.Effect']
+    effect: 'cogs5e.initiative.Effect'
+    conc_conflict: typing.List['cogs5e.initiative.Effect']
 
 
 @dataclass(frozen=True)

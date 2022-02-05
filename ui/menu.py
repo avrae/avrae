@@ -34,7 +34,10 @@ class MenuBase(disnake.ui.View):
     async def on_timeout(self):
         if self.message is None:
             return
-        await self.message.edit(view=None)
+        try:
+            await self.message.edit(view=None)
+        except disnake.HTTPException:
+            pass
 
     # ==== content ====
     async def get_content(self) -> Mapping:

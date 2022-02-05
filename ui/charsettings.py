@@ -1,5 +1,6 @@
 import abc
 import asyncio
+from contextlib import suppress
 from typing import TYPE_CHECKING, TypeVar
 
 import disnake
@@ -46,7 +47,10 @@ class CharacterSettingsMenuBase(MenuBase, abc.ABC):
         # ddb sheets: if either of the flags are enabled
         elif self.character.sheet_type == 'beyond':
             ddb_user = await self.bot.ddb.get_ddb_user(self, self.owner.id)
-            ddb_user_ld = ddb_user.to_ld_dict()
+            if ddb_user is None:
+                ddb_user_ld = {"key": str(self.owner.id), "anonymous": True}
+            else:
+                ddb_user_ld = ddb_user.to_ld_dict()
             outbound_flag = await self.bot.ldclient.variation(
                 'cog.sheetmanager.sync.send.enabled',
                 ddb_user_ld,
@@ -148,21 +152,21 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
         try:
             input_msg: disnake.Message = await self.bot.wait_for(
                 'message', timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel == interaction.channel
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id
             )
             color_val = pydantic.color.Color(input_msg.content)
             r, g, b = color_val.as_rgb_tuple(alpha=False)
             self.settings.color = (r << 16) + (g << 8) + b
-            await input_msg.delete()
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
         except (ValueError, asyncio.TimeoutError, pydantic.ValidationError):
             await interaction.send("No valid color found. Press `Select Color` to try again.", ephemeral=True)
-        except disnake.HTTPException:
-            pass
+        else:
+            await self.commit_settings()
+            await interaction.send("Your embed color has been updated.", ephemeral=True)
         finally:
             button.disabled = False
-            await self.commit_settings()
             await self.refresh_content(interaction)
-            await interaction.send("Your embed color has been updated.", ephemeral=True)
 
     @disnake.ui.button(label='Reset Color', style=disnake.ButtonStyle.danger)
     async def reset_color(self, _: disnake.ui.Button, interaction: disnake.Interaction):
@@ -298,11 +302,14 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
                   f"will be treated as a 10 if it rolls 9 or lower.*",
             inline=False
         )
+        sr_slot_note = ""
+        if self.character.spellbook.max_pact_slots is not None:
+            sr_slot_note = " Note that your pact slots will reset on a short rest even if this setting is disabled."
         embed.add_field(
             name="Reset All Spell Slots on Short Rest",
             value=f"**{self.settings.srslots}**\n"
                   f"*If this is enabled, all of your spell slots (including non-pact slots) will reset on a short "
-                  f"rest. Note that pact slots will reset on a short rest even if this setting is disabled.*",
+                  f"rest.{sr_slot_note}*",
             inline=False
         )
         return {"embed": embed}

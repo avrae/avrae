@@ -31,15 +31,16 @@ class CharacterSettings(SettingsBaseModel):
     def from_old_csettings(cls, d):
         """Returns a new CharacterSettings instance with all default options, updated by legacy csettings options."""
         # for each key, get it from old or fall back to class default
+        old_settings = d.get('options', {})
         return cls(
-            color=d.get('color', None),
-            embed_image=d.get('embedimage', True),
-            crit_on=d.get('criton', 20),
-            extra_crit_dice=d.get('critdice', 0),
-            ignore_crit=d.get('ignorecrit', False),
-            reroll=d.get('reroll', None),
-            talent=d.get('talent', False),
-            srslots=d.get('srslots', False)
+            color=old_settings.get('color', None),
+            embed_image=old_settings.get('embedimage') or True,
+            crit_on=old_settings.get('criton') or 20,
+            extra_crit_dice=old_settings.get('critdice') or 0,
+            ignore_crit=old_settings.get('ignorecrit') or False,
+            reroll=old_settings.get('reroll', None),
+            talent=old_settings.get('talent') or False,
+            srslots=old_settings.get('srslots') or False
         )
 
     async def commit(self, mdb, character):
@@ -126,16 +127,26 @@ class CSetting:  # character settings
 
 CHARACTER_SETTINGS = {
     "color": CSetting("color", "color", default="random", display_func=lambda val: f"#{val:06X}"),
-    "criton": CSetting("crit_on", "number", description="crit range", default=20,
-                       display_func=lambda val: f"{val}-20"),
+    "criton": CSetting(
+        "crit_on", "number", description="crit range", default=20,
+        display_func=lambda val: f"{val}-20"
+    ),
     "reroll": CSetting("reroll", "number"),
-    "srslots": CSetting("srslots", "boolean", description="short rest slots", default='disabled',
-                        display_func=lambda val: 'enabled' if val else 'disabled'),
-    "embedimage": CSetting("embed_image", "boolean", description="embed image", default='disabled',
-                           display_func=lambda val: 'enabled' if val else 'disabled'),
+    "srslots": CSetting(
+        "srslots", "boolean", description="short rest slots", default='disabled',
+        display_func=lambda val: 'enabled' if val else 'disabled'
+    ),
+    "embedimage": CSetting(
+        "embed_image", "boolean", description="embed image", default='disabled',
+        display_func=lambda val: 'enabled' if val else 'disabled'
+    ),
     "critdice": CSetting("extra_crit_dice", "number", description="extra crit dice", default=0),
-    "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
-                       display_func=lambda val: 'enabled' if val else 'disabled'),
-    "ignorecrit": CSetting("ignore_crit", "boolean", description="ignore crits", default='disabled',
-                           display_func=lambda val: 'enabled' if val else 'disabled')
+    "talent": CSetting(
+        "talent", "boolean", description="reliable talent", default='disabled',
+        display_func=lambda val: 'enabled' if val else 'disabled'
+    ),
+    "ignorecrit": CSetting(
+        "ignore_crit", "boolean", description="ignore crits", default='disabled',
+        display_func=lambda val: 'enabled' if val else 'disabled'
+    )
 }

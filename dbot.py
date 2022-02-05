@@ -32,7 +32,7 @@ from utils.redisIO import RedisIO
 # -----COGS-----
 COGS = (
     "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
-    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogs5e.gamelog",
+    "cogs5e.gametrack", "cogs5e.initiative", "cogs5e.sheetManager", "cogs5e.gamelog",
     "cogsmisc.customization", "cogsmisc.core",
     "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils", "cogsmisc.tutorials"
 )

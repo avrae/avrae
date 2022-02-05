@@ -7,8 +7,8 @@ import discord
 import gamedata.lookuputils
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException, InvalidArgument
-from cogs5e.models.initiative.effect import Effect
-from cogs5e.models.initiative.types import BaseCombatant
+from cogs5e.initiative.effect import Effect
+from cogs5e.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import confirm, maybe_http_url, smart_trim, verbose_stat
 from .mixins import AutomatibleMixin, DescribableMixin
@@ -100,8 +100,9 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             if 'round' in unit:
                 return num
             elif 'minute' in unit:
-                if num == 1:  # anything over 1 minute can be indefinite, really
-                    return 10
+                return 10 * num
+            elif 'hour' in unit:
+                return 600 * num
         return -1
 
     def to_dicecloud(self):

@@ -365,9 +365,12 @@ class SheetManager(commands.Cog):
         result = await char.set_active(ctx)
         await try_delete(ctx.message)
         if result.did_unset_server_active:
-            await ctx.send(f"Active character changed to {char.name}. Your server active character has been unset.")
+            await ctx.send(
+                f"Active character changed to {char.name}. Your server active character has been unset.",
+                delete_after=30
+            )
         else:
-            await ctx.send(f"Active character changed to {char.name}.")
+            await ctx.send(f"Active character changed to {char.name}.", delete_after=15)
 
     @character.command(name='server')
     @commands.guild_only()
@@ -517,7 +520,12 @@ class SheetManager(commands.Cog):
 
     @commands.command()
     async def csettings(self, ctx, *args):
-        """Updates settings for the currently active character."""
+        """
+        Opens the Character Settings menu.
+
+        In this menu, you can change your character's cosmetic and gameplay settings, such as their embed color,
+        crit range, extra crit dice, and more.
+        """
         char = await ctx.get_character()
 
         if not args:
@@ -695,6 +703,13 @@ async def send_ddb_ctas(ctx, character):
         ld_dict = {"key": str(ctx.author.id), "anonymous": True}
     gamelog_flag = await ctx.bot.ldclient.variation('cog.gamelog.cta.enabled', ld_dict, False)
 
+    # get server settings for whether to pull up campaign settings
+    if ctx.guild is not None:
+        guild_settings = await ctx.get_server_settings()
+        show_campaign_cta = guild_settings.show_campaign_cta
+    else:
+        show_campaign_cta = False
+
     # has the user seen this cta within the last 7d?
     if await ctx.bot.rdb.get(f"cog.sheetmanager.cta.seen.{ctx.author.id}"):
         return
@@ -713,7 +728,7 @@ async def send_ddb_ctas(ctx, character):
             inline=False
         )
     # game log
-    if character.ddb_campaign_id and gamelog_flag:
+    if character.ddb_campaign_id and gamelog_flag and show_campaign_cta:
         try:
             await CampaignLink.from_id(ctx.bot.mdb, character.ddb_campaign_id)
         except NoCampaignLink:
@@ -721,7 +736,8 @@ async def send_ddb_ctas(ctx, character):
                 name="Link Your D&D Beyond Campaign",
                 value=f"Sync rolls between a Discord channel and your D&D Beyond character sheet by linking your "
                       f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
-                      f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.",
+                      f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.\n"
+                      f"This message can be disabled in `{ctx.prefix}server_settings`.",
                 inline=False
             )
 

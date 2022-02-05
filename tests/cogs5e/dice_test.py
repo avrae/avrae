@@ -57,22 +57,22 @@ async def test_mc(avrae, dhttp):
     dhttp.clear()
 
     avrae.message("!mc kobold acro")
+    await dhttp.receive_delete()
     await dhttp.receive_message(
         embed=discord.Embed(
             title="A Kobold makes an Acrobatics check!",
             description=D20_PATTERN
         )
     )
-    await dhttp.receive_delete()
 
     avrae.message("!mc kobold acro -h")
+    await dhttp.receive_delete()
     await dhttp.receive_message(
         embed=discord.Embed(
             title="An unknown creature makes an Acrobatics check!",
             description=D20_PATTERN
         )
     )
-    await dhttp.receive_delete()
 
 
 @requires_data()
@@ -80,22 +80,22 @@ async def test_ms(avrae, dhttp):
     dhttp.clear()
 
     avrae.message("!ms kobold dex")
+    await dhttp.receive_delete()
     await dhttp.receive_message(
         embed=discord.Embed(
             title="A Kobold makes a Dexterity Save!",
             description=D20_PATTERN
         )
     )
-    await dhttp.receive_delete()
 
     avrae.message("!ms kobold dex -h")
+    await dhttp.receive_delete()
     await dhttp.receive_message(
         embed=discord.Embed(
             title="An unknown creature makes a Dexterity Save!",
             description=D20_PATTERN
         )
     )
-    await dhttp.receive_delete()
 
 
 @requires_data()
@@ -152,6 +152,26 @@ async def test_inline_rolling_enabled(avrae, dhttp, mock_ldclient):
 
             avrae.message("one two [[1d20]] three four five")
             await dhttp.receive_message(rf'one two \({D20_PATTERN}\) three four\.\.\.')
+
+
+async def test_inline_rolling_character(avrae, dhttp, mock_ldclient, character):
+    async with server_settings(avrae, inline_enabled=InlineRollingType.ENABLED):
+        with mock_ldclient.flags({'cog.dice.inline_rolling.enabled': True}):
+            avrae.message("[[1d20]]")
+            await dhttp.drain()  # clear any 1st time interactions
+
+            # checks/saves
+            avrae.message("[[c:arcana]]")
+            await dhttp.receive_message(rf'\(Arcana Check: {D20_PATTERN}\)')
+
+            avrae.message("[[s:dex]]")
+            await dhttp.receive_message(rf'\(Dexterity Save: {D20_PATTERN}\)')
+
+            # invalid
+            avrae.message("[[c:foobar]]")
+            await dhttp.receive_message('(`foobar` is not a valid skill.)', regex=False)
+            avrae.message("[[s:foobar]]")
+            await dhttp.receive_message('(`foobar` is not a valid save.)', regex=False)
 
 
 async def test_roll(avrae, dhttp):

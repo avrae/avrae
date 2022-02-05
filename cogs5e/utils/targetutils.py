@@ -1,7 +1,6 @@
+from cogs5e.initiative import CombatNotFound, CombatantGroup
 from cogs5e.models.character import Character
 from cogs5e.models.errors import InvalidArgument, SelectionException
-from cogs5e.models.initiative.errors import CombatNotFound
-from cogs5e.models.initiative.group import CombatantGroup
 from utils.argparser import argparse
 
 

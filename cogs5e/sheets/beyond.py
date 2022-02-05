@@ -169,7 +169,9 @@ class BeyondSheetParser(SheetLoaderABC):
 
         # ability skills (base strength, dex, etc checks)
         for stat_key, skill in zip(constants.STAT_ABBREVIATIONS, constants.STAT_NAMES):
-            out[skill] = Skill(self.character_data['stats'][stat_key]['modifier'])
+            stat_obj = self.character_data['stats'][stat_key]
+            prof_type = {1: 0, 2: 0.5, 3: 1, 4: 2}.get(stat_obj['modifierProficiency'], 0)
+            out[skill] = Skill(stat_obj['modifier'], prof_type)
 
         return Skills(out)
 

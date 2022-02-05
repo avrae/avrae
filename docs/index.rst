@@ -12,6 +12,7 @@ Welcome to Avrae's documentation!
    cheatsheets/get_started
    cheatsheets/dm_combat
    cheatsheets/pc_combat
+   cheatsheets/inline_rolling
 
 .. toctree::
    :maxdepth: 3

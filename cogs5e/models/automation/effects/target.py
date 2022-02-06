@@ -20,7 +20,9 @@ class Target(Effect):
     def to_dict(self):
         out = super().to_dict()
         effects = [e.to_dict() for e in self.effects]
-        out.update({"type": "target", "target": self.target, "effects": effects, "sorting": self.sorting})
+        out.update({"type": "target", "target": self.target, "effects": effects})
+        if self.sorting:
+            out['sorting'] = self.sorting
         return out
 
     def run(self, autoctx):

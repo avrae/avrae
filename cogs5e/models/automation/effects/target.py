@@ -2,13 +2,15 @@ from . import Effect
 from .. import utils
 from ..results import TargetResult
 from ..runtime import AutomationTarget
+from cogs5e.models.sheet.statblock import StatBlock
 
 
 class Target(Effect):
-    def __init__(self, target, effects: list, **kwargs):
+    def __init__(self, target, effects: list, sorting=None, **kwargs):
         super().__init__("target", **kwargs)
         self.target = target
         self.effects = effects
+        self.sorting = sorting
 
     @classmethod
     def from_data(cls, data):
@@ -18,7 +20,7 @@ class Target(Effect):
     def to_dict(self):
         out = super().to_dict()
         effects = [e.to_dict() for e in self.effects]
-        out.update({"type": "target", "target": self.target, "effects": effects})
+        out.update({"type": "target", "target": self.target, "effects": effects, "sorting": self.sorting})
         return out
 
     def run(self, autoctx):
@@ -27,8 +29,13 @@ class Target(Effect):
         previous_target = autoctx.target
         result_pairs = []
 
+        if self.sorting == 'ascending_hp':
+            targets = sorted(autoctx.targets, key = lambda t: (t.hp or 0) if isinstance(t, StatBlock) else 0)
+        else:
+            targets = autoctx.targets
+
         if self.target in ('all', 'each'):
-            for target in autoctx.targets:
+            for target in targets:
                 autoctx.target = AutomationTarget(target)
                 autoctx.metavars['target'] = utils.maybe_alias_statblock(target)  # #1335
                 for iteration_result in self.run_effects(autoctx):
@@ -41,7 +48,7 @@ class Target(Effect):
                 result_pairs.append((target, iteration_result))
         else:
             try:
-                target = autoctx.targets[self.target - 1]
+                target = targets[self.target - 1]
                 autoctx.target = AutomationTarget(target)
                 autoctx.metavars['target'] = utils.maybe_alias_statblock(target)  # #1335
             except IndexError:

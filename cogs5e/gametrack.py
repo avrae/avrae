@@ -677,7 +677,7 @@ class GameTrack(commands.Cog):
 
         embed = result.embed
         embed.colour = char.get_color()
-        if 'thumb' not in args:
+        if 'thumb' not in args and char.options.embed_image:
             embed.set_thumbnail(url=char.image)
 
         # save changes: combat state, spell slot usage

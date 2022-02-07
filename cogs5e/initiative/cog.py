@@ -104,7 +104,10 @@ class InitTracker(commands.Cog):
             f"Otherwise: `{ctx.prefix}init add <modifier> <name>`"
         )
         if guild_settings.upenn_nlp_opt_in:
-            out = f"{out}\nMessages sent in this channel during combat will be recorded."
+            out = (
+                f"{out}\nMessages sent in this channel during combat will be recorded for research purposes. "
+                f"For more information, see `{ctx.clean_prefix}init nlp`."
+            )
             combat.nlp_record_session_id = create_nlp_record_session_id()
             await self.nlp.on_combat_start(combat)
 

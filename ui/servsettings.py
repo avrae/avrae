@@ -334,7 +334,7 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Contribute Message Data to Natural Language AI Training",
             value=f"**{self.settings.upenn_nlp_opt_in}**\n"
-                  f"*If this is enabled, the contents of messages, anonymised user IDs, character names, and snapshots "
+                  f"*If this is enabled, the contents of messages, usernames, character names, and snapshots "
                   f"of a character's resources will be recorded in channels **with an active combat.***\n"
                   f"*This data will be used in a project to make advances in interactive fiction and text generation "
                   f"using artificial intelligence at the University of Pennsylvania.*\n"

@@ -16,7 +16,7 @@
 
 ### Discord setup
 
-- `User Settings` (cog icon) > `Appearance`, enable "Developer Mode".
+- `User Settings` (cog icon) > `Advanced`, enable "Developer Mode".
 - Right-click your name in the user list and `Copy ID`, this is your `DISCORD_OWNER_USER_ID` below.
 - Create a server for yourself to test with: big `+` icon, `Create a server`.
 

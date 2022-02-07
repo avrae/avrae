@@ -4,13 +4,12 @@ from ..results import TargetResult
 from ..runtime import AutomationTarget
 from cogs5e.models.sheet.statblock import StatBlock
 
-
 class Target(Effect):
-    def __init__(self, target, effects: list, sorting=None, **kwargs):
+    def __init__(self, target, effects: list, sort_by=None, **kwargs):
         super().__init__("target", **kwargs)
         self.target = target
         self.effects = effects
-        self.sorting = sorting
+        self.sort_by = sort_by
 
     @classmethod
     def from_data(cls, data):
@@ -21,8 +20,8 @@ class Target(Effect):
         out = super().to_dict()
         effects = [e.to_dict() for e in self.effects]
         out.update({"type": "target", "target": self.target, "effects": effects})
-        if self.sorting:
-            out['sorting'] = self.sorting
+        if self.sort_by:
+            out['sort_by'] = self.sort_by
         return out
 
     def run(self, autoctx):
@@ -31,10 +30,20 @@ class Target(Effect):
         previous_target = autoctx.target
         result_pairs = []
 
-        if self.sorting == 'ascending_hp':
-            targets = sorted(autoctx.targets, key = lambda t: (t.hp or 0) if isinstance(t, StatBlock) else 0)
-        else:
-            targets = autoctx.targets
+        targets = autoctx.targets
+        if isinstance(self.sort_by, str):
+            if self.sort_by.endswith('desc'):
+                descending = True
+                sort_last = float('-inf')
+            else:
+                descending = False
+                sort_last = float('inf')
+
+            if self.sort_by in ('hp_asc', 'hp_desc'):
+                targets = sorted(
+                    autoctx.targets, reverse=descending,
+                    key=lambda t: (t.hp or sort_last) if isinstance(t, StatBlock) else sort_last
+                )
 
         if self.target in ('all', 'each'):
             for target in targets:

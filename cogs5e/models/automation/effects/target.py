@@ -2,7 +2,6 @@ from . import Effect
 from .. import utils
 from ..results import TargetResult
 from ..runtime import AutomationTarget
-from cogs5e.models.sheet.statblock import StatBlock
 
 class Target(Effect):
     def __init__(self, target, effects: list, sort_by=None, **kwargs):
@@ -30,20 +29,19 @@ class Target(Effect):
         previous_target = autoctx.target
         result_pairs = []
 
-        targets = autoctx.targets
-        if isinstance(self.sort_by, str):
-            if self.sort_by.endswith('desc'):
-                descending = True
-                sort_last = float('-inf')
-            else:
-                descending = False
-                sort_last = float('inf')
-
-            if self.sort_by in ('hp_asc', 'hp_desc'):
-                targets = sorted(
-                    autoctx.targets, reverse=descending,
-                    key=lambda t: (t.hp or sort_last) if isinstance(t, StatBlock) else sort_last
-                )
+        if self.sort_by == 'hp_asc':
+            targets = sorted(
+                autoctx.targets, 
+                key=lambda t: target_hp_or_default(t, float('inf'))
+            )
+        elif self.sort_by == 'hp_desc':
+            targets = sorted(
+                autoctx.targets,
+                key=lambda t: target_hp_or_default(t, float('-inf')),
+                reverse=True
+            )
+        else:
+            targets = autoctx.targets
 
         if self.target in ('all', 'each'):
             for target in targets:

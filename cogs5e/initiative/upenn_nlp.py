@@ -11,13 +11,16 @@ import datetime
 import logging
 import re
 import time
-from typing import Any, Iterable, List, MutableMapping, Optional, Tuple
+from typing import Any, List, MutableMapping, Optional, Sequence, Tuple
 
+import botocore.exceptions
 import cachetools
 import disnake
-from pydantic import BaseModel
+from aiobotocore import get_session
+from pydantic import BaseModel, Field
 
 import utils.context
+from utils import config
 from .combat import Combat
 
 ONE_MONTH_SECS = 2592000
@@ -27,7 +30,9 @@ log = logging.getLogger(__name__)
 
 # ==== models ====
 class RecordedEvent(BaseModel):
+    combat_id: str
     event_type: str
+    timestamp: float = Field(default_factory=time.time)
 
 
 class RecordedMessage(RecordedEvent):
@@ -35,17 +40,18 @@ class RecordedMessage(RecordedEvent):
     message_id: int
     author_id: int
     author_name: str
-    created_at: datetime.datetime
+    created_at: float
     content: str
     embeds: List[dict]  # just call disnake.Embed.to_dict() to generate these
 
     @classmethod
-    def from_message(cls, message: disnake.Message):
+    def from_message(cls, combat_id: str, message: disnake.Message):
         return cls(
+            combat_id=combat_id,
             message_id=message.id,
             author_id=message.author.id,
             author_name=message.author.display_name,
-            created_at=message.created_at,
+            created_at=message.created_at.timestamp(),
             content=message.content,
             embeds=[embed.to_dict() for embed in message.embeds]
         )
@@ -60,7 +66,7 @@ class RecordedCommandInvocation(RecordedMessage):
     targets: Optional[List[dict]]
 
     @classmethod
-    def from_ctx(cls, ctx: utils.context.AvraeContext):
+    def from_ctx(cls, combat_id: str, ctx: utils.context.AvraeContext):
         message = ctx.message
 
         # caster
@@ -76,10 +82,11 @@ class RecordedCommandInvocation(RecordedMessage):
             targets = [t.to_dict() for t in ctx.nlp_targets]
 
         return cls(
+            combat_id=combat_id,
             message_id=message.id,
             author_id=message.author.id,
             author_name=message.author.display_name,
-            created_at=message.created_at,
+            created_at=message.created_at.timestamp(),
             content=message.content,
             embeds=[embed.to_dict() for embed in message.embeds],
 
@@ -99,6 +106,7 @@ class RecordedCombatState(RecordedEvent):
     @classmethod
     def from_combat(cls, combat: Combat):
         return cls(
+            combat_id=combat.nlp_record_session_id,
             data=combat.to_dict(),
             human_readable=combat.get_summary(private=True)
         )
@@ -114,6 +122,21 @@ class NLPRecorder:
 
     def __init__(self, bot):
         self.bot = bot
+        self._kinesis_firehose = None
+
+    async def initialize(self):
+        if config.NLP_KINESIS_DELIVERY_STREAM is None:
+            log.warning("'NLP_KINESIS_DELIVERY_STREAM' env var is not set - nlp module will not record any events")
+            return
+        boto_session = get_session()
+        self._kinesis_firehose = await boto_session.create_client(
+            'firehose',
+            region_name=config.DYNAMO_REGION
+        ).__aenter__()
+
+    def close(self):
+        if self._kinesis_firehose is not None:
+            self.bot.loop.create_task(self._kinesis_firehose.__aexit__(None, None, None))
 
     def register_listeners(self):
         self.bot.add_listener(self.on_message)
@@ -148,16 +171,15 @@ class NLPRecorder:
         )
         # record cached messages less than X minutes old for pre-combat context
         await self._record_events(
-            combat.nlp_record_session_id,
             [
-                RecordedMessage.from_message(message)
+                RecordedMessage.from_message(combat_id=combat.nlp_record_session_id, message=message)
                 for message in self.bot.cached_messages
                 if (message.channel.id == int(combat.channel)
                     and message.created_at > disnake.utils.utcnow() - datetime.timedelta(minutes=15))
             ][-25:]
         )
         # record combat start meta event
-        await self._record_event(combat.nlp_record_session_id, RecordedEvent(event_type='combat_start'))
+        await self._record_event(RecordedEvent(combat_id=combat.nlp_record_session_id, event_type='combat_start'))
 
     async def on_guild_message(self, message: disnake.Message):
         """
@@ -165,7 +187,7 @@ class NLPRecorder:
         """
         is_recording, combat_id = await self._recording_info(message.guild.id, message.channel.id)
         if is_recording:
-            await self._record_event(combat_id, RecordedMessage.from_message(message))
+            await self._record_event(RecordedMessage.from_message(combat_id=combat_id, message=message))
 
     async def on_guild_command(self, ctx: utils.context.AvraeContext):
         """
@@ -174,7 +196,7 @@ class NLPRecorder:
         """
         is_recording, combat_id = await self._recording_info(ctx.guild.id, ctx.channel.id)
         if is_recording:
-            await self._record_event(combat_id, RecordedCommandInvocation.from_ctx(ctx))
+            await self._record_event(RecordedCommandInvocation.from_ctx(combat_id=combat_id, ctx=ctx))
 
     async def on_combat_commit(self, combat: Combat):
         """
@@ -187,7 +209,7 @@ class NLPRecorder:
             combat_id=combat.nlp_record_session_id
         )
         # record a snapshot of the combat's human-readable and machine-readable state
-        await self._record_event(combat.nlp_record_session_id, RecordedCombatState.from_combat(combat))
+        await self._record_event(RecordedCombatState.from_combat(combat))
 
     async def on_combat_end(self, combat: Combat):
         """
@@ -201,7 +223,7 @@ class NLPRecorder:
             record_duration=120
         )
         # record a combat end meta marker
-        await self._record_event(combat.nlp_record_session_id, RecordedEvent(event_type='combat_end'))
+        await self._record_event(RecordedEvent(combat_id=combat.nlp_record_session_id, event_type='combat_end'))
 
     # ==== management ====
     async def get_recording_channels(self, guild_id: int):
@@ -302,29 +324,67 @@ class NLPRecorder:
         )
         return recording_until
 
-    async def _record_event(self, combat_id: str, event: RecordedEvent):
+    async def _record_event(self, event: RecordedEvent):
         """Saves an event to the recording for the given combat ID."""
-        log.debug(f"saving 1 event to {combat_id=} of type {event.event_type!r}")
-        await self.bot.mdb.nlp_recordings.insert_one(
-            {
-                "combat_id": combat_id,
-                "timestamp": datetime.datetime.now(),
-                **event.dict()
-            }
-        )
-
-    async def _record_events(self, combat_id: str, events: Iterable[RecordedEvent]):
-        """Saves many events to the recording for the given combat ID."""
-        now = datetime.datetime.now()
-        documents = [
-            {
-                "combat_id": combat_id,
-                "timestamp": now,
-                **event.dict()
-            }
-            for event in events
-        ]
-        if not documents:
+        if self._kinesis_firehose is None:
+            log.warning("skipping event because kinesis firehose is not initialized")
             return
-        log.debug(f"saving {len(documents)} events to {combat_id=}")
-        await self.bot.mdb.nlp_recordings.insert_many(documents)
+
+        log.debug(f"saving 1 event to {event.combat_id=} of type {event.event_type!r}")
+        try:
+            response = await self._kinesis_firehose.put_record(
+                DeliveryStreamName=config.NLP_KINESIS_DELIVERY_STREAM,
+                Record={
+                    'Data': event.json().encode()
+                }
+            )
+        except botocore.exceptions.BotoCoreError:
+            log.exception(f"Failed to record NLP event to {event.combat_id=} of type {event.event_type!r}")
+        else:
+            log.debug(str(response))
+
+    async def _record_events(self, events: Sequence[RecordedEvent]):
+        """Saves many events to the recording for the given combat ID."""
+        if not events:
+            return
+        if self._kinesis_firehose is None:
+            log.warning(f"skipping {len(events)} events because kinesis firehose is not initialized")
+            return
+
+        log.debug(f"saving {len(events)} events to kinesis")
+        try:
+            response = await self._kinesis_firehose.put_record_batch(
+                DeliveryStreamName=config.NLP_KINESIS_DELIVERY_STREAM,
+                Records=[
+                    {'Data': event.json().encode()}
+                    for event in events
+                ]
+            )
+        except botocore.exceptions.BotoCoreError:
+            log.exception(f"Failed to record {len(events)} NLP events")
+        else:
+            log.debug(str(response))
+            if failed_count := response.get("FailedPutCount"):
+                log.error(f"Failed to record {failed_count} NLP events; response={response!r}")
+
+    # ==== docdb ingest impls ====
+    # async def _record_event_docdb(self, combat_id: str, event: RecordedEvent):
+    #     """Saves an event to the recording for the given combat ID."""
+    #     log.debug(f"saving 1 event to {combat_id=} of type {event.event_type!r}")
+    #     await self.bot.mdb.nlp_recordings.insert_one(event.dict())
+
+    # async def _record_events_docdb(self, combat_id: str, events: Iterable[RecordedEvent]):
+    #     """Saves many events to the recording for the given combat ID."""
+    #     now = datetime.datetime.now()
+    #     documents = [
+    #         {
+    #             "combat_id": combat_id,
+    #             "timestamp": now,
+    #             **event.dict()
+    #         }
+    #         for event in events
+    #     ]
+    #     if not documents:
+    #         return
+    #     log.debug(f"saving {len(documents)} events to {combat_id=}")
+    #     await self.bot.mdb.nlp_recordings.insert_many(documents)

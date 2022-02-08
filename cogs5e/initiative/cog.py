@@ -48,6 +48,7 @@ class InitTracker(commands.Cog):
 
     # ==== special methods ====
     async def cog_load(self):
+        await self.nlp.initialize()
         self.nlp.register_listeners()
 
     async def cog_check(self, ctx):
@@ -60,6 +61,7 @@ class InitTracker(commands.Cog):
 
     def cog_unload(self):
         self.nlp.deregister_listeners()
+        self.nlp.close()
 
     # ==== commands ====
     @commands.group(aliases=['i'], invoke_without_command=True)

@@ -16,7 +16,7 @@ from typing import Any, List, MutableMapping, Optional, Sequence, Tuple
 import botocore.exceptions
 import cachetools
 import disnake
-from aiobotocore import get_session
+from aiobotocore.session import get_session
 from pydantic import BaseModel, Field
 
 import utils.context

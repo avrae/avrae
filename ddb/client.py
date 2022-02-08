@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -8,6 +9,7 @@ from aiobotocore.session import get_session
 from cogsmisc.stats import Stats
 from ddb import auth, character, entitlements, waterdeep
 from ddb.errors import AuthException
+from ddb.utils import update_user_map
 from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, DYNAMO_ENTITLEMENTS_TABLE, DYNAMO_REGION
 
 # dynamo
@@ -128,17 +130,11 @@ class BeyondClient(BeyondClientBase):
             return None
 
         user = auth.BeyondUser.from_jwt(token)
-        await ctx.bot.rdb.jsetex(user_cache_key, user.to_dict(), ttl)
-        await Stats.count_ddb_link(ctx, user_id, user)
-
-        # update the ddb -> discord user mapping
-        await ctx.bot.mdb.ddb_account_map.delete_one({"ddb_id": user.user_id})
-        await ctx.bot.mdb.ddb_account_map.update_one(
-            {"discord_id": user_id},
-            {"$set": {"ddb_id": user.user_id}},
-            upsert=True
+        await asyncio.gather(
+            ctx.bot.rdb.jsetex(user_cache_key, user.to_dict(), ttl),
+            Stats.count_ddb_link(ctx, user_id, user),
+            update_user_map(ctx, ddb_id=user.user_id, discord_id=user_id)
         )
-
         return user
 
     # ==== entitlement helpers ====

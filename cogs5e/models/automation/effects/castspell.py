@@ -7,8 +7,10 @@ from ..results import CastSpellResult
 
 
 class CastSpell(Effect):
-    def __init__(self, id: int, level: int = None, dc: str = None, attackBonus: str = None, castingMod: str = None,
-                 **kwargs):
+    def __init__(
+        self, id: int, level: int = None, dc: str = None, attackBonus: str = None, castingMod: str = None,
+        **kwargs
+    ):
         super().__init__("spell", **kwargs)
         self.id = id
         self.level = level
@@ -18,8 +20,12 @@ class CastSpell(Effect):
 
     def to_dict(self):
         out = super().to_dict()
-        out.update({"id": self.id, "level": self.level, "dc": self.dc, "attackBonus": self.attack_bonus,
-                    "castingMod": self.casting_mod})
+        out.update(
+            {
+                "id": self.id, "level": self.level, "dc": self.dc, "attackBonus": self.attack_bonus,
+                "castingMod": self.casting_mod
+            }
+        )
         return out
 
     async def preflight(self, autoctx):
@@ -72,10 +78,17 @@ class CastSpell(Effect):
             autoctx.evaluator.builtins['spell'] = old_spell_override
             autoctx.spell_level_override = old_level_override
             autoctx.spell = None
-        else:  # copied from Spell.cast
+
+            # display higher level info
+            if cast_level != spell.level and spell.higherlevels:
+                autoctx.effect_queue(f"**At Higher Levels**: {smart_trim(spell.higherlevels)}")
+        else:
+            # copied from Spell.cast
             results = []
             autoctx.queue(smart_trim(spell.description))
             autoctx.push_embed_field(title=spell.name)
+
+            # display higher level info
             if cast_level != spell.level and spell.higherlevels:
                 autoctx.queue(smart_trim(spell.higherlevels))
                 autoctx.push_embed_field(title="At Higher Levels")

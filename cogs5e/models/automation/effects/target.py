@@ -32,12 +32,12 @@ class Target(Effect):
         if self.sort_by == 'hp_asc':
             targets = sorted(
                 autoctx.targets, 
-                key=lambda t: target_hp_or_default(t, float('inf'))
+                key=lambda t: utils.target_hp_or_default(t, float('inf'))
             )
         elif self.sort_by == 'hp_desc':
             targets = sorted(
                 autoctx.targets,
-                key=lambda t: target_hp_or_default(t, float('-inf')),
+                key=lambda t: utils.target_hp_or_default(t, float('-inf')),
                 reverse=True
             )
         else:

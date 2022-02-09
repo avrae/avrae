@@ -46,12 +46,11 @@ async def get_prefix(the_bot, message):
 
 
 class Avrae(commands.AutoShardedBot):
-    def __init__(self, prefix, description=None, testing=False, **options):
-        test_guilds = None if not testing else config.COMMAND_TEST_GUILD_IDS
-
-        super().__init__(prefix, help_command=help_command, description=description, test_guilds=test_guilds,
-                         sync_commands=False, sync_commands_debug=testing, **options)
-        self.testing = testing
+    def __init__(self, prefix, description=None, **options):
+        super().__init__(
+            prefix, help_command=help_command, description=description, test_guilds=config.COMMAND_TEST_GUILD_IDS,
+            sync_commands=False, sync_commands_debug=config.TESTING, **options
+        )
         self.state = "init"
 
         # dbs
@@ -239,7 +238,8 @@ async def on_command_error(ctx, error):
 
     elif isinstance(error, (commands.UserInputError, commands.NoPrivateMessage, ValueError)):
         return await ctx.send(
-            f"Error: {str(error)}\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help.")
+            f"Error: {str(error)}\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help."
+        )
 
     elif isinstance(error, commands.CheckFailure):
         msg = str(error) or "You are not allowed to run this command."
@@ -300,7 +300,8 @@ async def on_command_error(ctx, error):
 
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-        f"Please join <https://support.avrae.io> and let us know about the error!")
+        f"Please join <https://support.avrae.io> and let us know about the error!"
+    )
 
     log.warning("Error caused by message: `{}`".format(ctx.message.content))
     for line in traceback.format_exception(type(error), error, error.__traceback__):
@@ -329,7 +330,9 @@ async def on_command(ctx):
         log.debug(
             "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "
             "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(
-                ctx))
+                ctx
+            )
+        )
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 

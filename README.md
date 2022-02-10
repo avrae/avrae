@@ -161,6 +161,48 @@ The `TESTING` env var, if present, enables/disables the following:
 (venv) $ python dbot.py test
 ```
 
+<details>
+  <summary>VSCode launch.json Template</summary>
+
+  ```json
+    {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "name": "Run Avrae",
+          "type": "python",
+          "request": "launch",
+          "program": "dbot.py",
+          "console": "integratedTerminal",
+          "env": {
+            "DISCORD_BOT_TOKEN":" ",
+            "DISCORD_OWNER_USER_ID": " ",
+            "DICECLOUD_USER": " ",
+            "DICECLOUD_PASS": " ",
+            "DICECLOUD_TOKEN": " ",
+            "MONGO_URL": " ",
+            "REDIS_URL": " ",
+            "ENVIRONMENT": " ",
+            "DDB_AUTH_SECRET": " ",
+            "DYNAMO_REGION": " ",
+            "DYNAMO_ENTITLEMENTS_TABLE": " ",
+            "DDB_AUTH_SERVICE_URL": " ",
+            "AWS_ACCESS_KEY_ID": " ",
+            "AWS_SECRET_ACCESS_KEY": " ",
+            "DDB_AUTH_WATERDEEP_SECRET": " ",
+            "CHARACTER_COMPUTATION_ENDPOINT": " ",
+            "DDB_WATERDEEP_URL": " ",
+            "DDB_GAMELOG_ENDPOINT": " ",
+            "DDB_CHARACTER_SERVICE_URL": " ",
+            "DDB_SCDS_SERVICE_URL": " ",
+            "LAUNCHDARKLY_SDK_KEY": " "
+          }
+        }
+      ]
+    }
+  ```
+</details>
+
 ### Testing
 
 This repo contains a pytest test suite that mocks a number of interactions between Avrae and the Discord API, and runs

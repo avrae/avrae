@@ -94,7 +94,7 @@ To install the dependencies, run:
 
 | Name                             | Description                                                                                                                                                                      | Used For                      | Set By (dev)         | Set By (prod)                     | Required?       |
 |----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|----------------------|-----------------------------------|-----------------|
-| `DISCORD_BOT_TOKEN`              | The bot token used to authenticate to the Discord API.                                                                                                                           | Connecting to the Discord API | you                  | AWS Secrets Manager via Terraform | **yes**         |
+| `DISCORD_BOT_TOKEN`              | The bot token used to authenticate to the Discord API. See "Discord Bot Token", below.                                                                                           | Connecting to the Discord API | you                  | AWS Secrets Manager via Terraform | **yes**         |
 | `TESTING`                        | Whether the bot is running in a dev environment. See "Testing Env Var", below. Also set if `test` arg supplied in CLI.                                                           | Enabling certain debug logs   | you                  | N/A                               | no              |
 | `ENVIRONMENT`                    | The environment the bot is running in. Defaults to `development` if `TESTING` is set, or `production` otherwise.                                                                 | Logs (e.g. Sentry)            | set to `development` | Terraform                         | **yes**         |
 | `GIT_COMMIT_SHA`                 | The commit SHA of the running deploy.                                                                                                                                            | Cluster coordination key      | N/A                  | Docker via GH Actions             | *prod only*     |
@@ -134,6 +134,17 @@ To install the dependencies, run:
 | `DDB_SCDS_SERVICE_URL`           | The base URL for requests to the Simple Character Data Store. Defaults to `https://character-service-scds.dndbeyond.com/v1`.                                                     | Campaign Link                 | 1Password            | Terraform                         | no              |
 | `LAUNCHDARKLY_SDK_KEY`           | The [LaunchDarkly SDK Key](https://docs.launchdarkly.com/sdk/server-side/python).                                                                                                | Feature Flags                 | 1Password            | AWS Secrets Manager via Terraform | *DDB team only* |
 | `DBL_TOKEN`                      | The Discord Bot List API token.                                                                                                                                                  | Updating server count         | N/A                  | AWS Secrets Manager via Terraform | no              |
+
+**Discord Bot Token**
+
+To create a Discord bot user, go to the [Discord Developer Portal](https://discord.com/developers/).
+
+- `New Application`, give it a cool name, `Create`.
+- `Bot` > `Add Bot`.
+- (Optional but recommended): Switch off `Public Bot` so only you can add this bot to servers.
+- Scroll down to `Privileged Gateway Intents`, and enable the switches to the right of `Server Members Intent`
+  and `Message Content Intent`.
+- `Click to Reveal Token`, this is your `DISCORD_BOT_TOKEN`.
 
 **Testing Env Var**
 

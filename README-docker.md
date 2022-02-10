@@ -13,7 +13,7 @@
 ### Dicecloud
 
 - Click Username in top left top open Account page
-- `DICECLOUD_USER` is the login username, which may be the `Email` instead of `Username`
+- `DICECLOUD_USER` is the login username
 - `DICECLOUD_PASS` is your password (recommended to use a dedicated bot account with a random generated password)
 - `DICECLOUD_TOKEN` is the `API KEY` revealed by `SHOW`
 

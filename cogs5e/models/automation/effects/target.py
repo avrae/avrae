@@ -3,12 +3,13 @@ from .. import utils
 from ..results import TargetResult
 from ..runtime import AutomationTarget
 
+
 class Target(Effect):
-    def __init__(self, target, effects: list, sort_by=None, **kwargs):
+    def __init__(self, target, effects: list, sortBy=None, **kwargs):
         super().__init__("target", **kwargs)
         self.target = target
         self.effects = effects
-        self.sort_by = sort_by
+        self.sort_by = sortBy
 
     @classmethod
     def from_data(cls, data):
@@ -20,7 +21,7 @@ class Target(Effect):
         effects = [e.to_dict() for e in self.effects]
         out.update({"type": "target", "target": self.target, "effects": effects})
         if self.sort_by:
-            out['sort_by'] = self.sort_by
+            out['sortBy'] = self.sort_by
         return out
 
     def run(self, autoctx):
@@ -31,7 +32,7 @@ class Target(Effect):
 
         if self.sort_by == 'hp_asc':
             targets = sorted(
-                autoctx.targets, 
+                autoctx.targets,
                 key=lambda t: utils.target_hp_or_default(t, float('inf'))
             )
         elif self.sort_by == 'hp_desc':

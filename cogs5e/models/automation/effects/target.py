@@ -5,10 +5,11 @@ from ..runtime import AutomationTarget
 
 
 class Target(Effect):
-    def __init__(self, target, effects: list, **kwargs):
+    def __init__(self, target, effects: list, sortBy=None, **kwargs):
         super().__init__("target", **kwargs)
         self.target = target
         self.effects = effects
+        self.sort_by = sortBy
 
     @classmethod
     def from_data(cls, data):
@@ -19,6 +20,8 @@ class Target(Effect):
         out = super().to_dict()
         effects = [e.to_dict() for e in self.effects]
         out.update({"type": "target", "target": self.target, "effects": effects})
+        if self.sort_by:
+            out['sortBy'] = self.sort_by
         return out
 
     def run(self, autoctx):
@@ -27,8 +30,22 @@ class Target(Effect):
         previous_target = autoctx.target
         result_pairs = []
 
+        if self.sort_by == 'hp_asc':
+            targets = sorted(
+                autoctx.targets,
+                key=lambda t: utils.target_hp_or_default(t, float('inf'))
+            )
+        elif self.sort_by == 'hp_desc':
+            targets = sorted(
+                autoctx.targets,
+                key=lambda t: utils.target_hp_or_default(t, float('-inf')),
+                reverse=True
+            )
+        else:
+            targets = autoctx.targets
+
         if self.target in ('all', 'each'):
-            for target in autoctx.targets:
+            for target in targets:
                 autoctx.target = AutomationTarget(target)
                 autoctx.metavars['target'] = utils.maybe_alias_statblock(target)  # #1335
                 for iteration_result in self.run_effects(autoctx):
@@ -41,7 +58,7 @@ class Target(Effect):
                 result_pairs.append((target, iteration_result))
         else:
             try:
-                target = autoctx.targets[self.target - 1]
+                target = targets[self.target - 1]
                 autoctx.target = AutomationTarget(target)
                 autoctx.metavars['target'] = utils.maybe_alias_statblock(target)  # #1335
             except IndexError:
@@ -52,8 +69,8 @@ class Target(Effect):
         autoctx.target = previous_target
         autoctx.metavars['target'] = utils.maybe_alias_statblock(previous_target)  # #1335
 
-        targets, results = zip(*result_pairs)  # convenient unzipping :D
-        return TargetResult(targets, results)
+        final_targets, results = zip(*result_pairs)  # convenient unzipping :D
+        return TargetResult(final_targets, results)
 
     def run_effects(self, autoctx):
         args = autoctx.args

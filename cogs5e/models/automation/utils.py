@@ -107,3 +107,11 @@ def stringify_intexpr(evaluator, expr):
         return int(evaluator.eval(str(expr)))
     except (TypeError, ValueError, draconic.DraconicException):
         return float('nan')
+
+
+def target_hp_or_default(target, default):
+    """Returns the target's hp if defined, otherwise default"""
+    if isinstance(target, StatBlock) and target.hp is not None:
+        return target.hp
+    else:
+        return default

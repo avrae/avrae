@@ -69,8 +69,8 @@ class Target(Effect):
         autoctx.target = previous_target
         autoctx.metavars['target'] = utils.maybe_alias_statblock(previous_target)  # #1335
 
-        targets, results = zip(*result_pairs)  # convenient unzipping :D
-        return TargetResult(targets, results)
+        final_targets, results = zip(*result_pairs)  # convenient unzipping :D
+        return TargetResult(final_targets, results)
 
     def run_effects(self, autoctx):
         args = autoctx.args

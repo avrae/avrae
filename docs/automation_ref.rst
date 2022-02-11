@@ -20,6 +20,7 @@ Target
         type: "target";
         target: "all"|"each"|int|"self";
         effects: Effect[];
+        sortBy?: "hp_asc" | "hp_desc";
     }
 
 A Target effect should only show up as a top-level effect.
@@ -35,6 +36,14 @@ It designates what creatures to affect.
 .. attribute:: effects
 
     A list of effects that each targeted creature will be subject to.
+
+.. attribute:: sortBy
+
+    *optional* - Whether to sort the target list. If not given, targets are processed in the order the ``-t`` arguments
+    are seen. This does not affect ``self`` targets.
+
+    - ``hp_asc``: Sorts the targets in order of remaining hit points ascending (lowest HP first, None last).
+    - ``hp_desc``: Sorts the targets in order of remaining hit points descending (highest HP first, None last).
 
 **Variables**
 

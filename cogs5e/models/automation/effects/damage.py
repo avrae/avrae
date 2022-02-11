@@ -94,10 +94,7 @@ class Damage(Effect):
         if in_crit:
             dice_ast = d20.utils.tree_map(utils.crit_mapper, dice_ast)
             if critdice and not autoctx.is_spell:
-                # add X critdice to the leftmost node if it's dice
-                left = d20.utils.leftmost(dice_ast)
-                if isinstance(left, d20.ast.Dice):
-                    left.num += int(critdice)
+                utils.critdice_tree_update(dice_ast, int(critdice))
 
         # -c #
         if in_crit:

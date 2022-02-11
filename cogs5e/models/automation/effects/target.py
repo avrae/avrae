@@ -5,10 +5,11 @@ from ..runtime import AutomationTarget
 
 
 class Target(Effect):
-    def __init__(self, target, effects: list, **kwargs):
+    def __init__(self, target, effects: list, sortBy=None, **kwargs):
         super().__init__("target", **kwargs)
         self.target = target
         self.effects = effects
+        self.sort_by = sortBy
 
     @classmethod
     def from_data(cls, data):
@@ -19,6 +20,8 @@ class Target(Effect):
         out = super().to_dict()
         effects = [e.to_dict() for e in self.effects]
         out.update({"type": "target", "target": self.target, "effects": effects})
+        if self.sort_by:
+            out['sortBy'] = self.sort_by
         return out
 
     def run(self, autoctx):
@@ -26,16 +29,30 @@ class Target(Effect):
         # WEB-038 (.io #121) - this will semantically work correctly, but will make the display really weird
         previous_target = autoctx.target
 
+        if self.sort_by == 'hp_asc':
+            targets = sorted(
+                autoctx.targets,
+                key=lambda t: utils.target_hp_or_default(t, float('inf'))
+            )
+        elif self.sort_by == 'hp_desc':
+            targets = sorted(
+                autoctx.targets,
+                key=lambda t: utils.target_hp_or_default(t, float('-inf')),
+                reverse=True
+            )
+        else:
+            targets = autoctx.targets
+
         if self.target in ('all', 'each'):
             result_pairs = []
-            for idx, target in enumerate(autoctx.targets):
+            for idx, target in enumerate(targets):
                 result_pairs.extend(self.run_target(autoctx, target, idx))
         elif self.target == 'self':
             target = autoctx.caster
             result_pairs = self.run_target(autoctx, target, 0)
         else:
             try:
-                target = autoctx.targets[self.target - 1]
+                target = targets[self.target - 1]
             except IndexError:
                 return TargetResult()
             result_pairs = self.run_target(autoctx, target, 0)
@@ -43,8 +60,8 @@ class Target(Effect):
         autoctx.target = previous_target
         autoctx.metavars['target'] = utils.maybe_alias_statblock(previous_target)  # #1335
 
-        targets, results = zip(*result_pairs)  # convenient unzipping :D
-        return TargetResult(targets, results)
+        final_targets, results = zip(*result_pairs)  # convenient unzipping :D
+        return TargetResult(final_targets, results)
 
     def run_target(self, autoctx, target, target_index):
         result_pairs = []

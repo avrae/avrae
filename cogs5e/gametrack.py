@@ -589,7 +589,9 @@ class GameTrack(commands.Cog):
         """
         Edits an existing custom counter replacing passed arguments.
 
-        Pass `none` to remove a value entirely. Will clamp counter value to new limits if needed.
+        Pass `none` to remove an argument entirely.
+        Will clamp counter value to new limits if needed.
+
         __Valid Arguments__
         `-title <title>` - Sets the title for the output when modifying the counter. `[name]` will be replaced with the player's name.
         `-desc <desc>` - Sets the description when setting or viewing the counter.

@@ -163,6 +163,79 @@ class AliasCharacter(AliasStatBlock):
             self.delete_cc(name)
         return self.create_cc_nx(name, *args, **kwargs)
 
+    def edit_cc(self, name: str, minVal: str = None, maxVal: str = None, reset: str = None,
+                dispType: str = None, reset_to: str = None, reset_by: str = None,
+                title: str = None, desc: str = None):
+        """
+        Edits an existing custom counter.
+
+        Pass `none` to remove an argument entirely.
+        Will clamp counter value to new limits if needed.
+
+        :param str name: The name of the counter to edit.
+        :param str minVal: The minimum value of the counter. Supports :ref:`cvar-table` parsing.
+        :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
+        :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
+        :param str dispType: Either ``None`` or ``'bubble'``.
+        :param str reset_to: The value the counter should reset to. Supports :ref:`cvar-table` parsing.
+        :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
+        :param str title: The title of the counter.
+        :param str desc: The description of the counter.
+        :rtype: AliasCustomCounter
+        :returns: The edited counter.
+        """
+        counter = self._get_consumable(name)
+
+        if minVal is not None:
+            minVal = str(minVal) if str(minVal) not in ('none', 'None') else None
+        else:
+            minVal = counter.get_min()
+
+        if maxVal is not None:
+            maxVal = str(maxVal) if str(maxVal) not in ('none', 'None') else None
+        else:
+            maxVal = counter.get_max()
+
+        if reset is not None:
+            reset = str(reset) if str(reset) not in ('none', 'None') else None
+        else:
+            reset = counter.reset
+
+        if dispType is not None:
+            dispType = str(dispType) if str(dispType) not in ('none', 'None') else None
+        else:
+            dispType = counter.display_type
+
+        if reset_to is not None:
+            reset_to = str(reset_to) if str(reset_to) not in ('none', 'None') else None
+        else:
+            reset_to = counter.get_reset_to()
+
+        if reset_by is not None:
+            reset_by = str(reset_by) if str(reset_by) not in ('none', 'None') else None
+        else:
+            reset_by = counter.reset_by
+
+        if title is not None:
+            title = str(title) if str(title) not in ('none', 'None') else None
+        else:
+            title = counter.title
+
+        if desc is not None:
+            desc = str(desc) if str(desc) not in ('none', 'None') else None
+        else:
+            desc = counter.desc
+
+        if self.cc_exists(name):
+            edit_consumable = player_api.CustomCounter.new(
+                self._character, name, minVal, maxVal, reset, dispType,
+                title=title, desc=desc, reset_to=reset_to, reset_by=reset_by)
+            edit_consumable.set(counter.value)
+            self._character.consumables.insert(self._character.consumables.index(counter), edit_consumable)
+            self._character.consumables.remove(counter)
+            self._consumables = None  # reset cache
+            return AliasCustomCounter(edit_consumable)
+
     def cc_exists(self, name):
         """
         Returns whether a custom counter exists.

@@ -607,22 +607,22 @@ class GameTrack(commands.Cog):
         # pull in the new values, or existing ones
         args = argparse(args)
         e_reset = args.last('reset', counter.reset_on)
-        e_max = args.last('max', counter.get_max())
-        e_min = args.last('min', counter.get_min())
+        e_max = args.last('max', counter.max)
+        e_min = args.last('min', counter.min)
         e_type = args.last('type', counter.display_type)
-        e_reset_to = args.last('resetto', counter.get_reset_to())
+        e_reset_to = args.last('resetto', counter.reset_to)
         e_reset_by = args.last('resetby', counter.reset_by)
         e_title = args.last('title', counter.title)
         e_desc = args.last('desc', counter.desc)
         # Clamp the values to None if we want to remove them instead
         _reset = e_reset if e_reset.lower() != 'none' else None
-        _max = e_max if e_max not in ('none', 'None') else None
-        _min = e_min if e_min not in ('none', 'None') else None
-        _type = e_type if e_type not in ('none', 'None') else None
-        reset_to = e_reset_to if e_reset_to not in ('none', 'None') else None
-        reset_by = e_reset_by if e_reset_by not in ('none', 'None') else None
-        title = e_title if e_title not in ('none', 'None') else None
-        desc = e_desc if e_desc not in ('none', 'None') else None
+        _max = e_max if e_max.lower() != 'none' else None
+        _min = e_min if e_min.lower() != 'none' else None
+        _type = e_type if e_type.lower() != 'none' else None
+        reset_to = e_reset_to if e_reset_to.lower() != 'none' else None
+        reset_by = e_reset_by if e_reset_by.lower() != 'none' else None
+        title = e_title if e_title.lower() != 'none' else None
+        desc = e_desc if e_desc.lower() != 'none' else None
 
         try:
             new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
@@ -630,12 +630,12 @@ class GameTrack(commands.Cog):
         except InvalidArgument as e:
             return await ctx.send(f"Failed to edit counter: {e}")
         else:
-            value = new_counter.set(counter.value)
+            new_value = new_counter.set(counter.value)
             character.consumables.insert(character.consumables.index(counter), new_counter)
             character.consumables.remove(counter)
             await character.commit(ctx)
 
-            clamp_message = f" Clamped: {counter.value} to {value}." if not counter.value == value else ""
+            clamp_message = f" Clamped: \n({new_value - counter.value} overflow)." if not counter.value == new_value else ""
             await ctx.send(f"Custom counter {name} edited."+clamp_message)
 
     @customcounter.command(name='delete', aliases=['remove'])

@@ -2,6 +2,7 @@ from functools import cached_property
 
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
+from aliasing.utils import optional_cast_arg_or_default
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
 
@@ -85,7 +86,8 @@ class AliasCharacter(AliasStatBlock):
 
         :param str name: The name of the custom counter to set.
         :param int value: The value to set the counter to.
-        :param bool strict: If ``True``, will raise a :exc:`CounterOutOfBounds` if the new value is out of bounds, otherwise silently clips to bounds.
+        :param bool strict: If ``True``, will raise a :exc:`CounterOutOfBounds` if the new value is out of bounds,
+                            otherwise silently clips to bounds.
         :raises: :exc:`ConsumableException` if the counter does not exist.
         :returns: The cc's new value.
         :rtype: int
@@ -182,49 +184,19 @@ class AliasCharacter(AliasStatBlock):
         :param str title: The title of the counter.
         :param str desc: The description of the counter.
         :rtype: AliasCustomCounter
-        :returns: The edited counter.
+        :raises: :exc:`ConsumableException` if the counter does not exist.
+        :returns: The edited counter
         """
         counter = self._get_consumable(name)
 
-        if minVal is not None:
-            minVal = str(minVal) if str(minVal) not in ('none', 'None') else None
-        else:
-            minVal = counter.get_min()
-
-        if maxVal is not None:
-            maxVal = str(maxVal) if str(maxVal) not in ('none', 'None') else None
-        else:
-            maxVal = counter.get_max()
-
-        if reset is not None:
-            reset = str(reset) if str(reset) not in ('none', 'None') else None
-        else:
-            reset = counter.reset
-
-        if dispType is not None:
-            dispType = str(dispType) if str(dispType) not in ('none', 'None') else None
-        else:
-            dispType = counter.display_type
-
-        if reset_to is not None:
-            reset_to = str(reset_to) if str(reset_to) not in ('none', 'None') else None
-        else:
-            reset_to = counter.get_reset_to()
-
-        if reset_by is not None:
-            reset_by = str(reset_by) if str(reset_by) not in ('none', 'None') else None
-        else:
-            reset_by = counter.reset_by
-
-        if title is not None:
-            title = str(title) if str(title) not in ('none', 'None') else None
-        else:
-            title = counter.title
-
-        if desc is not None:
-            desc = str(desc) if str(desc) not in ('none', 'None') else None
-        else:
-            desc = counter.desc
+        minVal = optional_cast_arg_or_default(minVal, default=counter.min)
+        maxVal = optional_cast_arg_or_default(maxVal, default=counter.max)
+        reset = optional_cast_arg_or_default(reset, default=counter.reset)
+        dispType = optional_cast_arg_or_default(dispType, default=counter.display_type)
+        reset_to = optional_cast_arg_or_default(reset_to, default=counter.reset_to)
+        reset_by = optional_cast_arg_or_default(reset_by, default=counter.reset_by)
+        title = optional_cast_arg_or_default(title, default=counter.title)
+        desc = optional_cast_arg_or_default(desc, default=counter.desc)
 
         if self.cc_exists(name):
             edit_consumable = player_api.CustomCounter.new(

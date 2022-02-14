@@ -615,7 +615,7 @@ class GameTrack(commands.Cog):
         e_title = args.last('title', counter.title)
         e_desc = args.last('desc', counter.desc)
         # Clamp the values to None if we want to remove them instead
-        _reset = e_reset if e_reset not in ('none', 'None') else None
+        _reset = e_reset if e_reset.lower() != 'none' else None
         _max = e_max if e_max not in ('none', 'None') else None
         _min = e_min if e_min not in ('none', 'None') else None
         _type = e_type if e_type not in ('none', 'None') else None

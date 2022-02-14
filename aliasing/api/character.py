@@ -171,7 +171,7 @@ class AliasCharacter(AliasStatBlock):
         """
         Edits an existing custom counter.
 
-        Pass `none` to remove an argument entirely.
+        Pass ``None`` to remove an argument entirely.
         Will clamp counter value to new limits if needed.
 
         :param str name: The name of the counter to edit.

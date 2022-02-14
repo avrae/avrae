@@ -88,8 +88,10 @@ class GameTrack(commands.Cog):
 
         # footer - pact vs non pact
         if character.spellbook.max_pact_slots is not None:
-            embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
-                                  f"{constants.FILLED_BUBBLE_ALT} / {constants.EMPTY_BUBBLE_ALT} = Pact Slot")
+            embed.set_footer(
+                text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
+                     f"{constants.FILLED_BUBBLE_ALT} / {constants.EMPTY_BUBBLE_ALT} = Pact Slot"
+            )
         else:
             embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used")
 
@@ -123,7 +125,8 @@ class GameTrack(commands.Cog):
 
         if '-h' in args:
             values = ', '.join(
-                set(ctr.name for ctr, _ in reset_counters) | {"Hit Points", "Death Saves", "Spell Slots"})
+                set(ctr.name for ctr, _ in reset_counters) | {"Hit Points", "Death Saves", "Spell Slots"}
+            )
             embed.add_field(name="Reset Values", value=values)
         else:
             # hp
@@ -514,7 +517,8 @@ class GameTrack(commands.Cog):
                 roll_text = f"\nRoll: {roll_result}"
             except d20.RollSyntaxError:
                 raise InvalidArgument(
-                    f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string.")
+                    f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string."
+                )
 
         old_value = counter.value
         result_embed = EmbedWithCharacter(character)
@@ -575,8 +579,10 @@ class GameTrack(commands.Cog):
         title = args.last('title')
         desc = args.last('desc')
         try:
-            new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
-                                            reset_to=reset_to, reset_by=reset_by, title=title, desc=desc)
+            new_counter = CustomCounter.new(
+                character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
+                reset_to=reset_to, reset_by=reset_by, title=title, desc=desc
+            )
             character.consumables.append(new_counter)
             await character.commit(ctx)
         except InvalidArgument as e:
@@ -613,8 +619,10 @@ class GameTrack(commands.Cog):
             if total > 25:
                 embed.set_footer(text=f"Page [{page}/{maxpage}] | {ctx.prefix}cc list <page>")
         else:
-            embed.add_field(name="No Custom Counters",
-                            value=f"Check out `{ctx.prefix}help cc create` to see how to create new ones.")
+            embed.add_field(
+                name="No Custom Counters",
+                value=f"Check out `{ctx.prefix}help cc create` to see how to create new ones."
+            )
 
         await ctx.send(embed=embed)
 
@@ -647,13 +655,15 @@ class GameTrack(commands.Cog):
         else:
             await self._rest(ctx, 'all', *args)
 
-    @commands.command(pass_context=True, help=f"""
-    Casts a spell.
-    __**Valid Arguments**__
-    {VALID_SPELLCASTING_ARGS}
-
-    {VALID_AUTOMATION_ARGS}
-    """)
+    @commands.command(
+        pass_context=True, help=f"""
+        Casts a spell.
+        __**Valid Arguments**__
+        {VALID_SPELLCASTING_ARGS}
+    
+        {VALID_AUTOMATION_ARGS}
+        """
+    )
     async def cast(self, ctx, spell_name, *, args=''):
         await try_delete(ctx.message)
 
@@ -668,7 +678,8 @@ class GameTrack(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send(
                     f"No matching spells found. Make sure this spell is in your "
-                    f"`{ctx.prefix}spellbook`, or cast with the `-i` argument to ignore restrictions!")
+                    f"`{ctx.prefix}spellbook`, or cast with the `-i` argument to ignore restrictions!"
+                )
         else:
             spell = await select_spell_full(ctx, spell_name)
 
@@ -677,7 +688,7 @@ class GameTrack(commands.Cog):
 
         embed = result.embed
         embed.colour = char.get_color()
-        if 'thumb' not in args:
+        if 'thumb' not in args and char.options.embed_image:
             embed.set_thumbnail(url=char.image)
 
         # save changes: combat state, spell slot usage

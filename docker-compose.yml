@@ -34,7 +34,10 @@ services:
     restart: always
     ports:
       - 58081:8081
+    depends_on:
+      - mongo
     environment:
+      ME_CONFIG_MONGODB_URL: mongodb://root:topsecret@mongo:27017
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: topsecret
 

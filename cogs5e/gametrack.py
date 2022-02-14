@@ -615,14 +615,14 @@ class GameTrack(commands.Cog):
         e_title = args.last('title', counter.title)
         e_desc = args.last('desc', counter.desc)
         # Clamp the values to None if we want to remove them instead
-        _reset = e_reset if e_reset.lower() != 'none' else None
-        _max = e_max if e_max.lower() != 'none' else None
-        _min = e_min if e_min.lower() != 'none' else None
-        _type = e_type if e_type.lower() != 'none' else None
-        reset_to = e_reset_to if e_reset_to.lower() != 'none' else None
-        reset_by = e_reset_by if e_reset_by.lower() != 'none' else None
-        title = e_title if e_title.lower() != 'none' else None
-        desc = e_desc if e_desc.lower() != 'none' else None
+        _reset = e_reset if e_reset and e_reset.lower() != 'none' else None
+        _max = e_max if e_max and e_max.lower() != 'none' else None
+        _min = e_min if e_min and e_min.lower() != 'none' else None
+        _type = e_type if e_type and e_type.lower() != 'none' else None
+        reset_to = e_reset_to if e_reset_to and e_reset_to.lower() != 'none' else None
+        reset_by = e_reset_by if e_reset_by and e_reset_by.lower() != 'none' else None
+        title = e_title if e_title and e_title.lower() != 'none' else None
+        desc = e_desc if e_desc and e_desc.lower() != 'none' else None
 
         try:
             new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
@@ -635,8 +635,8 @@ class GameTrack(commands.Cog):
             character.consumables.remove(counter)
             await character.commit(ctx)
 
-            clamp_message = f" Clamped: \n({new_value - counter.value} overflow)." if not counter.value == new_value else ""
-            await ctx.send(f"Custom counter {name} edited."+clamp_message)
+            clamp = f"\nClamped: {new_value} ({new_value - counter.value} overflow)." if not counter.value == new_value else ""
+            await ctx.send(f"Custom counter {name} edited."+clamp)
 
     @customcounter.command(name='delete', aliases=['remove'])
     async def customcounter_delete(self, ctx, name):

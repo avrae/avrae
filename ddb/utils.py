@@ -3,6 +3,29 @@ from pydantic import BaseModel
 from utils.functions import get_guild_member, user_from_id
 
 
+async def update_user_map(ctx, ddb_id, discord_id):
+    """
+    Update the one-to-one mapping of DDB user IDs to Discord user IDs.
+    """
+    # todo: this should be a multi-document transaction when we move to documentdb >= 4.0
+    # as is, there is a possible race condition between the delete and update, but unless there is extreme latency
+    # this shouldn't happen
+    existing_mapping = await ctx.bot.mdb.ddb_account_map.find_one({"discord_id": discord_id})
+    if existing_mapping is None:
+        await ctx.bot.mdb.ddb_account_map.update_one(
+            {"ddb_id": ddb_id},
+            {"$set": {"discord_id": discord_id}},
+            upsert=True
+        )
+    elif existing_mapping['ddb_id'] != ddb_id:
+        await ctx.bot.mdb.ddb_account_map.delete_one({"discord_id": discord_id})
+        await ctx.bot.mdb.ddb_account_map.update_one(
+            {"ddb_id": ddb_id},
+            {"$set": {"discord_id": discord_id}},
+            upsert=True
+        )
+
+
 async def ddb_id_to_discord_id(mdb, ddb_user_id):
     """
     Translates a DDB user ID to a Discord user ID.

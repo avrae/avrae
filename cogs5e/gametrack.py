@@ -657,12 +657,12 @@ class GameTrack(commands.Cog):
 
     @commands.command(
         pass_context=True, help=f"""
-    Casts a spell.
-    __**Valid Arguments**__
-    {VALID_SPELLCASTING_ARGS}
-
-    {VALID_AUTOMATION_ARGS}
-    """
+        Casts a spell.
+        __**Valid Arguments**__
+        {VALID_SPELLCASTING_ARGS}
+    
+        {VALID_AUTOMATION_ARGS}
+        """
     )
     async def cast(self, ctx, spell_name, *, args=''):
         await try_delete(ctx.message)
@@ -688,7 +688,7 @@ class GameTrack(commands.Cog):
 
         embed = result.embed
         embed.colour = char.get_color()
-        if 'thumb' not in args:
+        if 'thumb' not in args and char.options.embed_image:
             embed.set_thumbnail(url=char.image)
 
         # save changes: combat state, spell slot usage

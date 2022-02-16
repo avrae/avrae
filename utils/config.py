@@ -16,21 +16,21 @@ MONSTER_TOKEN_ENDPOINT = os.getenv('MONSTER_TOKEN_ENDPOINT')  # S3: monster toke
 COMMAND_TEST_GUILD_IDS = [
     269275778867396608,  # Avrae Development
     783776775670726661,  # Avrae Constants Guild
-]
+] if TESTING else None
 # secret for the draconic signature() function
 DRACONIC_SIGNATURE_SECRET = os.getenv('DRACONIC_SIGNATURE_SECRET', 'secret').encode()
 
 # ---- mongo/redis ----
 MONGO_URL = os.getenv('MONGO_URL', "mongodb://localhost:27017")
 MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
-REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 REDIS_DB_NUM = int(os.getenv('REDIS_DB_NUM', 0))
 
 # ---- user ----
 DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 
 # ---- monitoring ----
-SENTRY_DSN = os.getenv('SENTRY_DSN') or None
+SENTRY_DSN = os.getenv('SENTRY_DSN')
 
 # ---- character sheets ---
 NO_DICECLOUD = os.environ.get('NO_DICECLOUD', 'DICECLOUD_USER' not in os.environ)

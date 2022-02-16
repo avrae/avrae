@@ -20,6 +20,7 @@ Target
         type: "target";
         target: "all"|"each"|int|"self";
         effects: Effect[];
+        sortBy?: "hp_asc" | "hp_desc";
     }
 
 A Target effect should only show up as a top-level effect.
@@ -36,10 +37,22 @@ It designates what creatures to affect.
 
     A list of effects that each targeted creature will be subject to.
 
+.. attribute:: sortBy
+
+    *optional* - Whether to sort the target list. If not given, targets are processed in the order the ``-t`` arguments
+    are seen. This does not affect ``self`` targets.
+
+    - ``hp_asc``: Sorts the targets in order of remaining hit points ascending (lowest HP first, None last).
+    - ``hp_desc``: Sorts the targets in order of remaining hit points descending (highest HP first, None last).
+
 **Variables**
 
 - ``target`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The current target.
 - ``targetIteration`` (:class:`int`) If running multiple iterations (i.e. ``-rr``), the current iteration (1-indexed).
+- ``targetIndex`` (:class:`int`) The index of the target in the list of targets processed by this effect
+  (0-indexed - first target = ``0``, second = ``1``, etc.). Self targets and nth-targets (``target: "self"`` and
+  ``target: int``) will always be ``0``.
+- ``targetNumber`` (:class:`int`) Same as ``targetIndex``, but 1-indexed (equivalent to ``targetIndex + 1``).
 
 Attack
 ------

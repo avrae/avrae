@@ -28,7 +28,7 @@ class Publicity(commands.Cog):
             self.bot.loop.create_task(self.background_update())
 
     async def update_server_count(self):
-        if self.bot.testing or not config.DBL_TOKEN:
+        if config.TESTING is not None or config.DBL_TOKEN is None:
             return
         payload = {"server_count": await Stats.get_guild_count(self.bot)}
         async with aiohttp.ClientSession() as aioclient:

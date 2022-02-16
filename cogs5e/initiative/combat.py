@@ -399,7 +399,7 @@ class Combat:
         """
         return await search_and_select(
             self.ctx, self.get_combatants(select_group), name, lambda c: c.name,
-            message=choice_message
+            message=choice_message, selectkey=lambda c: f"{c.name} {c.hp_str()}"
         )
 
     def advance_turn(self):

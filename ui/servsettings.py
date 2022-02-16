@@ -93,12 +93,22 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             value=await self.get_inline_rolling_desc(),
             inline=False
         )
+
+        nlp_enabled_description = ""
+        nlp_feature_flag = await self.bot.ldclient.variation(
+            "cog.initiative.upenn_nlp.enabled",
+            user=discord_user_to_dict(self.owner),
+            default=False
+        )
+        if nlp_feature_flag:
+            nlp_enabled_description = f"\n**Contribute Message Data to NLP Training**: {self.settings.upenn_nlp_opt_in}"
         embed.add_field(
             name="Miscellaneous Settings",
-            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}\n"
-                  f"**Contribute Message Data to NLP Training**: {self.settings.upenn_nlp_opt_in}",
+            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}"
+                  f"{nlp_enabled_description}",
             inline=False
         )
+
         return {"embed": embed}
 
 
@@ -319,6 +329,19 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         await self.defer_to(ServerSettingsUI, interaction)
 
     # ==== content ====
+    async def _before_send(self):
+        if TYPE_CHECKING:
+            self.toggle_upenn_nlp_opt_in: disnake.ui.Button
+
+        # nlp feature flag
+        flag_enabled = await self.bot.ldclient.variation(
+            "cog.initiative.upenn_nlp.enabled",
+            user=discord_user_to_dict(self.owner),
+            default=False
+        )
+        if not flag_enabled:
+            self.remove_item(self.toggle_upenn_nlp_opt_in)
+
     async def get_content(self):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Miscellaneous Settings",
@@ -331,15 +354,23 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
                   f"you import a character in an unlinked campaign.*",
             inline=False
         )
-        embed.add_field(
-            name="Contribute Message Data to Natural Language AI Training",
-            value=f"**{self.settings.upenn_nlp_opt_in}**\n"
-                  f"*If this is enabled, the contents of messages, usernames, character names, and snapshots "
-                  f"of a character's resources will be recorded in channels **with an active combat.***\n"
-                  f"*This data will be used in a project to make advances in interactive fiction and text generation "
-                  f"using artificial intelligence at the University of Pennsylvania.*\n"
-                  f"*Read more about the project [here](https://avrae.io), and our data handling and Privacy Policy "
-                  f"[here](https://avrae.io).*",  # todo link
-            inline=False
+
+        nlp_feature_flag = await self.bot.ldclient.variation(
+            "cog.initiative.upenn_nlp.enabled",
+            user=discord_user_to_dict(self.owner),
+            default=False
         )
+        if nlp_feature_flag:
+            embed.add_field(
+                name="Contribute Message Data to Natural Language AI Training",
+                value=f"**{self.settings.upenn_nlp_opt_in}**\n"
+                      f"*If this is enabled, the contents of messages, usernames, character names, and snapshots "
+                      f"of a character's resources will be recorded in channels **with an active combat.***\n"
+                      f"*This data will be used in a project to make advances in interactive fiction and text "
+                      f"generation using artificial intelligence at the University of Pennsylvania.*\n"
+                      f"*Read more about the project [here](https://avrae.io), and our data handling and "
+                      f"Privacy Policy [here](https://avrae.io).*",  # todo link
+                inline=False
+            )
+
         return {"embed": embed}

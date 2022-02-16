@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 import utils.context
 from utils import config
 from .combat import Combat
+from .utils import nlp_feature_flag_enabled
 
 ONE_MONTH_SECS = 2592000
 
@@ -266,7 +267,7 @@ class NLPRecorder:
         try:
             # memory cache
             channel_recording_until, combat_id = self._recorded_channel_cache[channel_id]
-            log.debug(f"found recording info for {channel_id} in memory cache")
+            # log.debug(f"found recording info for {channel_id} in memory cache")
         except KeyError:
             # get from redis
             combat_id = await self.bot.rdb.get(
@@ -280,10 +281,10 @@ class NLPRecorder:
                     f"cog.initiative.upenn_nlp.{guild_id}.{channel_id}.recorded_combat_id"
                 )
                 channel_recording_until = int(now + channel_recording_ttl)
-                log.debug(f"found recording info for {channel_id} in redis with ttl {channel_recording_ttl}")
+                # log.debug(f"found recording info for {channel_id} in redis with ttl {channel_recording_ttl}")
             self._recorded_channel_cache[channel_id] = (channel_recording_until, combat_id)
 
-        log.debug(f"{channel_id}: {channel_recording_until=}, {combat_id=}")
+        # log.debug(f"{channel_id}: {channel_recording_until=}, {combat_id=}")
 
         # if we are not recording or the recording session has expired, return
         if not channel_recording_until or combat_id is None:
@@ -329,6 +330,9 @@ class NLPRecorder:
         if self._kinesis_firehose is None:
             log.warning("skipping event because kinesis firehose is not initialized")
             return
+        if not await nlp_feature_flag_enabled(self.bot):
+            log.debug("NLP feature flag is disabled, dropping event")
+            return
 
         log.debug(f"saving 1 event to {event.combat_id=} of type {event.event_type!r}")
         try:
@@ -338,7 +342,7 @@ class NLPRecorder:
                     'Data': event.json().encode()
                 }
             )
-        except botocore.exceptions.BotoCoreError:
+        except botocore.exceptions.ClientError:
             log.exception(f"Failed to record NLP event to {event.combat_id=} of type {event.event_type!r}")
         else:
             log.debug(str(response))
@@ -350,6 +354,9 @@ class NLPRecorder:
         if self._kinesis_firehose is None:
             log.warning(f"skipping {len(events)} events because kinesis firehose is not initialized")
             return
+        if not await nlp_feature_flag_enabled(self.bot):
+            log.debug("NLP feature flag is disabled, dropping event")
+            return
 
         log.debug(f"saving {len(events)} events to kinesis")
         try:
@@ -360,7 +367,7 @@ class NLPRecorder:
                     for event in events
                 ]
             )
-        except botocore.exceptions.BotoCoreError:
+        except botocore.exceptions.ClientError:
             log.exception(f"Failed to record {len(events)} NLP events")
         else:
             log.debug(str(response))

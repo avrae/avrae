@@ -20,12 +20,11 @@ from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
-from utils import constants
+from utils import checks, constants
 from utils.argparser import argparse
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
-from . import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
+from . import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant, utils
 from .upenn_nlp import NLPRecorder
-from .utils import create_nlp_record_session_id
 
 log = logging.getLogger(__name__)
 
@@ -105,12 +104,12 @@ class InitTracker(commands.Cog):
             f"If it's a 5e monster: `{ctx.prefix}init madd <monster name>`\n"
             f"Otherwise: `{ctx.prefix}init add <modifier> <name>`"
         )
-        if guild_settings.upenn_nlp_opt_in:
+        if guild_settings.upenn_nlp_opt_in and await utils.nlp_feature_flag_enabled(self.bot):
             out = (
                 f"{out}\nMessages sent in this channel during combat will be recorded for research purposes. "
                 f"For more information, see `{ctx.clean_prefix}init nlp`."
             )
-            combat.nlp_record_session_id = create_nlp_record_session_id()
+            combat.nlp_record_session_id = utils.create_nlp_record_session_id()
             await self.nlp.on_combat_start(combat)
 
         await combat.final()
@@ -1397,6 +1396,7 @@ class InitTracker(commands.Cog):
 
     # ==== nlp commands ====
     @init.group(name="nlp", hidden=True, invoke_without_command=True)
+    @checks.feature_flag("cog.initiative.upenn_nlp.enabled")
     async def init_nlp(self, ctx):
         """
         Commands to manage the server's contributions to the Natural Language AI Training project.
@@ -1419,6 +1419,7 @@ class InitTracker(commands.Cog):
             )
 
     @init_nlp.command(name="list")
+    @checks.feature_flag("cog.initiative.upenn_nlp.enabled")
     async def init_nlp_list(self, ctx):
         """
         Displays a list of all channels in this server with active combat recordings.
@@ -1441,6 +1442,7 @@ class InitTracker(commands.Cog):
 
     @init_nlp.command(name="stopall")
     @commands.has_guild_permissions(manage_messages=True)
+    @checks.feature_flag("cog.initiative.upenn_nlp.enabled")
     async def init_nlp_stopall(self, ctx):
         """
         Stops the recording of messages in any currently active combats immediately.

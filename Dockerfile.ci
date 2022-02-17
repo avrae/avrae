@@ -5,6 +5,7 @@ ENV NO_DICECLOUD=1
 ENV TESTING=1
 
 COPY requirements.txt .
+COPY tests/requirements.txt tests/
 RUN pip install -r requirements.txt
 RUN pip install -r tests/requirements.txt
 

@@ -369,7 +369,7 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
                       f"*This data will be used in a project to make advances in interactive fiction and text "
                       f"generation using artificial intelligence at the University of Pennsylvania.*\n"
                       f"*Read more about the project [here](https://avrae.io), and our data handling and "
-                      f"Privacy Policy [here](https://avrae.io).*",  # todo link
+                      f"Privacy Policy [here](https://www.fandom.com/privacy-policy).*",  # todo link
                 inline=False
             )
 

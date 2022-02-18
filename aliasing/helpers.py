@@ -1,8 +1,10 @@
 import traceback
 import uuid
+from contextlib import suppress
 
+import disnake
 import draconic
-from discord.ext.commands import ArgumentParsingError
+from disnake.ext.commands import ArgumentParsingError
 
 from aliasing import evaluators
 from aliasing.api.functions import AliasException
@@ -435,10 +437,9 @@ async def handle_alias_exception(ctx, err):
         e = e.original
 
     tb = ''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))
-    try:
-        if isinstance(e, AliasException) and not e.pm_user:
-            pass
-        else:
+    # send traceback to user
+    if not isinstance(e, AliasException) or e.pm_user:
+        with suppress(disnake.HTTPException):
             await ctx.author.send(
                 f"```py\n"
                 f"Error {location}:\n"
@@ -447,9 +448,14 @@ async def handle_alias_exception(ctx, err):
                 f"```"
                 f"This is an issue in a user-created command; do *not* report this on the official bug tracker."
             )
-    except:
-        pass
-    return await ctx.channel.send(err)
+
+    # send error message to channel
+    try:
+        return await ctx.channel.send(err)
+    except disnake.HTTPException:
+        return await ctx.channel.send(
+            f"There was an error, but the error message was too long to send! ({type(e).__name__})"
+        )
 
 
 async def workshop_entitlements_check(ctx, ws_obj):

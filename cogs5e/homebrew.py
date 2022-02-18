@@ -133,7 +133,6 @@ class Homebrew(commands.Cog):
 
         if bestiary:
             await active_bestiary.unsubscribe(ctx)
-
             await bestiary.add_server_subscriptions(ctx, old_server_subs)
             await bestiary.set_active(ctx)
             await bestiary.load_monsters(ctx)

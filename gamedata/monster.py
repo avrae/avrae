@@ -453,9 +453,11 @@ class MonsterCastableSpellbook(MonsterSpellbook):
             return
 
         daily_key, daily_value = self._daily_cast_info(spell)
-        if daily_value > 0:
+        if daily_key is not None and daily_value > 0:
             self.daily[daily_key] -= 1
-            return
+            return self.remaining_casts_of(spell, level)
+        elif daily_key is not None:
+            raise CounterOutOfBounds(f"You do not have any remaining casts of {spell.name}.")
 
         self.use_slot(level, pact=pact)
 

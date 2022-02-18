@@ -129,17 +129,19 @@ class Homebrew(commands.Cog):
         loading = await ctx.send("Updating bestiary (this may take a while for large bestiaries)...")
 
         old_server_subs = await active_bestiary.server_subscriptions(ctx)
-        await active_bestiary.unsubscribe(ctx)
         bestiary = await Bestiary.from_critterdb(ctx, active_bestiary.upstream, active_bestiary.published)
 
-        await bestiary.add_server_subscriptions(ctx, old_server_subs)
-        await bestiary.set_active(ctx)
-        await bestiary.load_monsters(ctx)
-        await loading.edit(content=f"Imported and updated {bestiary.name}!")
-        embed = HomebrewEmbedWithAuthor(ctx)
-        embed.title = bestiary.name
-        embed.description = '\n'.join(m.name for m in bestiary.monsters)
-        await ctx.send(embed=embed)
+        if bestiary:
+            await active_bestiary.unsubscribe(ctx)
+
+            await bestiary.add_server_subscriptions(ctx, old_server_subs)
+            await bestiary.set_active(ctx)
+            await bestiary.load_monsters(ctx)
+            await loading.edit(content=f"Imported and updated {bestiary.name}!")
+            embed = HomebrewEmbedWithAuthor(ctx)
+            embed.title = bestiary.name
+            embed.description = '\n'.join(m.name for m in bestiary.monsters)
+            await ctx.send(embed=embed)
 
     @bestiary.group(name='server', invoke_without_command=True)
     @commands.guild_only()

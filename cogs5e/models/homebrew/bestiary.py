@@ -92,15 +92,13 @@ class Bestiary(CommonHomebrewMixin):
         log.debug(f"Bestiary hash: {sha256}")
         existing_bestiary = await ctx.bot.mdb.bestiaries.find_one({"upstream": url, "sha256": sha256})
         if existing_bestiary:
-            log.info("This bestiary already exists, subscribing")
+            log.info("This bestiary already exists")
             existing_bestiary = Bestiary.from_dict(existing_bestiary)
-            await existing_bestiary.subscribe(ctx)
             return existing_bestiary
 
         parsed_creatures = [_monster_factory(c, name) for c in creatures]
         b = cls(None, sha256, url, published, name, parsed_creatures, desc)
         await b.write_to_db(ctx)
-        await b.subscribe(ctx)
         return b
 
     async def load_monsters(self, ctx):

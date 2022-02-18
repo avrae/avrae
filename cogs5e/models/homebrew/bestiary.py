@@ -1,16 +1,15 @@
 import hashlib
 import logging
 import re
-from math import floor
 
 import aiohttp
-from markdownify import markdownify
-
 import yaml
+from markdownify import markdownify
+from math import floor
 
 import gamedata.compendium as gd
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
-from cogs5e.models.sheet.attack import AttackList, Attack
+from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
@@ -26,9 +25,11 @@ BESTIARY_SCHEMA_VERSION = b'1'
 
 
 class Bestiary(CommonHomebrewMixin):
-    def __init__(self, _id, sha256: str, upstream: str, published: bool,
-                 name: str, monsters: list = None, desc: str = None,
-                 **_):
+    def __init__(
+        self, _id, sha256: str, upstream: str, published: bool,
+        name: str, monsters: list = None, desc: str = None,
+        **_
+    ):
         # metadata - should never change
         super().__init__(_id)
         self.sha256 = sha256
@@ -57,8 +58,10 @@ class Bestiary(CommonHomebrewMixin):
 
     @classmethod
     async def from_id(cls, ctx, oid):
-        bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": oid},
-                                                         projection={"monsters": False})
+        bestiary = await ctx.bot.mdb.bestiaries.find_one(
+            {"_id": oid},
+            projection={"monsters": False}
+        )
         if bestiary is None:
             raise ValueError("Bestiary does not exist")
         return cls.from_dict(bestiary)
@@ -140,8 +143,10 @@ class Bestiary(CommonHomebrewMixin):
         Sets the object as active for the contextual guild.
         This override is here because bestiaries' server active docs need a provider id.
         """
-        sub_doc = {"type": "server_active", "subscriber_id": ctx.guild.id,
-                   "object_id": self.id, "provider_id": ctx.author.id}
+        sub_doc = {
+            "type": "server_active", "subscriber_id": ctx.guild.id,
+            "object_id": self.id, "provider_id": ctx.author.id
+        }
         await self.sub_coll(ctx).insert_one(sub_doc)
 
     async def unsubscribe(self, ctx):
@@ -175,7 +180,8 @@ class Bestiary(CommonHomebrewMixin):
         """Returns a list of server ids (ints) representing server subscriptions supplied by the contextual author.
         Mainly used to determine what subscriptions should be carried over to a new bestiary when updated."""
         subs = ctx.bot.mdb.bestiary_subscriptions.find(
-            {"type": "server_active", "object_id": self.id, "provider_id": ctx.author.id})
+            {"type": "server_active", "object_id": self.id, "provider_id": ctx.author.id}
+        )
         return [s['subscriber_id'] async for s in subs]
 
     async def add_server_subscriptions(self, ctx, serv_ids):
@@ -184,9 +190,14 @@ class Bestiary(CommonHomebrewMixin):
             {"type": "server_active", "subscriber_id": {"$in": serv_ids}, "object_id": self.id}
         ).to_list(None)
         existing = {e['subscriber_id'] for e in existing}
-        sub_docs = [{"type": "server_active", "subscriber_id": serv_id,
-                     "object_id": self.id, "provider_id": ctx.author.id} for serv_id in serv_ids if
-                    serv_id not in existing]
+        sub_docs = [
+            {
+                "type": "server_active", "subscriber_id": serv_id,
+                "object_id": self.id, "provider_id": ctx.author.id
+            }
+            for serv_id in serv_ids
+            if serv_id not in existing
+        ]
         if sub_docs:
             await ctx.bot.mdb.bestiary_subscriptions.insert_many(sub_docs)
 
@@ -208,14 +219,14 @@ class Bestiary(CommonHomebrewMixin):
 
 
 async def select_bestiary(ctx, name):
-    user_bestiaries = []
-    async for b in Bestiary.user_bestiaries(ctx):
-        user_bestiaries.append(b)
+    user_bestiaries = [best async for best in Bestiary.user_bestiaries(ctx)]
     if not user_bestiaries:
         raise NoActiveBrew()
 
-    bestiary = await search_and_select(ctx, user_bestiaries, name, key=lambda b: b.name,
-                                       selectkey=lambda b: f"{b.name} (`{b.upstream})`")
+    bestiary = await search_and_select(
+        ctx, user_bestiaries, name, key=lambda b: b.name,
+        selectkey=lambda b: f"{b.name} (`{b.upstream})`"
+    )
     return bestiary
 
 
@@ -228,7 +239,8 @@ async def get_published_bestiary_creatures(url, session, api_base, sha256_hash):
         async with session.get(f"{api_base}/{url}/creatures/{index}") as resp:
             if not 199 < resp.status < 300:
                 raise ExternalImportError(
-                    "Error importing bestiary: HTTP error. Are you sure the link is right?")
+                    "Error importing bestiary: HTTP error. Are you sure the link is right?"
+                )
             raw_creatures = await parse_critterdb_response(resp, sha256_hash)
             if not raw_creatures:
                 break
@@ -242,10 +254,12 @@ async def get_link_shared_bestiary_creatures(url, session, api_base, sha256_hash
     async with session.get(f"{api_base}/{url}/creatures") as resp:
         if resp.status == 400:
             raise ExternalImportError(
-                "Error importing bestiary: Cannot access bestiary. Please ensure link sharing is enabled!")
+                "Error importing bestiary: Cannot access bestiary. Please ensure link sharing is enabled!"
+            )
         elif not 199 < resp.status < 300:
             raise ExternalImportError(
-                "Error importing bestiary: HTTP error. Are you sure the link is right?")
+                "Error importing bestiary: HTTP error. Are you sure the link is right?"
+            )
         creatures = await parse_critterdb_response(resp, sha256_hash)
     return creatures
 
@@ -260,16 +274,20 @@ async def parse_critterdb_response(resp, sha256_hash):
 
 
 # critterdb -> bestiary helpers
-AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(?:(?P<simple>(.*?)\|([+-]?\d*)\|(.*?))|'
-                                       r'(?P<freeform>.*?))</avrae>', re.IGNORECASE | re.DOTALL)
-ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? (?P<attackBonus>[+-]?\d+) to hit, .*?(?:<i>)?'
-                       r'Hit:(?:</i>)? [+-]?(?:\d+ \((?P<damageDiceBase>.+?)\)|(?P<damageIntBase>\d+)) '
-                       r'(?P<damageTypeBase>[aA-zZ ]+) damage[., ]??(?: in melee[.,]?? or [+-]?(?:\d+ '
-                       r'\((?P<damageRangedDice>.+?)\)|(?P<damageRangedInt>\d+)) (?P<damageTypeRanged>[aA-zZ ]+) '
-                       r'damage at range[,.]?)?(?:,? or [+-]?(?:\d+ \((?P<damageDiceVers>.+?)\)|(?P<damageIntVers>\d+))'
-                       r' (?P<damageTypeVers>[aA-zZ ]+) damage if used with two hands to make a melee attack)?'
-                       r'(?:,? (?:plus|and) [+-]?(?:\d+ \((?P<damageBonusDice>.+?)\)|(?P<damageBonusInt>\d+)) '
-                       r'(?P<damageTypeBonus>[aA-zZ ]+) damage)?', re.IGNORECASE)
+AVRAE_ATTACK_OVERRIDES_RE = re.compile(
+    r'<avrae hidden>(?:(?P<simple>(.*?)\|([+-]?\d*)\|(.*?))|'
+    r'(?P<freeform>.*?))</avrae>', re.IGNORECASE | re.DOTALL
+)
+ATTACK_RE = re.compile(
+    r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? (?P<attackBonus>[+-]?\d+) to hit, .*?(?:<i>)?'
+    r'Hit:(?:</i>)? [+-]?(?:\d+ \((?P<damageDiceBase>.+?)\)|(?P<damageIntBase>\d+)) '
+    r'(?P<damageTypeBase>[aA-zZ ]+) damage[., ]??(?: in melee[.,]?? or [+-]?(?:\d+ '
+    r'\((?P<damageRangedDice>.+?)\)|(?P<damageRangedInt>\d+)) (?P<damageTypeRanged>[aA-zZ ]+) '
+    r'damage at range[,.]?)?(?:,? or [+-]?(?:\d+ \((?P<damageDiceVers>.+?)\)|(?P<damageIntVers>\d+))'
+    r' (?P<damageTypeVers>[aA-zZ ]+) damage if used with two hands to make a melee attack)?'
+    r'(?:,? (?:plus|and) [+-]?(?:\d+ \((?P<damageBonusDice>.+?)\)|(?P<damageBonusInt>\d+)) '
+    r'(?P<damageTypeBonus>[aA-zZ ]+) damage)?', re.IGNORECASE
+)
 JUST_DAMAGE_RE = re.compile(r'[+-]?\d+ \((.+?)\) (\w+) damage', re.IGNORECASE)
 
 
@@ -278,15 +296,19 @@ def spaced_to_camel(spaced):
 
 
 def _monster_factory(data, bestiary_name):
-    ability_scores = BaseStats(data['stats']['proficiencyBonus'] or 0,
-                               data['stats']['abilityScores']['strength'] or 10,
-                               data['stats']['abilityScores']['dexterity'] or 10,
-                               data['stats']['abilityScores']['constitution'] or 10,
-                               data['stats']['abilityScores']['intelligence'] or 10,
-                               data['stats']['abilityScores']['wisdom'] or 10,
-                               data['stats']['abilityScores']['charisma'] or 10)
-    cr = {0.125: '1/8', 0.25: '1/4', 0.5: '1/2'}.get(data['stats']['challengeRating'],
-                                                     str(data['stats']['challengeRating']))
+    ability_scores = BaseStats(
+        data['stats']['proficiencyBonus'] or 0,
+        data['stats']['abilityScores']['strength'] or 10,
+        data['stats']['abilityScores']['dexterity'] or 10,
+        data['stats']['abilityScores']['constitution'] or 10,
+        data['stats']['abilityScores']['intelligence'] or 10,
+        data['stats']['abilityScores']['wisdom'] or 10,
+        data['stats']['abilityScores']['charisma'] or 10
+    )
+    cr = {0.125: '1/8', 0.25: '1/4', 0.5: '1/2'}.get(
+        data['stats']['challengeRating'],
+        str(data['stats']['challengeRating'])
+    )
     num_hit_die = data['stats']['numHitDie']
     hit_die_size = data['stats']['hitDieSize']
     con_by_level = num_hit_die * ability_scores.get_mod('con')
@@ -341,20 +363,26 @@ def _monster_factory(data, bestiary_name):
 
     spellcasting = parse_critterdb_spellcasting(traits + actions, ability_scores)
 
-    resistances = Resistances.from_dict(dict(vuln=data['stats']['damageVulnerabilities'],
-                                             resist=data['stats']['damageResistances'],
-                                             immune=data['stats']['damageImmunities']))
+    resistances = Resistances.from_dict(
+        dict(
+            vuln=data['stats']['damageVulnerabilities'],
+            resist=data['stats']['damageResistances'],
+            immune=data['stats']['damageImmunities']
+        )
+    )
 
-    return Monster(name=data['name'], size=data['stats']['size'], race=data['stats']['race'],
-                   alignment=data['stats']['alignment'],
-                   ac=data['stats']['armorClass'], armortype=data['stats']['armorType'], hp=hp, hitdice=hitdice,
-                   speed=data['stats']['speed'], ability_scores=ability_scores, saves=saves, skills=skills,
-                   senses=', '.join(data['stats']['senses']), resistances=resistances, display_resists=resistances,
-                   condition_immune=data['stats']['conditionImmunities'], languages=data['stats']['languages'], cr=cr,
-                   xp=data['stats']['experiencePoints'], traits=traits, actions=actions, reactions=reactions,
-                   legactions=legactions, la_per_round=data['stats']['legendaryActionsPerRound'],
-                   attacks=attacks, proper=data['flavor']['nameIsProper'], image_url=data['flavor']['imageUrl'],
-                   spellcasting=spellcasting, homebrew=True, source=bestiary_name)
+    return Monster(
+        name=data['name'], size=data['stats']['size'], race=data['stats']['race'],
+        alignment=data['stats']['alignment'],
+        ac=data['stats']['armorClass'], armortype=data['stats']['armorType'], hp=hp, hitdice=hitdice,
+        speed=data['stats']['speed'], ability_scores=ability_scores, saves=saves, skills=skills,
+        senses=', '.join(data['stats']['senses']), resistances=resistances, display_resists=resistances,
+        condition_immune=data['stats']['conditionImmunities'], languages=data['stats']['languages'], cr=cr,
+        xp=data['stats']['experiencePoints'], traits=traits, actions=actions, reactions=reactions,
+        legactions=legactions, la_per_round=data['stats']['legendaryActionsPerRound'],
+        attacks=attacks, proper=data['flavor']['nameIsProper'], image_url=data['flavor']['imageUrl'],
+        spellcasting=spellcasting, homebrew=True, source=bestiary_name
+    )
 
 
 def parse_critterdb_traits(data, key):
@@ -374,18 +402,23 @@ def parse_critterdb_traits(data, key):
         if overrides:
             for override in overrides:
                 if override.group('simple'):
-                    attacks.append(Attack.from_dict({
-                        'name': override.group(2) or name,
-                        'attackBonus': override.group(3) or None,
-                        'damage': override.group(4) or None,
-                        'details': desc
-                    }))
-                elif (freeform_override := override.group('freeform')):
+                    attacks.append(
+                        Attack.from_dict(
+                            {
+                                'name': override.group(2) or name,
+                                'attackBonus': override.group(3) or None,
+                                'damage': override.group(4) or None,
+                                'details': desc
+                            }
+                        )
+                    )
+                elif freeform_override := override.group('freeform'):
                     try:
                         attack_yaml = yaml.safe_load(freeform_override)
                     except yaml.YAMLError:
                         raise ExternalImportError(
-                            f"Monster had an invalid automation YAML ({data['name']}: {name})")
+                            f"Monster had an invalid automation YAML ({data['name']}: {name})"
+                        )
                     if not isinstance(attack_yaml, list):
                         attack_yaml = [attack_yaml]
                     for atk in attack_yaml:
@@ -395,10 +428,12 @@ def parse_critterdb_traits(data, key):
                                 attacks.append(Attack.from_dict(atk))
                             except Exception:
                                 raise ExternalImportError(
-                                    f"An automation YAML contained an invalid attack ({data['name']}: {atk_name})")
+                                    f"An automation YAML contained an invalid attack ({data['name']}: {atk_name})"
+                                )
                         else:
                             raise ExternalImportError(
-                                f"An automation YAML contained an invalid attack ({data['name']}: {name})")
+                                f"An automation YAML contained an invalid attack ({data['name']}: {name})"
+                            )
                 # else: empty override, so skip this attack.
         elif raw_atks:
             for atk in raw_atks:
@@ -414,42 +449,58 @@ def parse_critterdb_traits(data, key):
                 if (vers_damage_type := atk.group('damageTypeVers')) and \
                         (verse_damage := atk.group('damageIntVers') or atk.group('damageDiceVers')):
                     damage = f"{verse_damage} [{vers_damage_type}]" + bonus
-                    attacks.append(Attack.from_dict({
-                        'name': f"2 Handed {name}",
-                        'attackBonus': attack_bonus,
-                        'damage': damage,
-                        'details': desc
-                    }))
+                    attacks.append(
+                        Attack.from_dict(
+                            {
+                                'name': f"2 Handed {name}",
+                                'attackBonus': attack_bonus,
+                                'damage': damage,
+                                'details': desc
+                            }
+                        )
+                    )
 
                 # Ranged Attacks
                 if (ranged_damage_type := atk.group('damageTypeRanged')) and \
                         (ranged_damage := atk.group('damageRangedInt') or atk.group('damageRangedDice')):  # ranged
                     damage = f"{ranged_damage}[{ranged_damage_type}]" + bonus
-                    attacks.append(Attack.from_dict({
-                        'name': f"Ranged {name}",
-                        'attackBonus': attack_bonus,
-                        'damage': damage,
-                        'details': desc
-                    }))
+                    attacks.append(
+                        Attack.from_dict(
+                            {
+                                'name': f"Ranged {name}",
+                                'attackBonus': attack_bonus,
+                                'damage': damage,
+                                'details': desc
+                            }
+                        )
+                    )
 
                 # Base Attack
                 base_damage = atk.group('damageIntBase') or atk.group('damageDiceBase')
                 damage = f"{base_damage} [{atk.group('damageTypeBase')}]" + bonus
-                attacks.append(Attack.from_dict({
-                    'name': name,
-                    'attackBonus': attack_bonus,
-                    'damage': damage,
-                    'details': desc
-                }))
+                attacks.append(
+                    Attack.from_dict(
+                        {
+                            'name': name,
+                            'attackBonus': attack_bonus,
+                            'damage': damage,
+                            'details': desc
+                        }
+                    )
+                )
         else:
             for dmg in raw_damage:
                 damage = f"{dmg.group(1)}[{dmg.group(2)}]"
-                attacks.append(Attack.from_dict({
-                    'name': name,
-                    'attackBonus': None,
-                    'damage': damage,
-                    'details': desc
-                }))
+                attacks.append(
+                    Attack.from_dict(
+                        {
+                            'name': name,
+                            'attackBonus': None,
+                            'damage': damage,
+                            'details': desc
+                        }
+                    )
+                )
 
         traits.append(Trait(name, desc))
     return traits, attacks
@@ -466,7 +517,7 @@ def parse_critterdb_spellcasting(traits, base_stats):
     slots = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0}
 
     for trait in traits:
-        if not 'Spellcasting' in trait.name:
+        if 'Spellcasting' not in trait.name:
             continue
         desc = trait.desc
 
@@ -475,8 +526,10 @@ def parse_critterdb_spellcasting(traits, base_stats):
         type_sab = int(type_match.group(3)) if type_match else None
         type_casting_ability = base_stats.get_mod(type_match.group(1)) if type_match else None
         type_caster_level_match = re.search(r'(\d+)[stndrh]{2}-level', desc)
-        caster_level = max(caster_level,
-                           int(type_caster_level_match.group(1))) if type_caster_level_match else caster_level
+        caster_level = max(
+            caster_level,
+            int(type_caster_level_match.group(1))
+        ) if type_caster_level_match else caster_level
         type_spells = []
 
         def extract_spells(text):
@@ -496,16 +549,18 @@ def parse_critterdb_spellcasting(traits, base_stats):
                     strict = False
 
                 extracted.append(
-                    SpellbookSpell(real_name, strict=strict, dc=type_dc, sab=type_sab, mod=type_casting_ability))
+                    SpellbookSpell(real_name, strict=strict, dc=type_dc, sab=type_sab, mod=type_casting_ability)
+                )
             type_spells.extend(extracted)
             return extracted
 
         for type_leveled_spells in re.finditer(
                 r"(?:"
-                r"(?:(?P<level>\d)[stndrh]{2}\slevel \((?P<slots>\d+) slots?\))"
-                r"|(?:Cantrip \(at will\))): "
+                r"(?P<level>\d)[stndrh]{2}\slevel \((?P<slots>\d+) slots?\)"
+                r"|Cantrip \(at will\)): "
                 r"(?P<spells>.+)$",
-                desc, re.MULTILINE):
+                desc, re.MULTILINE
+        ):
             extract_spells(type_leveled_spells.group("spells"))
             if type_leveled_spells.group("level") and type_leveled_spells.group("slots"):
                 slots[type_leveled_spells.group("level")] = int(type_leveled_spells.group("slots"))

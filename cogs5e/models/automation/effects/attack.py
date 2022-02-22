@@ -132,7 +132,7 @@ class Attack(Effect):
             if ac:
                 to_hit_message = f'**To Hit (AC {ac})**:'
             if force_roll:
-                to_hit_message = '**To Hit**: Forced Roll!'
+                to_hit_message = f'{to_hit_message} Forced Roll!'
 
             if b:
                 to_hit_roll = d20.roll(f"{formatted_d20}+{attack_bonus}+{b}")

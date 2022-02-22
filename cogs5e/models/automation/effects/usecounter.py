@@ -301,10 +301,17 @@ def abilityreference_counter_discovery(ref, char):
     eid = e.entity_id
     tid = e.type_id
 
-    # 1: cc with same id (if the referenced entity is a LimitedUse)
+    # if we are referencing a LimitedUse directly:
     if isinstance(e, gamedata.LimitedUse):
+        # 1: cc with same id
         if (limiteduse_cc := consumables_by_lu_id.get((tid, eid))) is not None:
             return limiteduse_cc
+
+        # 1.5: cc with same name as the LimitedUse
+        if (limiteduse_name_cc := consumables_by_name.get(e.name)) is not None:
+            return limiteduse_name_cc
+
+        # otherwise fall back to the granting feature
         e = e.parent
         eid = e.entity_id
         tid = e.type_id

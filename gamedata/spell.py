@@ -168,10 +168,12 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         if not i:
             # if I'm a warlock, and I didn't have any slots of this level anyway (#655)
             # automatically scale up to our pact slot level (or the next available level s.t. max > 0)
-            if l > 0 \
-                    and l == self.level \
-                    and not caster.spellbook.get_max_slots(l) \
-                    and not caster.spellbook.can_cast(self, l):
+            if (
+                    l > 0
+                    and l == self.level
+                    and not caster.spellbook.get_max_slots(l)
+                    and not caster.spellbook.can_cast(self, l)
+            ):
                 if caster.spellbook.pact_slot_level is not None:
                     l = caster.spellbook.pact_slot_level
                 else:
@@ -255,6 +257,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         if all((self.concentration, isinstance(caster, BaseCombatant), combat, not noconc)):
             duration = args.last('dur', self.get_combat_duration(), int)
             conc_effect = Effect.new(combat, caster, self.name, duration, "", True)
+            # noinspection PyUnresolvedReferences
             effect_result = caster.add_effect(conc_effect)
             conc_conflict = effect_result['conc_conflict']
 
@@ -281,8 +284,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
 
         if conc_conflict:
             conflicts = ', '.join(e.name for e in conc_conflict)
-            embed.add_field(name="Concentration",
-                            value=f"Dropped {conflicts} due to concentration.")
+            embed.add_field(name="Concentration", value=f"Dropped {conflicts} due to concentration.")
 
         if 'thumb' in args:
             embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))

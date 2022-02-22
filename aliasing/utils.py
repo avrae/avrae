@@ -14,7 +14,7 @@ class ExecutionScope(enum.IntEnum):
 
 def optional_cast_arg_or_default(argument, arg_t=str, default=None, unset_sentinel=UNSET):
     """
-    Given a passed argument, returns that argument cast to *arg_t* (or None if the arg is None), 
+    Given a passed argument, returns that argument cast to *arg_t* (or None if the arg is None),
     unless the argument is *unset_sentinel*, in which case returns *default*.
 
     Used to cast aliasing args to the expected optional type while handling the unset case.

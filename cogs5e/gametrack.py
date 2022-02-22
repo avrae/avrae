@@ -582,7 +582,7 @@ class GameTrack(commands.Cog):
         except InvalidArgument as e:
             return await ctx.send(f"Failed to create counter: {e}")
         else:
-            await ctx.send("Custom counter created.")
+            await ctx.send(f"Custom counter created.\n\n**{name}**\n{new_counter.full_str()}")
 
     @customcounter.command(name='edit')
     async def customcounter_edit(self, ctx, name, *args):
@@ -593,15 +593,19 @@ class GameTrack(commands.Cog):
         Will clamp counter value to new limits if needed.
 
         __Valid Arguments__
-        `-title <title>` - Sets the title for the output when modifying the counter. `[name]` will be replaced with the player's name.
+        `-title <title>` - Sets the title for the output when modifying the counter.
+                           `[name]` will be replaced with the player's name.
         `-desc <desc>` - Sets the description when setting or viewing the counter.
-        `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
+        `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none".
+                                     Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.
         `-min <min value>` - The minimum value of the counter.
-        `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers.
+        `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers.
+                                   Default - numbers.
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
-        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
-        """  # noqa: E501
+        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset.
+                             Supports dice.
+        """
         character: Character = await ctx.get_character()
         counter = await character.select_consumable(ctx, name)
         # pull in the new values, or existing ones
@@ -636,7 +640,7 @@ class GameTrack(commands.Cog):
             await character.commit(ctx)
 
             clamp = f"\nClamped: {new_value} ({new_value - counter.value} overflow)." if not counter.value == new_value else ""
-            await ctx.send(f"Custom counter {name} edited."+clamp)
+            await ctx.send(f"Custom counter edited.{clamp}\n\n**{name}**\n{new_counter.full_str()}")
 
     @customcounter.command(name='delete', aliases=['remove'])
     async def customcounter_delete(self, ctx, name):

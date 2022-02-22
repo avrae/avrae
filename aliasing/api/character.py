@@ -2,7 +2,7 @@ from functools import cached_property
 
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
-from aliasing.utils import optional_cast_arg_or_default
+from aliasing.utils import optional_cast_arg_or_default, UNSET
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
 
@@ -165,9 +165,9 @@ class AliasCharacter(AliasStatBlock):
             self.delete_cc(name)
         return self.create_cc_nx(name, *args, **kwargs)
 
-    def edit_cc(self, name: str, minVal: str = None, maxVal: str = None, reset: str = None,
-                dispType: str = None, reset_to: str = None, reset_by: str = None,
-                title: str = None, desc: str = None):
+    def edit_cc(self, name: str, minVal: str = UNSET, maxVal: str = UNSET, reset: str = UNSET,
+                dispType: str = UNSET, reset_to: str = UNSET, reset_by: str = UNSET,
+                title: str = UNSET, desc: str = UNSET):
         """
         Edits an existing custom counter.
 
@@ -198,15 +198,14 @@ class AliasCharacter(AliasStatBlock):
         title = optional_cast_arg_or_default(title, default=counter.title)
         desc = optional_cast_arg_or_default(desc, default=counter.desc)
 
-        if self.cc_exists(name):
-            edit_consumable = player_api.CustomCounter.new(
-                self._character, name, minVal, maxVal, reset, dispType,
-                title=title, desc=desc, reset_to=reset_to, reset_by=reset_by)
-            edit_consumable.set(counter.value)
-            self._character.consumables.insert(self._character.consumables.index(counter), edit_consumable)
-            self._character.consumables.remove(counter)
-            self._consumables = None  # reset cache
-            return AliasCustomCounter(edit_consumable)
+        edit_consumable = player_api.CustomCounter.new(
+            self._character, name, minVal, maxVal, reset, dispType,
+            title=title, desc=desc, reset_to=reset_to, reset_by=reset_by)
+        edit_consumable.set(counter.value)
+        self._character.consumables.insert(self._character.consumables.index(counter), edit_consumable)
+        self._character.consumables.remove(counter)
+        self._consumables = None  # reset cache
+        return AliasCustomCounter(edit_consumable)
 
     def cc_exists(self, name):
         """

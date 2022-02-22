@@ -88,7 +88,7 @@ class Homebrew(commands.Cog):
 
         For more complex automation, you can create an attack on the Avrae Dashboard and copy the exported YAML into the CritterDB attack description as follows:
         `<avrae hidden>YAML</avrae>`
-        """
+        """  # noqa: E501
 
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
         # https://critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
@@ -105,8 +105,9 @@ class Homebrew(commands.Cog):
 
         bestiary = await Bestiary.from_critterdb(ctx, bestiary_id, published=is_published)
 
+        await bestiary.subscribe(ctx)
         await bestiary.set_active(ctx)
-        await bestiary.load_monsters(ctx)
+
         await loading.edit(content=f"Imported {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
@@ -121,24 +122,31 @@ class Homebrew(commands.Cog):
     async def bestiary_update(self, ctx):
         """Updates the active bestiary from CritterDB."""
         try:
-            active_bestiary = await Bestiary.from_ctx(ctx)
+            old_bestiary = await Bestiary.from_ctx(ctx)
         except NoActiveBrew:
             return await ctx.send(
                 f"You don't have a bestiary active. Add one with `{ctx.prefix}bestiary import` first!"
             )
         loading = await ctx.send("Updating bestiary (this may take a while for large bestiaries)...")
 
-        old_server_subs = await active_bestiary.server_subscriptions(ctx)
-        await active_bestiary.unsubscribe(ctx)
-        bestiary = await Bestiary.from_critterdb(ctx, active_bestiary.upstream, active_bestiary.published)
+        old_server_subs = await old_bestiary.server_subscriptions(ctx)
+        bestiary = await Bestiary.from_critterdb(ctx, old_bestiary.upstream, old_bestiary.published)
 
-        await bestiary.add_server_subscriptions(ctx, old_server_subs)
-        await bestiary.set_active(ctx)
-        await bestiary.load_monsters(ctx)
+        # only do subscription operations if there was actually a change
+        if bestiary.sha256 != old_bestiary.sha256:
+            await old_bestiary.unsubscribe(ctx)
+            await bestiary.subscribe(ctx)
+            await bestiary.add_server_subscriptions(ctx, old_server_subs)
+            await bestiary.set_active(ctx)
+
         await loading.edit(content=f"Imported and updated {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
-        embed.description = '\n'.join(m.name for m in bestiary.monsters)
+        monnames = '\n'.join(m.name for m in bestiary.monsters)
+        if len(monnames) < 2040:
+            embed.description = monnames
+        else:
+            embed.description = f"{len(bestiary.monsters)} creatures."
         await ctx.send(embed=embed)
 
     @bestiary.group(name='server', invoke_without_command=True)

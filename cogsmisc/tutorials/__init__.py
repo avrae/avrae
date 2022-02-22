@@ -53,8 +53,10 @@ class Tutorials(commands.Cog):
         if user_state is not None:
             tutorial, state = self.get_tutorial_and_state(user_state)
             if tutorial is None or state is None:
-                await ctx.send(f"The tutorial you were running no longer exists. "
-                               f"Please run `{ctx.prefix}tutorial end` to start a new tutorial!")
+                await ctx.send(
+                    f"The tutorial you were running no longer exists. "
+                    f"Please run `{ctx.prefix}tutorial end` to start a new tutorial!"
+                )
                 return
             # show tutorial state objective
             await state.objective(ctx, user_state)
@@ -73,8 +75,10 @@ class Tutorials(commands.Cog):
         """Lists the available tutorials."""
         embed = EmbedWithAuthor(ctx)
         embed.title = "Available Tutorials"
-        embed.description = f"Use `{ctx.prefix}tutorial <name>` to select a tutorial from the ones available below!\n" \
-                            f"First time here? Try `{ctx.prefix}tutorial quickstart`!"
+        embed.description = (
+            f"Use `{ctx.prefix}tutorial <name>` to select a tutorial from the ones available below!\n"
+            f"First time here? Try `{ctx.prefix}tutorial quickstart`!"
+        )
         for tutorial in self.tutorials.values():
             embed.add_field(name=tutorial.name, value=tutorial.description, inline=False)
         await ctx.send(embed=embed)
@@ -88,8 +92,10 @@ class Tutorials(commands.Cog):
             return await ctx.send("You are not currently running a tutorial.")
         tutorial, state = self.get_tutorial_and_state(user_state)
         if tutorial is None or state is None:
-            return await ctx.send(f"The tutorial you were running no longer exists. "
-                                  f"Please run `{ctx.prefix}tutorial end` to start a new tutorial!")
+            return await ctx.send(
+                f"The tutorial you were running no longer exists. "
+                f"Please run `{ctx.prefix}tutorial end` to start a new tutorial!"
+            )
         # confirm
         result = await confirm(ctx, "Are you sure you want to skip the current tutorial objective? (Reply with yes/no)")
         if not result:
@@ -112,6 +118,14 @@ class Tutorials(commands.Cog):
         # delete tutorial state map
         await user_state.end_tutorial(ctx)
         await ctx.send("Ok, ended the tutorial.")
+
+    @commands.command(hidden=True)
+    @commands.guild_only()
+    @checks.feature_flag('cog.tutorials.guild_join.enabled')
+    async def show_join_message(self, ctx):
+        """Sends the message that appears when Avrae is added to a server."""
+        await self.send_welcome_message(ctx.guild, to_user=ctx.author)
+        await ctx.message.add_reaction("\u2705")
 
     # ==== main listener entrypoint ====
     @commands.Cog.listener()
@@ -139,12 +153,17 @@ class Tutorials(commands.Cog):
         state = tutorial.states.get(user_state.state_key)
         return tutorial, state
 
-    async def send_welcome_message(self, guild):
-        owner = await get_guild_member(guild, guild.owner_id)
-        if owner is None:
+    async def send_welcome_message(self, guild, to_user=None):
+        if to_user is None:
+            to_user = await get_guild_member(guild, guild.owner_id)
+        if to_user is None:
             return
-        flag_on = await self.bot.ldclient.variation('cog.tutorials.guild_join.enabled', discord_user_to_dict(owner),
-                                                    default=False)
+
+        flag_on = await self.bot.ldclient.variation(
+            'cog.tutorials.guild_join.enabled',
+            discord_user_to_dict(to_user),
+            default=False
+        )
         if not flag_on:
             return
         prefix = await self.bot.get_guild_prefix(guild)
@@ -153,11 +172,13 @@ class Tutorials(commands.Cog):
         embed = discord.Embed()
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.display_avatar.url)
         embed.colour = discord.Colour.blurple()
-        embed.description = textwrap.dedent(f"""
-        :wave: Hi there! Thanks for adding me to {guild.name}!
-        
-        I'm ready to roll, but before we get started, let's take a look at some of the things I can do! 
-        """).strip()
+        embed.description = textwrap.dedent(
+            f"""
+            :wave: Hi there! Thanks for adding me to {guild.name}!
+            
+            I'm ready to roll, but before we get started, let's take a look at some of the things I can do! 
+            """
+        ).strip()
 
         if not prefix_is_default:
             embed.add_field(
@@ -216,11 +237,13 @@ class Tutorials(commands.Cog):
             name="More Resources", inline=False,
             value=f"If you ever want a refresher on a command or feature, use the `{prefix}help` command for help on a "
                   f"command, or `{prefix}tutorial` for a list of available tutorials.\n\n"
-                  f"For even more resources, come join us in the development Discord at <https://support.avrae.io>!"
+                  f"For even more resources, come join us in the development Discord at <https://support.avrae.io>!\n\n"
+                  f"[Privacy Policy](https://www.fandom.com/privacy-policy) "
+                  f"| [Terms of Use](https://www.fandom.com/terms-of-use)"
         )
 
         try:
-            await owner.send(embed=embed)
+            await to_user.send(embed=embed)
         except discord.HTTPException:
             pass
 

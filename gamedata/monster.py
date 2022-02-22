@@ -407,8 +407,9 @@ class MonsterSpellbook(Spellbook):
     def remaining_casts_of(self, spell, level):
         if spell.name in self.at_will:
             return f"**{spell.name}**: At Will"
-        elif spell.name in self.daily:
-            return f"**{spell.name}**: {bubble_format(self.daily[spell.name], self.daily_max[spell.name])}"
+        daily_key, daily_value = self._daily_cast_info(spell)
+        if daily_key is not None:
+            return f"**{spell.name}**: {bubble_format(daily_value, self.daily_max[daily_key])}"
         return super().remaining_casts_of(spell, level)
 
     def cast(self, *args, **kwargs):
@@ -422,11 +423,19 @@ class MonsterSpellbook(Spellbook):
         is_at_will = spell.name.lower() in [s.lower() for s in self.at_will]
 
         # daily
-        daily_key = next((k for k in self.daily if spell.name.lower() == k.lower()), None)
-        is_daily = daily_key is not None and self.daily[daily_key] > 0
+        daily_key, daily_value = self._daily_cast_info(spell)
+        is_daily = daily_value > 0
 
         # check
         return spell.name in self and (has_slot or is_daily or is_at_will)
+
+    def _daily_cast_info(self, spell):
+        """Return a pair (key, remaining_casts) for a daily-cast spell. If not found, returns (None, 0)."""
+        try:
+            daily_key = next(k for k in self.daily if spell.name.lower() == k.lower())
+        except StopIteration:
+            return None, 0
+        return daily_key, self.daily[daily_key]
 
 
 class MonsterCastableSpellbook(MonsterSpellbook):
@@ -442,15 +451,17 @@ class MonsterCastableSpellbook(MonsterSpellbook):
     def cast(self, spell, level, pact=True):
         if spell.name.lower() in [s.lower() for s in self.at_will]:
             return
-        elif (daily_key := next((k for k in self.daily if spell.name.lower() == k.lower()), None)) is not None:
-            if self.daily[daily_key] > 0:
-                self.daily[daily_key] -= 1
-            else:
-                raise CounterOutOfBounds(f"You do not have any remaining casts of {spell.name}.")
-        else:
-            self.use_slot(level, pact=pact)
+
+        daily_key, daily_value = self._daily_cast_info(spell)
+        if daily_key is not None and daily_value > 0:
+            self.daily[daily_key] -= 1
+            return self.remaining_casts_of(spell, level)
+        elif daily_key is not None:
+            raise CounterOutOfBounds(f"You do not have any remaining casts of {spell.name}.")
+
+        self.use_slot(level, pact=pact)
 
     def reset_slots(self):
         super().reset_slots()
-        for spell, max in self.daily_max.items():
-            self.daily[spell] = max
+        for spell, max_casts in self.daily_max.items():
+            self.daily[spell] = max_casts

@@ -189,12 +189,14 @@ class Avrae(commands.AutoShardedBot):
         self.ldclient.close()
 
 
-desc = '''
-Avrae, a D&D 5e utility bot designed to help you and your friends play D&D online.
-A full command list can be found [here](https://avrae.io/commands)!
-Invite Avrae to your server [here](https://invite.avrae.io)!
-Join the official development server [here](https://support.avrae.io)!
-'''
+desc = (
+    "Play D&D over Discord! Featuring advanced dice, initiative tracking, D&D Beyond integration, and more, you'll "
+    "never need another D&D bot.\n"
+    "View the full list of commands [here](https://avrae.io/commands)!\n"
+    "Invite Avrae to your server [here](https://invite.avrae.io)!\n"
+    "Join the official development server [here](https://support.avrae.io)!\n"
+    "[Privacy Policy](https://www.fandom.com/privacy-policy) | [Terms of Use](https://www.fandom.com/terms-of-use)"
+)
 intents = discord.Intents(
     guilds=True, members=True, messages=True, reactions=True,
     bans=False, emojis=False, integrations=False, webhooks=False, invites=False, voice_states=False, presences=False,

@@ -47,6 +47,7 @@ class Attack(Effect):
         reroll = args.last('reroll', 0, int)
         criton = args.last('criton', 20, int)
         ac = args.last('ac', None, int)
+        force_roll = args.last('attackroll', None, int, ephem=True)
 
         # ==== caster options ====
         # character-specific arguments
@@ -116,7 +117,9 @@ class Attack(Effect):
             if reroll:
                 reroll_str = f"ro{reroll}"
 
-            if adv == 1:
+            if force_roll:
+                formatted_d20 = f"{force_roll}"
+            elif adv == 1:
                 formatted_d20 = f'2d20{reroll_str}kh1'
             elif adv == 2:
                 formatted_d20 = f'3d20{reroll_str}kh1'
@@ -125,9 +128,11 @@ class Attack(Effect):
             else:
                 formatted_d20 = f'1d20{reroll_str}'
 
-            to_hit_message = 'To Hit'
+            to_hit_message = '**To Hit**:'
             if ac:
-                to_hit_message = f'To Hit (AC {ac})'
+                to_hit_message = f'**To Hit (AC {ac})**:'
+            if force_roll:
+                to_hit_message = f'{to_hit_message} Forced Roll!'
 
             if b:
                 to_hit_roll = d20.roll(f"{formatted_d20}+{attack_bonus}+{b}")
@@ -159,7 +164,7 @@ class Attack(Effect):
 
             # output
             if not hide:  # not hidden
-                autoctx.queue(f"**{to_hit_message}**: {to_hit_roll.result}")
+                autoctx.queue(f"{to_hit_message} {to_hit_roll.result}")
             elif target_has_ac:  # hidden
                 if not did_hit:
                     hit_type = 'MISS'
@@ -168,10 +173,10 @@ class Attack(Effect):
                 else:
                     hit_type = 'HIT'
                 autoctx.queue(f"**To Hit**: {formatted_d20}... = `{hit_type}`")
-                autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
+                autoctx.add_pm(str(autoctx.ctx.author.id), f"{to_hit_message} {to_hit_roll.result}")
             else:  # hidden, no ac
                 autoctx.queue(f"**To Hit**: {formatted_d20}... = `{to_hit_roll.total}`")
-                autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
+                autoctx.add_pm(str(autoctx.ctx.author.id), f"{to_hit_message} {to_hit_roll.result}")
 
             if not did_hit:
                 children = self.on_miss(autoctx)

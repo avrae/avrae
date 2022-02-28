@@ -74,5 +74,16 @@ class CharacterServiceClient(BaseClient):
         }
         return await self.put(ddb_user, '/spell/slots', json=data)
 
+    # ==== Currency ====
+    async def set_currency(self, ddb_user, pp: int, gp: int, ep: int, sp: int, cp: int, character_id: int):
+        data = {
+            "cp": 0,
+            "sp": 0,
+            "ep": 0,
+            "gp": 0,
+            "pp": 0,
+            "characterId": character_id
+        }
+        return await self.put(ddb_user, '/inventory/currency', json=data)
 
 CharacterServiceResponse = namedtuple('CharacterServiceResponse', 'id message data')

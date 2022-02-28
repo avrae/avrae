@@ -16,6 +16,7 @@ from cogs5e.models.sheet.player import CustomCounter, DeathSaves, ManualOverride
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock
+from cogs5e.models.sheet.coinpurse import Coinpurse
 from cogs5e.sheets.abc import SHEET_VERSION
 from utils.functions import search_and_select
 from utils.settings import CharacterSettings
@@ -40,7 +41,8 @@ class Character(StatBlock):
                  live, race: str, background: str,
                  creature_type: str = None,
                  ddb_campaign_id: str = None, actions: Actions = None, active_guilds: list = None,
-                 options_v2: CharacterSettings = None,
+                 options_v2: CharacterSettings = None, 
+                 coinpurse = None,
                  **kwargs):
         if actions is None:
             actions = Actions()
@@ -51,6 +53,8 @@ class Character(StatBlock):
                 options_v2 = CharacterSettings.from_old_csettings(kwargs.pop('options'))
             else:
                 options_v2 = CharacterSettings()
+        if coinpurse is None:
+            coinpurse = Coinpurse()
         if kwargs:
             log.debug(f"Unused kwargs: {kwargs}")
 

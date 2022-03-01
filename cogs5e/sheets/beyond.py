@@ -294,7 +294,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
     def _get_purse(self) -> Coinpurse:
         """Returns the Currency values."""
-        coins = Coinpurse(self.character_data, pp=self.character_data['currencies']['pp'], gp=self.character_data['currencies']['gp'], ep=self.character_data['currencies']['ep'], sp=self.character_data['currencies']['sp'], cp=self.character_data['currencies']['cp'])
+        coins = Coinpurse(pp=self.character_data['currencies']['pp'], gp=self.character_data['currencies']['gp'], ep=self.character_data['currencies']['ep'], sp=self.character_data['currencies']['sp'], cp=self.character_data['currencies']['cp'])
         return coins
 
     def _get_attacks_and_actions(self):

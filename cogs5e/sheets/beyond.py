@@ -15,6 +15,7 @@ from cogs5e.models import automation
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.action import Action, Actions
+from cogs5e.models.sheet.coinpurse import Coinpurse
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.player import CustomCounter
@@ -286,6 +287,12 @@ class BeyondSheetParser(SheetLoaderABC):
 
     def _get_background(self):
         return self.character_data['background']
+
+    def _get_purse(self) -> Coinpurse:
+        """Returns a dict of stats."""
+        c = self.character_data
+        coins = Coinpurse(c, c['currencies'])
+        return coins
 
     def _get_attacks_and_actions(self):
         """

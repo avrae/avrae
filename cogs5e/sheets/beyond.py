@@ -289,7 +289,7 @@ class BeyondSheetParser(SheetLoaderABC):
         return self.character_data['background']
 
     def _get_purse(self) -> Coinpurse:
-        """Returns a dict of stats."""
+        """Returns the Currency values."""
         c = self.character_data
         coins = Coinpurse(c, c['currencies'])
         return coins

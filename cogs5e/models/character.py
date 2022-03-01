@@ -593,8 +593,7 @@ class Character(StatBlock):
             embed.add_field(name="Attacks", value=atk_str)
 
         # Coins
-        #if(isinstance(self.coinpurse, dict)):
-        embed.add_field(name="Currency", value=str(self.coinpurse))
+        embed.add_field(name="Currency", value=str(self.coinpurse.to_dict()))
         
 
         # sheet url?

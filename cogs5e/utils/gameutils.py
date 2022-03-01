@@ -16,3 +16,9 @@ async def send_hp_result(ctx, caster, delta=None):
         await caster.message_controller(ctx, f"{caster.name}'s HP: {caster.hp_str(True)}{deltaend}")
     else:
         await ctx.send(f"{caster.name}: {caster.hp_str()}{deltaend}")
+
+async def send_coinpurse(ctx, character):
+    """
+    Sends the result of coinpurse
+    """
+    await ctx.send(f"Contents of Coinpurse: {character.coinpurse.to_dict()}")

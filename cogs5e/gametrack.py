@@ -175,6 +175,20 @@ class GameTrack(commands.Cog):
         -h - Hides the character summary output."""
         await self._rest(ctx, 'short', *args)
 
+    @game.command(name='coinpurse', aliases=['coins'])
+    async def game_coinpurse(self, ctx, *, args = None):
+        """
+        game coinpurse (pp|gp|ep|sp|cp) <amount>
+        game coins 2gp -5sp
+        ([+-](\d+)(p|g|e|s|c)p\s*)+
+        TODO: game coins <amount> ( default gold )   gp.sp.cp == parse float to convert to proper format
+        """
+        character: Character = await ctx.get_character()
+
+        if args is None:
+            return await gameutils.send_coinpurse(ctx, character)
+        
+
     @game.group(name='hp', invoke_without_command=True)
     async def game_hp(self, ctx, *, hp: str = None):
         """Modifies the HP of a the current active character."""

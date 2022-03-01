@@ -10,12 +10,16 @@ class LiveIntegration(abc.ABC):
         self.character = character
         self._key = character.upstream
         self._should_sync_hp = False
+        self._should_sync_coins = False
         self._should_sync_slots = False
         self._should_sync_ccs = {}
         self._should_sync_death_saves = False
         self._ctx = None  # set for the duration of a commit, use for access to bot stuff
 
     async def _do_sync_hp(self):
+        raise NotImplementedError
+
+    async def _do_sync_coins(self):
         raise NotImplementedError
 
     async def _do_sync_slots(self):
@@ -31,6 +35,10 @@ class LiveIntegration(abc.ABC):
     def sync_hp(self):
         """Mark that HP should be synced on commit."""
         self._should_sync_hp = True
+
+    def sync_coins(self):
+        """Mark that Currency should be synced on commit."""
+        self._should_sync_coins = True
 
     def sync_slots(self):
         """Mark that spell slots should be synced on commit."""
@@ -53,6 +61,7 @@ class LiveIntegration(abc.ABC):
     def clear(self):
         self._should_sync_hp = False
         self._should_sync_slots = False
+        self._should_sync_coins = False
         self._should_sync_ccs = {}
         self._should_sync_death_saves = False
 
@@ -66,6 +75,8 @@ class LiveIntegration(abc.ABC):
             to_await = []
             if self._should_sync_hp:
                 to_await.append(self._do_sync_hp())
+            if self._should_sync_coins:
+                to_await.append(self._do_sync_coins())
             if self._should_sync_slots:
                 to_await.append(self._do_sync_slots())
             if self._should_sync_death_saves:

@@ -90,6 +90,7 @@ class BeyondSheetParser(SheetLoaderABC):
         live = 'beyond' if self._is_live else None
         race = self._get_race()
         background = self._get_background()
+        coinpurse = self._get_purse()
 
         # ddb campaign
         campaign = self.character_data.get('campaign')
@@ -101,7 +102,7 @@ class BeyondSheetParser(SheetLoaderABC):
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
             skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
             spellbook, live, race, background,
-            ddb_campaign_id=campaign_id, actions=actions
+            ddb_campaign_id=campaign_id, actions=actions, coinpurse=coinpurse
         )
         return character
 
@@ -290,8 +291,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
     def _get_purse(self) -> Coinpurse:
         """Returns the Currency values."""
-        c = self.character_data
-        coins = Coinpurse(c, pp=c['currencies']['pp'], gp=c['currencies']['gp'], ep=c['currencies']['ep'], sp=c['currencies']['sp'], cp=c['currencies']['cp'])
+        coins = Coinpurse(self.character_data, pp=self.character_data['currencies']['pp'], gp=self.character_data['currencies']['gp'], ep=self.character_data['currencies']['ep'], sp=self.character_data['currencies']['sp'], cp=self.character_data['currencies']['cp'])
         return coins
 
     def _get_attacks_and_actions(self):

@@ -7,6 +7,8 @@ class Coinpurse:
         self.sp = sp
         self.cp = cp
 
+#    def __str__ (self): 
+
     @classmethod
     def from_dict(cls, d):
         return cls(**d)

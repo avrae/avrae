@@ -53,8 +53,6 @@ class Character(StatBlock):
                 options_v2 = CharacterSettings.from_old_csettings(kwargs.pop('options'))
             else:
                 options_v2 = CharacterSettings()
-        if coinpurse is None:
-            coinpurse = Coinpurse()
         if kwargs:
             log.debug(f"Unused kwargs: {kwargs}")
 
@@ -65,6 +63,7 @@ class Character(StatBlock):
         self._active_guilds = active_guilds
         self._sheet_type = sheet_type
         self._import_version = import_version
+        self.coinpurse = coinpurse
 
         # StatBlock super call
         super().__init__(
@@ -587,6 +586,9 @@ class Character(StatBlock):
             atk_str = f"{atk_str[:1000]}\n[...]"
         if atk_str:
             embed.add_field(name="Attacks", value=atk_str)
+
+        # Coins
+        embed.add_field(name="Currency", value=str(self.coinpurse.to_dict()))
 
         # sheet url?
         if self._import_version < SHEET_VERSION:

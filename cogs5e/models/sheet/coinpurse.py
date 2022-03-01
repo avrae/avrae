@@ -37,6 +37,9 @@ class Coinpurse(HasIntegrationMixin):
         self.sp += sp
         self.cp += cp
 
+        if self._live_integration:
+            self.live_integration.sync_coins()
+
     def set_currency(self, pp:int=0, gp:int=0, ep:int=0, sp:int=0, cp:int=0):
         if not all(
             isinstance(pp, int),
@@ -52,3 +55,6 @@ class Coinpurse(HasIntegrationMixin):
         self.ep = ep
         self.sp = sp
         self.cp = cp
+
+        if self._live_integration:
+            self.live_integration.sync_coins()

@@ -13,8 +13,8 @@ class Coinpurse(HasIntegrationMixin):
 #    def __str__ (self): 
 
     @classmethod
-    def from_dict(cls, character, d):
-        return cls(character, **d)
+    def from_dict(cls, d):
+        return cls(**d)
 
     def to_dict(self):
         return {

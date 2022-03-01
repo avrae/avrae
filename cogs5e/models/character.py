@@ -48,6 +48,8 @@ class Character(StatBlock):
             actions = Actions()
         if active_guilds is None:
             active_guilds = []
+        if coinpurse is None:
+            coinpurse = Coinpurse()
         if options_v2 is None:
             if 'options' in kwargs:  # options v1 -> v2 migration (options rewrite)
                 options_v2 = CharacterSettings.from_old_csettings(kwargs.pop('options'))
@@ -181,7 +183,7 @@ class Character(StatBlock):
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
             "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict(),
-            "active_guilds": self._active_guilds, "options_v2": self.options.dict(),
+            "active_guilds": self._active_guilds, "options_v2": self.options.dict(), "coinpurse": self.coinpurse.to_dict(),
         })
         return d
 
@@ -588,7 +590,9 @@ class Character(StatBlock):
             embed.add_field(name="Attacks", value=atk_str)
 
         # Coins
-        embed.add_field(name="Currency", value=str(self.coinpurse.to_dict()))
+        #if(isinstance(self.coinpurse, dict)):
+        embed.add_field(name="Currency", value=str(self.coinpurse))
+        
 
         # sheet url?
         if self._import_version < SHEET_VERSION:
@@ -638,4 +642,4 @@ class CharacterSpellbook(Spellbook):
 SetActiveResult = namedtuple('SetActiveResult', 'did_unset_server_active')
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
-DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions, "options_v2": CharacterSettings}
+DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions, "options_v2": CharacterSettings, "coinpurse": Coinpurse}

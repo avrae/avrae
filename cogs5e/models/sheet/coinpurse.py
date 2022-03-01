@@ -1,6 +1,9 @@
-class Coinpurse:
-    def __init__(self, character, pp=0, gp=0, ep=0, sp=0, cp=0):
-        self._character = character
+from .mixins import HasIntegrationMixin
+
+
+class Coinpurse(HasIntegrationMixin):
+    def __init__(self, pp=0, gp=0, ep=0, sp=0, cp=0):
+        super().__init__()
         self.pp = pp
         self.gp = gp
         self.ep = ep

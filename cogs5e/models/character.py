@@ -12,6 +12,7 @@ from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharact
 from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
+from cogs5e.models.sheet.mixins import HasIntegrationMixin
 from cogs5e.models.sheet.player import CustomCounter, DeathSaves, ManualOverrides
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
@@ -95,6 +96,10 @@ class Character(StatBlock):
         else:
             self._live_integration = None
 
+        # child objects' live integration stuff
+        self.spellbook._live_integration = self._live_integration
+        self.coinpurse._live_integration = self._live_integration
+
         # misc research things
         self.race = race
         self.background = background
@@ -112,9 +117,7 @@ class Character(StatBlock):
         for key, klass in DESERIALIZE_MAP.items():
             if key in d:
                 d[key] = klass.from_dict(d[key])
-        inst = cls(**d)
-        inst._spellbook._live_integration = inst._live_integration
-        return inst
+        return cls(**d)
 
     @classmethod
     async def from_ctx(cls, ctx, ignore_guild: bool = False):
@@ -626,12 +629,8 @@ class Character(StatBlock):
         return None
 
 
-class CharacterSpellbook(Spellbook):
+class CharacterSpellbook(HasIntegrationMixin, Spellbook):
     """A subclass of spellbook to support live integrations."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._live_integration = None
 
     def set_slots(self, *args, **kwargs):
         super().set_slots(*args, **kwargs)

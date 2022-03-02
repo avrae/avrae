@@ -7,6 +7,7 @@ Most of this module was coded 5 miles in the air. (Aug 8, 2017)
 """
 import collections
 import logging
+import re
 
 import d20
 from discord.ext import commands
@@ -180,14 +181,18 @@ class GameTrack(commands.Cog):
         """
         game coinpurse (pp|gp|ep|sp|cp) <amount>
         game coins 2gp -5sp
-        ([+-](\d+)(p|g|e|s|c)p\s*)+
         TODO: game coins <amount> ( default gold )   gp.sp.cp == parse float to convert to proper format
         """
         character: Character = await ctx.get_character()
 
         if args is None:
             return await gameutils.send_coinpurse(ctx, character)
+
+        if re.search('(\d+)', args).group(1):
+            coins = gameutils.parse_coinpurse_args(args)
+            return await gameutils.send_coinpurse(ctx, character)
         
+
 
     @game.group(name='hp', invoke_without_command=True)
     async def game_hp(self, ctx, *, hp: str = None):

@@ -31,7 +31,6 @@ def parse_coinpurse_args(args:str):
     """
     TODO: Parsing will be here
     Parsing Coinpurse String
-    Regex: ([+-](\d+)(p|g|e|s|c)p\s*)+
     """
-    parse = re.search("\s(([+-]?[0-9]{0,}\.?[0-9]?)([a-zA-Z]{1}p)*)+", args).group(1)
+    parse = re.search("\s(([+-]?[0-9]{0,}\.?[0-9]?)([a-zA-Z]{1}p)*)+", args)
     return parse

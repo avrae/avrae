@@ -22,13 +22,13 @@ class Coinpurse(HasIntegrationMixin):
         }
 
     def update_currency(self, pp:int=0, gp:int=0, ep:int=0, sp:int=0, cp:int=0):
-        if not all(
+        if not all((
             isinstance(pp, int),
             isinstance(gp, int),
             isinstance(ep, int),
             isinstance(sp, int),
             isinstance(cp, int)
-        ):
+        )):
             raise TypeError("All values must be numeric.")
 
         self.pp += pp
@@ -38,16 +38,16 @@ class Coinpurse(HasIntegrationMixin):
         self.cp += cp
 
         if self._live_integration:
-            self.live_integration.sync_coins()
+            self._live_integration.sync_coins()
 
     def set_currency(self, pp:int=0, gp:int=0, ep:int=0, sp:int=0, cp:int=0):
-        if not all(
+        if not all((
             isinstance(pp, int),
             isinstance(gp, int),
             isinstance(ep, int),
             isinstance(sp, int),
             isinstance(cp, int)
-        ):
+        )):
             raise TypeError("All values must be numeric.")
 
         self.pp = pp
@@ -57,4 +57,4 @@ class Coinpurse(HasIntegrationMixin):
         self.cp = cp
 
         if self._live_integration:
-            self.live_integration.sync_coins()
+            self._live_integration.sync_coins()

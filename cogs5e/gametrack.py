@@ -186,12 +186,15 @@ class GameTrack(commands.Cog):
         character: Character = await ctx.get_character()
 
         if args is None:
-            return await gameutils.send_coinpurse(ctx, character)
+            return await gameutils.send_current_coin(ctx, character)
 
-        if re.search('(\d+)', args).group(1):
-            coins = gameutils.parse_coinpurse_args(args)
-            return await gameutils.send_coinpurse(ctx, character)
-        
+        if re.fullmatch(r'([pgesc]p)', args, re.IGNORECASE):
+            return await gameutils.send_current_coin(ctx, character, args)
+
+        coins = gameutils.parse_coin_args(args)
+        character.coinpurse.update_currency(pp=coins.pp, gp=coins.gp, ep=coins.ep, sp=coins.sp, cp=coins.cp)
+        await character.commit(ctx)
+        return await gameutils.send_current_coin(ctx, character)
 
 
     @game.group(name='hp', invoke_without_command=True)

@@ -1,8 +1,18 @@
+import dataclasses
 import re
-from collections import namedtuple
-from cogs5e.initiative import Combatant
 
-CoinsArgs = namedtuple("CoinsArgs", "pp gp ep sp cp")
+from cogs5e.initiative import Combatant
+from cogs5e.models.errors import InvalidArgument
+
+
+@dataclasses.dataclass
+class CoinsArgs:
+    pp: int = 0
+    gp: int = 0
+    ep: int = 0
+    sp: int = 0
+    cp: int = 0
+
 
 async def send_hp_result(ctx, caster, delta=None):
     """
@@ -20,17 +30,71 @@ async def send_hp_result(ctx, caster, delta=None):
     else:
         await ctx.send(f"{caster.name}: {caster.hp_str()}{deltaend}")
 
-async def send_coinpurse(ctx, character, coin="All"):
-    """
-    Sends the result of coinpurse
-    """
-    
-    await ctx.send(f"Contents of Coinpurse: {character.coinpurse.to_dict()}")
 
-def parse_coinpurse_args(args:str):
+async def send_current_coin(ctx, character, coin="All"):
     """
-    TODO: Parsing will be here
-    Parsing Coinpurse String
+    Sends the current contents of the CoinPurse
     """
-    parse = re.search("\s(([+-]?[0-9]{0,}\.?[0-9]?)([a-zA-Z]{1}p)*)+", args)
-    return parse
+    if coin == "All":
+        await ctx.send(f"Contents of Coinpurse({coin}): {character.coinpurse.to_dict()}")
+    else:
+        await ctx.send(f"Contents of Coinpurse({coin}): {character.coinpurse.to_dict()[coin]}")
+
+
+def parse_coin_args(args: str) -> CoinsArgs:
+    """
+    Parses a user's coin string into a representation of each currency.
+    If the user input is a decimal number, assumes gold pieces.
+    Otherwise, allows the user to specify currencies in the form ``/(([+-]?\d+)\s*([pgesc]p)?)+/``
+    (e.g. +1gp -2sp 3cp).
+    """
+    try:
+        return _parse_coin_args_float(float(args))
+    except ValueError:
+        return _parse_coin_args_re(args)
+
+
+def _parse_coin_args_float(coins: float) -> CoinsArgs:
+    """
+    Parses a float into currencies. The input is assumed to be in gp, and any sub-cp values will be truncated.
+    """
+    # 0.01
+    # 1.12313
+    total_copper = int(coins * 100)  # if any sub-copper passed (i.e. 1-thousandth), truncate it
+    return CoinsArgs(
+        # pp=total_copper // 1000,  #  If we are going to utilize Platinum Uncomment This
+        gp=total_copper // 100,  # (total_copper % 1000) // 100  # if allowing plat
+        sp=(total_copper % 100) // 10,
+        cp=total_copper % 10
+    )
+
+
+def _parse_coin_args_re(args: str) -> CoinsArgs:
+    """
+    Parses a currency string into currencies. Duplicates of the same currency will be summed.
+    Examples:
+    10gp -10sp 1pp -> CoinsArgs(pp=1, gp=10, ep=0, sp=-10, cp=0)
+    +10gp -10pp -> CoinsArgs(pp=-10, gp=10, ep=0, sp=0, cp=0)
+    -10gp 50gp 1gp -> CoinsArgs(pp=0, gp=41, ep=0, sp=0, cp=0)
+    """
+    is_valid = re.fullmatch(r"(([+-]?\d+)\s*([pgesc]p)?\s*)+", args, re.IGNORECASE)
+    if not is_valid:
+        raise InvalidArgument("Coins must be a number or a currency string, e.g. `+101.2` or `10cp +101gp -2sp`.")
+
+    out = CoinsArgs()
+    for coin_match in re.finditer(r"(?P<amount>[+-]?\d+)\s*(?P<currency>[pgesc]p)?", args, re.IGNORECASE):
+        amount = int(coin_match["amount"])
+        currency = coin_match["currency"]
+
+        if currency == 'pp':
+            out.pp += amount
+        elif currency == 'gp':
+            out.gp += amount
+        elif currency == 'ep':
+            out.ep += amount
+        elif currency == 'sp':
+            out.sp += amount
+        else:
+            out.cp += amount
+
+    return out

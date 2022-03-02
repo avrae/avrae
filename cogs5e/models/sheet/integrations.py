@@ -1,5 +1,8 @@
 import abc
 import asyncio
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class LiveIntegration(abc.ABC):
@@ -87,6 +90,9 @@ class LiveIntegration(abc.ABC):
             self.clear()
         except asyncio.CancelledError:
             pass
+        except Exception:
+            log.exception("Error in character sync:")
+            self._inflight_tasks.pop(self._key, None)
         else:
             self._inflight_tasks.pop(self._key, None)
         finally:

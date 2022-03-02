@@ -33,11 +33,11 @@ class DDBSheetSync(LiveIntegration):
             return
         await self._ctx.bot.ddb.character.set_currency(
             ddb_user=ddb_user,
-            pp = self.character.currency.pp,
-            gp = self.character.currency.gp,
-            ep = self.character.currency.ep,
-            sp = self.character.currency.sp,
-            cp = self.character.currency.cp,
+            pp = self.character.coinpurse.pp,
+            gp = self.character.coinpurse.gp,
+            ep = self.character.coinpurse.ep,
+            sp = self.character.coinpurse.sp,
+            cp = self.character.coinpurse.cp,
             character_id=int(self.character.upstream_id)
         )
 

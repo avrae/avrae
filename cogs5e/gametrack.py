@@ -176,7 +176,7 @@ class GameTrack(commands.Cog):
         -h - Hides the character summary output."""
         await self._rest(ctx, 'short', *args)
 
-    @game.command(name='coinpurse', aliases=['coins'])
+    @game.command(name='coinpurse', aliases=['coins', 'coin'])
     async def game_coinpurse(self, ctx, *, args = None):
         """
         game coinpurse (pp|gp|ep|sp|cp) <amount>

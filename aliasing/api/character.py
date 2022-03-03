@@ -663,18 +663,20 @@ class AliasCoinpurse:
         return self.__getattr__(item)
 
     def __str__(self):
-        return self._coinpurse.compact_str() if self._parent_statblock.options.compact_coins else str(self._coinpurse)
+        if self._parent_statblock.options.compact_coins:
+            return self._coinpurse.str_styled('compact')
+        return str(self._coinpurse)
 
     def coin_str(self, cointype: str):
         """
-        Returns a string representation of the chosen coin type
+        Returns a string representation of the chosen coin type.
 
         :param str cointype: The type of coin to return
         :rtype str
         """
-        if cointype.lower() not in ("cp", "sp", "ep", "gp", "pp"):
+        if cointype.lower() not in ("compact", "cp", "sp", "ep", "gp", "pp"):
             raise ValueError(f"{cointype} is not valid coin.")
-        return f"{self._coinpurse.to_dict().get(cointype.lower()):,} {cointype.lower()}"
+        return self._coinpurse.str_styled(cointype.lower())
 
     def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         """

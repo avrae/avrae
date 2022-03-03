@@ -36,23 +36,19 @@ async def send_current_coin(ctx, character, coin="All"):
     """
     Sends the current contents of the CoinPurse
     """
+    cp_display_embed = EmbedWithColor()
+    cp_display_embed.colour = 15844367
+    cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
+    cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
     if coin == "All":
+        cp_display_embed.title = f"{character.name}'s Coinpurse"
         if character.options.compact_coins:
-            await ctx.send(f"Contents of Coinpurse ({coin}) Compact!: {character.coinpurse.compact_str()}")
-        else: 
-            cp_display_embed = EmbedWithColor()
-            cp_display_embed.colour = 15844367
-            cp_display_embed.title = f"{character.name}'s Coinpurse"
-            cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
-            cp_display_embed.description = character.coinpurse.str_styled
-            cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
+            cp_display_embed.description = character.coinpurse.str_styled('compact')
+        else:
+            cp_display_embed.description = str(character.coinpurse)
     else:
-        cp_display_embed = EmbedWithColor()
-        cp_display_embed.colour = 15844367
-        cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
         cp_display_embed.title = f"{character.name}'s {CoinTypes[coin]['name']} pieces."
         cp_display_embed.description=f"{CoinTypes[coin]['icon']} {coin}: {character.coinpurse.to_dict()[coin]:,}"
-        cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
 
     await ctx.send(embed=cp_display_embed)
 

@@ -24,6 +24,7 @@ CoinTypes = {
     }
 }
 
+
 class Coinpurse(HasIntegrationMixin):
     def __init__(self, pp=0, gp=0, ep=0, sp=0, cp=0):
         super().__init__()
@@ -34,22 +35,18 @@ class Coinpurse(HasIntegrationMixin):
         self.cp = cp
 
     def __str__(self):
-        return (f"{self.pp:,} pp\n"
-                f"{self.gp:,} gp\n"
-                f"{self.ep:,} ep\n"
-                f"{self.sp:,} sp\n"
-                f"{self.cp:,} cp")
+        return "\n".join(self.str_styled(coin_type) for coin_type in CoinTypes)
 
-    @property
-    def str_styled(self):
-        return (f"{CoinTypes['pp']['icon']} pp: {self.pp:,}\n"
-                f"{CoinTypes['gp']['icon']} gp: {self.gp:,}\n"
-                f"{CoinTypes['ep']['icon']} ep: {self.ep:,}\n"
-                f"{CoinTypes['sp']['icon']} sp: {self.sp:,}\n"
-                f"{CoinTypes['cp']['icon']} cp: {self.cp:,}\n")
+    def str_styled(self, coin_type):
+        if coin_type not in ("compact", "pp", "gp", "ep", "sp", "cp"):
+            raise ValueError("coin_type must be in ('compact', 'pp', 'gp', 'ep', 'sp', 'cp')")
 
-    def compact_str(self):
-        return f"{self.total:,.2f} gp"
+        if coin_type == 'compact':
+            coin_value = self.total
+            coin_type = 'gp'
+        else:
+            coin_value = getattr(self, coin_type)
+        return f"{CoinTypes[coin_type]['icon']} {coin_type}: {coin_value:,}"
 
     @property
     def total(self):

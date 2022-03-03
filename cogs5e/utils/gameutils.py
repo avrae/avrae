@@ -36,7 +36,10 @@ async def send_current_coin(ctx, character, coin="All"):
     Sends the current contents of the CoinPurse
     """
     if coin == "All":
-        await ctx.send(f"Contents of Coinpurse({coin}): {character.coinpurse.to_dict()}")
+        if character.options.compact_coins:
+            await ctx.send(f"Contents of Coinpurse ({coin}) Compact!: {character.coinpurse.compact_str()}")
+        else:
+            await ctx.send(f"Contents of Coinpurse ({coin}): {character.coinpurse}")
     else:
         await ctx.send(f"Contents of Coinpurse({coin}): {character.coinpurse.to_dict()[coin]}")
 

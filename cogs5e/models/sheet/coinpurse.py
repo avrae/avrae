@@ -10,7 +10,20 @@ class Coinpurse(HasIntegrationMixin):
         self.sp = sp
         self.cp = cp
 
-#    def __str__ (self): 
+    def __str__(self):
+        return (f"{self.cp:,} cp\n" 
+                f"{self.sp:,} sp\n" 
+                f"{self.ep:,} ep\n" 
+                f"{self.gp:,} gp\n" 
+                f"{self.pp:,} pp")
+
+    def compact_str(self):
+        total = self.gp
+        total += self.pp * 10
+        total += self.ep * 0.5
+        total += self.sp * 0.1
+        total += self.cp * 0.01
+        return f"{total:,.2f} gp"
 
     @classmethod
     def from_dict(cls, d):
@@ -21,7 +34,7 @@ class Coinpurse(HasIntegrationMixin):
             "pp": self.pp, "gp": self.gp, "ep": self.ep, "sp": self.sp, "cp": self.cp
         }
 
-    def update_currency(self, pp:int=0, gp:int=0, ep:int=0, sp:int=0, cp:int=0):
+    def update_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         if not all((
             isinstance(pp, int),
             isinstance(gp, int),
@@ -40,7 +53,7 @@ class Coinpurse(HasIntegrationMixin):
         if self._live_integration:
             self._live_integration.sync_coins()
 
-    def set_currency(self, pp:int=0, gp:int=0, ep:int=0, sp:int=0, cp:int=0):
+    def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         if not all((
             isinstance(pp, int),
             isinstance(gp, int),

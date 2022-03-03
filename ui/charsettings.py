@@ -110,7 +110,8 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
         embed.add_field(
             name="Cosmetic Settings",
             value=f"**Embed Color**: {color_setting_desc(self.settings.color)}\n"
-                  f"**Show Character Image**: {self.settings.embed_image}",
+                  f"**Show Character Image**: {self.settings.embed_image}\n"
+                  f"**Use Compact Coin Display:** {self.settings.compact_coins}",
             inline=False
         )
         embed.add_field(
@@ -180,7 +181,13 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=2)
+    @disnake.ui.button(label='Toggle Compact Coin Display', style=disnake.ButtonStyle.primary, row=2)
+    async def toggle_compact_coin_display(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        self.settings.compact_coins = not self.settings.compact_coins
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=3)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(CharacterSettingsUI, interaction)
 
@@ -201,6 +208,12 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
             value=f"**{self.settings.embed_image}**\n"
                   f"*If this is disabled, your character's portrait will not appear on the right side of their "
                   f"checks, saves, actions, and some other embeds.*",
+            inline=False
+        )
+        embed.add_field(
+            name="Compact Coin Display",
+            value=f"**{self.settings.compact_coins}**\n"
+                  f"*If this is enabled, your coins will be displayed in decimal gold format.*",
             inline=False
         )
         return {"embed": embed}

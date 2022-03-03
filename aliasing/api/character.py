@@ -1,9 +1,11 @@
 from functools import cached_property
+from dataclasses import asdict
 
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
+from cogs5e.utils.gameutils import parse_coin_args
 
 
 class AliasCharacter(AliasStatBlock):
@@ -15,6 +17,7 @@ class AliasCharacter(AliasStatBlock):
         super().__init__(character)
         self._character = character
         self._interpreter = interpreter
+        self._coinpurse = None
 
     # helpers
     def _get_consumable(self, name):
@@ -311,6 +314,17 @@ class AliasCharacter(AliasStatBlock):
         :rtype: dict
         """
         return self._character.options.dict()
+
+    @property
+    def coinpurse(self):
+        """
+        The coinpurse of the character.
+
+        :rtype: :class:`~aliasing.api.character.AliasCoinpurse`
+        """
+        if self._coinpurse is None:
+            self._coinpurse = AliasCoinpurse(self._character.coinpurse)
+        return self._coinpurse
 
     # --- private helpers ----
     async def func_commit(self, ctx):
@@ -625,3 +639,80 @@ class AliasAction:
     def __repr__(self):
         return f"<{self.__class__.__name__} name={self.name!r} activation_type={self.activation_type!r} " \
                f"activation_type_name={self.activation_type_name!r}>"
+
+
+class AliasCoinpurse:
+    """
+    An object holding the coinpurse for the active character.
+    """
+
+    def __init__(self, coinpurse):
+        """
+        :type coinpurse: cogs5e.models.sheet.coinpurse.Coinpurse
+        """
+        self._coinpurse = coinpurse
+
+    def __getattr__(self, item):
+        if item.lower() not in ("cp", "sp", "ep", "gp", "pp"):
+            raise ValueError(f"{item} is not valid coin.")
+        return self._coinpurse.to_dict().get(item.lower())
+
+    def __getitem__(self, item):
+        return self.__getattr__(item)
+
+    def __str__(self):
+        return str(self._coinpurse)
+
+    def coin_str(self, cointype: str):
+        """
+        Returns a string representation of the chosen coin type
+
+        :param str cointype: The type of coin to return
+        :rtype str
+        """
+        if cointype.lower() not in ("cp", "sp", "ep", "gp", "pp"):
+            raise ValueError(f"{cointype} is not valid coin.")
+        return f"{self._coinpurse.to_dict().get(cointype.lower()):,} {cointype.lower()}"
+
+    def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
+        """
+        Modifies your coinpurse based on the provided values.
+
+        :param int pp: Platinum Pieces
+        :param int gp: Gold Pieces
+        :param int ep: Electrum Pieces
+        :param int sp: Silver Pieces
+        :param int cp: Copper Pieces
+        """
+        self._coinpurse.update_currency(pp, gp, ep, sp, cp)
+
+    def set_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
+        """
+        Sets your coinpurse to the provided values.
+
+        :param int pp: Platinum Pieces
+        :param int gp: Gold Pieces
+        :param int ep: Electrum Pieces
+        :param int sp: Silver Pieces
+        :param int cp: Copper Pieces
+        """
+        self._coinpurse.set_currency(pp, gp, ep, sp, cp)
+
+    def get_coins(self):
+        """
+        Returns a dict of your current coinpurse.
+
+        :rtype dict
+        """
+        return self._coinpurse.to_dict()
+
+    @staticmethod
+    def parse(args):
+        """
+        Parses a user's coin string into a representation of each currency.
+        If the user input is a decimal number, assumes gold pieces.
+        Otherwise, allows the user to specify currencies in the form '+1gp -2sp 3cp'
+
+        :rtype dict
+        """
+        return asdict(parse_coin_args(args))

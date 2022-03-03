@@ -1,6 +1,6 @@
 import dataclasses
 import re
-from avrae.cogs5e.models.sheet.coinpurse import CoinTypes
+from cogs5e.models.sheet.coinpurse import CoinTypes
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.initiative import Combatant
 from cogs5e.models.errors import InvalidArgument

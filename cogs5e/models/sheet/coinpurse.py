@@ -4,23 +4,28 @@ from .mixins import HasIntegrationMixin
 CoinTypes = {
     "pp": {
         "icon": "<:DDBPlatinum:948681049326624849>",
-        "name": "Platinum"
+        "name": "Platinum",
+        "gSheet14": "D72"
     },
     "gp": {
         "icon": "<:DDBGold:948681049221775370>",
-        "name": "Gold"
+        "name": "Gold",
+        "gSheet14": "D69"
     },
     "ep": {
         "icon": "<:DDBElectrum:948681048932364401>",
-        "name": "Electrum"
+        "name": "Electrum",
+        "gSheet14": "D66"
     },
     "sp": {
         "icon": "<:DDBSilver:948681049288867930>",
-        "name": "Silver"
+        "name": "Silver",
+        "gSheet14": "D63"
     },
     "cp": {
         "icon": "<:DDBCopper:948681049217597480>",
-        "name": "Copper"
+        "name": "Copper",
+        "gSheet14": "D60"
     }
 }
 

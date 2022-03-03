@@ -43,12 +43,8 @@ async def send_current_coin(ctx, character, coin="All"):
             cp_display_embed = EmbedWithColor()
             cp_display_embed.colour = 15844367
             cp_display_embed.title = f"{character.name}'s Coinpurse"
-            coinMsg = f""
             cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
-            for c_type in CoinTypes:
-                coinMsg = coinMsg + f"{CoinTypes[c_type]['icon']} {c_type}: {character.coinpurse.to_dict()[c_type]:,}" + "\n"
-                
-            cp_display_embed.description = coinMsg
+            cp_display_embed.description = character.coinpurse.str_styled
             cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
     else:
         cp_display_embed = EmbedWithColor()

@@ -41,12 +41,17 @@ async def send_current_coin(ctx, character, coin="All"):
             await ctx.send(f"Contents of Coinpurse ({coin}) Compact!: {character.coinpurse.compact_str()}")
         else: 
             cp_display_embed = EmbedWithColor()
+            cp_display_embed.colour = 15844367
             cp_display_embed.title = f"{character.name}'s Coinpurse"
+            cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
             for c_type in CoinTypes:
                 cp_display_embed.add_field(name=f"\u200B", value=f"{CoinTypes[c_type]['icon']}{c_type}: {character.coinpurse.to_dict()[c_type]}")    
+            cp_display_embed.add_field(name=f"\u200B", value=f"\u200B")    
             cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
     else:
         cp_display_embed = EmbedWithColor()
+        cp_display_embed.colour = 15844367
+        cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
         cp_display_embed.title = f"{character.name}'s {CoinTypes[coin]['name']} pieces."
         cp_display_embed.add_field(name=f"\u200B", value=f"{CoinTypes[coin]['icon']}{coin}: {character.coinpurse.to_dict()[coin]}")
         cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")

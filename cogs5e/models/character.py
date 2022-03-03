@@ -522,6 +522,9 @@ class Character(StatBlock):
             and con.live_id not in new_cc_upstreams
         )
 
+        # Monetary Concerns
+        self.coinpurse = old_character.coinpurse
+
         # overridden spells
         sb = self.spellbook
         sb.spells.extend(self.overrides.spells)

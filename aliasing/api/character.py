@@ -323,7 +323,7 @@ class AliasCharacter(AliasStatBlock):
         :rtype: :class:`~aliasing.api.character.AliasCoinpurse`
         """
         if self._coinpurse is None:
-            self._coinpurse = AliasCoinpurse(self._character.coinpurse)
+            self._coinpurse = AliasCoinpurse(self._character.coinpurse, self._character)
         return self._coinpurse
 
     # --- private helpers ----
@@ -646,11 +646,13 @@ class AliasCoinpurse:
     An object holding the coinpurse for the active character.
     """
 
-    def __init__(self, coinpurse):
+    def __init__(self, coinpurse, parent_statblock):
         """
         :type coinpurse: cogs5e.models.sheet.coinpurse.Coinpurse
+        :type parent_statblock: cogs5e.models.character.Character
         """
         self._coinpurse = coinpurse
+        self._parent_statblock = parent_statblock
 
     def __getattr__(self, item):
         if item.lower() not in ("cp", "sp", "ep", "gp", "pp"):
@@ -661,7 +663,7 @@ class AliasCoinpurse:
         return self.__getattr__(item)
 
     def __str__(self):
-        return str(self._coinpurse)
+        return self._coinpurse.compact_str() if self._parent_statblock.options.compact_coins else str(self._coinpurse)
 
     def coin_str(self, cointype: str):
         """

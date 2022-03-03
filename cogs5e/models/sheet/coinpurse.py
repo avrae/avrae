@@ -11,10 +11,10 @@ class Coinpurse(HasIntegrationMixin):
         self.cp = cp
 
     def __str__(self):
-        return (f"{self.cp:,} cp\n" 
-                f"{self.sp:,} sp\n" 
-                f"{self.ep:,} ep\n" 
-                f"{self.gp:,} gp\n" 
+        return (f"{self.cp:,} cp\n"
+                f"{self.sp:,} sp\n"
+                f"{self.ep:,} ep\n"
+                f"{self.gp:,} gp\n"
                 f"{self.pp:,} pp")
 
     def compact_str(self):

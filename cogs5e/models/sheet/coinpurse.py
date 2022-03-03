@@ -39,6 +39,14 @@ class Coinpurse(HasIntegrationMixin):
                 f"{self.sp:,} sp\n"
                 f"{self.cp:,} cp")
 
+    @property
+    def str_styled(self):
+        return (f"{CoinTypes['pp']['icon']} pp: {self.pp:,}\n"
+                f"{CoinTypes['gp']['icon']} gp: {self.gp:,}\n"
+                f"{CoinTypes['ep']['icon']} ep: {self.ep:,}\n"
+                f"{CoinTypes['sp']['icon']} sp: {self.sp:,}\n"
+                f"{CoinTypes['cp']['icon']} cp: {self.cp:,}\n")
+
     def compact_str(self):
         return f"{self.total:,.2f} gp"
 

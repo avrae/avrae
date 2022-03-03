@@ -1,6 +1,7 @@
 import dataclasses
 import re
-
+from avrae.cogs5e.models.sheet.coinpurse import CoinTypes
+from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.initiative import Combatant
 from cogs5e.models.errors import InvalidArgument
 
@@ -39,9 +40,18 @@ async def send_current_coin(ctx, character, coin="All"):
         if character.options.compact_coins:
             await ctx.send(f"Contents of Coinpurse ({coin}) Compact!: {character.coinpurse.compact_str()}")
         else:
-            await ctx.send(f"Contents of Coinpurse ({coin}): {character.coinpurse}")
+            cp_embed_title = f"{character.name}'s Coinpurse"
+            cp_display_embed = EmbedWithCharacter(character)
+            for c_type in CoinTypes:
+                cp_display_embed.add_field(value=f"{CoinTypes[c_type]['icon']}{c_type}: {character.coinpurse.to_dict()[c_type]}")    
+            cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
     else:
-        await ctx.send(f"Contents of Coinpurse({coin}): {character.coinpurse.to_dict()[coin]}")
+        cp_embed_title = f"{character.name}'s {CoinTypes[coin]['name']} pieces.)"
+        cp_display_embed = EmbedWithCharacter(character)
+        cp_display_embed.add_field(value=f"{CoinTypes[coin]['icon']}{coin}: {character.coinpurse.to_dict()[coin]}")
+        cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
+
+    await ctx.send(embed=cp_display_embed)
 
 
 def parse_coin_args(args: str) -> CoinsArgs:

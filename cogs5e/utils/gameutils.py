@@ -1,7 +1,7 @@
 import dataclasses
 import re
+from cogs5e.models.embeds import EmbedWithColor
 from cogs5e.models.sheet.coinpurse import CoinTypes
-from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.initiative import Combatant
 from cogs5e.models.errors import InvalidArgument
 
@@ -39,15 +39,15 @@ async def send_current_coin(ctx, character, coin="All"):
     if coin == "All":
         if character.options.compact_coins:
             await ctx.send(f"Contents of Coinpurse ({coin}) Compact!: {character.coinpurse.compact_str()}")
-        else:
-            cp_embed_title = f"{character.name}'s Coinpurse"
-            cp_display_embed = EmbedWithCharacter(character)
+        else: 
+            cp_display_embed = EmbedWithColor()
+            cp_display_embed.title = f"{character.name}'s Coinpurse"
             for c_type in CoinTypes:
                 cp_display_embed.add_field(name=f"\u200B", value=f"{CoinTypes[c_type]['icon']}{c_type}: {character.coinpurse.to_dict()[c_type]}")    
             cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
     else:
-        cp_embed_title = f"{character.name}'s {CoinTypes[coin]['name']} pieces.)"
-        cp_display_embed = EmbedWithCharacter(character)
+        cp_display_embed = EmbedWithColor()
+        cp_display_embed.title = f"{character.name}'s {CoinTypes[coin]['name']} pieces."
         cp_display_embed.add_field(name=f"\u200B", value=f"{CoinTypes[coin]['icon']}{coin}: {character.coinpurse.to_dict()[coin]}")
         cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
 

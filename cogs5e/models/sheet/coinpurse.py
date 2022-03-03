@@ -1,3 +1,4 @@
+from cogs5e.models.errors import InvalidArgument
 from .mixins import HasIntegrationMixin
 
 CoinTypes = {
@@ -78,6 +79,15 @@ class Coinpurse(HasIntegrationMixin):
         )):
             raise TypeError("All values must be numeric.")
 
+        if not all((
+            True if (self.pp + pp ) >= 0 else False,
+            True if (self.gp + gp ) >= 0 else False,
+            True if (self.ep + ep ) >= 0 else False,
+            True if (self.sp + sp ) >= 0 else False,
+            True if (self.cp + cp ) >= 0 else False
+        )):
+            raise InvalidArgument("You cannot put a currency into negative numbers.")
+
         self.pp += pp
         self.gp += gp
         self.ep += ep
@@ -96,6 +106,15 @@ class Coinpurse(HasIntegrationMixin):
             isinstance(cp, int)
         )):
             raise TypeError("All values must be numeric.")
+
+        if not all((
+            True if pp >= 0 else False,
+            True if gp >= 0 else False,
+            True if ep >= 0 else False,
+            True if sp >= 0 else False,
+            True if cp >= 0 else False
+        )):
+            raise InvalidArgument("You cannot put a currency into negative numbers.")
 
         self.pp = pp
         self.gp = gp

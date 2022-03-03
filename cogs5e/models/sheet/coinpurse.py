@@ -33,15 +33,15 @@ class Coinpurse(HasIntegrationMixin):
         self.cp = cp
 
     def __str__(self):
-        return (f"{self.cp:,} cp\n"
-                f"{self.sp:,} sp\n"
-                f"{self.ep:,} ep\n"
+        return (f"{self.pp:,} pp\n"
                 f"{self.gp:,} gp\n"
-                f"{self.pp:,} pp")
+                f"{self.ep:,} ep\n"
+                f"{self.sp:,} sp\n"
+                f"{self.cp:,} cp")
 
     def compact_str(self):
         return f"{self.total:,.2f} gp"
-        
+
     @property
     def total(self):
         total = self.gp

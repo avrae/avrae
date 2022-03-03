@@ -657,7 +657,7 @@ class AliasCoinpurse:
     def __getattr__(self, item):
         if item.lower() not in ("cp", "sp", "ep", "gp", "pp"):
             raise ValueError(f"{item} is not valid coin.")
-        return self._coinpurse.to_dict().get(item.lower())
+        return getattr(self._coinpurse, item.lower())
 
     def __getitem__(self, item):
         return self.__getattr__(item)

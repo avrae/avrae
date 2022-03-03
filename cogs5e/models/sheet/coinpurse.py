@@ -1,6 +1,27 @@
 from .mixins import HasIntegrationMixin
 
-
+CoinTypes = {
+    "pp": {
+        "icon": "<:DDBPlatinum:948681049326624849>",
+        "name": "Platinum"
+    },
+    "gp": {
+        "icon": "<:DDBGold:948681049221775370>",
+        "name": "Gold"
+    },
+    "ep": {
+        "icon": "<:DDBElectrum:948681048932364401>",
+        "name": "Electrum"
+    },
+    "sp": {
+        "icon": "<:DDBSilver:948681049288867930>",
+        "name": "Silver"
+    },
+    "cp": {
+        "icon": "<:DDBCopper:948681049217597480>",
+        "name": "Copper"
+    }
+}
 class Coinpurse(HasIntegrationMixin):
     def __init__(self, pp=0, gp=0, ep=0, sp=0, cp=0):
         super().__init__()

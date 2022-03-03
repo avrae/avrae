@@ -18,6 +18,7 @@ from google.oauth2.service_account import Credentials
 from gspread import SpreadsheetNotFound
 from gspread.exceptions import APIError
 from gspread.utils import a1_to_rowcol, fill_gaps
+from cogs5e.models.sheet.coinpurse import Coinpurse, CoinTypes
 
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
@@ -297,6 +298,8 @@ class GoogleSheet(SheetLoaderABC):
         levels = self.get_levels()
         attacks = self.get_attacks()
 
+        coinpurse = self.get_coinpurse()
+
         skills, saves = self.get_skills_and_saves()
 
         resistances = self.get_resistances()
@@ -319,7 +322,7 @@ class GoogleSheet(SheetLoaderABC):
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
             skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
-            spellbook, live, race, background, actions=actions
+            spellbook, live, race, background, actions=actions, coinpurse=coinpurse
         )
         return character
 
@@ -380,6 +383,16 @@ class GoogleSheet(SheetLoaderABC):
         stats = BaseStats(prof_bonus, **stat_dict)
         self._stats = stats
         return stats
+
+    def get_coinpurse(self):
+        if self.character_data is None: raise Exception('You must call get_character() first.')
+        total_pp = int(self.character_data.value(CoinTypes['pp']['gSheet14'])) or 0
+        total_gp = int(self.character_data.value(CoinTypes['gp']['gSheet14'])) or 0
+        total_ep = int(self.character_data.value(CoinTypes['ep']['gSheet14'])) or 0
+        total_sp = int(self.character_data.value(CoinTypes['sp']['gSheet14'])) or 0
+        total_cp = int(self.character_data.value(CoinTypes['cp']['gSheet14'])) or 0
+
+        coins = Coinpurse(pp=total_pp, gp=total_gp, ep=total_ep, sp=total_sp, cp=total_cp)
 
     def get_levels(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')

@@ -386,13 +386,12 @@ class GoogleSheet(SheetLoaderABC):
 
     def get_coinpurse(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')
-        total_pp = int(self.character_data.value(CoinTypes['pp']['gSheet14'])) or 0
-        total_gp = int(self.character_data.value(CoinTypes['gp']['gSheet14'])) or 0
-        total_ep = int(self.character_data.value(CoinTypes['ep']['gSheet14'])) or 0
-        total_sp = int(self.character_data.value(CoinTypes['sp']['gSheet14'])) or 0
-        total_cp = int(self.character_data.value(CoinTypes['cp']['gSheet14'])) or 0
+        coins = {}
 
-        coins = Coinpurse(pp=total_pp, gp=total_gp, ep=total_ep, sp=total_sp, cp=total_cp)
+        for c_type in CoinTypes:
+            coins[c_type] = int(self.character_data.value(CoinTypes[c_type]['gSheet14'])) or 0
+            
+        return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])
 
     def get_levels(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')

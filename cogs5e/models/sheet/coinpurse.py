@@ -40,12 +40,16 @@ class Coinpurse(HasIntegrationMixin):
                 f"{self.pp:,} pp")
 
     def compact_str(self):
+        return f"{self.total:,.2f} gp"
+        
+    @property
+    def total(self):
         total = self.gp
         total += self.pp * 10
         total += self.ep * 0.5
         total += self.sp * 0.1
         total += self.cp * 0.01
-        return f"{total:,.2f} gp"
+        return total
 
     @classmethod
     def from_dict(cls, d):

@@ -22,6 +22,7 @@ CoinTypes = {
         "name": "Copper"
     }
 }
+
 class Coinpurse(HasIntegrationMixin):
     def __init__(self, pp=0, gp=0, ep=0, sp=0, cp=0):
         super().__init__()

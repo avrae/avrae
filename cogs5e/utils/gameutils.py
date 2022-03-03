@@ -43,12 +43,12 @@ async def send_current_coin(ctx, character, coin="All"):
             cp_embed_title = f"{character.name}'s Coinpurse"
             cp_display_embed = EmbedWithCharacter(character)
             for c_type in CoinTypes:
-                cp_display_embed.add_field(value=f"{CoinTypes[c_type]['icon']}{c_type}: {character.coinpurse.to_dict()[c_type]}")    
+                cp_display_embed.add_field(name=f"\u200B", value=f"{CoinTypes[c_type]['icon']}{c_type}: {character.coinpurse.to_dict()[c_type]}")    
             cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
     else:
         cp_embed_title = f"{character.name}'s {CoinTypes[coin]['name']} pieces.)"
         cp_display_embed = EmbedWithCharacter(character)
-        cp_display_embed.add_field(value=f"{CoinTypes[coin]['icon']}{coin}: {character.coinpurse.to_dict()[coin]}")
+        cp_display_embed.add_field(name=f"\u200B", value=f"{CoinTypes[coin]['icon']}{coin}: {character.coinpurse.to_dict()[coin]}")
         cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
 
     await ctx.send(embed=cp_display_embed)

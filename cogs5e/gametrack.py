@@ -189,7 +189,7 @@ class GameTrack(commands.Cog):
         if args is None:
             return await gameutils.send_current_coin(ctx, character)
 
-        if re.fullmatch(r'([pgesc]p)', args, re.IGNORECASE):
+        if re.fullmatch(r'[pgesc]p', args, re.IGNORECASE):
             return await gameutils.send_current_coin(ctx, character, args)
 
         coins, explicit = gameutils.parse_coin_args(args)

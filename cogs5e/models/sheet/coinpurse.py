@@ -69,7 +69,7 @@ class Coinpurse(HasIntegrationMixin):
         else:
             coin_value = getattr(self, coin_type)
             style = ","
-        return f"{CoinTypes[coin_type]['icon']} {coin_type}: {coin_value:{style}}"
+        return f"{CoinTypes[coin_type]['icon']} {coin_value:{style}} {coin_type}"
 
     @property
     def total(self):

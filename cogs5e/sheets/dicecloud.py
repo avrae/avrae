@@ -148,7 +148,7 @@ class DicecloudParser(SheetLoaderABC):
         }
 
         for i in self.character_data.get('items'):
-            if re.search(r"^((plat|gold|electrum|silver|copper)( piece)?|(pp|gp|ep|sp|cp))", i['name'], re.IGNORECASE):
+            if re.fullmatch(r"^((plat(inum)?|gold|electrum|silver|copper)( pieces?)?|(pp|gp|ep|sp|cp))", i['name'], re.IGNORECASE):
                 coins[i['name'][0].lower() + 'p'] += int(i['quantity'])
 
         return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])

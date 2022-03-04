@@ -34,10 +34,13 @@ async def send_hp_result(ctx, caster, delta=None):
         await ctx.send(f"{caster.name}: {caster.hp_str()}{deltaend}")
 
 
-async def send_current_coin(ctx, character, coin="All"):
+async def send_current_coin(ctx, character, coin=None):
     """
-    Sends the current contents of the CoinPurse
+    Sends the current contents of the CoinPurse.
+    If ``coin`` is passed, it must be a valid coin type and will only show the amount of that specific coin.
     """
+    if coin is not None and coin.lower() not in CoinTypes:
+        raise ValueError(f"{coin!r} is not a valid coin type.")
     cp_display_embed = EmbedWithCharacter(character)
     cp_display_embed.set_footer(text=f"For help managing your coins, use {ctx.prefix}game coinpurse")
     cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")

@@ -11,6 +11,7 @@ import re
 from math import ceil, floor
 
 import draconic
+from cogs5e.models.sheet.coinpurse import Coinpurse
 
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import DicecloudClient
@@ -44,6 +45,7 @@ class DicecloudParser(SheetLoaderABC):
         self.stats = None
         self.levels = None
         self.args = None
+        self.coinpurse = None
         self.evaluator = DicecloudEvaluator()
         self._cache = {}
 
@@ -74,6 +76,8 @@ class DicecloudParser(SheetLoaderABC):
 
         skills, saves = self.get_skills_and_saves()
 
+        coinpurse = self.get_coinpurse()
+
         resistances = self.get_resistances()
         ac = self.get_ac()
         max_hp = int(self.calculate_stat('hitPoints'))
@@ -97,7 +101,7 @@ class DicecloudParser(SheetLoaderABC):
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
             skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
-            spellbook, live, race, background, actions=actions
+            spellbook, live, race, background, actions=actions, coinpurse=coinpurse
         )
         return character
 
@@ -128,6 +132,27 @@ class DicecloudParser(SheetLoaderABC):
 
         self.stats = stats
         return stats
+
+    def get_coinpurse(self):
+        """ Due to the format of the coin handling in DiceCloud, this is going to be slightly messy."""
+        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.coinpurse:
+                return self.coinpurse
+        character = self.character_data
+
+        coins = {
+            "pp": 0,
+            "gp": 0,
+            "ep": 0,
+            "sp": 0,
+            "cp": 0
+        }
+
+        for i in self.character_data.get('items'):
+            if re.search(r"^((plat|gold|electrum|silver|copper)( piece)?|(pp|gp|ep|sp|cp))", i['name'], re.IGNORECASE):
+                coins[i['name'][0].lower() + 'p'] += int(i['quantity'])
+
+        return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])
 
     def get_levels(self) -> Levels:
         """Returns a dict with the character's level and class levels."""

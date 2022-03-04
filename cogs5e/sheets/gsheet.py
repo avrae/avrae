@@ -266,6 +266,9 @@ class GoogleSheet(SheetLoaderABC):
         elif vcell:
             self.additional = TempCharacter(doc.worksheet('Additional'))
             self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
+            if self.version >= (2, 0):
+                self.inventory = TempCharacter(doc.worksheet('Inventory'))
+
 
     # main loading methods
     async def load_character(self, ctx, args):
@@ -389,7 +392,12 @@ class GoogleSheet(SheetLoaderABC):
         coins = {}
 
         for c_type in CoinTypes:
-            coins[c_type] = int(self.character_data.value(CoinTypes[c_type]['gSheet14'])) or 0
+            if self.version >= (2, 0):
+                coins[c_type] = int(self.inventory.value(CoinTypes[c_type]['gSheet']['v2']) or 0)
+            else:
+                coins[c_type] = int(self.character_data.value(CoinTypes[c_type]['gSheet']['v14']) or 0)
+            
+            
             
         return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])
 

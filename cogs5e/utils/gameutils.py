@@ -38,7 +38,7 @@ async def send_current_coin(ctx, character, coin="All"):
     """
     Sends the current contents of the CoinPurse
     """
-    cp_display_embed = EmbedWithCharacter()
+    cp_display_embed = EmbedWithCharacter(character)
     cp_display_embed.set_footer(text=f"For help managing your coins, use {ctx.prefix}game coinpurse")
     cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
     cp_display_embed.add_field(name="Total Value in Purse",

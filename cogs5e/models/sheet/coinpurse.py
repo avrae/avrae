@@ -127,8 +127,7 @@ class Coinpurse(HasIntegrationMixin):
         print(pp_change, gp_change, ep_change, sp_change, cp_change)
         return pp_change, gp_change, ep_change, sp_change, cp_change
 
-    async def update_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0,
-                              explicit: bool = False, ctx=None):
+    async def update_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         if not all((
             isinstance(pp, int),
             isinstance(gp, int),
@@ -137,10 +136,10 @@ class Coinpurse(HasIntegrationMixin):
             isinstance(cp, int)
         )):
             raise TypeError("All values must be numeric.")
-            
+
         self.set_currency(self.pp + pp, self.gp + gp, self.ep + ep, self.sp + sp, self.cp + cp)
 
-    async def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
+    async def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0, explicit: bool = False, ctx=None):
         if not all((
             isinstance(pp, int),
             isinstance(gp, int),
@@ -151,11 +150,11 @@ class Coinpurse(HasIntegrationMixin):
             raise TypeError("All values must be numeric.")
 
         if not all((
-            self.pp + pp >= 0,
-            self.gp + gp >= 0,
-            self.ep + ep >= 0,
-            self.sp + sp >= 0,
-            self.cp + cp >= 0
+            pp >= 0,
+            gp >= 0,
+            ep >= 0,
+            sp >= 0,
+            cp >= 0
         )):
             if explicit and not await confirm(ctx, "You don't have enough of the chosen coins to complete this transaction. "
                                                    "Auto convert from larger coins? (Reply with yes/no)"):

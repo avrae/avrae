@@ -40,14 +40,14 @@ async def send_current_coin(ctx, character, coin="All"):
     """
     cp_display_embed = EmbedWithColor()
     cp_display_embed.colour = 15844367
-    cp_display_embed.set_footer(text=f"For help managing your coins, use !game coinpurse")
+    cp_display_embed.set_footer(text=f"For help managing your coins, use {ctx.prefix}game coinpurse")
     cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
-    cp_display_embed.add_field(name="Total Value in Purse", value=f"{CoinTypes['gp']['icon']} gp: {character.coinpurse.total}", inline=False)
+    cp_display_embed.add_field(name="Total Value in Purse",
+                               value=character.coinpurse.str_styled('compact'),
+                               inline=False)
     if coin == "All":
         cp_display_embed.title = f"{character.name}'s Coinpurse"
-        if character.options.compact_coins:
-            cp_display_embed.description = character.coinpurse.str_styled('compact')
-        else:
+        if not character.options.compact_coins:
             cp_display_embed.description = str(character.coinpurse) + "\n"
     else:
         cp_display_embed.title = f"{character.name}'s {CoinTypes[coin]['name']} pieces."

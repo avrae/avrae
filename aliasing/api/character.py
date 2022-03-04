@@ -671,7 +671,8 @@ class AliasCoinpurse:
         """
         Returns a string representation of the chosen coin type.
 
-        :param str cointype: The type of coin to return
+        :param str cointype: The type of coin to return. ``"compact"``, ``"pp"``, ``"gp"``, ``"ep"``, ``"sp"``, and ``"cp"``
+        :return The string representation of the chosen coin type.
         :rtype str
         """
         if cointype.lower() not in ("compact", "cp", "sp", "ep", "gp", "pp"):
@@ -682,11 +683,11 @@ class AliasCoinpurse:
         """
         Modifies your coinpurse based on the provided values.
 
-        :param int pp: Platinum Pieces
-        :param int gp: Gold Pieces
-        :param int ep: Electrum Pieces
-        :param int sp: Silver Pieces
-        :param int cp: Copper Pieces
+        :param int pp: Platinum Pieces. Defaults to ``0``.
+        :param int gp: Gold Pieces. Defaults to ``0``.
+        :param int ep: Electrum Pieces. Defaults to ``0``.
+        :param int sp: Silver Pieces. Defaults to ``0``.
+        :param int cp: Copper Pieces. Defaults to ``0``.
         """
         self._coinpurse.set_currency(self._coinpurse.pp+pp, self._coinpurse.gp+gp, self._coinpurse.ep+ep,
                                      self._coinpurse.sp+sp, self._coinpurse.cp+cp)
@@ -707,6 +708,7 @@ class AliasCoinpurse:
         """
         Returns a dict of your current coinpurse.
 
+        :return A dict of your current coinpurse, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3}``
         :rtype dict
         """
         return self._coinpurse.to_dict()
@@ -718,7 +720,8 @@ class AliasCoinpurse:
         If the user input is a decimal number, assumes gold pieces.
         Otherwise, allows the user to specify currencies in the form '+1gp -2sp 3cp'
 
-        :rtype tuple(dict, bool)
+        :return A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3}``
+        :rtype dict
         """
-        coin_args, explicit = parse_coin_args(args)
-        return asdict(coin_args), explicit
+        coin_args, _ = parse_coin_args(args)
+        return asdict(coin_args)

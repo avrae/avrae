@@ -65,9 +65,11 @@ class Coinpurse(HasIntegrationMixin):
         if coin_type == 'compact':
             coin_value = self.total
             coin_type = 'gp'
+            style = ",.2f"
         else:
             coin_value = getattr(self, coin_type)
-        return f"{CoinTypes[coin_type]['icon']} {coin_type}: {coin_value:,}"
+            style = ","
+        return f"{CoinTypes[coin_type]['icon']} {coin_type}: {coin_value:{style}}"
 
     @property
     def total(self):

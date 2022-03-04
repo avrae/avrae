@@ -178,10 +178,9 @@ class GameTrack(commands.Cog):
 
     @game.command(name='coinpurse', aliases=['coins', 'coin'])
     async def game_coinpurse(self, ctx, *, args = None):
-        """
-        game coinpurse (pp|gp|ep|sp|cp) <amount>
-        game coins 2gp -5sp
-        TODO: game coins <amount> ( default gold )   gp.sp.cp == parse float to convert to proper format
+        """Updates currency for character sheet.
+        __Valid Arguments__
+        (pp|gp|ep|sp|cp) <amount> e.g> 2gp -5sp
         """
         character: Character = await ctx.get_character()
 

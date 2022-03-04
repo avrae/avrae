@@ -178,9 +178,11 @@ class GameTrack(commands.Cog):
 
     @game.command(name='coinpurse', aliases=['coins', 'coin'])
     async def game_coinpurse(self, ctx, *, args = None):
-        """Updates currency for character sheet.
-        __Valid Arguments__
-        (pp|gp|ep|sp|cp) <amount> e.g> 2gp -5sp
+        """Manage your character's coinpurse.
+        __Valid Subcommands__
+        `!game coins` - Show your current coinpurse.
+        `!game coins [pp|gp|ep|sp|cp]` - Show the amount of a single currency contained in your coinpurse.
+        `!game coins <amount>` - Add or remove a given amount of currency. The amount can either be a number like `+102.13` (gold pieces), or explicit numbers of currencies like `+10pp +2gp +1sp +3cp`.
         """
         character: Character = await ctx.get_character()
 

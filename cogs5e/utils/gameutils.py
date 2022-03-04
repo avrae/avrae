@@ -47,7 +47,7 @@ async def send_current_coin(ctx, character, coin=None):
     cp_display_embed.add_field(name="Total Value",
                                value=character.coinpurse.str_styled('compact'),
                                inline=False)
-    if coin == "All":
+    if coin is None:
         cp_display_embed.title = f"{character.name}'s Coinpurse"
         if not character.options.compact_coins:
             cp_display_embed.description = str(character.coinpurse)

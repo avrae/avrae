@@ -72,6 +72,8 @@ class Coinpurse(HasIntegrationMixin):
             coin_value = f"{getattr(self, coin_type):{style}}"
             if length > 0:
                 coin_value = f"{coin_value:{numSpace}>{length}}".replace("\u2002", "\u200A", 1)
+                if "," in coin_value:
+                    coin_value = "\u200A\u200A" + coin_value
             return f"{CoinTypes[coin_type]['icon']} {coin_value} {coin_type}" 
         return f"{CoinTypes[coin_type]['icon']} {coin_value:{style}} {coin_type}"
 

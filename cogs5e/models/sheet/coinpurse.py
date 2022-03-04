@@ -56,9 +56,9 @@ class Coinpurse(HasIntegrationMixin):
         self.cp = cp
 
     def __str__(self):
-        return "\n".join(self.str_styled(coin_type) for coin_type in CoinTypes)
+        return "\n".join(self.str_styled(coin_type, self.max_length) for coin_type in CoinTypes)
 
-    def str_styled(self, coin_type):
+    def str_styled(self, coin_type, length=0):
         if coin_type not in ("compact", "pp", "gp", "ep", "sp", "cp"):
             raise ValueError("coin_type must be in ('compact', 'pp', 'gp', 'ep', 'sp', 'cp')")
 
@@ -67,9 +67,18 @@ class Coinpurse(HasIntegrationMixin):
             coin_type = 'gp'
             style = ",.2f"
         else:
-            coin_value = getattr(self, coin_type)
             style = ","
+            numSpace = "\u2002"
+            coin_value = f"{getattr(self, coin_type):{style}}"
+            if length > 0:
+                coin_value = f"{coin_value:{numSpace}>{length}}".replace("\u2002", "\u200A", 1)
+            return f"{CoinTypes[coin_type]['icon']} {coin_value} {coin_type}" 
         return f"{CoinTypes[coin_type]['icon']} {coin_value:{style}} {coin_type}"
+
+    @property
+    def max_length(self):
+        maxValue = f"{max({self.pp, self.gp, self.ep, self.sp, self.cp}):,}"
+        return len(str(maxValue))
 
     @property
     def total(self):

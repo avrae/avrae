@@ -138,7 +138,6 @@ class DicecloudParser(SheetLoaderABC):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         if self.coinpurse:
                 return self.coinpurse
-        character = self.character_data
 
         coins = {
             "pp": 0,

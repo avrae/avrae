@@ -522,6 +522,9 @@ class Character(StatBlock):
             and con.live_id not in new_cc_upstreams
         )
 
+        # Monetary Concerns
+        self.coinpurse = old_character.coinpurse
+
         # overridden spells
         sb = self.spellbook
         sb.spells.extend(self.overrides.spells)
@@ -593,7 +596,7 @@ class Character(StatBlock):
             embed.add_field(name="Attacks", value=atk_str)
 
         # Coins
-        embed.add_field(name="Currency", value=self.coinpurse.str_styled)
+        embed.add_field(name="Currency", value=str(self.coinpurse))
         
 
         # sheet url?

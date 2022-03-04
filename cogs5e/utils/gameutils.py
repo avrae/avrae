@@ -50,7 +50,7 @@ async def send_current_coin(ctx, character, coin="All"):
         if not character.options.compact_coins:
             cp_display_embed.description = str(character.coinpurse)
     else:
-        cp_display_embed.title = f"{character.name}'s {CoinTypes[coin]['name']} pieces."
+        cp_display_embed.title = f"{character.name}'s {CoinTypes[coin]['name']} Pieces"
         cp_display_embed.description=f"{CoinTypes[coin]['icon']} {coin}: {character.coinpurse.to_dict()[coin]:,}"
 
     await ctx.send(embed=cp_display_embed)

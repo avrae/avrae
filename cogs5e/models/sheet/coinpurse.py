@@ -84,12 +84,7 @@ class Coinpurse(HasIntegrationMixin):
 
     @property
     def total(self):
-        total = self.gp
-        total += self.pp * 10
-        total += self.ep * 0.5
-        total += self.sp * 0.1
-        total += self.cp * 0.01
-        return total
+        return (self.pp * 10) + self.gp + (self.ep * 0.5) + (self.sp * 0.1) + (self.cp * 0.01)
 
     @classmethod
     def from_dict(cls, d):

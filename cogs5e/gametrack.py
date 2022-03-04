@@ -191,11 +191,11 @@ class GameTrack(commands.Cog):
         if re.fullmatch(r'([pgesc]p)', args, re.IGNORECASE):
             return await gameutils.send_current_coin(ctx, character, args)
 
-        coins = gameutils.parse_coin_args(args)
-        character.coinpurse.update_currency(pp=coins.pp, gp=coins.gp, ep=coins.ep, sp=coins.sp, cp=coins.cp)
+        coins, explicit = gameutils.parse_coin_args(args)
+        await character.coinpurse.update_currency(pp=coins.pp, gp=coins.gp, ep=coins.ep, sp=coins.sp, cp=coins.cp,
+                                                  explicit=explicit, ctx=ctx)
         await character.commit(ctx)
         return await gameutils.send_current_coin(ctx, character)
-
 
     @game.group(name='hp', invoke_without_command=True)
     async def game_hp(self, ctx, *, hp: str = None):

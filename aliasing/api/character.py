@@ -688,9 +688,10 @@ class AliasCoinpurse:
         :param int sp: Silver Pieces
         :param int cp: Copper Pieces
         """
-        self._coinpurse.update_currency(pp, gp, ep, sp, cp)
+        self._coinpurse.set_currency(self._coinpurse.pp+pp, self._coinpurse.gp+gp, self._coinpurse.ep+ep,
+                                     self._coinpurse.sp+sp, self._coinpurse.cp+cp)
 
-    def set_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
+    def set_coins(self, pp: int, gp: int, ep: int, sp: int, cp: int):
         """
         Sets your coinpurse to the provided values.
 
@@ -717,6 +718,7 @@ class AliasCoinpurse:
         If the user input is a decimal number, assumes gold pieces.
         Otherwise, allows the user to specify currencies in the form '+1gp -2sp 3cp'
 
-        :rtype dict
+        :rtype tuple(dict, bool)
         """
-        return asdict(parse_coin_args(args))
+        coin_args, explicit = parse_coin_args(args)
+        return asdict(coin_args), explicit

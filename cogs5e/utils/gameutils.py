@@ -1,5 +1,7 @@
 import dataclasses
 import re
+from typing import Tuple
+
 from cogs5e.models.embeds import EmbedWithColor
 from cogs5e.models.sheet.coinpurse import CoinTypes
 from cogs5e.initiative import Combatant
@@ -53,7 +55,7 @@ async def send_current_coin(ctx, character, coin="All"):
     await ctx.send(embed=cp_display_embed)
 
 
-def parse_coin_args(args: str) -> CoinsArgs:
+def parse_coin_args(args: str) -> tuple[CoinsArgs, bool]:
     """
     Parses a user's coin string into a representation of each currency.
     If the user input is a decimal number, assumes gold pieces.
@@ -61,9 +63,9 @@ def parse_coin_args(args: str) -> CoinsArgs:
     (e.g. +1gp -2sp 3cp).
     """
     try:
-        return _parse_coin_args_float(float(args))
+        return _parse_coin_args_float(float(args)), False
     except ValueError:
-        return _parse_coin_args_re(args)
+        return _parse_coin_args_re(args), True
 
 
 def _parse_coin_args_float(coins: float) -> CoinsArgs:

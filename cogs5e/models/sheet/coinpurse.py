@@ -1,6 +1,5 @@
 from cogs5e.models.errors import InvalidArgument
 from .mixins import HasIntegrationMixin
-#                coins[c_type] = int(self.character_data.value(CoinTypes[c_type]['gSheet']['v2'])) or 0
 
 CoinTypes = {
     "pp": {

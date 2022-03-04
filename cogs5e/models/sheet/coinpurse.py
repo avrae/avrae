@@ -150,14 +150,7 @@ class Coinpurse(HasIntegrationMixin):
                 raise InvalidArgument("You cannot put a currency into negative numbers.")
             pp, gp, ep, sp, cp = self.auto_convert(pp, gp, ep, sp, cp)
 
-        self.pp += pp
-        self.gp += gp
-        self.ep += ep
-        self.sp += sp
-        self.cp += cp
-
-        if self._live_integration:
-            self._live_integration.sync_coins()
+        self.set_currency(self.pp + pp, self.gp + gp, self.ep + ep, self.sp + sp, self.cp + cp)
 
     def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         if not all((

@@ -137,6 +137,18 @@ class Coinpurse(HasIntegrationMixin):
             isinstance(cp, int)
         )):
             raise TypeError("All values must be numeric.")
+            
+        self.set_currency(self.pp + pp, self.gp + gp, self.ep + ep, self.sp + sp, self.cp + cp)
+
+    async def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
+        if not all((
+            isinstance(pp, int),
+            isinstance(gp, int),
+            isinstance(ep, int),
+            isinstance(sp, int),
+            isinstance(cp, int)
+        )):
+            raise TypeError("All values must be numeric.")
 
         if not all((
             self.pp + pp >= 0,
@@ -149,27 +161,6 @@ class Coinpurse(HasIntegrationMixin):
                                                    "Auto convert from larger coins? (Reply with yes/no)"):
                 raise InvalidArgument("You cannot put a currency into negative numbers.")
             pp, gp, ep, sp, cp = self.auto_convert(pp, gp, ep, sp, cp)
-
-        self.set_currency(self.pp + pp, self.gp + gp, self.ep + ep, self.sp + sp, self.cp + cp)
-
-    def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
-        if not all((
-            isinstance(pp, int),
-            isinstance(gp, int),
-            isinstance(ep, int),
-            isinstance(sp, int),
-            isinstance(cp, int)
-        )):
-            raise TypeError("All values must be numeric.")
-
-        if not all((
-            pp >= 0,
-            gp >= 0,
-            ep >= 0,
-            sp >= 0,
-            cp >= 0
-        )):
-            raise InvalidArgument("You cannot put a currency into negative numbers.")
 
         self.pp = pp
         self.gp = gp

@@ -193,10 +193,10 @@ class GameTrack(commands.Cog):
             return await gameutils.send_current_coin(ctx, character, args)
 
         coins = gameutils.parse_coin_args(args)
-        await character.coinpurse.resolve_strict(pp=coins.pp, gp=coins.gp, ep=coins.ep, sp=coins.sp, cp=coins.cp,
-                                                 explicit=coins.explicit, ctx=ctx)
+        deltas = await character.coinpurse.resolve_strict(pp=coins.pp, gp=coins.gp, ep=coins.ep, sp=coins.sp, cp=coins.cp,
+                                                          explicit=coins.explicit, ctx=ctx)
         await character.commit(ctx)
-        return await gameutils.send_current_coin(ctx, character)
+        return await gameutils.send_current_coin(ctx, character, deltas=deltas)
 
     @game.group(name='hp', invoke_without_command=True)
     async def game_hp(self, ctx, *, hp: str = None):

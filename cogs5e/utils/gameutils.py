@@ -1,6 +1,5 @@
 import dataclasses
 import re
-from typing import Tuple
 
 from cogs5e.models.embeds import EmbedWithCharacter
 from utils.constants import COIN_TYPES
@@ -16,6 +15,10 @@ class CoinsArgs:
     sp: int = 0
     cp: int = 0
     explicit: bool = False
+
+    @property
+    def total_cp(self) -> int:
+        return (self.pp * 1000) + (self.gp * 100) + (self.ep * 50) + (self.sp * 10) + self.cp
 
 
 async def send_hp_result(ctx, caster, delta=None):
@@ -35,26 +38,35 @@ async def send_hp_result(ctx, caster, delta=None):
         await ctx.send(f"{caster.name}: {caster.hp_str()}{deltaend}")
 
 
-async def send_current_coin(ctx, character, coin=None):
+async def send_current_coin(ctx, character, coin=None, deltas: dict = None):
     """
     Sends the current contents of the CoinPurse.
     If ``coin`` is passed, it must be a valid coin type and will only show the amount of that specific coin.
     """
-    if coin is not None and coin.lower() not in CoinTypes:
+    if coin is not None and coin.lower() not in COIN_TYPES:
         raise ValueError(f"{coin!r} is not a valid coin type.")
+    if not deltas:
+        deltas = {}
+
+    delta_total = (deltas.get('pp', 0) * 10) + deltas.get('gp', 0) + (deltas.get('ep', 0) * 0.5) + \
+                  (deltas.get('sp', 0) * 0.1) + (deltas.get('cp', 0) * 0.01)
+
     cp_display_embed = EmbedWithCharacter(character)
     cp_display_embed.set_footer(text=f"For help managing your coins, use {ctx.prefix}game coinpurse")
     cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
     cp_display_embed.add_field(name="Total Value",
-                               value=character.coinpurse.str_styled('compact'),
+                               value=character.coinpurse.compact_string(delta=delta_total),
                                inline=False)
     if coin is None:
         cp_display_embed.title = f"{character.name}'s Coinpurse"
         if not character.options.compact_coins:
-            cp_display_embed.description = str(character.coinpurse)
+            cp_display_embed.description = "\n".join(character.coinpurse.coin_string(coin_type,
+                                                                                     character.coinpurse.max_length,
+                                                                                     deltas.get(coin_type))
+                                                     for coin_type in COIN_TYPES)
     else:
         cp_display_embed.title = f"{character.name}'s {COIN_TYPES[coin]['name']} Pieces"
-        cp_display_embed.description = character.coinpurse.str_styled(coin)
+        cp_display_embed.description = character.coinpurse.coin_string(coin)
 
     await ctx.send(embed=cp_display_embed)
 

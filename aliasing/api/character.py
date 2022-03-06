@@ -665,7 +665,7 @@ class AliasCoinpurse:
 
     def __str__(self):
         if self._parent_statblock.options.compact_coins:
-            return self._coinpurse.str_styled('compact')
+            return self._coinpurse.coin_string('compact')
         return str(self._coinpurse)
 
     def coin_str(self, cointype: str):
@@ -676,9 +676,11 @@ class AliasCoinpurse:
         :return The string representation of the chosen coin type.
         :rtype str
         """
-        if cointype not in ("compact", "cp", "sp", "ep", "gp", "pp"):
+        if cointype == 'compact':
+            return self._coinpurse.compact_string()
+        elif cointype not in COIN_TYPES:
             raise ValueError(f"{cointype} is not valid coin.")
-        return self._coinpurse.str_styled(cointype)
+        return self._coinpurse.coin_string(cointype)
 
     def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         """
@@ -721,8 +723,9 @@ class AliasCoinpurse:
         If the user input is a decimal number, assumes gold pieces.
         Otherwise, allows the user to specify currencies in the form '+1gp -2sp 3cp'
 
-        :return A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3}``
+        :return A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3, "total_cp": 83}``
         :rtype dict
         """
         coin_args = parse_coin_args(args)
-        return {"pp": coin_args.pp, "gp": coin_args.gp, "ep": coin_args.ep, "sp": coin_args.sp, "cp": coin_args.cp}
+        return {"pp": coin_args.pp, "gp": coin_args.gp, "ep": coin_args.ep, "sp": coin_args.sp, "cp": coin_args.cp,
+                "total_cp": coin_args.total_cp}

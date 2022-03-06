@@ -101,10 +101,9 @@ class TestBasicSheetCommands:
 
     async def test_game_coinpurse_remove_confirm(self, avrae, dhttp):
         avrae.message("!game coinpurse -10cp")
-        await dhttp.drain()
-        await dhttp.receive_message("You don't have enough of the chosen coins to complete this transaction. "
-                                    "Auto convert from larger coins? (Reply with yes/no)")
-        avrae.message("Yes, I am sure")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        avrae.message("Yes")
         await dhttp.drain()
 
 

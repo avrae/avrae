@@ -59,55 +59,42 @@ class Coinpurse(HasIntegrationMixin):
             "pp": self.pp, "gp": self.gp, "ep": self.ep, "sp": self.sp, "cp": self.cp
         }
 
-    def auto_convert(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
-        temp_pp = self.pp
-        temp_gp = self.gp
-        temp_ep = self.ep
-        temp_sp = self.sp
-        temp_cp = self.cp
-
-        pp_change = pp
-        gp_change = gp
-        ep_change = ep
-        sp_change = sp
-        cp_change = cp
-
-        if temp_cp + cp_change < 0:
-            sp_borrowed = ((cp_change + temp_cp) // 10)
-            cp_change -= sp_borrowed * 10
-            sp_change += sp_borrowed
-        if temp_sp + sp_change < 0:
-            ep_borrowed = ((sp_change + temp_sp) // 5)
-            sp_change -= ep_borrowed * 5
-            ep_change += ep_borrowed
-        if temp_ep + ep_change < 0:
-            gp_borrowed = ((ep_change + temp_ep) // 2)
-            ep_change -= gp_borrowed * 2
-            gp_change += gp_borrowed
-        if temp_gp + gp_change < 0:
-            pp_borrowed = ((gp_change + temp_gp) // 10)
-            gp_change -= pp_borrowed * 10
-            pp_change += pp_borrowed
-        if temp_pp + pp_change < 0:
+    def auto_convert(self, coins=None):
+        if self.cp + coins.cp < 0:
+            sp_borrowed = ((coins.cp + self.cp) // 10)
+            coins.cp -= sp_borrowed * 10
+            coins.sp += sp_borrowed
+        if self.sp + coins.sp < 0:
+            ep_borrowed = ((coins.sp + self.sp) // 5)
+            coins.sp -= ep_borrowed * 5
+            coins.ep += ep_borrowed
+        if self.ep + coins.ep < 0:
+            gp_borrowed = ((coins.ep + self.ep) // 2)
+            coins.ep -= gp_borrowed * 2
+            coins.gp += gp_borrowed
+        if self.gp + coins.gp < 0:
+            pp_borrowed = ((coins.gp + self.gp) // 10)
+            coins.gp -= pp_borrowed * 10
+            coins.pp += pp_borrowed
+        if self.pp + coins.pp < 0:
             raise InvalidArgument("You do not have enough coins to cover this transaction.")
-        return pp_change, gp_change, ep_change, sp_change, cp_change
+        return coins
 
-    async def resolve_strict(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0,
-                             explicit: bool = False, ctx=None):
+    async def resolve_strict(self, coins=None, ctx=None):
         if not all((
-            self.pp + pp >= 0,
-            self.gp + gp >= 0,
-            self.ep + ep >= 0,
-            self.sp + sp >= 0,
-            self.cp + cp >= 0
+                self.pp + coins.pp >= 0,
+                self.gp + coins.gp >= 0,
+                self.ep + coins.ep >= 0,
+                self.sp + coins.sp >= 0,
+                self.cp + coins.cp >= 0
         )):
-            if explicit and not await confirm(ctx,
+            if coins.explicit and not await confirm(ctx,
                                               "You don't have enough of the chosen coins to complete this transaction. "
                                               "Auto convert from larger coins? (Reply with yes/no)"):
                 raise InvalidArgument("You cannot put a currency into negative numbers.")
-            pp, gp, ep, sp, cp = self.auto_convert(pp, gp, ep, sp, cp)
-        self.update_currency(pp, gp, ep, sp, cp)
-        return {"pp": pp, "gp": gp, "ep": ep, "sp": sp, "cp": cp}
+            coins = self.auto_convert(coins)
+        self.update_currency(coins.pp, coins.gp, coins.ep, coins.sp, coins.cp)
+        return {"pp": coins.pp, "gp": coins.gp, "ep": coins.ep, "sp": coins.sp, "cp": coins.cp}
 
     def update_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         self.set_currency(self.pp + pp, self.gp + gp, self.ep + ep, self.sp + sp, self.cp + cp)

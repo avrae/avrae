@@ -18,7 +18,7 @@ from google.oauth2.service_account import Credentials
 from gspread import SpreadsheetNotFound
 from gspread.exceptions import APIError
 from gspread.utils import a1_to_rowcol, fill_gaps
-from cogs5e.models.sheet.coinpurse import Coinpurse, CoinTypes
+from cogs5e.models.sheet.coinpurse import Coinpurse
 
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
@@ -32,7 +32,7 @@ from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.utils import get_actions_for_names
 from gamedata.compendium import compendium
 from utils import config
-from utils.constants import DAMAGE_TYPES
+from utils.constants import DAMAGE_TYPES, COIN_TYPES
 from utils.dice import get_roll_comment
 from utils.functions import search
 
@@ -391,14 +391,12 @@ class GoogleSheet(SheetLoaderABC):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         coins = {}
 
-        for c_type in CoinTypes:
+        for c_type in COIN_TYPES:
             if self.version >= (2, 0):
-                coins[c_type] = int(self.inventory.value(CoinTypes[c_type]['gSheet']['v2']) or 0)
+                coins[c_type] = int(self.inventory.value(COIN_TYPES[c_type]['gSheet']['v2']) or 0)
             else:
-                coins[c_type] = int(self.character_data.value(CoinTypes[c_type]['gSheet']['v14']) or 0)
-            
-            
-            
+                coins[c_type] = int(self.character_data.value(COIN_TYPES[c_type]['gSheet']['v14']) or 0)
+
         return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])
 
     def get_levels(self):

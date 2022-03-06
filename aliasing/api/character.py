@@ -1,5 +1,4 @@
 from functools import cached_property
-from dataclasses import asdict
 
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers

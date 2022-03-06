@@ -90,6 +90,14 @@ class TestBasicSheetCommands:
     async def test_list_cvar(self, avrae, dhttp):
         avrae.message("!cvar list")
 
+    async def test_game_coinpurse(self, avrae, dhttp):
+        avrae.message("!game coinpurse")
+        avrae.message("!game coinpurse +10gp")
+        avrae.message("!game coinpurse -10cp")
+        await dhttp.receive_message()
+        avrae.message("Yes, I am sure")
+        await dhttp.drain()
+
 
 @pytest.mark.usefixtures("character")
 class TestComplexAttacks:

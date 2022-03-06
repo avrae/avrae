@@ -15,6 +15,7 @@ class CoinsArgs:
     ep: int = 0
     sp: int = 0
     cp: int = 0
+    explicit: bool = False
 
 
 async def send_hp_result(ctx, caster, delta=None):
@@ -58,7 +59,7 @@ async def send_current_coin(ctx, character, coin=None):
     await ctx.send(embed=cp_display_embed)
 
 
-def parse_coin_args(args: str) -> tuple[CoinsArgs, bool]:
+def parse_coin_args(args: str) -> CoinsArgs:
     """
     Parses a user's coin string into a representation of each currency.
     If the user input is a decimal number, assumes gold pieces.
@@ -66,9 +67,9 @@ def parse_coin_args(args: str) -> tuple[CoinsArgs, bool]:
     (e.g. +1gp -2sp 3cp).
     """
     try:
-        return _parse_coin_args_float(float(args)), False
+        return _parse_coin_args_float(float(args))
     except ValueError:
-        return _parse_coin_args_re(args), True
+        return _parse_coin_args_re(args)
 
 
 def _parse_coin_args_float(coins: float) -> CoinsArgs:
@@ -98,7 +99,7 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
     if not is_valid:
         raise InvalidArgument("Coins must be a number or a currency string, e.g. `+101.2` or `10cp +101gp -2sp`.")
 
-    out = CoinsArgs()
+    out = CoinsArgs(explicit=True)
     for coin_match in re.finditer(r"(?P<amount>[+-]?\d+)\s*(?P<currency>[pgesc]p)?", args, re.IGNORECASE):
         amount = int(coin_match["amount"])
         currency = coin_match["currency"]

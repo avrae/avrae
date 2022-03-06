@@ -724,5 +724,5 @@ class AliasCoinpurse:
         :return A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3}``
         :rtype dict
         """
-        coin_args, _ = parse_coin_args(args)
-        return asdict(coin_args)
+        coin_args = parse_coin_args(args)
+        return {"pp": coin_args.pp, "gp": coin_args.gp, "ep": coin_args.ep, "sp": coin_args.sp, "cp": coin_args.cp}

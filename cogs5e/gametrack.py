@@ -192,9 +192,9 @@ class GameTrack(commands.Cog):
         if re.fullmatch(r'[pgesc]p', args, re.IGNORECASE):
             return await gameutils.send_current_coin(ctx, character, args)
 
-        coins, explicit = gameutils.parse_coin_args(args)
-        await character.coinpurse.update_currency(pp=coins.pp, gp=coins.gp, ep=coins.ep, sp=coins.sp, cp=coins.cp,
-                                                  explicit=explicit, ctx=ctx)
+        coins = gameutils.parse_coin_args(args)
+        await character.coinpurse.resolve_strict(pp=coins.pp, gp=coins.gp, ep=coins.ep, sp=coins.sp, cp=coins.cp,
+                                                 explicit=coins.explicit, ctx=ctx)
         await character.commit(ctx)
         return await gameutils.send_current_coin(ctx, character)
 

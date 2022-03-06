@@ -1161,6 +1161,21 @@ AliasAction
 .. autoclass:: aliasing.api.character.AliasAction()
     :members:
 
+AliasCoinpurse
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.character.AliasCoinpurse()
+
+    .. attribute:: pp
+        gp
+        ep
+        sp
+        cp
+
+        The skill modifier for the given skill.
+
+        :type: :class:`~aliasing.api.statblock.AliasSkill`
+
 StatBlock Models
 ----------------
 

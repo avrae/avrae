@@ -400,7 +400,7 @@ class GoogleSheet(SheetLoaderABC):
         return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])
 
     def get_levels(self):
-        if self.character_data is None: raise Exception('Y ou must call get_character() first.')
+        if self.character_data is None: raise Exception('You must call get_character() first.')
         try:
             total_level = int(self.character_data.value("AL6"))
             self.total_level = total_level

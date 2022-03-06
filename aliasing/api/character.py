@@ -6,6 +6,7 @@ from aliasing import helpers
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
 from cogs5e.utils.gameutils import parse_coin_args
+from utils.constants import COIN_TYPES
 
 
 class AliasCharacter(AliasStatBlock):
@@ -655,9 +656,9 @@ class AliasCoinpurse:
         self._parent_statblock = parent_statblock
 
     def __getattr__(self, item):
-        if item.lower() not in ("cp", "sp", "ep", "gp", "pp"):
+        if item not in COIN_TYPES:
             raise ValueError(f"{item} is not valid coin.")
-        return getattr(self._coinpurse, item.lower())
+        return getattr(self._coinpurse, item)
 
     def __getitem__(self, item):
         return self.__getattr__(item)
@@ -675,9 +676,9 @@ class AliasCoinpurse:
         :return The string representation of the chosen coin type.
         :rtype str
         """
-        if cointype.lower() not in ("compact", "cp", "sp", "ep", "gp", "pp"):
+        if cointype not in ("compact", "cp", "sp", "ep", "gp", "pp"):
             raise ValueError(f"{cointype} is not valid coin.")
-        return self._coinpurse.str_styled(cointype.lower())
+        return self._coinpurse.str_styled(cointype)
 
     def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         """

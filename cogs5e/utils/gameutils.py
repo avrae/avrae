@@ -3,7 +3,7 @@ import re
 from typing import Tuple
 
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.sheet.coinpurse import CoinTypes
+from utils.constants import COIN_TYPES
 from cogs5e.initiative import Combatant
 from cogs5e.models.errors import InvalidArgument
 
@@ -52,8 +52,8 @@ async def send_current_coin(ctx, character, coin=None):
         if not character.options.compact_coins:
             cp_display_embed.description = str(character.coinpurse)
     else:
-        cp_display_embed.title = f"{character.name}'s {CoinTypes[coin]['name']} Pieces"
-        cp_display_embed.description=character.coinpurse.str_styled(coin)
+        cp_display_embed.title = f"{character.name}'s {COIN_TYPES[coin]['name']} Pieces"
+        cp_display_embed.description = character.coinpurse.str_styled(coin)
 
     await ctx.send(embed=cp_display_embed)
 

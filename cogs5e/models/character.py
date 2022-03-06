@@ -43,7 +43,7 @@ class Character(StatBlock):
                  creature_type: str = None,
                  ddb_campaign_id: str = None, actions: Actions = None, active_guilds: list = None,
                  options_v2: CharacterSettings = None, 
-                 coinpurse = None,
+                 coinpurse=None,
                  **kwargs):
         if actions is None:
             actions = Actions()
@@ -71,8 +71,7 @@ class Character(StatBlock):
         # StatBlock super call
         super().__init__(
             name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellbook,
-            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
+            spellbook=spellbook, ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
         )
 
         # main character info
@@ -597,7 +596,6 @@ class Character(StatBlock):
 
         # Coins
         embed.add_field(name="Currency", value=str(self.coinpurse))
-        
 
         # sheet url?
         if self._import_version < SHEET_VERSION:
@@ -643,4 +641,5 @@ class CharacterSpellbook(HasIntegrationMixin, Spellbook):
 SetActiveResult = namedtuple('SetActiveResult', 'did_unset_server_active')
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
-DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions, "options_v2": CharacterSettings, "coinpurse": Coinpurse}
+DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions,
+                   "options_v2": CharacterSettings, "coinpurse": Coinpurse}

@@ -177,7 +177,7 @@ class GameTrack(commands.Cog):
         await self._rest(ctx, 'short', *args)
 
     @game.command(name='coinpurse', aliases=['coins', 'coin'])
-    async def game_coinpurse(self, ctx, *, args = None):
+    async def game_coinpurse(self, ctx, *, args=None):
         """Manage your character's coinpurse.
         __Valid Subcommands__
         `!game coins` - Show your current coinpurse.

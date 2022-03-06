@@ -92,9 +92,18 @@ class TestBasicSheetCommands:
 
     async def test_game_coinpurse(self, avrae, dhttp):
         avrae.message("!game coinpurse")
+
+    async def test_game_coinpurse_add(self, avrae, dhttp):
         avrae.message("!game coinpurse +10gp")
+
+    async def test_game_coinpurse_remove(self, avrae, dhttp):
+        avrae.message("!game coinpurse -1")
+
+    async def test_game_coinpurse_remove_confirm(self, avrae, dhttp):
         avrae.message("!game coinpurse -10cp")
-        await dhttp.receive_message()
+        await dhttp.drain()
+        await dhttp.receive_message("You don't have enough of the chosen coins to complete this transaction. "
+                                    "Auto convert from larger coins? (Reply with yes/no)")
         avrae.message("Yes, I am sure")
         await dhttp.drain()
 

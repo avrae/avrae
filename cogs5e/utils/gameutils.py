@@ -51,7 +51,7 @@ async def send_current_coin(ctx, character, coin=None, deltas: dict = None):
     delta_total = (deltas.get('pp', 0) * 10) + deltas.get('gp', 0) + (deltas.get('ep', 0) * 0.5) + \
                   (deltas.get('sp', 0) * 0.1) + (deltas.get('cp', 0) * 0.01)
 
-    cp_display_embed = EmbedWithCharacter(character)
+    cp_display_embed = EmbedWithCharacter(character, name=False)
     cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
     cp_display_embed.add_field(name="Total Value",
                                value=character.coinpurse.compact_string(delta=delta_total),

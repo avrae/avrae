@@ -266,7 +266,7 @@ class GoogleSheet(SheetLoaderABC):
         elif vcell:
             self.additional = TempCharacter(doc.worksheet('Additional'))
             self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
-            if self.version >= (2, 0):
+            if self.version >= (2, 1):
                 self.inventory = TempCharacter(doc.worksheet('Inventory'))
 
 
@@ -392,7 +392,7 @@ class GoogleSheet(SheetLoaderABC):
         coins = {}
 
         for c_type in COIN_TYPES:
-            if self.version >= (2, 0):
+            if self.version >= (2, 1):
                 coins[c_type] = int(self.inventory.value(COIN_TYPES[c_type]['gSheet']['v2']) or 0)
             else:
                 coins[c_type] = int(self.character_data.value(COIN_TYPES[c_type]['gSheet']['v14']) or 0)
@@ -400,7 +400,7 @@ class GoogleSheet(SheetLoaderABC):
         return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])
 
     def get_levels(self):
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None: raise Exception('Y ou must call get_character() first.')
         try:
             total_level = int(self.character_data.value("AL6"))
             self.total_level = total_level

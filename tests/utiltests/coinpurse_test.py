@@ -9,7 +9,7 @@ pytestmark = pytest.mark.asyncio
 def test_parse_coin_args():
     assert parse_coin_args("+10") == CoinsArgs(gp=10, explicit=False)
     assert parse_coin_args("+10cp +10gp -8ep") == CoinsArgs(gp=10, ep=-8, cp=10, explicit=True)
-    assert parse_coin_args("-10.47") == CoinsArgs(gp=-11, sp=5, cp=3, explicit=False)
+    assert parse_coin_args("-10.47") == CoinsArgs(gp=-10, sp=-4, cp=-7, explicit=False)
     assert parse_coin_args("+10.388888") == CoinsArgs(gp=10, sp=3, cp=8, explicit=False)
 
 

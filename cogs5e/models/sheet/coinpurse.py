@@ -38,7 +38,7 @@ class Coinpurse(HasIntegrationMixin):
         if delta:
             delta_out = f" ({delta:+,.2f})"
         coin_value = self.total
-        coin_type = 'gp'
+        coin_type = "gp"
         return f"{COIN_TYPES[coin_type]['icon']} {coin_value:,.2f} {coin_type}{delta_out}"
 
     @property
@@ -55,25 +55,23 @@ class Coinpurse(HasIntegrationMixin):
         return cls(**d)
 
     def to_dict(self):
-        return {
-            "pp": self.pp, "gp": self.gp, "ep": self.ep, "sp": self.sp, "cp": self.cp
-        }
+        return {"pp": self.pp, "gp": self.gp, "ep": self.ep, "sp": self.sp, "cp": self.cp}
 
     def auto_convert(self, coins=None):
         if self.cp + coins.cp < 0:
-            sp_borrowed = ((coins.cp + self.cp) // 10)
+            sp_borrowed = (coins.cp + self.cp) // 10
             coins.cp -= sp_borrowed * 10
             coins.sp += sp_borrowed
         if self.sp + coins.sp < 0:
-            ep_borrowed = ((coins.sp + self.sp) // 5)
+            ep_borrowed = (coins.sp + self.sp) // 5
             coins.sp -= ep_borrowed * 5
             coins.ep += ep_borrowed
         if self.ep + coins.ep < 0:
-            gp_borrowed = ((coins.ep + self.ep) // 2)
+            gp_borrowed = (coins.ep + self.ep) // 2
             coins.ep -= gp_borrowed * 2
             coins.gp += gp_borrowed
         if self.gp + coins.gp < 0:
-            pp_borrowed = ((coins.gp + self.gp) // 10)
+            pp_borrowed = (coins.gp + self.gp) // 10
             coins.gp -= pp_borrowed * 10
             coins.pp += pp_borrowed
         if self.pp + coins.pp < 0:
@@ -81,16 +79,20 @@ class Coinpurse(HasIntegrationMixin):
         return coins
 
     async def resolve_strict(self, coins=None, ctx=None):
-        if not all((
+        if not all(
+            (
                 self.pp + coins.pp >= 0,
                 self.gp + coins.gp >= 0,
                 self.ep + coins.ep >= 0,
                 self.sp + coins.sp >= 0,
-                self.cp + coins.cp >= 0
-        )):
-            if coins.explicit and not await confirm(ctx,
-                                              "You don't have enough of the chosen coins to complete this transaction. "
-                                              "Auto convert from larger coins? (Reply with yes/no)"):
+                self.cp + coins.cp >= 0,
+            )
+        ):
+            if coins.explicit and not await confirm(
+                ctx,
+                "You don't have enough of the chosen coins to complete this transaction. "
+                "Auto convert from larger coins? (Reply with yes/no)",
+            ):
                 raise InvalidArgument("You cannot put a currency into negative numbers.")
             coins = self.auto_convert(coins)
         self.update_currency(coins.pp, coins.gp, coins.ep, coins.sp, coins.cp)
@@ -100,22 +102,12 @@ class Coinpurse(HasIntegrationMixin):
         self.set_currency(self.pp + pp, self.gp + gp, self.ep + ep, self.sp + sp, self.cp + cp)
 
     def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
-        if not all((
-            isinstance(pp, int),
-            isinstance(gp, int),
-            isinstance(ep, int),
-            isinstance(sp, int),
-            isinstance(cp, int)
-        )):
+        if not all(
+            (isinstance(pp, int), isinstance(gp, int), isinstance(ep, int), isinstance(sp, int), isinstance(cp, int))
+        ):
             raise TypeError("All values must be numeric.")
 
-        if not all((
-            pp >= 0,
-            gp >= 0,
-            ep >= 0,
-            sp >= 0,
-            cp >= 0
-        )):
+        if not all((pp >= 0, gp >= 0, ep >= 0, sp >= 0, cp >= 0)):
             raise InvalidArgument("You cannot put a currency into negative numbers.")
 
         self.pp = pp

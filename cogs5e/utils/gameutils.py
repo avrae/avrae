@@ -48,21 +48,26 @@ async def send_current_coin(ctx, character, coin=None, deltas: dict = None):
     if not deltas:
         deltas = {}
 
-    delta_total = (deltas.get('pp', 0) * 10) + deltas.get('gp', 0) + (deltas.get('ep', 0) * 0.5) + \
-                  (deltas.get('sp', 0) * 0.1) + (deltas.get('cp', 0) * 0.01)
+    delta_total = (
+        (deltas.get("pp", 0) * 10)
+        + deltas.get("gp", 0)
+        + (deltas.get("ep", 0) * 0.5)
+        + (deltas.get("sp", 0) * 0.1)
+        + (deltas.get("cp", 0) * 0.01)
+    )
 
     cp_display_embed = EmbedWithCharacter(character, name=False)
     cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
-    cp_display_embed.add_field(name="Total Value",
-                               value=character.coinpurse.compact_string(delta=delta_total),
-                               inline=False)
+    cp_display_embed.add_field(
+        name="Total Value", value=character.coinpurse.compact_string(delta=delta_total), inline=False
+    )
     if coin is None:
         cp_display_embed.title = f"{character.name}'s Coinpurse"
         if not character.options.compact_coins:
-            cp_display_embed.description = "\n".join(character.coinpurse.coin_string(coin_type,
-                                                                                     character.coinpurse.max_length,
-                                                                                     deltas.get(coin_type))
-                                                     for coin_type in COIN_TYPES)
+            cp_display_embed.description = "\n".join(
+                character.coinpurse.coin_string(coin_type, character.coinpurse.max_length, deltas.get(coin_type))
+                for coin_type in COIN_TYPES
+            )
     else:
         cp_display_embed.title = f"{character.name}'s {COIN_TYPES[coin]['name']} Pieces"
         cp_display_embed.description = character.coinpurse.coin_string(coin)
@@ -94,7 +99,7 @@ def _parse_coin_args_float(coins: float) -> CoinsArgs:
         # pp=total_copper // 1000,  #  If we are going to utilize Platinum Uncomment This
         gp=total_copper // 100,  # (total_copper % 1000) // 100  # if allowing plat
         sp=(total_copper % 100) // 10,
-        cp=total_copper % 10
+        cp=total_copper % 10,
     )
 
 
@@ -115,13 +120,13 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
         amount = int(coin_match["amount"])
         currency = coin_match["currency"]
 
-        if currency == 'pp':
+        if currency == "pp":
             out.pp += amount
-        elif currency == 'gp':
+        elif currency == "gp":
             out.gp += amount
-        elif currency == 'ep':
+        elif currency == "ep":
             out.ep += amount
-        elif currency == 'sp':
+        elif currency == "sp":
             out.sp += amount
         else:
             out.cp += amount

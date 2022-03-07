@@ -37,4 +37,5 @@ class SheetLoaderABC:
 # v16: explicit spellcasting mod import
 # v17: refactor to use StatBlock, AttackList
 # v18: action list
-SHEET_VERSION = 18
+# v19: coinpurse
+SHEET_VERSION = 19

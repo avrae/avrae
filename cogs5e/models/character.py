@@ -522,7 +522,8 @@ class Character(StatBlock):
         )
 
         # Monetary Concerns
-        self.coinpurse = old_character.coinpurse
+        if old_character._import_version >= 19:
+            self.coinpurse = old_character.coinpurse
 
         # overridden spells
         sb = self.spellbook

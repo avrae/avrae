@@ -18,8 +18,8 @@ class CoinsArgs:
     explicit: bool = False
 
     @property
-    def total_cp(self) -> int:
-        return (self.pp * 1000) + (self.gp * 100) + (self.ep * 50) + (self.sp * 10) + self.cp
+    def total(self) -> float:
+        return (self.pp * 10) + self.gp + (self.ep * 0.5) + (self.sp * 0.1) + (self.cp * 0.01)
 
 
 async def send_hp_result(ctx, caster, delta=None):
@@ -133,7 +133,7 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
 
 
 async def resolve_strict_coins(coinpurse=None, coins: CoinsArgs = None, ctx=None):
-    if (coinpurse.total*100 + coins.total_cp) < 0:
+    if (coinpurse.total + coins.total) < 0:
         raise InvalidArgument("You cannot put a currency into negative numbers.")
     if not all((
             coinpurse.pp + coins.pp >= 0,

@@ -729,9 +729,9 @@ class AliasCoinpurse:
         If the user input is a decimal number, assumes gold pieces.
         Otherwise, allows the user to specify currencies in the form '+1gp -2sp 3cp'
 
-        :return A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3, "total_cp": 83}``
+        :return A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3, "total": 0.83}``
         :rtype dict
         """
         coin_args = parse_coin_args(args)
         return {"pp": coin_args.pp, "gp": coin_args.gp, "ep": coin_args.ep, "sp": coin_args.sp, "cp": coin_args.cp,
-                "total_cp": coin_args.total_cp}
+                "total": coin_args.total}

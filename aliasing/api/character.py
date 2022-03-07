@@ -664,22 +664,29 @@ class AliasCoinpurse:
 
     def __str__(self):
         if self._parent_statblock.options.compact_coins:
-            return self._coinpurse.coin_string('compact')
+            return self._coinpurse.compact_string()
         return str(self._coinpurse)
 
     def coin_str(self, cointype: str):
         """
         Returns a string representation of the chosen coin type.
 
-        :param str cointype: The type of coin to return. ``"compact"``, ``"pp"``, ``"gp"``, ``"ep"``, ``"sp"``, and ``"cp"``
+        :param str cointype: The type of coin to return. ``"pp"``, ``"gp"``, ``"ep"``, ``"sp"``, and ``"cp"``
         :return The string representation of the chosen coin type.
         :rtype str
         """
-        if cointype == 'compact':
-            return self._coinpurse.compact_string()
-        elif cointype not in COIN_TYPES:
+        if cointype not in COIN_TYPES:
             raise ValueError(f"{cointype} is not valid coin.")
         return self._coinpurse.coin_string(cointype)
+
+    def compact_str(self):
+        """
+        Returns a string representation of the compacted coin value.
+
+        :return The string representation of the compacted coin value.
+        :rtype str
+        """
+        return self._coinpurse.compact_string()
 
     def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         """

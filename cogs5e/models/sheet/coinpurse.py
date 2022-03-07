@@ -15,21 +15,14 @@ class Coinpurse(HasIntegrationMixin):
     def __str__(self):
         return "\n".join(self.coin_string(coin_type, self.max_length) for coin_type in COIN_TYPES)
 
-    def coin_string(self, coin_type, length=0, delta=0):
+    def coin_string(self, coin_type, delta=0):
         if coin_type not in COIN_TYPES:
             raise ValueError("coin_type must be in ('pp', 'gp', 'ep', 'sp', 'cp')")
         delta_out = ""
         if delta:
             delta_out = f" ({delta:+,})"
 
-        style = ","
-        coin_value = f"{getattr(self, coin_type):{style}}"
-        # Attempt at right aligning coins
-        # num_space = "\u2002"
-        # if length > 0:
-        #     coin_value = f"{coin_value:{num_space}>{length}}".replace("\u2002", "\u200A", 1)
-        #     if "," in coin_value:
-        #         coin_value = ("\u200A\u200A" * coin_value.count(',')) + coin_value
+        coin_value = f"{getattr(self, coin_type):,}"
         return f"{COIN_TYPES[coin_type]['icon']} {coin_value} {coin_type}{delta_out}"
 
     def compact_string(self, delta=0):
@@ -39,11 +32,6 @@ class Coinpurse(HasIntegrationMixin):
         coin_value = self.total
         coin_type = 'gp'
         return f"{COIN_TYPES[coin_type]['icon']} {coin_value:,.2f} {coin_type}{delta_out}"
-
-    @property
-    def max_length(self):
-        max_value = f"{max({self.pp, self.gp, self.ep, self.sp, self.cp}):,}"
-        return len(str(max_value))
 
     @property
     def total(self):

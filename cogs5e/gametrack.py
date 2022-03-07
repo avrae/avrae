@@ -18,6 +18,7 @@ from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelectionElements
 from cogs5e.utils import checkutils, gameutils, targetutils
+from cogs5e.utils.gameutils import resolve_strict_coins
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
 from utils import constants
@@ -193,7 +194,8 @@ class GameTrack(commands.Cog):
             return await gameutils.send_current_coin(ctx, character, args)
 
         coins = gameutils.parse_coin_args(args)
-        deltas = await character.coinpurse.resolve_strict(coins, ctx=ctx)
+        deltas = await resolve_strict_coins(character.coinpurse, coins, ctx=ctx)
+        character.coinpurse.update_currency(deltas)
         await character.commit(ctx)
         return await gameutils.send_current_coin(ctx, character, deltas=deltas)
 

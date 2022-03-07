@@ -1165,6 +1165,7 @@ AliasCoinpurse
 ^^^^^^^^^^^^^^
 
 .. autoclass:: aliasing.api.character.AliasCoinpurse()
+    :members:
 
     .. attribute:: pp
         gp
@@ -1172,9 +1173,9 @@ AliasCoinpurse
         sp
         cp
 
-        The skill modifier for the given skill.
+        The value of the given coin type.
 
-        :type: :class:`~aliasing.api.statblock.AliasSkill`
+        :type: int
 
 StatBlock Models
 ----------------

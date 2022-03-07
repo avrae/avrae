@@ -44,13 +44,13 @@ async def send_current_coin(ctx, character, coin=None, deltas: dict = None):
     Sends the current contents of the CoinPurse.
     If ``coin`` is passed, it must be a valid coin type and will only show the amount of that specific coin.
     """
-    if coin is not None and coin.lower() not in COIN_TYPES:
+    if coin is not None and (coin := coin.lower()) not in COIN_TYPES:
         raise ValueError(f"{coin!r} is not a valid coin type.")
     if not deltas:
-        deltas = {}
+        deltas = CoinsArgs()
 
-    delta_total = (deltas.get('pp', 0) * 10) + deltas.get('gp', 0) + (deltas.get('ep', 0) * 0.5) + \
-                  (deltas.get('sp', 0) * 0.1) + (deltas.get('cp', 0) * 0.01)
+    delta_total = (deltas.pp * 10) + deltas.gp + (deltas.ep * 0.5) + \
+                  (deltas.sp * 0.1) + (deltas.cp * 0.01)
 
     cp_display_embed = EmbedWithCharacter(character, name=False)
     cp_display_embed.set_thumbnail(url="https://www.dndbeyond.com/attachments/thumbnails/3/929/650/358/scag01-04.png")
@@ -62,7 +62,7 @@ async def send_current_coin(ctx, character, coin=None, deltas: dict = None):
         if not character.options.compact_coins:
             cp_display_embed.description = "\n".join(character.coinpurse.coin_string(coin_type,
                                                                                      character.coinpurse.max_length,
-                                                                                     deltas.get(coin_type))
+                                                                                     getattr(deltas, coin_type))
                                                      for coin_type in COIN_TYPES)
     else:
         cp_display_embed.title = f"{character.name}'s {COIN_TYPES[coin]['name']} Pieces"

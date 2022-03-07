@@ -87,14 +87,17 @@ def _parse_coin_args_float(coins: float) -> CoinsArgs:
     """
     Parses a float into currencies. The input is assumed to be in gp, and any sub-cp values will be truncated.
     """
-    # 0.01
-    # 1.12313
-    total_copper = int(coins * 100)  # if any sub-copper passed (i.e. 1-thousandth), truncate it
+    # if any sub-copper passed (i.e. 1-thousandth), truncate it
+    total_copper = int(abs(coins * 100))
+
+    # this floor/mod math gets wonky when dealing with negative numbers (e.g. -2.62 becomes -3gp +3sp +8cp)
+    # so we do all our math in the positives
+    sign = 1 if coins >= 0 else -1
+
     return CoinsArgs(
-        # pp=total_copper // 1000,  #  If we are going to utilize Platinum Uncomment This
-        gp=total_copper // 100,  # (total_copper % 1000) // 100  # if allowing plat
-        sp=(total_copper % 100) // 10,
-        cp=total_copper % 10
+        gp=sign * (total_copper // 100),
+        sp=sign * ((total_copper % 100) // 10),
+        cp=sign * (total_copper % 10)
     )
 
 

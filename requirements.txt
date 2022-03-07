@@ -27,3 +27,6 @@ boto3==1.20.24  # used by clustering in certain scenarios
 dnspython==2.1.0  # used by mongodb
 google-auth==1.28.0
 pymongo==3.11.3  # pin this below 4.0 - TLS config changes in 4.0 are breaking
+
+# Formatting and Standardization deps
+black==22.1.0

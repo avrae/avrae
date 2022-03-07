@@ -1,6 +1,5 @@
 from cogs5e.models.errors import InvalidArgument
 from .mixins import HasIntegrationMixin
-from utils.functions import confirm
 from utils.constants import COIN_TYPES
 
 
@@ -80,24 +79,9 @@ class Coinpurse(HasIntegrationMixin):
             raise InvalidArgument("You do not have enough coins to cover this transaction.")
         return coins
 
-    async def resolve_strict(self, coins=None, ctx=None):
-        if not all((
-                self.pp + coins.pp >= 0,
-                self.gp + coins.gp >= 0,
-                self.ep + coins.ep >= 0,
-                self.sp + coins.sp >= 0,
-                self.cp + coins.cp >= 0
-        )):
-            if coins.explicit and not await confirm(ctx,
-                                              "You don't have enough of the chosen coins to complete this transaction. "
-                                              "Auto convert from larger coins? (Reply with yes/no)"):
-                raise InvalidArgument("You cannot put a currency into negative numbers.")
-            coins = self.auto_convert(coins)
-        self.update_currency(coins.pp, coins.gp, coins.ep, coins.sp, coins.cp)
-        return {"pp": coins.pp, "gp": coins.gp, "ep": coins.ep, "sp": coins.sp, "cp": coins.cp}
-
-    def update_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
-        self.set_currency(self.pp + pp, self.gp + gp, self.ep + ep, self.sp + sp, self.cp + cp)
+    def update_currency(self, coins=None):
+        self.set_currency(self.pp + coins.pp, self.gp + coins.gp, self.ep + coins.ep,
+                          self.sp + coins.sp, self.cp + coins.cp)
 
     def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
         if not all((

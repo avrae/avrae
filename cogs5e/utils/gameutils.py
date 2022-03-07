@@ -5,6 +5,7 @@ from cogs5e.models.embeds import EmbedWithCharacter
 from utils.constants import COIN_TYPES
 from cogs5e.initiative import Combatant
 from cogs5e.models.errors import InvalidArgument
+from utils.functions import confirm
 
 
 @dataclasses.dataclass
@@ -127,3 +128,22 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
             out.cp += amount
 
     return out
+
+
+async def resolve_strict_coins(coinpurse=None, coins: CoinsArgs = None, ctx=None):
+    if coins.total_cp >= coinpurse.total*100:
+        raise InvalidArgument("You cannot put a currency into negative numbers.")
+    if not all((
+            coinpurse.pp + coins.pp >= 0,
+            coinpurse.gp + coins.gp >= 0,
+            coinpurse.ep + coins.ep >= 0,
+            coinpurse.sp + coins.sp >= 0,
+            coinpurse.cp + coins.cp >= 0
+    )):
+        if coins.explicit and not await confirm(ctx,
+                                                "You don't have enough of the chosen coins to complete this transaction"
+                                                ". Auto convert from larger coins? (Reply with yes/no)"):
+            raise InvalidArgument("You cannot put a currency into negative numbers.")
+        coins = coinpurse.auto_convert(coins)
+    return coins
+

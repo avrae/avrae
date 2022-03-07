@@ -61,7 +61,6 @@ async def send_current_coin(ctx, character, coin=None, deltas: dict = None):
         cp_display_embed.title = f"{character.name}'s Coinpurse"
         if not character.options.compact_coins:
             cp_display_embed.description = "\n".join(character.coinpurse.coin_string(coin_type,
-                                                                                     character.coinpurse.max_length,
                                                                                      getattr(deltas, coin_type))
                                                      for coin_type in COIN_TYPES)
     else:
@@ -131,7 +130,7 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
 
 
 async def resolve_strict_coins(coinpurse=None, coins: CoinsArgs = None, ctx=None):
-    if coins.total_cp >= coinpurse.total*100:
+    if (coinpurse.total*100 + coins.total_cp) < 0:
         raise InvalidArgument("You cannot put a currency into negative numbers.")
     if not all((
             coinpurse.pp + coins.pp >= 0,

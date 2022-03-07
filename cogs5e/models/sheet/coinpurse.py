@@ -21,7 +21,7 @@ class Coinpurse(HasIntegrationMixin):
             raise ValueError("coin_type must be in ('pp', 'gp', 'ep', 'sp', 'cp')")
         delta_out = ""
         if delta:
-            delta_out = f" ({delta:+})"
+            delta_out = f" ({delta:+,})"
 
         style = ","
         coin_value = f"{getattr(self, coin_type):{style}}"

@@ -90,22 +90,6 @@ class TestBasicSheetCommands:
     async def test_list_cvar(self, avrae, dhttp):
         avrae.message("!cvar list")
 
-    async def test_game_coinpurse(self, avrae, dhttp):
-        avrae.message("!game coinpurse")
-
-    async def test_game_coinpurse_add(self, avrae, dhttp):
-        avrae.message("!game coinpurse +10gp")
-
-    async def test_game_coinpurse_remove(self, avrae, dhttp):
-        avrae.message("!game coinpurse -1")
-
-    async def test_game_coinpurse_remove_confirm(self, avrae, dhttp):
-        avrae.message("!game coinpurse -10cp")
-        await dhttp.receive_delete()
-        await dhttp.receive_message()
-        avrae.message("Yes")
-        await dhttp.drain()
-
 
 @pytest.mark.usefixtures("character")
 class TestComplexAttacks:

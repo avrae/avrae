@@ -115,7 +115,7 @@ class CustomCounter:
 
     @classmethod
     def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
-            reset_to=None, reset_by=None, initial_value=None, title=None, desc=None):
+            reset_to=None, reset_by=None, title=None, desc=None, initial_value=None):
         if reset not in ('short', 'long', 'none', None):
             raise InvalidArgument("Invalid reset.")
         if any(c in name for c in ".$"):

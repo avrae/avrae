@@ -25,14 +25,23 @@ async def test_resolve_strict_coins():
                                    CoinsArgs(pp=-1, explicit=False))
 
 
-def test_coin_autoconvert():
+def test_coin_autoconvert_down():
     assert Coinpurse(pp=10)\
-               .auto_convert(CoinsArgs(cp=-1)) == CoinsArgs(pp=-1, gp=9, ep=1, sp=4, cp=9)
+               .auto_convert_down(CoinsArgs(cp=-1)) == CoinsArgs(pp=-1, gp=9, ep=1, sp=4, cp=9)
     assert Coinpurse(pp=10, gp=3, cp=1)\
-               .auto_convert(CoinsArgs(cp=-2)) == CoinsArgs(gp=-1, ep=1, sp=4, cp=8)
+               .auto_convert_down(CoinsArgs(cp=-2)) == CoinsArgs(gp=-1, ep=1, sp=4, cp=8)
     with pytest.raises(InvalidArgument):
         Coinpurse(gp=1)\
-            .auto_convert(CoinsArgs(pp=-1, explicit=False))
+            .auto_convert_down(CoinsArgs(pp=-1, explicit=False))
+
+
+def test_coin_autoconvert_up():
+    assert Coinpurse(pp=10, gp=9, ep=1, sp=4, cp=9)\
+               .auto_convert_up(CoinsArgs()) == CoinsArgs()
+    assert Coinpurse(pp=10, gp=9, ep=1, sp=4, cp=10)\
+               .auto_convert_up(CoinsArgs()) == CoinsArgs(pp=1, gp=-9, ep=-1, sp=-4, cp=-10)
+    assert Coinpurse(pp=10, gp=9, ep=1, sp=4, cp=1234)\
+               .auto_convert_up(CoinsArgs()) == CoinsArgs(pp=2, gp=-7, ep=-1, sp=-2, cp=-1230)
 
 
 def test_coin_compactstring():

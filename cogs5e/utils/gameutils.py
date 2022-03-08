@@ -146,6 +146,6 @@ async def resolve_strict_coins(coinpurse=None, coins: CoinsArgs = None, ctx=None
                                                 "You don't have enough of the chosen coins to complete this transaction"
                                                 ". Auto convert from larger coins? (Reply with yes/no)"):
             raise InvalidArgument("You cannot put a currency into negative numbers.")
-        coins = coinpurse.auto_convert(coins)
+        coins = coinpurse.auto_convert_down(coins)
     return coins
 

@@ -18,7 +18,7 @@ from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelectionElements
 from cogs5e.utils import checkutils, gameutils, targetutils
-from cogs5e.utils.gameutils import resolve_strict_coins
+from cogs5e.utils.gameutils import resolve_strict_coins, CoinsArgs
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
 from utils import constants
@@ -177,7 +177,7 @@ class GameTrack(commands.Cog):
         -h - Hides the character summary output."""
         await self._rest(ctx, 'short', *args)
 
-    @game.command(name='coinpurse', aliases=['coins', 'coin'])
+    @game.group(name='coinpurse', aliases=['coins', 'coin'], invoke_without_command=True)
     async def game_coinpurse(self, ctx, *, args=None):
         """Manage your character's coinpurse.
         __Valid Subcommands__
@@ -195,6 +195,16 @@ class GameTrack(commands.Cog):
 
         coins = gameutils.parse_coin_args(args)
         deltas = await resolve_strict_coins(character.coinpurse, coins, ctx=ctx)
+        character.coinpurse.update_currency(deltas)
+        await character.commit(ctx)
+        return await gameutils.send_current_coin(ctx, character, deltas=deltas)
+
+    @game_coinpurse.command(name="convert")
+    async def game_coinpurse_convert(self, ctx):
+        """Converts all of your coins into the lowest amount of coins possible.
+        100cp turns into 1gp, 5sp turns into 1ep, etc."""
+        character: Character = await ctx.get_character()
+        deltas = character.coinpurse.auto_convert_up(CoinsArgs)
         character.coinpurse.update_currency(deltas)
         await character.commit(ctx)
         return await gameutils.send_current_coin(ctx, character, deltas=deltas)

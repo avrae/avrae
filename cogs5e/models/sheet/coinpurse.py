@@ -13,7 +13,7 @@ class Coinpurse(HasIntegrationMixin):
         self.cp = cp
 
     def __str__(self):
-        return "\n".join(self.coin_string(coin_type, self.max_length) for coin_type in COIN_TYPES)
+        return "\n".join(self.coin_string(coin_type) for coin_type in COIN_TYPES)
 
     def coin_string(self, coin_type, delta=0):
         if coin_type not in COIN_TYPES:
@@ -46,7 +46,7 @@ class Coinpurse(HasIntegrationMixin):
             "pp": self.pp, "gp": self.gp, "ep": self.ep, "sp": self.sp, "cp": self.cp
         }
 
-    def auto_convert(self, coins=None):
+    def auto_convert_down(self, coins=None):
         if self.cp + coins.cp < 0:
             sp_borrowed = ((coins.cp + self.cp) // 10)
             coins.cp -= sp_borrowed * 10
@@ -65,6 +65,26 @@ class Coinpurse(HasIntegrationMixin):
             coins.pp += pp_borrowed
         if self.pp + coins.pp < 0:
             raise InvalidArgument("You do not have enough coins to cover this transaction.")
+        return coins
+
+    def auto_convert_up(self, coins=None):
+        total_cp = self.total * 100
+        coins.pp = int(total_cp // 1000)
+        total_cp -= coins.pp * 1000
+        coins.gp = int(total_cp // 100)
+        total_cp -= coins.gp * 100
+        coins.ep = int(total_cp // 50)
+        total_cp -= coins.ep * 50
+        coins.sp = int(total_cp // 10)
+        total_cp -= coins.sp * 10
+        coins.cp = int(total_cp)
+
+        coins.pp -= self.pp
+        coins.gp -= self.gp
+        coins.ep -= self.ep
+        coins.sp -= self.sp
+        coins.cp -= self.cp
+
         return coins
 
     def update_currency(self, coins=None):

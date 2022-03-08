@@ -4,7 +4,7 @@ import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
-from cogs5e.utils.gameutils import parse_coin_args
+from cogs5e.utils.gameutils import parse_coin_args, CoinsArgs
 from utils.constants import COIN_TYPES
 
 
@@ -712,6 +712,13 @@ class AliasCoinpurse:
         :param int cp: Copper Pieces
         """
         self._coinpurse.set_currency(pp, gp, ep, sp, cp)
+
+    def autoconvert(self):
+        """
+        Converts all of your coins into the lowest amount of coins possible.
+        100cp turns into 1gp, 5sp turns into 1ep, etc.
+        """
+        self._coinpurse.update_currency(self._coinpurse.auto_convert_up(CoinsArgs))
 
     def get_coins(self):
         """

@@ -1,12 +1,11 @@
-import dataclasses
 import re
 
-from cogs5e.models.embeds import EmbedWithCharacter
-from utils.constants import COIN_TYPES
 from cogs5e.initiative import Combatant
+from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument
-from utils.functions import confirm
 from cogs5e.models.sheet.coinpurse import CoinsArgs
+from utils.constants import COIN_TYPES
+from utils.functions import confirm
 
 
 async def send_hp_result(ctx, caster, delta=None):
@@ -119,7 +118,7 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
     return out
 
 
-async def resolve_strict_coins(coinpurse=None, coins: CoinsArgs = None, ctx=None):
+async def resolve_strict_coins(coinpurse, coins: CoinsArgs, ctx):
     if (coinpurse.total + coins.total) < 0:
         raise InvalidArgument("You cannot put a currency into negative numbers.")
     if not all((

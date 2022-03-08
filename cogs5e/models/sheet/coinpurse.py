@@ -45,9 +45,7 @@ class Coinpurse(HasIntegrationMixin):
         delta_out = ""
         if delta:
             delta_out = f" ({delta:+,.2f})"
-        coin_value = self.total
-        coin_type = 'gp'
-        return f"{COIN_TYPES[coin_type]['icon']} {coin_value:,.2f} {coin_type}{delta_out}"
+        return f"{COIN_TYPES['gp']['icon']} {self.total:,.2f} gp{delta_out}"
 
     @property
     def total(self):

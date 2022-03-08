@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.10
 
 ARG DBOT_ARGS
 ARG ENVIRONMENT=production

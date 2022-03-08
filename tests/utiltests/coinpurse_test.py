@@ -1,5 +1,5 @@
-from cogs5e.utils.gameutils import CoinsArgs, resolve_strict_coins, parse_coin_args
-from cogs5e.models.sheet.coinpurse import Coinpurse
+from cogs5e.utils.gameutils import resolve_strict_coins, parse_coin_args
+from cogs5e.models.sheet.coinpurse import CoinsArgs, Coinpurse
 import pytest
 from cogs5e.models.errors import InvalidArgument
 
@@ -37,11 +37,11 @@ def test_coin_autoconvert_down():
 
 def test_coin_autoconvert_up():
     assert Coinpurse(pp=10, gp=9, ep=1, sp=4, cp=9)\
-               .auto_convert_up(CoinsArgs()) == CoinsArgs()
+               .consolidate_coins() == CoinsArgs()
     assert Coinpurse(pp=10, gp=9, ep=1, sp=4, cp=10)\
-               .auto_convert_up(CoinsArgs()) == CoinsArgs(pp=1, gp=-9, ep=-1, sp=-4, cp=-10)
+               .consolidate_coins() == CoinsArgs(pp=1, gp=-9, ep=-1, sp=-4, cp=-10)
     assert Coinpurse(pp=10, gp=9, ep=1, sp=4, cp=1234)\
-               .auto_convert_up(CoinsArgs()) == CoinsArgs(pp=2, gp=-7, ep=-1, sp=-2, cp=-1230)
+               .consolidate_coins() == CoinsArgs(pp=2, gp=-7, ep=-1, sp=-2, cp=-1230)
 
 
 def test_coin_compactstring():

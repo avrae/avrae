@@ -4,7 +4,8 @@ import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
-from cogs5e.utils.gameutils import parse_coin_args, CoinsArgs
+from cogs5e.models.sheet.coinpurse import CoinsArgs
+from cogs5e.utils.gameutils import parse_coin_args
 from utils.constants import COIN_TYPES
 
 
@@ -667,7 +668,7 @@ class AliasCoinpurse:
             return self._coinpurse.compact_string()
         return str(self._coinpurse)
 
-    def coin_str(self, cointype: str):
+    def coin_str(self, cointype: str) -> str:
         """
         Returns a string representation of the chosen coin type.
 
@@ -679,7 +680,7 @@ class AliasCoinpurse:
             raise ValueError(f"{cointype} is not valid coin.")
         return self._coinpurse.coin_string(cointype)
 
-    def compact_str(self):
+    def compact_str(self) -> str:
         """
         Returns a string representation of the compacted coin value.
 
@@ -698,8 +699,8 @@ class AliasCoinpurse:
         :param int sp: Silver Pieces. Defaults to ``0``.
         :param int cp: Copper Pieces. Defaults to ``0``.
         """
-        self._coinpurse.set_currency(self._coinpurse.pp+pp, self._coinpurse.gp+gp, self._coinpurse.ep+ep,
-                                     self._coinpurse.sp+sp, self._coinpurse.cp+cp)
+        self._coinpurse.set_currency(self._coinpurse.pp + pp, self._coinpurse.gp + gp, self._coinpurse.ep + ep,
+                                     self._coinpurse.sp + sp, self._coinpurse.cp + cp)
 
     def set_coins(self, pp: int, gp: int, ep: int, sp: int, cp: int):
         """
@@ -718,9 +719,9 @@ class AliasCoinpurse:
         Converts all of your coins into the lowest amount of coins possible.
         100cp turns into 1gp, 5sp turns into 1ep, etc.
         """
-        self._coinpurse.update_currency(self._coinpurse.auto_convert_up(CoinsArgs))
+        self._coinpurse.consolidate_coins()
 
-    def get_coins(self):
+    def get_coins(self) -> dict:
         """
         Returns a dict of your current coinpurse.
 
@@ -730,7 +731,7 @@ class AliasCoinpurse:
         return self._coinpurse.to_dict()
 
     @staticmethod
-    def parse(args):
+    def parse(args: str) -> dict:
         """
         Parses a user's coin string into a representation of each currency.
         If the user input is a decimal number, assumes gold pieces.

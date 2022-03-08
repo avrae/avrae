@@ -1,6 +1,22 @@
+import dataclasses
+
 from cogs5e.models.errors import InvalidArgument
 from .mixins import HasIntegrationMixin
 from utils.constants import COIN_TYPES
+
+
+@dataclasses.dataclass
+class CoinsArgs:
+    pp: int = 0
+    gp: int = 0
+    ep: int = 0
+    sp: int = 0
+    cp: int = 0
+    explicit: bool = False
+
+    @property
+    def total(self) -> float:
+        return (self.pp * 10) + self.gp + (self.ep * 0.5) + (self.sp * 0.1) + (self.cp * 0.01)
 
 
 class Coinpurse(HasIntegrationMixin):
@@ -46,7 +62,7 @@ class Coinpurse(HasIntegrationMixin):
             "pp": self.pp, "gp": self.gp, "ep": self.ep, "sp": self.sp, "cp": self.cp
         }
 
-    def auto_convert_down(self, coins=None):
+    def auto_convert_down(self, coins: CoinsArgs) -> CoinsArgs:
         if self.cp + coins.cp < 0:
             sp_borrowed = ((coins.cp + self.cp) // 10)
             coins.cp -= sp_borrowed * 10
@@ -67,25 +83,23 @@ class Coinpurse(HasIntegrationMixin):
             raise InvalidArgument("You do not have enough coins to cover this transaction.")
         return coins
 
-    def auto_convert_up(self, coins=None):
+    def consolidate_coins(self) -> CoinsArgs:
         total_cp = self.total * 100
-        coins.pp = int(total_cp // 1000)
-        total_cp -= coins.pp * 1000
-        coins.gp = int(total_cp // 100)
-        total_cp -= coins.gp * 100
-        coins.ep = int(total_cp // 50)
-        total_cp -= coins.ep * 50
-        coins.sp = int(total_cp // 10)
-        total_cp -= coins.sp * 10
-        coins.cp = int(total_cp)
+        new_pp = int(total_cp // 1000)
+        total_cp -= new_pp * 1000
+        new_gp = int(total_cp // 100)
+        total_cp -= new_gp * 100
+        new_ep = int(total_cp // 50)
+        total_cp -= new_ep * 50
+        new_sp = int(total_cp // 10)
+        total_cp -= new_sp * 10
+        new_cp = int(total_cp)
 
-        coins.pp -= self.pp
-        coins.gp -= self.gp
-        coins.ep -= self.ep
-        coins.sp -= self.sp
-        coins.cp -= self.cp
+        delta = CoinsArgs(pp=new_pp - self.pp, gp=new_gp - self.gp, ep=new_ep - self.ep, sp=new_sp - self.sp,
+                          cp=new_cp - self.cp)
+        self.set_currency(pp=new_pp, gp=new_gp, ep=new_ep, sp=new_sp, cp=new_cp)
 
-        return coins
+        return delta
 
     def update_currency(self, coins=None):
         self.set_currency(self.pp + coins.pp, self.gp + coins.gp, self.ep + coins.ep,

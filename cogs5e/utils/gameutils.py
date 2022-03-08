@@ -6,20 +6,7 @@ from utils.constants import COIN_TYPES
 from cogs5e.initiative import Combatant
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import confirm
-
-
-@dataclasses.dataclass
-class CoinsArgs:
-    pp: int = 0
-    gp: int = 0
-    ep: int = 0
-    sp: int = 0
-    cp: int = 0
-    explicit: bool = False
-
-    @property
-    def total(self) -> float:
-        return (self.pp * 10) + self.gp + (self.ep * 0.5) + (self.sp * 0.1) + (self.cp * 0.01)
+from cogs5e.models.sheet.coinpurse import CoinsArgs
 
 
 async def send_hp_result(ctx, caster, delta=None):

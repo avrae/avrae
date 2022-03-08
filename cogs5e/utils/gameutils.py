@@ -1,4 +1,5 @@
 import re
+from typing import Optional
 
 from cogs5e.initiative import Combatant
 from cogs5e.models.embeds import EmbedWithCharacter
@@ -25,7 +26,7 @@ async def send_hp_result(ctx, caster, delta=None):
         await ctx.send(f"{caster.name}: {caster.hp_str()}{deltaend}")
 
 
-async def send_current_coin(ctx, character, coin=None, deltas: dict = None):
+async def send_current_coin(ctx, character, coin: Optional[str] = None, deltas: CoinsArgs = None):
     """
     Sends the current contents of the CoinPurse.
     If ``coin`` is passed, it must be a valid coin type and will only show the amount of that specific coin.

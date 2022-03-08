@@ -8,6 +8,7 @@ This key is set when a combat starts and expired 2 minutes after a combat ends i
 recording.
 """
 import datetime
+import hashlib
 import logging
 import re
 import time
@@ -39,7 +40,7 @@ class RecordedEvent(BaseModel):
 class RecordedMessage(RecordedEvent):
     event_type = 'message'
     message_id: int
-    author_id: int
+    author_id: str
     author_name: str
     created_at: float
     content: str
@@ -50,7 +51,7 @@ class RecordedMessage(RecordedEvent):
         return cls(
             combat_id=combat_id,
             message_id=message.id,
-            author_id=message.author.id,
+            author_id=anonymize_id(message.author.id),
             author_name=message.author.display_name,
             created_at=message.created_at.timestamp(),
             content=message.content,
@@ -395,3 +396,12 @@ class NLPRecorder:
     #         return
     #     log.debug(f"saving {len(documents)} events to {combat_id=}")
     #     await self.bot.mdb.nlp_recordings.insert_many(documents)
+
+
+# ==== helpers ====
+def anonymize_id(user_id: int) -> str:
+    """
+    Returns a new unique ID for the given user ID that cannot be linked back to the original ID.
+    This is accomplished by hashing the user ID and using the hash as the new ID.
+    """
+    return hashlib.md5(user_id.to_bytes(8, "big", signed=False)).hexdigest()

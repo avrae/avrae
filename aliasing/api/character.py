@@ -4,7 +4,6 @@ import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
-from cogs5e.models.sheet.coinpurse import CoinsArgs
 from cogs5e.utils.gameutils import parse_coin_args
 from utils.constants import COIN_TYPES
 
@@ -673,8 +672,8 @@ class AliasCoinpurse:
         Returns a string representation of the chosen coin type.
 
         :param str cointype: The type of coin to return. ``"pp"``, ``"gp"``, ``"ep"``, ``"sp"``, and ``"cp"``
-        :return The string representation of the chosen coin type.
-        :rtype str
+        :return: The string representation of the chosen coin type.
+        :rtype: str
         """
         if cointype not in COIN_TYPES:
             raise ValueError(f"{cointype} is not valid coin.")
@@ -684,8 +683,8 @@ class AliasCoinpurse:
         """
         Returns a string representation of the compacted coin value.
 
-        :return The string representation of the compacted coin value.
-        :rtype str
+        :return: The string representation of the compacted coin value.
+        :rtype: str
         """
         return self._coinpurse.compact_string()
 
@@ -725,8 +724,8 @@ class AliasCoinpurse:
         """
         Returns a dict of your current coinpurse.
 
-        :return A dict of your current coinpurse, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3}``
-        :rtype dict
+        :return: A dict of your current coinpurse, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3}``
+        :rtype: dict
         """
         return self._coinpurse.to_dict()
 
@@ -737,8 +736,8 @@ class AliasCoinpurse:
         If the user input is a decimal number, assumes gold pieces.
         Otherwise, allows the user to specify currencies in the form '+1gp -2sp 3cp'
 
-        :return A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3, "total": 0.83}``
-        :rtype dict
+        :return: A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3, "total": 0.83}``
+        :rtype: dict
         """
         coin_args = parse_coin_args(args)
         return {"pp": coin_args.pp, "gp": coin_args.gp, "ep": coin_args.ep, "sp": coin_args.sp, "cp": coin_args.cp,

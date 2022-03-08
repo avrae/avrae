@@ -61,6 +61,12 @@ class Coinpurse(HasIntegrationMixin):
         }
 
     def auto_convert_down(self, coins: CoinsArgs) -> CoinsArgs:
+        """
+        Given a CoinsArgs, resolves any negative currencies such that applying it to this coinpurse
+        would not make any currency negative. Raises ``InvalidArgument`` if such a resolution
+        is impossible.
+        This modifies the given ``CoinsArgs`` in place.
+        """
         if self.cp + coins.cp < 0:
             sp_borrowed = ((coins.cp + self.cp) // 10)
             coins.cp -= sp_borrowed * 10

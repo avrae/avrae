@@ -109,7 +109,7 @@ class AliasCharacter(AliasStatBlock):
         self._character.consumables.remove(to_delete)
 
     def create_cc_nx(self, name: str, minVal: str = None, maxVal: str = None, reset: str = None,
-                     dispType: str = None, reset_to: str = None, reset_by: str = None,
+                     dispType: str = None, reset_to: str = None, reset_by: str = None, initial_value: str = None,
                      title: str = None, desc: str = None):
         """
         Creates a custom counter if one with the given name does not already exist.
@@ -130,6 +130,8 @@ class AliasCharacter(AliasStatBlock):
             reset_to = str(reset_to)
         if reset_by is not None:
             reset_by = str(reset_by)
+        if initial_value is not None:
+            initial_value = str(initial_value)
         if title is not None:
             title = str(title)
         if desc is not None:
@@ -138,7 +140,7 @@ class AliasCharacter(AliasStatBlock):
         if not self.cc_exists(name):
             new_consumable = player_api.CustomCounter.new(
                 self._character, name, minVal, maxVal, reset, dispType,
-                title=title, desc=desc, reset_to=reset_to, reset_by=reset_by)
+                title=title, desc=desc, reset_to=reset_to, reset_by=reset_by, initial_value=initial_value)
             self._character.consumables.append(new_consumable)
             self._consumables = None  # reset cache
             return AliasCustomCounter(new_consumable)

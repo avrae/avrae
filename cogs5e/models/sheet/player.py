@@ -168,6 +168,11 @@ class CustomCounter:
                 initial_value = max_value
         else:
             initial_value = character.evaluate_math(initial_value)
+            # clamp initial value to min and max
+            if min_value is not None:
+                initial_value = max(initial_value, min_value)
+            if max_value is not None:
+                initial_value = min(initial_value, max_value)
 
         # length checks
         if desc and len(desc) > 1024:

@@ -14,6 +14,7 @@ class CharacterSettings(SettingsBaseModel):
     # cosmetic
     color: Optional[conint(ge=0, le=0xffffff)] = None
     embed_image: bool = True
+    compact_coins: bool = False
 
     # gameplay
     crit_on: conint(ge=1, le=20) = 20
@@ -147,6 +148,10 @@ CHARACTER_SETTINGS = {
     ),
     "ignorecrit": CSetting(
         "ignore_crit", "boolean", description="ignore crits", default='disabled',
+        display_func=lambda val: 'enabled' if val else 'disabled'
+    ),
+    "compactcoins": CSetting(
+        "compact_coins", "boolean", description="compact coin display", default='disabled',
         display_func=lambda val: 'enabled' if val else 'disabled'
     )
 }

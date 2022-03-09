@@ -28,6 +28,19 @@ class DDBSheetSync(LiveIntegration):
             character_id=int(self.character.upstream_id)
         )
 
+    async def _do_sync_coins(self):
+        if (ddb_user := await self._preflight()) is None:
+            return
+        await self._ctx.bot.ddb.character.set_currency(
+            ddb_user=ddb_user,
+            pp = self.character.coinpurse.pp,
+            gp = self.character.coinpurse.gp,
+            ep = self.character.coinpurse.ep,
+            sp = self.character.coinpurse.sp,
+            cp = self.character.coinpurse.cp,
+            character_id=int(self.character.upstream_id)
+        )
+
     async def _do_sync_slots(self):
         if (ddb_user := await self._preflight()) is None:
             return

@@ -12,10 +12,12 @@ from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharact
 from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
+from cogs5e.models.sheet.mixins import HasIntegrationMixin
 from cogs5e.models.sheet.player import CustomCounter, DeathSaves, ManualOverrides
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock
+from cogs5e.models.sheet.coinpurse import Coinpurse
 from cogs5e.sheets.abc import SHEET_VERSION
 from utils.functions import search_and_select
 from utils.settings import CharacterSettings
@@ -40,12 +42,15 @@ class Character(StatBlock):
                  live, race: str, background: str,
                  creature_type: str = None,
                  ddb_campaign_id: str = None, actions: Actions = None, active_guilds: list = None,
-                 options_v2: CharacterSettings = None,
+                 options_v2: CharacterSettings = None, 
+                 coinpurse=None,
                  **kwargs):
         if actions is None:
             actions = Actions()
         if active_guilds is None:
             active_guilds = []
+        if coinpurse is None:
+            coinpurse = Coinpurse()
         if options_v2 is None:
             if 'options' in kwargs:  # options v1 -> v2 migration (options rewrite)
                 options_v2 = CharacterSettings.from_old_csettings(kwargs.pop('options'))
@@ -61,12 +66,12 @@ class Character(StatBlock):
         self._active_guilds = active_guilds
         self._sheet_type = sheet_type
         self._import_version = import_version
+        self.coinpurse = coinpurse
 
         # StatBlock super call
         super().__init__(
             name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellbook,
-            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
+            spellbook=spellbook, ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
         )
 
         # main character info
@@ -90,6 +95,10 @@ class Character(StatBlock):
         else:
             self._live_integration = None
 
+        # child objects' live integration stuff
+        self.spellbook._live_integration = self._live_integration
+        self.coinpurse._live_integration = self._live_integration
+
         # misc research things
         self.race = race
         self.background = background
@@ -107,9 +116,7 @@ class Character(StatBlock):
         for key, klass in DESERIALIZE_MAP.items():
             if key in d:
                 d[key] = klass.from_dict(d[key])
-        inst = cls(**d)
-        inst._spellbook._live_integration = inst._live_integration
-        return inst
+        return cls(**d)
 
     @classmethod
     async def from_ctx(cls, ctx, ignore_guild: bool = False):
@@ -178,7 +185,7 @@ class Character(StatBlock):
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
             "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict(),
-            "active_guilds": self._active_guilds, "options_v2": self.options.dict(),
+            "active_guilds": self._active_guilds, "options_v2": self.options.dict(), "coinpurse": self.coinpurse.to_dict(),
         })
         return d
 
@@ -514,6 +521,10 @@ class Character(StatBlock):
             and con.live_id not in new_cc_upstreams
         )
 
+        # Monetary Concerns
+        if old_character._import_version >= 19:
+            self.coinpurse = old_character.coinpurse
+
         # overridden spells
         sb = self.spellbook
         sb.spells.extend(self.overrides.spells)
@@ -584,6 +595,9 @@ class Character(StatBlock):
         if atk_str:
             embed.add_field(name="Attacks", value=atk_str)
 
+        # Coins
+        embed.add_field(name="Currency", value=str(self.coinpurse))
+
         # sheet url?
         if self._import_version < SHEET_VERSION:
             embed.set_footer(text=f"You are using an old sheet version ({self.sheet_type} v{self._import_version}). "
@@ -616,12 +630,8 @@ class Character(StatBlock):
         return None
 
 
-class CharacterSpellbook(Spellbook):
+class CharacterSpellbook(HasIntegrationMixin, Spellbook):
     """A subclass of spellbook to support live integrations."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._live_integration = None
 
     def set_slots(self, *args, **kwargs):
         super().set_slots(*args, **kwargs)
@@ -632,4 +642,5 @@ class CharacterSpellbook(Spellbook):
 SetActiveResult = namedtuple('SetActiveResult', 'did_unset_server_active')
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
-DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions, "options_v2": CharacterSettings}
+DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions,
+                   "options_v2": CharacterSettings, "coinpurse": Coinpurse}

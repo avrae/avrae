@@ -15,6 +15,7 @@ from cogs5e.models import automation
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.action import Action, Actions
+from cogs5e.models.sheet.coinpurse import Coinpurse
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.player import CustomCounter
@@ -28,7 +29,10 @@ from utils.functions import smart_trim
 log = logging.getLogger(__name__)
 
 ENDPOINT = config.DDB_CHAR_COMPUTATION_ENDPT
-DDB_URL_RE = re.compile(r"(?:https?://)?(?:www\.dndbeyond\.com|ddb\.ac)(?:/profile/.+)?/characters/(\d+)/?")
+if config.ENVIRONMENT == 'development':
+    DDB_URL_RE = re.compile(r"(?:https?://)?(?:stg\.dndbeyond\.com|www\.dndbeyond\.com|ddb\.ac)(?:/profile/.+)?/characters/(\d+)/?")
+else:
+    DDB_URL_RE = re.compile(r"(?:https?://)?(?:www\.dndbeyond\.com|ddb\.ac)(?:/profile/.+)?/characters/(\d+)/?")
 SKILL_MAP = {
     '3': 'acrobatics', '11': 'animalHandling', '6': 'arcana', '2': 'athletics', '16': 'deception', '7': 'history',
     '12': 'insight', '17': 'intimidation', '8': 'investigation', '13': 'medicine', '9': 'nature', '14': 'perception',
@@ -89,6 +93,7 @@ class BeyondSheetParser(SheetLoaderABC):
         live = 'beyond' if self._is_live else None
         race = self._get_race()
         background = self._get_background()
+        coinpurse = self._get_purse()
 
         # ddb campaign
         campaign = self.character_data.get('campaign')
@@ -100,7 +105,7 @@ class BeyondSheetParser(SheetLoaderABC):
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
             skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
             spellbook, live, race, background,
-            ddb_campaign_id=campaign_id, actions=actions
+            ddb_campaign_id=campaign_id, actions=actions, coinpurse=coinpurse
         )
         return character
 
@@ -286,6 +291,11 @@ class BeyondSheetParser(SheetLoaderABC):
 
     def _get_background(self):
         return self.character_data['background']
+
+    def _get_purse(self) -> Coinpurse:
+        """Returns the Currency values."""
+        coins = Coinpurse(pp=self.character_data['currencies']['pp'], gp=self.character_data['currencies']['gp'], ep=self.character_data['currencies']['ep'], sp=self.character_data['currencies']['sp'], cp=self.character_data['currencies']['cp'])
+        return coins
 
     def _get_attacks_and_actions(self):
         """

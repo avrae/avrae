@@ -1161,6 +1161,22 @@ AliasAction
 .. autoclass:: aliasing.api.character.AliasAction()
     :members:
 
+AliasCoinpurse
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.character.AliasCoinpurse()
+    :members:
+
+    .. attribute:: pp
+        gp
+        ep
+        sp
+        cp
+
+        The value of the given coin type.
+
+        :type: int
+
 StatBlock Models
 ----------------
 

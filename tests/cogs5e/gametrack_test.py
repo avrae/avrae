@@ -157,6 +157,81 @@ class TestGame:
     async def test_s_death(self, avrae, dhttp):
         avrae.message("!s death")
 
+    async def test_game_coinpurse(self, avrae, dhttp):
+        avrae.message("!game coinpurse")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 0
+        assert char.coinpurse.gp == 0
+        assert char.coinpurse.ep == 0
+        assert char.coinpurse.sp == 0
+        assert char.coinpurse.cp == 0
+
+        avrae.message("!game coinpurse +10gp")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 0
+        assert char.coinpurse.gp == 10
+        assert char.coinpurse.ep == 0
+        assert char.coinpurse.sp == 0
+        assert char.coinpurse.cp == 0
+
+        avrae.message("!game coinpurse -1")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 0
+        assert char.coinpurse.gp == 9
+        assert char.coinpurse.ep == 0
+        assert char.coinpurse.sp == 0
+        assert char.coinpurse.cp == 0
+
+        avrae.message("!game coinpurse -10cp")
+        await dhttp.receive_delete()
+        await dhttp.receive_message("You don't have enough of the chosen")
+        avrae.message("Yes")
+        await dhttp.drain()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 0
+        assert char.coinpurse.gp == 8
+        assert char.coinpurse.ep == 1
+        assert char.coinpurse.sp == 4
+        assert char.coinpurse.cp == 0
+
+        avrae.message("!game coinpurse 10pp -1gp +3sp -2ep -1cp")
+        await dhttp.receive_delete()
+        await dhttp.receive_message("You don't have enough of the chosen")
+        avrae.message("Yes")
+        await dhttp.drain()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 10
+        assert char.coinpurse.gp == 6
+        assert char.coinpurse.ep == 1
+        assert char.coinpurse.sp == 6
+        assert char.coinpurse.cp == 9
+
+        avrae.message("!game coinpurse 12345cp")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 10
+        assert char.coinpurse.gp == 6
+        assert char.coinpurse.ep == 1
+        assert char.coinpurse.sp == 6
+        assert char.coinpurse.cp == 12354
+
+        avrae.message("!game coinpurse convert")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 23
+        assert char.coinpurse.gp == 0
+        assert char.coinpurse.ep == 1
+        assert char.coinpurse.sp == 1
+        assert char.coinpurse.cp == 4
+
 
 @pytest.mark.usefixtures("character")
 class TestSpellbook:

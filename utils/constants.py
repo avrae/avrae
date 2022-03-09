@@ -28,6 +28,50 @@ SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'i
              'strength': 'strength', 'dexterity': 'dexterity', 'constitution': 'constitution',
              'intelligence': 'intelligence', 'wisdom': 'wisdom', 'charisma': 'charisma'}
 
+
+COIN_TYPES = {
+    "pp": {
+        "icon": "<:DDBPlatinum:948681049326624849>",
+        "name": "Platinum",
+        "gSheet": {
+            "v14": "D72",
+            "v2": "D15",
+        }
+    },
+    "gp": {
+        "icon": "<:DDBGold:948681049221775370>",
+        "name": "Gold",
+        "gSheet": {
+            "v14": "D69",
+            "v2": "D12",
+        }
+    },
+    "ep": {
+        "icon": "<:DDBElectrum:948681048932364401>",
+        "name": "Electrum",
+        "gSheet": {
+            "v14": "D66",
+            "v2": "D9",
+        }
+    },
+    "sp": {
+        "icon": "<:DDBSilver:948681049288867930>",
+        "name": "Silver",
+        "gSheet": {
+            "v14": "D63",
+            "v2": "D6",
+        }
+    },
+    "cp": {
+        "icon": "<:DDBCopper:948681049217597480>",
+        "name": "Copper",
+        "gSheet": {
+            "v14": "D60",
+            "v2": "D3",
+        }
+    }
+}
+
 # ---- emojis, icons, other discord things ----
 DDB_LOGO_EMOJI = '<:beyond:783780183559372890>'
 DDB_LOGO_ICON = 'https://cdn.discordapp.com/emojis/783780183559372890.png?v=1'

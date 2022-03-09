@@ -29,6 +29,9 @@ class DicecloudIntegration(LiveIntegration):
         except MeteorClient.MeteorClientException:
             pass
 
+    async def _do_sync_coins(self):
+        pass
+
     async def _do_sync_slots(self):
         spell_dict = {}
         for lvl in range(1, 10):

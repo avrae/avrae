@@ -7,6 +7,7 @@ Most of this module was coded 5 miles in the air. (Aug 8, 2017)
 """
 import collections
 import logging
+import re
 
 import d20
 from discord.ext import commands
@@ -17,6 +18,7 @@ from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelectionElements
 from cogs5e.utils import checkutils, gameutils, targetutils
+from cogs5e.utils.gameutils import resolve_strict_coins
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
 from utils import constants
@@ -174,6 +176,37 @@ class GameTrack(commands.Cog):
         __Valid Arguments__
         -h - Hides the character summary output."""
         await self._rest(ctx, 'short', *args)
+
+    @game.group(name='coinpurse', aliases=['coins', 'coin'], invoke_without_command=True)
+    async def game_coinpurse(self, ctx, *, args=None):
+        """Manage your character's coinpurse.
+        __Valid Subcommands__
+        `!game coins` - Show your current coinpurse.
+        `!game coins [pp|gp|ep|sp|cp]` - Show the amount of a single currency contained in your coinpurse.
+        `!game coins <amount>` - Add or remove a given amount of currency. The amount can either be a number like `+102.13` (gold pieces), or explicit numbers of currencies like `+10pp +2gp +1sp +3cp`.
+        """
+        character: Character = await ctx.get_character()
+
+        if args is None:
+            return await gameutils.send_current_coin(ctx, character)
+
+        if re.fullmatch(r'[pgesc]p', args, re.IGNORECASE):
+            return await gameutils.send_current_coin(ctx, character, args)
+
+        coins = gameutils.parse_coin_args(args)
+        deltas = await resolve_strict_coins(character.coinpurse, coins, ctx=ctx)
+        character.coinpurse.update_currency(deltas)
+        await character.commit(ctx)
+        return await gameutils.send_current_coin(ctx, character, deltas=deltas)
+
+    @game_coinpurse.command(name="convert", aliases=["consolidate"])
+    async def game_coinpurse_convert(self, ctx):
+        """Converts all of your coins into the lowest amount of coins possible.
+        100cp turns into 1gp, 5sp turns into 1ep, etc."""
+        character: Character = await ctx.get_character()
+        deltas = character.coinpurse.consolidate_coins()
+        await character.commit(ctx)
+        return await gameutils.send_current_coin(ctx, character, deltas=deltas)
 
     @game.group(name='hp', invoke_without_command=True)
     async def game_hp(self, ctx, *, hp: str = None):

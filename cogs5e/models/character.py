@@ -521,8 +521,9 @@ class Character(StatBlock):
             and con.live_id not in new_cc_upstreams
         )
 
-        # Monetary Concerns
-        if old_character._import_version >= 19:
+        # coinpurse
+        # only allow update to overwrite coinpurse if it's the first v19 update and the coinpurse is empty
+        if old_character._import_version >= 19 or old_character.coinpurse.total > 0:
             self.coinpurse = old_character.coinpurse
 
         # overridden spells

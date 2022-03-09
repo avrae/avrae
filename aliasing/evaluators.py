@@ -19,7 +19,7 @@ import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.context import AliasContext
 from aliasing.api.functions import (_roll, _vroll, create_signature, err, rand, randchoice, randint, roll, safe_range,
-    typeof, verify_signature, vroll)
+    typeof, verify_signature, vroll, parse_coins)
 from aliasing.api.legacy import LegacyRawCharacter
 from aliasing.errors import EvaluationError, FunctionRequiresCharacter
 from aliasing.personal import _CustomizationBase
@@ -34,7 +34,7 @@ DEFAULT_BUILTINS = {
     'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min, 'enumerate': enumerate,
     'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'abs': abs, 'time': time.time,
     # ours
-    'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof,
+    'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof, 'parse_coins': parse_coins,
     'rand': rand, 'randint': randint, 'randchoice': randchoice,
 }
 SCRIPTING_RE = re.compile(

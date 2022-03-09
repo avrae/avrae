@@ -11,6 +11,7 @@ import disnake.utils
 import draconic
 
 from cogs5e.models.errors import AvraeException
+from cogs5e.utils.gameutils import parse_coin_args
 from utils import config
 from utils.dice import RerollableStringifier
 from .context import AliasAuthor, AliasChannel, AliasGuild
@@ -247,3 +248,17 @@ def verify_signature(ctx: disnake.ext.commands.Context, data: str):
         "channel": channel and AliasChannel(channel),  # may be None
         "author": author and AliasAuthor(author),  # may be None
     }
+
+
+def parse_coins(args: str) -> dict:
+    """
+    Parses a coin string into a representation of each currency.
+    If the user input is a decimal number, assumes gold pieces.
+    Otherwise, allows the user to specify currencies in the form '+1gp -2sp 3cp'
+
+    :return: A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3, "total": 0.83}``
+    :rtype: dict
+    """
+    coin_args = parse_coin_args(args)
+    return {"pp": coin_args.pp, "gp": coin_args.gp, "ep": coin_args.ep, "sp": coin_args.sp, "cp": coin_args.cp,
+            "total": coin_args.total}

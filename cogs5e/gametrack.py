@@ -589,6 +589,7 @@ class GameTrack(commands.Cog):
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.
         `-min <min value>` - The minimum value of the counter.
+        `-value <value>` - The initial value for the counter.
         `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers.
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
         `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
@@ -609,12 +610,13 @@ class GameTrack(commands.Cog):
         _type = args.last('type')
         reset_to = args.last('resetto')
         reset_by = args.last('resetby')
+        initial_value = args.last('value')
         title = args.last('title')
         desc = args.last('desc')
         try:
             new_counter = CustomCounter.new(
                 character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
-                reset_to=reset_to, reset_by=reset_by, title=title, desc=desc
+                reset_to=reset_to, reset_by=reset_by, initial_value=initial_value, title=title, desc=desc
             )
             character.consumables.append(new_counter)
             await character.commit(ctx)

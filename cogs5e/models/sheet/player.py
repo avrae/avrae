@@ -115,7 +115,7 @@ class CustomCounter:
 
     @classmethod
     def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
-            reset_to=None, reset_by=None, title=None, desc=None):
+            reset_to=None, reset_by=None, title=None, desc=None, initial_value=None):
         if reset not in ('short', 'long', 'none', None):
             raise InvalidArgument("Invalid reset.")
         if any(c in name for c in ".$"):
@@ -159,12 +159,20 @@ class CustomCounter:
             except d20.RollSyntaxError:
                 raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
 
-        # set initial value
-        initial_value = max(0, min_value or 0)
-        if reset_to_value is not None:
-            initial_value = reset_to_value
-        elif max_value is not None:
-            initial_value = max_value
+        # set initial value if not already set
+        if initial_value is None:
+            initial_value = max(0, min_value or 0)
+            if reset_to_value is not None:
+                initial_value = reset_to_value
+            elif max_value is not None:
+                initial_value = max_value
+        else:
+            initial_value = character.evaluate_math(initial_value)
+            # clamp initial value to min and max
+            if min_value is not None:
+                initial_value = max(initial_value, min_value)
+            if max_value is not None:
+                initial_value = min(initial_value, max_value)
 
         # length checks
         if desc and len(desc) > 1024:

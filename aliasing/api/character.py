@@ -113,7 +113,7 @@ class AliasCharacter(AliasStatBlock):
 
     def create_cc_nx(self, name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                      dispType: str = None, reset_to: str = None, reset_by: str = None,
-                     title: str = None, desc: str = None):
+                     title: str = None, desc: str = None, initial_value: str = None):
         """
         Creates a custom counter if one with the given name does not already exist.
         Equivalent to:
@@ -137,11 +137,13 @@ class AliasCharacter(AliasStatBlock):
             title = str(title)
         if desc is not None:
             desc = str(desc)
+        if initial_value is not None:
+            initial_value = str(initial_value)
 
         if not self.cc_exists(name):
             new_consumable = player_api.CustomCounter.new(
                 self._character, name, minVal, maxVal, reset, dispType,
-                title=title, desc=desc, reset_to=reset_to, reset_by=reset_by)
+                title=title, desc=desc, reset_to=reset_to, reset_by=reset_by, initial_value=initial_value)
             self._character.consumables.append(new_consumable)
             self._consumables = None  # reset cache
             return AliasCustomCounter(new_consumable)
@@ -159,6 +161,7 @@ class AliasCharacter(AliasStatBlock):
         :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
         :param str title: The title of the counter.
         :param str desc: The description of the counter.
+        :param str initial_value: The initial value of the counter.
         :rtype: AliasCustomCounter
         :returns: The newly created counter.
         """

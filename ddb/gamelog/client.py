@@ -10,7 +10,13 @@ import ddb
 from ddb.baseclient import BaseClient
 from ddb.gamelog.constants import AVRAE_EVENT_SOURCE, GAME_LOG_PUBSUB_CHANNEL
 from ddb.gamelog.context import GameLogEventContext
-from ddb.gamelog.errors import CampaignAlreadyLinked, CampaignLinkException, IgnoreEvent, LinkNotAllowed, NoCampaignLink
+from ddb.gamelog.errors import (
+    CampaignAlreadyLinked,
+    CampaignLinkException,
+    IgnoreEvent,
+    LinkNotAllowed,
+    NoCampaignLink,
+)
 from ddb.gamelog.event import GameLogEvent
 from ddb.gamelog.link import CampaignLink
 from ddb.utils import ddb_id_to_discord_id
@@ -53,25 +59,32 @@ class GameLogClient(BaseClient):
         # is the current user authorized to link this campaign?
         ddb_user = await self.ddb.get_ddb_user(ctx, ctx.author.id)
         if ddb_user is None:
-            raise CampaignLinkException("You do not have a D&D Beyond account connected to your Discord account. "
-                                        "Connect your accounts at <https://www.dndbeyond.com/account>!")
+            raise CampaignLinkException(
+                "You do not have a D&D Beyond account connected to your Discord account. "
+                "Connect your accounts at <https://www.dndbeyond.com/account>!"
+            )
         active_campaigns = await self.ddb.waterdeep.get_active_campaigns(ddb_user)
         the_campaign = next((c for c in active_campaigns if c.id == campaign_id), None)
 
         if the_campaign is None:  # the user is not in the campaign
-            raise LinkNotAllowed("You are not in this campaign, or this campaign does not exist.")
+            raise LinkNotAllowed(
+                "You are not in this campaign, or this campaign does not exist."
+            )
         elif the_campaign.dm_id != ddb_user.user_id:  # the user is not the DM
-            raise LinkNotAllowed("Only the DM of a campaign is allowed to link a campaign to a Discord channel.")
+            raise LinkNotAllowed(
+                "Only the DM of a campaign is allowed to link a campaign to a Discord channel."
+            )
 
         # create the link
-        link = CampaignLink(campaign_id, the_campaign.name, ctx.channel.id, ctx.guild.id, ctx.author.id)
+        link = CampaignLink(
+            campaign_id, the_campaign.name, ctx.channel.id, ctx.guild.id, ctx.author.id
+        )
         try:
             await self.bot.mdb.gamelog_campaigns.insert_one(link.to_dict())
         except DuplicateKeyError:
             if overwrite:
                 await self.bot.mdb.gamelog_campaigns.replace_one(
-                    {"campaign_id": campaign_id},
-                    link.to_dict()
+                    {"campaign_id": campaign_id}, link.to_dict()
                 )
             else:
                 raise CampaignAlreadyLinked()
@@ -85,13 +98,15 @@ class GameLogClient(BaseClient):
         :type ddb_user: ddb.auth.BeyondUser
         :type message: GameLogEvent
         """
-        if DDB_GAMELOG_ENDPOINT is None or ddb_user is None:  # i.e. running on a limited-stack dev machine
+        if (
+            DDB_GAMELOG_ENDPOINT is None or ddb_user is None
+        ):  # i.e. running on a limited-stack dev machine
             return
 
         try:
             data = message.to_dict()
             log.debug(f"Sending gamelog event {message.id!r}: {data}")
-            await self.post(ddb_user, '/postMessage', json=data)
+            await self.post(ddb_user, "/postMessage", json=data)
         except Exception as e:
             self.bot.log_exception(e)
 
@@ -126,7 +141,9 @@ class GameLogClient(BaseClient):
 
         # check: do we have a callback for this event?
         if event.event_type not in self._event_handlers:
-            log.debug(f"No callback registered for event {event.event_type!r} - discarding event")
+            log.debug(
+                f"No callback registered for event {event.event_type!r} - discarding event"
+            )
             return
 
         # check: is this campaign linked to a channel?
@@ -143,20 +160,28 @@ class GameLogClient(BaseClient):
 
         # check: is the channel still there?
         if (channel := guild.get_channel_or_thread(campaign.channel_id)) is None:
-            log.debug(f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event")
+            log.debug(
+                f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event"
+            )
             return
 
         # check: do I have permissions to send messages to the channel?
         if not channel.permissions_for(guild.me).send_messages:
-            log.debug(f"No permissions to send messages in channel {campaign.channel_id} - discarding event")
+            log.debug(
+                f"No permissions to send messages in channel {campaign.channel_id} - discarding event"
+            )
             return
 
         # set up the event context
         discord_user_id = await ddb_id_to_discord_id(self.bot.mdb, event.user_id)
         if discord_user_id is None:
-            log.debug(f"No discord user associated with event {event.event_type!r} - discarding event")
+            log.debug(
+                f"No discord user associated with event {event.event_type!r} - discarding event"
+            )
             return
-        gctx = GameLogEventContext(self.bot, event, campaign, guild, channel, discord_user_id)
+        gctx = GameLogEventContext(
+            self.bot, event, campaign, guild, channel, discord_user_id
+        )
 
         # process the event
         try:
@@ -177,16 +202,18 @@ class GameLogClient(BaseClient):
         Called for each event that is successfully processed. Logs the event type, ddb user, ddb campaign,
         discord user id, discord guild id, discord channel id, event id, and timestamp.
         """
-        await self.bot.mdb.analytics_gamelog_events.insert_one({
-            "event_type": gctx.event.event_type,
-            "ddb_user": gctx.event.user_id,
-            "ddb_campaign": gctx.event.game_id,
-            "discord_user": gctx.discord_user_id,
-            "guild_id": gctx.guild.id,
-            "channel_id": gctx.channel.id,
-            "event_id": gctx.event.id,
-            "timestamp": datetime.datetime.now()
-        })
+        await self.bot.mdb.analytics_gamelog_events.insert_one(
+            {
+                "event_type": gctx.event.event_type,
+                "ddb_user": gctx.event.user_id,
+                "ddb_campaign": gctx.event.game_id,
+                "discord_user": gctx.discord_user_id,
+                "guild_id": gctx.guild.id,
+                "channel_id": gctx.channel.id,
+                "event_id": gctx.event.id,
+                "timestamp": datetime.datetime.now(),
+            }
+        )
 
     # ==== game log callback registration ====
     def register_callback(self, event_type, handler):

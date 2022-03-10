@@ -21,7 +21,7 @@ async def run_attack(ctx, embed, args, caster, attack, targets, combat):
     :type combat: None or cogs5e.models.initiative.Combat
     :rtype: cogs5e.models.automation.AutomationResult
     """
-    if not args.last('h', type_=bool):
+    if not args.last("h", type_=bool):
         name = caster.get_title_name()
     else:
         name = "An unknown creature"
@@ -33,17 +33,22 @@ async def run_attack(ctx, embed, args, caster, attack, targets, combat):
 
     verb = attack.verb or "attacks with"
 
-    if args.last('title') is not None:
-        embed.title = args.last('title') \
-            .replace('[name]', name) \
-            .replace('[aname]', attack_name) \
-            .replace('[verb]', verb)
+    if args.last("title") is not None:
+        embed.title = (
+            args.last("title")
+            .replace("[name]", name)
+            .replace("[aname]", attack_name)
+            .replace("[verb]", verb)
+        )
     else:
-        embed.title = f'{name} {verb} {attack_name}!'
+        embed.title = f"{name} {verb} {attack_name}!"
 
     # arg overrides (#1163)
     arg_defaults = {
-        'criton': attack.criton, 'phrase': attack.phrase, 'thumb': attack.thumb, 'c': attack.extra_crit_damage
+        "criton": attack.criton,
+        "phrase": attack.phrase,
+        "thumb": attack.thumb,
+        "c": attack.extra_crit_damage,
     }
     args.update_nx(arg_defaults)
 
@@ -73,17 +78,17 @@ async def run_action(ctx, embed, args, caster, action, targets, combat):
     if not lookuputils.can_access(source_feature, available_entity_e10s):
         raise RequiresLicense(source_feature, available_entity_e10s is not None)
 
-    if not args.last('h', type_=bool):
+    if not args.last("h", type_=bool):
         name = caster.get_title_name()
     else:
         name = "An unknown creature"
 
-    if args.last('title') is not None:
-        embed.title = args.last('title') \
-            .replace('[name]', name) \
-            .replace('[aname]', action.name)
+    if args.last("title") is not None:
+        embed.title = (
+            args.last("title").replace("[name]", name).replace("[aname]", action.name)
+        )
     else:
-        embed.title = f'{name} uses {action.name}!'
+        embed.title = f"{name} uses {action.name}!"
 
     if action.automation is not None:
         return await _run_common(ctx, embed, args, caster, action, targets, combat)
@@ -110,21 +115,29 @@ async def _run_common(ctx, embed, args, caster, action, targets, combat):
     :type combat: None or cogs5e.models.initiative.Combat
     :rtype: cogs5e.models.automation.AutomationResult
     """
-    result = await action.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
+    result = await action.automation.run(
+        ctx, embed, caster, targets, args, combat=combat, title=embed.title
+    )
     if combat:
         await combat.final()
     # commit character only if we have not already committed it via combat final
-    if result.caster_needs_commit and hasattr(caster, 'commit') and not (combat and caster in combat.get_combatants()):
+    if (
+        result.caster_needs_commit
+        and hasattr(caster, "commit")
+        and not (combat and caster in combat.get_combatants())
+    ):
         await caster.commit(ctx)
 
-    embeds.add_fields_from_args(embed, args.get('f'))
-    if 'thumb' in args:
-        embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
+    embeds.add_fields_from_args(embed, args.get("f"))
+    if "thumb" in args:
+        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
 
     return result
 
 
-async def select_action(ctx, name, attacks, actions=None, allow_no_automation=False, **kwargs):
+async def select_action(
+    ctx, name, attacks, actions=None, allow_no_automation=False, **kwargs
+):
     """
     Prompts the user to select an action from the caster's valid list of runnable actions, or returns a single
     unambiguous action.
@@ -147,12 +160,14 @@ async def select_action(ctx, name, attacks, actions=None, allow_no_automation=Fa
         list_to_search=list(itertools.chain(attacks, actions)),
         query=name,
         key=lambda a: a.name,
-        **kwargs
+        **kwargs,
     )
 
 
 # ==== action display ====
-async def send_action_list(ctx, caster, destination=None, attacks=None, actions=None, embed=None, args=None):
+async def send_action_list(
+    ctx, caster, destination=None, attacks=None, actions=None, embed=None, args=None
+):
     """
     Sends the list of actions and attacks given to the given destination.
 
@@ -167,7 +182,9 @@ async def send_action_list(ctx, caster, destination=None, attacks=None, actions=
     if destination is None:
         destination = ctx
     if embed is None:
-        embed = discord.Embed(color=caster.get_color(), title=f"{caster.get_title_name()}'s Actions")
+        embed = discord.Embed(
+            color=caster.get_color(), title=f"{caster.get_title_name()}'s Actions"
+        )
     if args is None:
         args = ()
 
@@ -178,17 +195,33 @@ async def send_action_list(ctx, caster, destination=None, attacks=None, actions=
     fields = []
 
     # arg setup
-    verbose = '-v' in args
-    display_attacks = 'attack' in args
-    display_actions = 'action' in args
-    display_bonus = 'bonus' in args
-    display_reactions = 'reaction' in args
-    display_other = 'other' in args
-    is_display_filtered = any((display_attacks, display_actions, display_bonus, display_reactions, display_other))
-    filtered_action_type_strs = list(itertools.compress(
-        ('attacks', 'actions', 'bonus actions', 'reactions', 'other actions'),
-        (display_attacks, display_actions, display_bonus, display_reactions, display_other)
-    ))
+    verbose = "-v" in args
+    display_attacks = "attack" in args
+    display_actions = "action" in args
+    display_bonus = "bonus" in args
+    display_reactions = "reaction" in args
+    display_other = "other" in args
+    is_display_filtered = any(
+        (
+            display_attacks,
+            display_actions,
+            display_bonus,
+            display_reactions,
+            display_other,
+        )
+    )
+    filtered_action_type_strs = list(
+        itertools.compress(
+            ("attacks", "actions", "bonus actions", "reactions", "other actions"),
+            (
+                display_attacks,
+                display_actions,
+                display_bonus,
+                display_reactions,
+                display_other,
+            ),
+        )
+    )
 
     # helpers
     non_automated_count = 0
@@ -199,7 +232,7 @@ async def send_action_list(ctx, caster, destination=None, attacks=None, actions=
     # action display
     if attacks and (display_attacks or not is_display_filtered):
         atk_str = attacks.build_str(caster)
-        fields.append({'name': 'Attacks', 'value': atk_str})
+        fields.append({"name": "Attacks", "value": atk_str})
 
     # since the sheet displays the description regardless of entitlements, we do here too
     async def add_action_field(title, action_source):
@@ -212,29 +245,43 @@ async def send_action_list(ctx, caster, destination=None, attacks=None, actions=
             if has_automation:
                 source_feature = action.gamedata.source_feature
                 if source_feature.entitlement_entity_type not in e10s_map:
-                    e10s_map[source_feature.entitlement_entity_type] = await ctx.bot.ddb.get_accessible_entities(
+                    e10s_map[
+                        source_feature.entitlement_entity_type
+                    ] = await ctx.bot.ddb.get_accessible_entities(
                         ctx, ctx.author.id, source_feature.entitlement_entity_type
                     )
-                source_feature_type_e10s = e10s_map[source_feature.entitlement_entity_type]
-                has_e10s = lookuputils.can_access(source_feature, source_feature_type_e10s)
+                source_feature_type_e10s = e10s_map[
+                    source_feature.entitlement_entity_type
+                ]
+                has_e10s = lookuputils.can_access(
+                    source_feature, source_feature_type_e10s
+                )
                 if not has_e10s:
                     non_e10s_count += 1
                     source_names.add(source_feature.source)
 
             if verbose:
-                name = f"**{action.name}**" if has_automation and has_e10s else f"***{action.name}***"
-                action_texts.append(f"{name}: {action.build_str(caster=caster, snippet=True)}")
+                name = (
+                    f"**{action.name}**"
+                    if has_automation and has_e10s
+                    else f"***{action.name}***"
+                )
+                action_texts.append(
+                    f"{name}: {action.build_str(caster=caster, snippet=True)}"
+                )
             elif has_automation:
                 name = f"**{action.name}**" if has_e10s else f"***{action.name}***"
-                action_texts.append(f"**{name}**: {action.build_str(caster=caster, snippet=False)}")
+                action_texts.append(
+                    f"**{name}**: {action.build_str(caster=caster, snippet=False)}"
+                )
 
             # count these for extra display
             if not has_automation:
                 non_automated_count += 1
         if not action_texts:
             return
-        action_text = '\n'.join(action_texts)
-        fields.append({'name': title, 'value': action_text})
+        action_text = "\n".join(action_texts)
+        fields.append({"name": title, "value": action_text})
 
     if actions is not None:
         if actions.full_actions and (display_actions or not is_display_filtered):
@@ -256,18 +303,26 @@ async def send_action_list(ctx, caster, destination=None, attacks=None, actions=
         else:
             description = f"{caster.get_title_name()} has no actions."
     elif is_display_filtered:
-        description = f"Only displaying {natural_join(filtered_action_type_strs, 'and')}."
+        description = (
+            f"Only displaying {natural_join(filtered_action_type_strs, 'and')}."
+        )
 
     # description: entitlements help
     if not verbose and actions and non_e10s_count:
         has_ddb_link = any(v is not None for v in e10s_map.values())
         if not has_ddb_link:
-            description = (f"{description}\nItalicized actions are for display only and cannot be run. "
-                           f"Connect your D&D Beyond account to unlock the full potential of these actions!")
+            description = (
+                f"{description}\nItalicized actions are for display only and cannot be run. "
+                f"Connect your D&D Beyond account to unlock the full potential of these actions!"
+            )
         else:
-            source_names = natural_join([lookuputils.long_source_name(s) for s in source_names], 'and')
-            description = (f"{description}\nItalicized actions are for display only and cannot be run. Unlock "
-                           f"{source_names} on your D&D Beyond account to unlock the full potential of these actions!")
+            source_names = natural_join(
+                [lookuputils.long_source_name(s) for s in source_names], "and"
+            )
+            description = (
+                f"{description}\nItalicized actions are for display only and cannot be run. Unlock "
+                f"{source_names} on your D&D Beyond account to unlock the full potential of these actions!"
+            )
     if description:
         ep.add_description(description.strip())
 
@@ -278,11 +333,17 @@ async def send_action_list(ctx, caster, destination=None, attacks=None, actions=
     # footer
     if not verbose and actions:
         if non_automated_count:
-            ep.set_footer(value=f"Use the -v argument to view each action's full description "
-                                f"and {non_automated_count} display-only actions.")
+            ep.set_footer(
+                value=f"Use the -v argument to view each action's full description "
+                f"and {non_automated_count} display-only actions."
+            )
         else:
-            ep.set_footer(value=f"Use the -v argument to view each action's full description.")
+            ep.set_footer(
+                value=f"Use the -v argument to view each action's full description."
+            )
     elif verbose and (non_automated_count or non_e10s_count):
-        ep.set_footer(value="Italicized actions are for display only and cannot be run.")
+        ep.set_footer(
+            value="Italicized actions are for display only and cannot be run."
+        )
 
     await ep.send_to(destination)

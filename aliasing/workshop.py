@@ -12,12 +12,14 @@ from utils.subscription_mixins import EditorMixin, GuildActiveMixin, SubscriberM
 
 
 class PublicationState(enum.Enum):
-    PRIVATE = 'PRIVATE'
-    UNLISTED = 'UNLISTED'
-    PUBLISHED = 'PUBLISHED'
+    PRIVATE = "PRIVATE"
+    UNLISTED = "UNLISTED"
+    PUBLISHED = "PUBLISHED"
 
 
-WORKSHOP_ADDRESS_RE = re.compile(r'(?:https?://)?avrae\.io/dashboard/workshop/([0-9a-f]{24})(?:$|/)')
+WORKSHOP_ADDRESS_RE = re.compile(
+    r"(?:https?://)?avrae\.io/dashboard/workshop/([0-9a-f]{24})(?:$|/)"
+)
 
 
 class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
@@ -27,10 +29,22 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
     Read-only bot-side; all modifications must be made through avrae.io.
     """
 
-    def __init__(self,
-                 _id, name, description, image, owner,
-                 alias_ids, snippet_ids,
-                 publish_state, num_subscribers, num_guild_subscribers, last_edited, created_at, tags):
+    def __init__(
+        self,
+        _id,
+        name,
+        description,
+        image,
+        owner,
+        alias_ids,
+        snippet_ids,
+        publish_state,
+        num_subscribers,
+        num_guild_subscribers,
+        last_edited,
+        created_at,
+        tags,
+    ):
         """
         :param _id: The MongoDB ID of this collection.
         :type _id: bson.ObjectId
@@ -83,7 +97,9 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
     @property
     def aliases(self):
         if self._aliases is None:
-            raise AttributeError("Aliases are not loaded yet - run load_aliases() first")
+            raise AttributeError(
+                "Aliases are not loaded yet - run load_aliases() first"
+            )
         return self._aliases
 
     @property
@@ -93,7 +109,9 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
     @property
     def snippets(self):
         if self._snippets is None:
-            raise AttributeError("Snippets are not loaded yet - run load_snippets() first")
+            raise AttributeError(
+                "Snippets are not loaded yet - run load_snippets() first"
+            )
         return self._snippets
 
     @property
@@ -103,13 +121,17 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
     async def load_aliases(self, ctx):
         self._aliases = []
         for alias_id in self._alias_ids:
-            self._aliases.append(await WorkshopAlias.from_id(ctx, alias_id, collection=self, parent=None))
+            self._aliases.append(
+                await WorkshopAlias.from_id(ctx, alias_id, collection=self, parent=None)
+            )
         return self._aliases
 
     async def load_snippets(self, ctx):
         self._snippets = []
         for snippet_id in self._snippet_ids:
-            self._snippets.append(await WorkshopSnippet.from_id(ctx, snippet_id, collection=self))
+            self._snippets.append(
+                await WorkshopSnippet.from_id(ctx, snippet_id, collection=self)
+            )
         return self._snippets
 
     # constructors
@@ -122,17 +144,30 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         if raw is None:
             raise CollectionNotFound()
 
-        return cls(raw['_id'], raw['name'], raw['description'], raw['image'], raw['owner'],
-                   raw['alias_ids'], raw['snippet_ids'],
-                   PublicationState(raw['publish_state']), raw['num_subscribers'], raw['num_guild_subscribers'],
-                   raw['last_edited'], raw['created_at'], raw['tags'])
+        return cls(
+            raw["_id"],
+            raw["name"],
+            raw["description"],
+            raw["image"],
+            raw["owner"],
+            raw["alias_ids"],
+            raw["snippet_ids"],
+            PublicationState(raw["publish_state"]),
+            raw["num_subscribers"],
+            raw["num_guild_subscribers"],
+            raw["last_edited"],
+            raw["created_at"],
+            raw["tags"],
+        )
 
     # helpers
     @classmethod
     async def user_owned_ids(cls, ctx):
         """Returns an async iterator of ObjectIds of objects the contextual user owns."""
-        async for obj in ctx.bot.mdb.workshop_collections.find({"owner": ctx.author.id}, ['_id']):
-            yield obj['_id']
+        async for obj in ctx.bot.mdb.workshop_collections.find(
+            {"owner": ctx.author.id}, ["_id"]
+        ):
+            yield obj["_id"]
 
     def is_owned_by(self, user):
         """Returns whether the member owns the object.
@@ -178,7 +213,9 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         """Adds the contextual author as a subscriber, with default name bindings."""
         if await self.is_subscribed(ctx):
             raise NotAllowed("You are already subscribed to this.")
-        if self.publish_state == PublicationState.PRIVATE and not self.is_owned_by(ctx.author):
+        if self.publish_state == PublicationState.PRIVATE and not self.is_owned_by(
+            ctx.author
+        ):
             raise NotAllowed("This collection is private.")
 
         # generate default bindings
@@ -187,18 +224,26 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
 
         # insert subscription
         await self.sub_coll(ctx).insert_one(
-            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id,
-             "alias_bindings": alias_bindings, "snippet_bindings": snippet_bindings}
+            {
+                "type": "subscribe",
+                "subscriber_id": ctx.author.id,
+                "object_id": self.id,
+                "alias_bindings": alias_bindings,
+                "snippet_bindings": snippet_bindings,
+            }
         )
         # increase subscription count
         await ctx.bot.mdb.workshop_collections.update_one(
-            {"_id": self.id},
-            {"$inc": {"num_subscribers": 1}}
+            {"_id": self.id}, {"$inc": {"num_subscribers": 1}}
         )
         # log subscribe event
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "subscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow(),
-             "user_id": ctx.author.id}
+            {
+                "type": "subscribe",
+                "object_id": self.id,
+                "timestamp": datetime.datetime.utcnow(),
+                "user_id": ctx.author.id,
+            }
         )
 
     async def unsubscribe(self, ctx):
@@ -206,20 +251,25 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         await super().unsubscribe(ctx)
         # decr sub count
         await ctx.bot.mdb.workshop_collections.update_one(
-            {"_id": self.id},
-            {"$inc": {"num_subscribers": -1}}
+            {"_id": self.id}, {"$inc": {"num_subscribers": -1}}
         )
         # log unsub event
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "unsubscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow(),
-             "user_id": ctx.author.id}
+            {
+                "type": "unsubscribe",
+                "object_id": self.id,
+                "timestamp": datetime.datetime.utcnow(),
+                "user_id": ctx.author.id,
+            }
         )
 
     async def set_server_active(self, ctx):
         """Sets the object as active for the contextual guild, with default name bindings."""
         if await self.is_server_active(ctx):
             raise NotAllowed("This collection is already installed on this server.")
-        if self.publish_state == PublicationState.PRIVATE and not self.is_owned_by(ctx.author):
+        if self.publish_state == PublicationState.PRIVATE and not self.is_owned_by(
+            ctx.author
+        ):
             raise NotAllowed("This collection is private.")
 
         # generate default bindings
@@ -228,18 +278,26 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
 
         # insert sub doc
         await self.sub_coll(ctx).insert_one(
-            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id,
-             "alias_bindings": alias_bindings, "snippet_bindings": snippet_bindings}
+            {
+                "type": "server_active",
+                "subscriber_id": ctx.guild.id,
+                "object_id": self.id,
+                "alias_bindings": alias_bindings,
+                "snippet_bindings": snippet_bindings,
+            }
         )
         # incr sub count
         await ctx.bot.mdb.workshop_collections.update_one(
-            {"_id": self.id},
-            {"$inc": {"num_guild_subscribers": 1}}
+            {"_id": self.id}, {"$inc": {"num_guild_subscribers": 1}}
         )
         # log sub event
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "server_subscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow(),
-             "user_id": ctx.author.id}
+            {
+                "type": "server_subscribe",
+                "object_id": self.id,
+                "timestamp": datetime.datetime.utcnow(),
+                "user_id": ctx.author.id,
+            }
         )
 
     async def unset_server_active(self, ctx):
@@ -250,51 +308,66 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         await super().unset_server_active(ctx)
         # decr sub count
         await ctx.bot.mdb.workshop_collections.update_one(
-            {"_id": self.id},
-            {"$inc": {"num_guild_subscribers": -1}}
+            {"_id": self.id}, {"$inc": {"num_guild_subscribers": -1}}
         )
         # log unsub event
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "server_unsubscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow(),
-             "user_id": ctx.author.id}
+            {
+                "type": "server_unsubscribe",
+                "object_id": self.id,
+                "timestamp": datetime.datetime.utcnow(),
+                "user_id": ctx.author.id,
+            }
         )
 
     async def _bindings_sanity_check(self, ctx, the_ids, the_bindings, binding_cls):
         # sanity check: ensure all aliases are in the bindings
-        binding_ids = {b['id'] for b in the_bindings}
+        binding_ids = {b["id"] for b in the_bindings}
         missing_ids = set(the_ids).difference(binding_ids)
         for missing in missing_ids:
             obj = await binding_cls.from_id(ctx, missing, collection=self)
             the_bindings.append({"name": obj.name, "id": obj.id})
 
         # sanity check: ensure there is no binding to anything deleted
-        return [b for b in the_bindings if b['id'] in the_ids]
+        return [b for b in the_bindings if b["id"] in the_ids]
 
     async def update_alias_bindings(self, ctx, subscription_doc):
         """Updates the alias bindings for a given subscription (given the entire subscription document)."""
         the_bindings = await self._bindings_sanity_check(
-            ctx, self._alias_ids, subscription_doc['alias_bindings'], WorkshopAlias)
+            ctx, self._alias_ids, subscription_doc["alias_bindings"], WorkshopAlias
+        )
 
         await self.sub_coll(ctx).update_one(
-            {"_id": subscription_doc['_id']},
-            {"$set": {"alias_bindings": the_bindings}}
+            {"_id": subscription_doc["_id"]}, {"$set": {"alias_bindings": the_bindings}}
         )
 
     async def update_snippet_bindings(self, ctx, subscription_doc):
         """Updates the snippet bindings for a given subscription (given the entire subscription document)."""
         the_bindings = await self._bindings_sanity_check(
-            ctx, self._snippet_ids, subscription_doc['snippet_bindings'], WorkshopSnippet)
+            ctx,
+            self._snippet_ids,
+            subscription_doc["snippet_bindings"],
+            WorkshopSnippet,
+        )
 
         await self.sub_coll(ctx).update_one(
-            {"_id": subscription_doc['_id']},
-            {"$set": {"snippet_bindings": the_bindings}}
+            {"_id": subscription_doc["_id"]},
+            {"$set": {"snippet_bindings": the_bindings}},
         )
 
 
 class WorkshopCollectableObject(abc.ABC):
-    def __init__(self, _id, name,
-                 code, versions, docs, entitlements, collection_id,
-                 collection=None):
+    def __init__(
+        self,
+        _id,
+        name,
+        code,
+        versions,
+        docs,
+        entitlements,
+        collection_id,
+        collection=None,
+    ):
         """
         :param _id: The MongoDB ID of this object.
         :type _id: bson.ObjectId
@@ -325,7 +398,7 @@ class WorkshopCollectableObject(abc.ABC):
 
     @property
     def short_docs(self):
-        return self.docs.split('\n')[0]
+        return self.docs.split("\n")[0]
 
     @property
     def collection_id(self) -> ObjectId:
@@ -334,7 +407,9 @@ class WorkshopCollectableObject(abc.ABC):
     @property
     def collection(self):
         if self._collection is None:
-            raise AttributeError("Collection is not loaded - run load_collection() first")
+            raise AttributeError(
+                "Collection is not loaded - run load_collection() first"
+            )
         return self._collection
 
     async def load_collection(self, ctx):
@@ -350,16 +425,36 @@ class WorkshopCollectableObject(abc.ABC):
 
 
 class WorkshopAlias(WorkshopCollectableObject):
-    def __init__(self, _id, name, code, versions, docs, entitlements, collection_id, subcommand_ids, parent_id,
-                 collection=None, parent=None):
+    def __init__(
+        self,
+        _id,
+        name,
+        code,
+        versions,
+        docs,
+        entitlements,
+        collection_id,
+        subcommand_ids,
+        parent_id,
+        collection=None,
+        parent=None,
+    ):
         """
         :param subcommand_ids: The alias IDs that are a child of this alias.
         :type subcommand_ids: list[ObjectId]
         :param parent: The alias that is a parent of this alias, if applicable.
         :type parent: WorkshopAlias or None
         """
-        super().__init__(_id, name, code, versions, docs, entitlements,
-                         collection_id=collection_id, collection=collection)
+        super().__init__(
+            _id,
+            name,
+            code,
+            versions,
+            docs,
+            entitlements,
+            collection_id=collection_id,
+            collection=collection,
+        )
         self._subcommands = None
         self._parent = parent
         # lazy-load subcommands, collection, parent
@@ -375,27 +470,47 @@ class WorkshopAlias(WorkshopCollectableObject):
     @property
     def subcommands(self):
         if self._subcommands is None:
-            raise AttributeError("Subcommands are not loaded yet - run load_subcommands() first")
+            raise AttributeError(
+                "Subcommands are not loaded yet - run load_subcommands() first"
+            )
         return self._subcommands
 
     async def load_parent(self, ctx):
-        self._parent = await WorkshopAlias.from_id(ctx, self._parent_id, collection=self._collection)
+        self._parent = await WorkshopAlias.from_id(
+            ctx, self._parent_id, collection=self._collection
+        )
         return self._parent
 
     async def load_subcommands(self, ctx):
         self._subcommands = []
         for subcommand_id in self._subcommand_ids:
             self._subcommands.append(
-                await WorkshopAlias.from_id(ctx, subcommand_id, collection=self._collection, parent=self))
+                await WorkshopAlias.from_id(
+                    ctx, subcommand_id, collection=self._collection, parent=self
+                )
+            )
         return self._subcommands
 
     # constructors
     @classmethod
     def from_dict(cls, raw, collection=None, parent=None):
-        versions = [CodeVersion.from_dict(cv) for cv in raw['versions']]
-        entitlements = [RequiredEntitlement.from_dict(ent) for ent in raw['entitlements']]
-        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], entitlements, raw['collection_id'],
-                   raw['subcommand_ids'], raw['parent_id'], collection, parent)
+        versions = [CodeVersion.from_dict(cv) for cv in raw["versions"]]
+        entitlements = [
+            RequiredEntitlement.from_dict(ent) for ent in raw["entitlements"]
+        ]
+        return cls(
+            raw["_id"],
+            raw["name"],
+            raw["code"],
+            versions,
+            raw["docs"],
+            entitlements,
+            raw["collection_id"],
+            raw["subcommand_ids"],
+            raw["parent_id"],
+            collection,
+            parent,
+        )
 
     @classmethod
     async def from_id(cls, ctx, _id, collection=None, parent=None):
@@ -409,9 +524,14 @@ class WorkshopAlias(WorkshopCollectableObject):
 
     # helpers
     async def log_invocation(self, ctx, is_server):
-        inv_type = 'workshop_alias' if not is_server else 'workshop_servalias'
+        inv_type = "workshop_alias" if not is_server else "workshop_servalias"
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
+            {
+                "type": inv_type,
+                "object_id": self.id,
+                "timestamp": datetime.datetime.utcnow(),
+                "user_id": ctx.author.id,
+            }
         )
 
     async def get_subalias_named(self, ctx, name):
@@ -433,16 +553,31 @@ class WorkshopSnippet(WorkshopCollectableObject):
         if raw is None:
             raise CollectableNotFound()
 
-        versions = [CodeVersion.from_dict(cv) for cv in raw['versions']]
-        entitlements = [RequiredEntitlement.from_dict(ent) for ent in raw['entitlements']]
-        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], entitlements,
-                   raw['collection_id'], collection)
+        versions = [CodeVersion.from_dict(cv) for cv in raw["versions"]]
+        entitlements = [
+            RequiredEntitlement.from_dict(ent) for ent in raw["entitlements"]
+        ]
+        return cls(
+            raw["_id"],
+            raw["name"],
+            raw["code"],
+            versions,
+            raw["docs"],
+            entitlements,
+            raw["collection_id"],
+            collection,
+        )
 
     # helpers
     async def log_invocation(self, ctx, is_server):
-        inv_type = 'workshop_snippet' if not is_server else 'workshop_servsnippet'
+        inv_type = "workshop_snippet" if not is_server else "workshop_servsnippet"
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
+            {
+                "type": inv_type,
+                "object_id": self.id,
+                "timestamp": datetime.datetime.utcnow(),
+                "user_id": ctx.author.id,
+            }
         )
 
 
@@ -484,6 +619,7 @@ class RequiredEntitlement:
     @classmethod
     def from_dict(cls, raw):
         return cls(**raw)
+
 
 # test_coll = {
 #     '_id': ObjectId(), 'name': 'Test Workshop Collection', 'description': "A test collection", 'image': None,

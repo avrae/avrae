@@ -16,13 +16,17 @@ class GameLogCallbackHandler(abc.ABC):
         # find all registered callbacks and save them
         callbacks = {}
         for name, member in inspect.getmembers(self, predicate=inspect.ismethod):
-            if (event_type := getattr(member, '__callback_type', None)) is None:
+            if (event_type := getattr(member, "__callback_type", None)) is None:
                 continue
             if event_type in callbacks:
-                raise ValueError(f"Callback for {event_type} is already registered in ({type(self).__name__})")
+                raise ValueError(
+                    f"Callback for {event_type} is already registered in ({type(self).__name__})"
+                )
             callbacks[event_type] = member
 
-        self.callbacks = MappingProxyType(callbacks)  # save an immutable copy of this mapping to avoid foot-guns
+        self.callbacks = MappingProxyType(
+            callbacks
+        )  # save an immutable copy of this mapping to avoid foot-guns
 
     def register(self):
         """Registers this handler's registered callbacks in the game log client."""
@@ -36,7 +40,7 @@ class GameLogCallbackHandler(abc.ABC):
 
 
 # ==== callback handler decorator ====
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class SupportsFromDict(Protocol):
@@ -45,7 +49,7 @@ class SupportsFromDict(Protocol):
         ...
 
 
-SelfT = TypeVar('SelfT', bound=GameLogCallbackHandler)
+SelfT = TypeVar("SelfT", bound=GameLogCallbackHandler)
 F1 = Callable[[SelfT, GameLogEventContext], Coroutine]
 F2 = Callable[[SelfT, GameLogEventContext, SupportsFromDict], Coroutine]
 
@@ -74,11 +78,15 @@ def callback(event_name: str) -> Callable[[Union[F1, F2]], F1]:
         elif nparams == 3:  # 2 params
             data_param = list(sig.parameters.values())[-1]
 
-            if data_param.annotation is inspect.Parameter.empty:  # if no annotation, just passthru the data
+            if (
+                data_param.annotation is inspect.Parameter.empty
+            ):  # if no annotation, just passthru the data
                 cast = lambda data: data  # noqa: E731
             else:  # otherwise the annotation is a type which supports cls.from_dict(d)
-                if not hasattr(data_param.annotation, 'from_dict'):
-                    raise TypeError(f"Expected annotation type to support .from_dict ({inner.__name__})")
+                if not hasattr(data_param.annotation, "from_dict"):
+                    raise TypeError(
+                        f"Expected annotation type to support .from_dict ({inner.__name__})"
+                    )
                 cast = lambda data: data_param.annotation.from_dict(data)  # noqa: E731
 
             @functools.wraps(inner)
@@ -89,6 +97,8 @@ def callback(event_name: str) -> Callable[[Union[F1, F2]], F1]:
             wrapped.__callback_type = event_name
             return wrapped
         else:
-            raise ValueError(f"Event callback must have either 1 or 2 parameters ({inner.__name__})")
+            raise ValueError(
+                f"Event callback must have either 1 or 2 parameters ({inner.__name__})"
+            )
 
     return decorator

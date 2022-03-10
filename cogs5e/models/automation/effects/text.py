@@ -16,7 +16,7 @@ class Text(Effect):
 
     @classmethod
     def from_data(cls, data):
-        data['text'] = deserialize_text_target(data['text'])
+        data["text"] = deserialize_text_target(data["text"])
         return super().from_data(data)
 
     def to_dict(self):
@@ -34,15 +34,17 @@ class Text(Effect):
         if entity is None:
             return
         type_e10s = await autoctx.ctx.bot.ddb.get_accessible_entities(
-            ctx=autoctx.ctx, user_id=autoctx.ctx.author.id, entity_type=entity.entitlement_entity_type
+            ctx=autoctx.ctx,
+            user_id=autoctx.ctx.author.id,
+            entity_type=entity.entitlement_entity_type,
         )
         if not gamedata.lookuputils.can_access(entity, type_e10s):
             raise RequiresLicense(entity, type_e10s is not None)
 
     def run(self, autoctx):
         super().run(autoctx)
-        hide = autoctx.args.last('h', type_=bool)
-        text = ''
+        hide = autoctx.args.last("h", type_=bool)
+        text = ""
 
         if isinstance(self.text, EntityReference):
             entity = self.text.entity
@@ -83,10 +85,10 @@ class EntityReference:
 
     @classmethod
     def from_data(cls, data):
-        return cls(id=data['id'], type_id=data['typeId'])
+        return cls(id=data["id"], type_id=data["typeId"])
 
     def to_dict(self):
-        return {'id': self.id, 'typeId': self.type_id}
+        return {"id": self.id, "typeId": self.type_id}
 
     def __repr__(self):
         return f"<EntityReference id={self.id!r} type_id={self.type_id!r} entity={self.entity!r}>"
@@ -98,6 +100,6 @@ def deserialize_text_target(target):
     """
     if isinstance(target, str):
         return target
-    elif 'id' in target:
+    elif "id" in target:
         return EntityReference.from_data(target)
     raise ValueError(f"Unknown text target: {target!r}")

@@ -35,16 +35,25 @@ class DicecloudHTTP:
         async with aiohttp.ClientSession() as session:
             for _ in range(MAX_TRIES):
                 try:
-                    async with session.request(method, f"{self.base}{endpoint}", data=body, headers=headers,
-                                               params=query) as resp:
+                    async with session.request(
+                        method,
+                        f"{self.base}{endpoint}",
+                        data=body,
+                        headers=headers,
+                        params=query,
+                    ) as resp:
                         log.info(f"Dicecloud returned {resp.status} ({endpoint})")
                         if resp.status == 200:
-                            data = await resp.json(encoding='utf-8')
+                            data = await resp.json(encoding="utf-8")
                             break
                         elif resp.status == 429:
-                            timeout = await resp.json(encoding='utf-8')
-                            log.warning(f"Dicecloud ratelimit hit ({endpoint}) - resets in {timeout}ms")
-                            await asyncio.sleep(timeout['timeToReset'] / 1000)  # rate-limited, wait and try again
+                            timeout = await resp.json(encoding="utf-8")
+                            log.warning(
+                                f"Dicecloud ratelimit hit ({endpoint}) - resets in {timeout}ms"
+                            )
+                            await asyncio.sleep(
+                                timeout["timeToReset"] / 1000
+                            )  # rate-limited, wait and try again
                         elif 400 <= resp.status < 600:
                             if resp.status == 403:
                                 raise Forbidden(resp.reason)
@@ -53,11 +62,17 @@ class DicecloudHTTP:
                             else:
                                 raise HTTPException(resp.status, resp.reason)
                         else:
-                            log.warning(f"Unknown response from Dicecloud: {resp.status}")
+                            log.warning(
+                                f"Unknown response from Dicecloud: {resp.status}"
+                            )
                 except aiohttp.ServerDisconnectedError:
                     raise HTTPException(None, "Server disconnected")
-        if not data:  # we did 10 loops and always got either 200 or 429 but we have no data, so we must have 429ed
-            raise Timeout(f"Dicecloud failed to respond after {MAX_TRIES} tries. Please try again.")
+        if (
+            not data
+        ):  # we did 10 loops and always got either 200 or 429 but we have no data, so we must have 429ed
+            raise Timeout(
+                f"Dicecloud failed to respond after {MAX_TRIES} tries. Please try again."
+            )
 
         return data
 
@@ -65,10 +80,16 @@ class DicecloudHTTP:
         return await self.request("GET", endpoint, None, query={"key": self.key})
 
     async def post(self, endpoint, body):
-        return await self.request("POST", endpoint, body, headers={"Authorization": self.key})
+        return await self.request(
+            "POST", endpoint, body, headers={"Authorization": self.key}
+        )
 
     async def put(self, endpoint, body):
-        return await self.request("PUT", endpoint, body, headers={"Authorization": self.key})
+        return await self.request(
+            "PUT", endpoint, body, headers={"Authorization": self.key}
+        )
 
     async def delete(self, endpoint):
-        return await self.request("DELETE", endpoint, None, headers={"Authorization": self.key})
+        return await self.request(
+            "DELETE", endpoint, None, headers={"Authorization": self.key}
+        )

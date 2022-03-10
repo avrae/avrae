@@ -52,7 +52,7 @@ class SimpleRollResult:
 
         :rtype: str
         """
-        d20.utils.simplify_expr(self._roll.expr, ambig_inherit='left')
+        d20.utils.simplify_expr(self._roll.expr, ambig_inherit="left")
         return RerollableStringifier().stringify(self._roll.expr.roll)
 
 
@@ -98,6 +98,7 @@ def _vroll(dice, multiply=1, add=0, roller=None):
     dice_ast = roller.parse(dice)
 
     if multiply != 1 or add != 0:
+
         def mapper(node):
             if isinstance(node, d20.ast.Dice):
                 node.num = (node.num * multiply) + add
@@ -117,18 +118,26 @@ def _vroll(dice, multiply=1, add=0, roller=None):
 def safe_range(start, stop=None, step=None):
     if stop is None and step is None:
         if start > MAX_ITER_LENGTH:
-            draconic._raise_in_context(draconic.IterableTooLong, "This range is too large.")
+            draconic._raise_in_context(
+                draconic.IterableTooLong, "This range is too large."
+            )
         return list(range(start))
     elif stop is not None and step is None:
         if stop - start > MAX_ITER_LENGTH:
-            draconic._raise_in_context(draconic.IterableTooLong, "This range is too large.")
+            draconic._raise_in_context(
+                draconic.IterableTooLong, "This range is too large."
+            )
         return list(range(start, stop))
     elif stop is not None and step is not None:
         if (stop - start) / step > MAX_ITER_LENGTH:
-            draconic._raise_in_context(draconic.IterableTooLong, "This range is too large.")
+            draconic._raise_in_context(
+                draconic.IterableTooLong, "This range is too large."
+            )
         return list(range(start, stop, step))
     else:
-        raise draconic._raise_in_context(draconic.DraconicValueError, "Invalid arguments passed to range()")
+        raise draconic._raise_in_context(
+            draconic.DraconicValueError, "Invalid arguments passed to range()"
+        )
 
 
 # err()
@@ -176,26 +185,38 @@ def randchoice(seq):
 
 # signatures
 SIG_SECRET = config.DRACONIC_SIGNATURE_SECRET
-SIG_STRUCT = struct.Struct('!QQQ12sB')  # u64, u64, u64, byte[12], u8 - https://docs.python.org/3/library/struct.html
-SIG_HASH_ALG = hashlib.sha1  # SHA1 is technically compromised but the hash collision attack vector is not feasible here
+SIG_STRUCT = struct.Struct(
+    "!QQQ12sB"
+)  # u64, u64, u64, byte[12], u8 - https://docs.python.org/3/library/struct.html
+SIG_HASH_ALG = (
+    hashlib.sha1
+)  # SHA1 is technically compromised but the hash collision attack vector is not feasible here
 
 
 def create_signature(
     ctx: disnake.ext.commands.Context,
     execution_scope: ExecutionScope,
     user_data: int,
-    workshop_collection_id: bson.ObjectId = None
+    workshop_collection_id: bson.ObjectId = None,
 ):
     if not 0 <= user_data <= 31:
         raise ValueError("User data must be an unsigned 5-bit integer ([0..31]).")
 
     # if workshop collection is not available, stick 12 null bytes there :(
-    workshop_collection_bytes = bytes(12) if workshop_collection_id is None else workshop_collection_id.binary
+    workshop_collection_bytes = (
+        bytes(12) if workshop_collection_id is None else workshop_collection_id.binary
+    )
     # tail byte: [user data](5)[scope](3)
-    tail_byte = ((user_data << 3) | execution_scope.value) & 0xff
+    tail_byte = ((user_data << 3) | execution_scope.value) & 0xFF
 
     # encode
-    packed = SIG_STRUCT.pack(ctx.message.id, ctx.channel.id, ctx.author.id, workshop_collection_bytes, tail_byte)
+    packed = SIG_STRUCT.pack(
+        ctx.message.id,
+        ctx.channel.id,
+        ctx.author.id,
+        workshop_collection_bytes,
+        tail_byte,
+    )
     b64_data = base64.b64encode(packed)
 
     # sign
@@ -208,10 +229,12 @@ def create_signature(
 def verify_signature(ctx: disnake.ext.commands.Context, data: str):
     # decode
     try:
-        encoded_data, encoded_signature = data.split('.', 1)
+        encoded_data, encoded_signature = data.split(".", 1)
         decoded_data = base64.b64decode(encoded_data, validate=True)
         decoded_signature = base64.b64decode(encoded_signature, validate=True)
-        message_id, channel_id, author_id, object_id, tail_byte = SIG_STRUCT.unpack(decoded_data)
+        message_id, channel_id, author_id, object_id, tail_byte = SIG_STRUCT.unpack(
+            decoded_data
+        )
     except (ValueError, struct.error) as e:
         raise ValueError("Failed to unpack signature: invalid format") from e
 
@@ -224,8 +247,10 @@ def verify_signature(ctx: disnake.ext.commands.Context, data: str):
     # resolve
     timestamp = ((message_id >> 22) + disnake.utils.DISCORD_EPOCH) / 1000
     execution_scope = ExecutionScope(tail_byte & 0x07)
-    user_data = (tail_byte & 0xf8) >> 3
-    collection_id = object_id.hex() if any(object_id) else None  # bytes is an iterable of int, check if it's all 0
+    user_data = (tail_byte & 0xF8) >> 3
+    collection_id = (
+        object_id.hex() if any(object_id) else None
+    )  # bytes is an iterable of int, check if it's all 0
 
     channel = ctx.bot.get_channel(channel_id)
     author = ctx.bot.get_user(author_id)
@@ -241,7 +266,6 @@ def verify_signature(ctx: disnake.ext.commands.Context, data: str):
         "scope": execution_scope.name,
         "user_data": user_data,
         "workshop_collection_id": collection_id,
-
         "guild_id": guild and guild.id,  # may be None
         "guild": guild and AliasGuild(guild),  # may be None
         "channel": channel and AliasChannel(channel),  # may be None

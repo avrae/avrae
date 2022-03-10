@@ -12,7 +12,14 @@ from ..results import DamageResult
 
 
 class Damage(Effect):
-    def __init__(self, damage: str, overheal: bool = False, higher: dict = None, cantripScale: bool = None, **kwargs):
+    def __init__(
+        self,
+        damage: str,
+        overheal: bool = False,
+        higher: dict = None,
+        cantripScale: bool = None,
+        **kwargs,
+    ):
         super().__init__("damage", **kwargs)
         self.damage = damage
         self.overheal = overheal
@@ -24,9 +31,9 @@ class Damage(Effect):
         out = super().to_dict()
         out.update({"damage": self.damage, "overheal": self.overheal})
         if self.higher is not None:
-            out['higher'] = self.higher
+            out["higher"] = self.higher
         if self.cantripScale is not None:
-            out['cantripScale'] = self.cantripScale
+            out["cantripScale"] = self.cantripScale
         return out
 
     def run(self, autoctx):
@@ -40,20 +47,20 @@ class Damage(Effect):
         args = autoctx.args
         damage = self.damage
         resistances = Resistances()
-        d_args = args.get('d', [], ephem=True)
-        c_args = args.get('c', [], ephem=True)
-        crit_arg = args.last('crit', None, bool, ephem=True)
-        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
-        max_arg = args.last('max', None, bool, ephem=True)
-        magic_arg = args.last('magical', None, bool, ephem=True)
-        silvered_arg = args.last('silvered', None, bool, ephem=True)
-        mi_arg = args.last('mi', None, int)
-        dtype_args = args.get('dtype', [], ephem=True)
-        critdice = sum(args.get('critdice', type_=int))
-        hide = args.last('h', type_=bool)
+        d_args = args.get("d", [], ephem=True)
+        c_args = args.get("c", [], ephem=True)
+        crit_arg = args.last("crit", None, bool, ephem=True)
+        nocrit = args.last("nocrit", default=False, type_=bool, ephem=True)
+        max_arg = args.last("max", None, bool, ephem=True)
+        magic_arg = args.last("magical", None, bool, ephem=True)
+        silvered_arg = args.last("silvered", None, bool, ephem=True)
+        mi_arg = args.last("mi", None, int)
+        dtype_args = args.get("dtype", [], ephem=True)
+        critdice = sum(args.get("critdice", type_=int))
+        hide = args.last("h", type_=bool)
 
         # character-specific arguments
-        if autoctx.character and 'critdice' not in args:
+        if autoctx.character and "critdice" not in args:
             critdice = autoctx.character.options.extra_crit_dice
 
         # combat-specific arguments
@@ -67,7 +74,7 @@ class Damage(Effect):
 
         # add on combatant damage effects (#224)
         if autoctx.combatant:
-            d_args.extend(autoctx.combatant.active_effects('d'))
+            d_args.extend(autoctx.combatant.active_effects("d"))
 
         # check if we actually need to care about the -d tag
         if self.contains_roll_meta(autoctx):
@@ -85,7 +92,7 @@ class Damage(Effect):
         # -d #
         for d_arg in d_args:
             d_ast = d20.parse(d_arg)
-            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
+            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, "+", d_ast.roll)
 
         # crit
         # nocrit (#1216)
@@ -100,7 +107,7 @@ class Damage(Effect):
         if in_crit:
             for c_arg in c_args:
                 c_ast = d20.parse(c_arg)
-                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', c_ast.roll)
+                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, "+", c_ast.roll)
 
         # max
         if max_arg:
@@ -112,17 +119,21 @@ class Damage(Effect):
         # magic arg (#853), magical effect (#1063)
         # silvered arg (#1544)
         always = set()
-        magical_effect = autoctx.combatant and autoctx.combatant.active_effects('magical')
+        magical_effect = autoctx.combatant and autoctx.combatant.active_effects(
+            "magical"
+        )
         if magical_effect or autoctx.is_spell or magic_arg:
-            always.add('magical')
-        silvered_effect = autoctx.combatant and autoctx.combatant.active_effects('silvered')
+            always.add("magical")
+        silvered_effect = autoctx.combatant and autoctx.combatant.active_effects(
+            "silvered"
+        )
         if silvered_effect or silvered_arg:
-            always.add('silvered')
+            always.add("silvered")
         # dtype transforms/overrides (#876)
         transforms = {}
         for dtype in dtype_args:
-            if '>' in dtype:
-                *froms, to = dtype.split('>')
+            if ">" in dtype:
+                *froms, to = dtype.split(">")
                 for frm in froms:
                     transforms[frm.strip()] = to.strip()
             else:
@@ -150,13 +161,15 @@ class Damage(Effect):
             autoctx.queue(f"**{roll_for}**: {result}")
         else:
             d20.utils.simplify_expr(dmgroll.expr)
-            autoctx.queue(f"**{roll_for}**: {d20.MarkdownStringifier().stringify(dmgroll.expr)}")
+            autoctx.queue(
+                f"**{roll_for}**: {d20.MarkdownStringifier().stringify(dmgroll.expr)}"
+            )
             autoctx.add_pm(str(autoctx.ctx.author.id), f"**{roll_for}**: {result}")
 
         autoctx.target.damage(autoctx, dmgroll.total, allow_overheal=self.overheal)
 
         # #1335
-        autoctx.metavars['lastDamage'] = dmgroll.total
+        autoctx.metavars["lastDamage"] = dmgroll.total
         return DamageResult(damage=dmgroll.total, damage_roll=dmgroll, in_crit=in_crit)
 
     def is_meta(self, autoctx):
@@ -165,18 +178,22 @@ class Damage(Effect):
 
     def contains_roll_meta(self, autoctx):
         """Check if the damage string contains the result of a Roll effect."""
-        return any(f"{{{k}}}" in self.damage for k, v in autoctx.metavars.items() if isinstance(v, RollEffectMetaVar))
+        return any(
+            f"{{{k}}}" in self.damage
+            for k, v in autoctx.metavars.items()
+            if isinstance(v, RollEffectMetaVar)
+        )
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
         try:
             damage = evaluator.transformed_str(self.damage)
-            evaluator.builtins['lastDamage'] = damage
+            evaluator.builtins["lastDamage"] = damage
         except draconic.DraconicException:
             damage = self.damage
-            evaluator.builtins['lastDamage'] = 0
+            evaluator.builtins["lastDamage"] = 0
 
         # damage/healing
-        if damage.startswith('-'):
+        if damage.startswith("-"):
             return f"{damage[1:].strip()} healing"
         return f"{damage} damage"

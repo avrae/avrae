@@ -12,7 +12,7 @@ class EmbedWithColor(discord.Embed):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.colour = random.randint(0, 0xffffff)
+        self.colour = random.randint(0, 0xFFFFFF)
 
 
 class EmbedWithAuthor(EmbedWithColor):
@@ -23,7 +23,9 @@ class EmbedWithAuthor(EmbedWithColor):
         :type ctx: utils.context.AvraeContext
         """
         super().__init__(**kwargs)
-        self.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
+        self.set_author(
+            name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url
+        )
 
 
 class HomebrewEmbedWithAuthor(EmbedWithAuthor):
@@ -31,7 +33,10 @@ class HomebrewEmbedWithAuthor(EmbedWithAuthor):
 
     def __init__(self, ctx, **kwargs):
         super().__init__(ctx, **kwargs)
-        self.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
+        self.set_footer(
+            text="Homebrew content.",
+            icon_url="https://avrae.io/assets/img/homebrew.png",
+        )
 
 
 class EmbedWithCharacter(discord.Embed):
@@ -41,7 +46,8 @@ class EmbedWithCharacter(discord.Embed):
         """:param name: bool - If True, sets author name to character name.
         :param image: bool - If True, shows character image as thumb if embedimage setting is true."""
         super().__init__(**kwargs)
-        if name: self.set_author(name=character.name)
+        if name:
+            self.set_author(name=character.name)
         if character.options.embed_image and image:
             self.set_thumbnail(url=character.image)
         self.colour = character.get_color()
@@ -52,10 +58,10 @@ class EmbedPaginator:
     EMBED_FIELD_MAX = 1024
     EMBED_DESC_MAX = 4096
     EMBED_TITLE_MAX = 256
-    CONTINUATION_FIELD_TITLE = '** **'
+    CONTINUATION_FIELD_TITLE = "** **"
 
-    def __init__(self, first_embed=None, copy_kwargs=('colour',), **embed_options):
-        self._current_field_name = ''
+    def __init__(self, first_embed=None, copy_kwargs=("colour",), **embed_options):
+        self._current_field_name = ""
         self._current_field_inline = False
         self._current_field = []
         self._field_count = 0
@@ -67,7 +73,9 @@ class EmbedPaginator:
             first_embed = discord.Embed(**embed_options)
 
         self._embed_count = len(first_embed)
-        self._default_embed_options = {c: getattr(first_embed, c) for c in copy_kwargs if hasattr(first_embed, c)}
+        self._default_embed_options = {
+            c: getattr(first_embed, c) for c in copy_kwargs if hasattr(first_embed, c)
+        }
         self._default_embed_options.update(embed_options)
         self._embeds = [first_embed]
 
@@ -81,7 +89,10 @@ class EmbedPaginator:
         embed can't fit the value. Note that this adds the title to the current embed, so you should call this
         first to add it to the first embed.
         """
-        if len(value) > self.EMBED_TITLE_MAX or len(value) + self._embed_count > self.EMBED_MAX:
+        if (
+            len(value) > self.EMBED_TITLE_MAX
+            or len(value) + self._embed_count > self.EMBED_MAX
+        ):
             raise ValueError("The current embed cannot fit this title.")
 
         self._current.title = value
@@ -93,13 +104,16 @@ class EmbedPaginator:
         embed can't fit the value. Note that this adds the description to the current embed, so you should call this
         first to add it to the first embed.
         """
-        if len(value) > self.EMBED_DESC_MAX or len(value) + self._embed_count > self.EMBED_MAX:
+        if (
+            len(value) > self.EMBED_DESC_MAX
+            or len(value) + self._embed_count > self.EMBED_MAX
+        ):
             raise ValueError("The current embed cannot fit this description.")
 
         self._current.description = value
         self._embed_count += len(value)
 
-    def add_field(self, name='', value='', inline=False):
+    def add_field(self, name="", value="", inline=False):
         """Add a new field to the current embed."""
         if len(name) > self.EMBED_TITLE_MAX:
             raise ValueError("This value is too large to store in an embed field.")
@@ -134,13 +148,20 @@ class EmbedPaginator:
         """Terminate the current field and write it to the last embed."""
         value = "\n".join(self._current_field)
 
-        if self._embed_count + len(value) + len(self._current_field_name) > self.EMBED_MAX:
+        if (
+            self._embed_count + len(value) + len(self._current_field_name)
+            > self.EMBED_MAX
+        ):
             self.close_embed()
 
-        self._current.add_field(name=self._current_field_name, value=value, inline=self._current_field_inline)
+        self._current.add_field(
+            name=self._current_field_name,
+            value=value,
+            inline=self._current_field_inline,
+        )
         self._embed_count += len(value) + len(self._current_field_name)
 
-        self._current_field_name = ''
+        self._current_field_name = ""
         self._current_field_inline = False
         self._current_field = []
         self._field_count = 0
@@ -156,10 +177,10 @@ class EmbedPaginator:
         kwargs = {}
         if self._footer_url:
             current_count += len(self._footer_url)
-            kwargs['icon_url'] = self._footer_url
+            kwargs["icon_url"] = self._footer_url
         if self._footer_text:
             current_count += len(self._footer_text)
-            kwargs['text'] = self._footer_text
+            kwargs["text"] = self._footer_text
         if current_count > self.EMBED_MAX:
             self.close_embed()
 
@@ -190,8 +211,10 @@ class EmbedPaginator:
             await destination.send(embed=embed, **kwargs)
 
     def __repr__(self):
-        return f'<EmbedPaginator _current_field_name={self._current_field_name} _field_count={self._field_count} ' \
-               f'_embed_count={self._embed_count}>'
+        return (
+            f"<EmbedPaginator _current_field_name={self._current_field_name} _field_count={self._field_count} "
+            f"_embed_count={self._embed_count}>"
+        )
 
 
 def add_fields_from_args(embed, _fields):
@@ -204,9 +227,9 @@ def add_fields_from_args(embed, _fields):
     if type(_fields) == list:
         for f in _fields:
             inline = False
-            title = f.split('|')[0] if '|' in f else '\u200b'
-            value = f.split('|', 1)[1] if '|' in f else f
-            if value.endswith('|inline'):
+            title = f.split("|")[0] if "|" in f else "\u200b"
+            value = f.split("|", 1)[1] if "|" in f else f
+            if value.endswith("|inline"):
                 inline = True
                 value = value[:-7]
             embed.add_field(name=title, value=value, inline=inline)
@@ -231,7 +254,7 @@ def set_maybe_long_desc(embed, desc):
     :param str desc: The description to add. Will overwrite existing description.
     """
     desc = chunk_text(trim_str(desc, 5000))
-    embed.description = ''.join(desc[:2]).strip()
+    embed.description = "".join(desc[:2]).strip()
     for piece in desc[2:]:
         embed.add_field(name="** **", value=piece.strip(), inline=False)
 

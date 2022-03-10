@@ -46,13 +46,15 @@ class DicecloudClient:
 
         def on_login(error, data):
             if data:
-                type(self).user_id = data.get('id')
+                type(self).user_id = data.get("id")
                 self.logged_in = True
             else:
                 log.warning(error)
                 raise LoginFailure()
 
-        self.meteor_client.login(config.DICECLOUD_USER, config.DICECLOUD_PASS, callback=on_login)
+        self.meteor_client.login(
+            config.DICECLOUD_USER, config.DICECLOUD_PASS, callback=on_login
+        )
         loops = 0
         while not self.logged_in and loops < 100:
             time.sleep(0.1)
@@ -74,13 +76,20 @@ class DicecloudClient:
 
         char = await self.get_character(char_id)
         if list_name:
-            list_id = next((l for l in char.get('spellLists', []) if l['name'].lower() == list_name.lower()), None)
+            list_id = next(
+                (
+                    l
+                    for l in char.get("spellLists", [])
+                    if l["name"].lower() == list_name.lower()
+                ),
+                None,
+            )
         else:
-            list_id = next((l for l in char.get('spellLists', [])), None)
+            list_id = next((l for l in char.get("spellLists", [])), None)
         return list_id
 
     async def get_character(self, charId):
-        return await self.http.get(f'/character/{charId}/json')
+        return await self.http.get(f"/character/{charId}/json")
 
     async def add_spell(self, character, spell):
         """Adds a spell to the dicecloud list."""
@@ -94,61 +103,78 @@ class DicecloudClient:
         """
         list_id = await self._get_list_id(character, spell_list)
         if not list_id:  # still
-            raise InsertFailure("No matching spell lists on origin sheet. Run `!update` if this seems incorrect.")
-        return await self.http.post(f'/api/character/{character.upstream[10:]}/spellList/{list_id}',
-                                    [s.to_dicecloud() for s in spells])
+            raise InsertFailure(
+                "No matching spell lists on origin sheet. Run `!update` if this seems incorrect."
+            )
+        return await self.http.post(
+            f"/api/character/{character.upstream[10:]}/spellList/{list_id}",
+            [s.to_dicecloud() for s in spells],
+        )
 
-    async def create_character(self, name: str = "New Character", gender: str = None, race: str = None,
-                               backstory: str = None):
-        data = {'name': name, 'writers': [self.user_id]}
+    async def create_character(
+        self,
+        name: str = "New Character",
+        gender: str = None,
+        race: str = None,
+        backstory: str = None,
+    ):
+        data = {"name": name, "writers": [self.user_id]}
         if gender is not None:
-            data['gender'] = gender
+            data["gender"] = gender
         if race is not None:
-            data['race'] = race
+            data["race"] = race
         if backstory is not None:
-            data['backstory'] = backstory
+            data["backstory"] = backstory
 
-        data['settings'] = {'viewPermission': 'public'}  # sharing is caring!
-        response = await self.http.post('/api/character', data)
-        return response['id']
+        data["settings"] = {"viewPermission": "public"}  # sharing is caring!
+        response = await self.http.post("/api/character", data)
+        return response["id"]
 
     async def delete_character(self, charId: str):
-        await self.http.delete(f'/api/character/{charId}')
+        await self.http.delete(f"/api/character/{charId}")
 
     async def get_user_id(self, username: str):
         username = urllib.parse.quote_plus(username)
-        userId = await self.http.get(f'/api/user?username={username}')
-        return userId['id']
+        userId = await self.http.get(f"/api/user?username={username}")
+        return userId["id"]
 
     async def transfer_ownership(self, charId: str, userId: str):
-        await self.http.put(f'/api/character/{charId}/owner', {'id': userId})
+        await self.http.put(f"/api/character/{charId}/owner", {"id": userId})
 
     async def insert_feature(self, charId, feature):
         return (await self.insert_features(charId, [feature]))[0]
 
     async def insert_features(self, charId: str, features: list):
-        response = await self.http.post(f'/api/character/{charId}/feature', [f.to_dict() for f in features])
+        response = await self.http.post(
+            f"/api/character/{charId}/feature", [f.to_dict() for f in features]
+        )
         return response
 
     async def insert_proficiency(self, charId, prof):
         return (await self.insert_proficiencies(charId, [prof]))[0]
 
     async def insert_proficiencies(self, charId: str, profs: list):
-        response = await self.http.post(f'/api/character/{charId}/prof', [p.to_dict() for p in profs])
+        response = await self.http.post(
+            f"/api/character/{charId}/prof", [p.to_dict() for p in profs]
+        )
         return response
 
     async def insert_effect(self, charId, effect):
         return (await self.insert_effects(charId, [effect]))[0]
 
     async def insert_effects(self, charId: str, effects: list):
-        response = await self.http.post(f'/api/character/{charId}/effect', [e.to_dict() for e in effects])
+        response = await self.http.post(
+            f"/api/character/{charId}/effect", [e.to_dict() for e in effects]
+        )
         return response
 
     async def insert_class(self, charId, klass):
         return (await self.insert_classes(charId, [klass]))[0]
 
     async def insert_classes(self, charId: str, classes: list):
-        response = await self.http.post(f'/api/character/{charId}/class', [c.to_dict() for c in classes])
+        response = await self.http.post(
+            f"/api/character/{charId}/class", [c.to_dict() for c in classes]
+        )
         return response
 
 

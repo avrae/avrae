@@ -27,13 +27,15 @@ class SimpleCombat:
         self.turn_num = self._combat.turn_num
         current = self._combat.current_combatant
         if current:
-            if current.type == init.CombatantType.GROUP:  # isinstance(current, init.CombatantGroup):
+            if (
+                current.type == init.CombatantType.GROUP
+            ):  # isinstance(current, init.CombatantGroup):
                 self.current = SimpleGroup(current)
             else:
                 self.current = SimpleCombatant(current)
         else:
             self.current = None
-        self.name = self._combat.options.get('name')
+        self.name = self._combat.options.get("name")
 
     @classmethod
     def from_ctx(cls, ctx):
@@ -95,7 +97,9 @@ class SimpleCombat:
         """
         key = str(k)
         value = str(v)
-        previous_metadata_size = sum(len(ke) + len(va) for ke, va in self._combat._metadata.items() if ke != key)
+        previous_metadata_size = sum(
+            len(ke) + len(va) for ke, va in self._combat._metadata.items() if ke != key
+        )
         new_metadata_size = len(key) + len(value)
         if previous_metadata_size + new_metadata_size > MAX_METADATA_SIZE:
             raise ValueError("Combat metadata is too large")
@@ -147,8 +151,12 @@ class SimpleCombat:
     # private functions
     def func_set_character(self, character):
         me = next(
-            (c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
-            None
+            (
+                c
+                for c in self._combat.get_combatants()
+                if getattr(c, "character_id", None) == character.upstream
+            ),
+            None,
         )
         if not me:
             return
@@ -190,7 +198,9 @@ class SimpleCombatant(AliasStatBlock):
             self._race = combatant.character.race
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
-        self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
+        self.level = (
+            self._combatant.spellbook.caster_level
+        )  # use .spellbook.caster_level or .levels.total_level instead
 
     @property
     def id(self):
@@ -261,7 +271,7 @@ class SimpleCombatant(AliasStatBlock):
         except ValueError:
             raise InvalidSaveType
 
-        sb = self._combatant.active_effects('sb')
+        sb = self._combatant.active_effects("sb")
         saveroll = save.d20(base_adv=adv)
         if sb:
             saveroll = f'{saveroll}+{"+".join(sb)}'
@@ -293,27 +303,28 @@ class SimpleCombatant(AliasStatBlock):
 
         class _SimpleAutomationContext(AutomationContext):
             def __init__(self, caster, target, args, combat, crit=False):
-                super(_SimpleAutomationContext, self).__init__(None, None, caster, [target], args, combat)
+                super(_SimpleAutomationContext, self).__init__(
+                    None, None, caster, [target], args, combat
+                )
                 self.in_crit = crit
                 self.target = AutomationTarget(target)
 
-        args = ParsedArguments.from_dict(
-            {
-                'critdice': [critdice]
-            }
-        )
+        args = ParsedArguments.from_dict({"critdice": [critdice]})
         if d:
-            args['d'] = d
+            args["d"] = d
         if c:
-            args['c'] = c
+            args["c"] = c
         damage = Damage(dice_str, overheal=overheal)
-        autoctx = _SimpleAutomationContext(StatBlock("generic"), self._combatant, args, self._combatant.combat, crit)
+        autoctx = _SimpleAutomationContext(
+            StatBlock("generic"), self._combatant, args, self._combatant.combat, crit
+        )
 
         result = damage.run(autoctx)
         roll_for = "Damage" if not result.in_crit else "Damage (CRIT!)"
         return {
-            'damage': f"**{roll_for}**: {result.damage_roll.result}", 'total': result.damage,
-            'roll': SimpleRollResult(result.damage_roll)
+            "damage": f"**{roll_for}**: {result.damage_roll.result}",
+            "total": result.damage,
+            "roll": SimpleRollResult(result.damage_roll),
         }
 
     def set_ac(self, ac: int):
@@ -399,8 +410,14 @@ class SimpleCombatant(AliasStatBlock):
         return None
 
     def add_effect(
-        self, name: str, args: str, duration: int = -1, concentration: bool = False, parent=None,
-        end: bool = False, desc: str = None
+        self,
+        name: str,
+        args: str,
+        duration: int = -1,
+        concentration: bool = False,
+        parent=None,
+        end: bool = False,
+        desc: str = None,
     ):
         """
         Adds an effect to the combatant.
@@ -422,8 +439,14 @@ class SimpleCombatant(AliasStatBlock):
         if existing:
             existing.remove()
         effectObj = init.Effect.new(
-            self._combatant.combat, self._combatant, duration=duration, name=name,
-            effect_args=args, concentration=concentration, tick_on_end=end, desc=desc
+            self._combatant.combat,
+            self._combatant,
+            duration=duration,
+            name=name,
+            effect_args=args,
+            concentration=concentration,
+            tick_on_end=end,
+            desc=desc,
         )
         if parent:
             effectObj.set_parent(parent._effect)
@@ -474,7 +497,9 @@ class SimpleCombatant(AliasStatBlock):
         """
         return self.max_hp
 
-    def mod_hp(self, mod: int, overheal: bool = False):  # deprecated - use modify_hp instead
+    def mod_hp(
+        self, mod: int, overheal: bool = False
+    ):  # deprecated - use modify_hp instead
         """
         .. deprecated:: 2.5.0
             Use ``SimpleCombatant.modify_hp()`` instead.
@@ -540,23 +565,27 @@ class SimpleGroup:
 
     def get_combatant(self, name, strict=None):
         """
-       Gets a :class:`~aliasing.api.combat.SimpleCombatant` from the group.
+        Gets a :class:`~aliasing.api.combat.SimpleCombatant` from the group.
 
-        :param str name: The name of the combatant to get.
-        :param strict: Whether combatant name must be a full case insensitive match.
-            If this is ``None`` (default), attempts a strict match with fallback to partial match.
-            If this is ``False``, it returns the first partial match.
-            If this is ``True``, it will only return a strict match.
-        :return: The combatant or None.
-        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
+         :param str name: The name of the combatant to get.
+         :param strict: Whether combatant name must be a full case insensitive match.
+             If this is ``None`` (default), attempts a strict match with fallback to partial match.
+             If this is ``False``, it returns the first partial match.
+             If this is ``True``, it will only return a strict match.
+         :return: The combatant or None.
+         :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
         name = str(name)
         combatant = None
 
         if strict is not False:
-            combatant = next((c for c in self.combatants if name.lower() == c.name.lower()), None)
+            combatant = next(
+                (c for c in self.combatants if name.lower() == c.name.lower()), None
+            )
         if not combatant and not strict:
-            combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
+            combatant = next(
+                (c for c in self.combatants if name.lower() in c.name.lower()), None
+            )
         return combatant
 
     def set_init(self, init: int):
@@ -613,7 +642,9 @@ class SimpleEffect:
         :rtype: list of :class:`~aliasing.api.combat.SimpleEffect`
         """
         if self._children is None:
-            self._children = [SimpleEffect(e) for e in self._effect.get_children_effects()]
+            self._children = [
+                SimpleEffect(e) for e in self._effect.get_children_effects()
+            ]
         return self._children
 
     def set_parent(self, parent):

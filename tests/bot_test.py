@@ -14,9 +14,11 @@ async def test_basic_commands(avrae, dhttp):
     await dhttp.receive_delete()
     await dhttp.receive_message(r".*: foobar", regex=True)
 
-    avrae.message("!embed -f foo|bar -title \"Hello world\"", dm=True)
+    avrae.message('!embed -f foo|bar -title "Hello world"', dm=True)
     await dhttp.receive_delete(dm=True)
-    await dhttp.receive_message(embed=discord.Embed(title=r"Hello \w+"), regex=True, dm=True)
+    await dhttp.receive_message(
+        embed=discord.Embed(title=r"Hello \w+"), regex=True, dm=True
+    )
 
 
 async def test_nonexistant_commands(avrae, dhttp):

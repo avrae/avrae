@@ -3,6 +3,7 @@ from cogs5e.models.errors import AvraeException
 
 class DicecloudException(AvraeException):
     """A base exception for exceptions relating to the Dicecloud Meteor client to stem from."""
+
     pass
 
 

@@ -20,9 +20,17 @@ class Combat:
     _cache = cachetools.TTLCache(maxsize=50, ttl=10)
 
     def __init__(
-        self, channel_id, message_id, dm_id, options, ctx,
-        combatants=None, round_num=0, turn_num=0, current_index=None,
-        metadata=None
+        self,
+        channel_id,
+        message_id,
+        dm_id,
+        options,
+        ctx,
+        combatants=None,
+        round_num=0,
+        turn_num=0,
+        current_index=None,
+        metadata=None,
     ):
         if combatants is None:
             combatants = []
@@ -65,11 +73,19 @@ class Combat:
     @classmethod
     async def from_dict(cls, raw, ctx):
         inst = cls(
-            raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-            raw['turn'], raw['current'], raw.get('metadata')
+            raw["channel"],
+            raw["summary"],
+            raw["dm"],
+            raw["options"],
+            ctx,
+            [],
+            raw["round"],
+            raw["turn"],
+            raw["current"],
+            raw.get("metadata"),
         )
-        for c in raw['combatants']:
-            ctype = CombatantType(c['type'])
+        for c in raw["combatants"]:
+            ctype = CombatantType(c["type"])
             if ctype == CombatantType.GENERIC:
                 inst._combatants.append(Combatant.from_dict(c, ctx, inst))
             elif ctype == CombatantType.MONSTER:
@@ -100,11 +116,19 @@ class Combat:
     @classmethod
     def from_dict_sync(cls, raw, ctx):
         inst = cls(
-            raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-            raw['turn'], raw['current'], raw.get('metadata')
+            raw["channel"],
+            raw["summary"],
+            raw["dm"],
+            raw["options"],
+            ctx,
+            [],
+            raw["round"],
+            raw["turn"],
+            raw["current"],
+            raw.get("metadata"),
         )
-        for c in raw['combatants']:
-            ctype = CombatantType(c['type'])
+        for c in raw["combatants"]:
+            ctype = CombatantType(c["type"])
             if ctype == CombatantType.GENERIC:
                 inst._combatants.append(Combatant.from_dict(c, ctx, inst))
             elif ctype == CombatantType.MONSTER:
@@ -119,9 +143,15 @@ class Combat:
 
     def to_dict(self):
         return {
-            'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
-            'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-            'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata
+            "channel": self.channel,
+            "summary": self.summary,
+            "dm": self.dm,
+            "options": self.options,
+            "combatants": [c.to_dict() for c in self._combatants],
+            "turn": self.turn_num,
+            "round": self.round_num,
+            "current": self._current_index,
+            "metadata": self._metadata,
         }
 
     # members
@@ -266,9 +296,13 @@ class Combat:
 
         current = None
         if self._current_index is not None:
-            current = next((c for c in self._combatants if c.index == self._current_index), None)
+            current = next(
+                (c for c in self._combatants if c.index == self._current_index), None
+            )
 
-        self._combatants = sorted(self._combatants, key=lambda k: (k.init, int(k.init_skill)), reverse=True)
+        self._combatants = sorted(
+            self._combatants, key=lambda k: (k.init, int(k.init_skill)), reverse=True
+        )
         for n, c in enumerate(self._combatants):
             c.index = n
 
@@ -297,9 +331,15 @@ class Combat:
 
         combatant = None
         if strict is not False:
-            combatant = next((c for c in self.get_combatants() if name.lower() == c.name.lower()), None)
+            combatant = next(
+                (c for c in self.get_combatants() if name.lower() == c.name.lower()),
+                None,
+            )
         if not combatant and not strict:
-            combatant = next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
+            combatant = next(
+                (c for c in self.get_combatants() if name.lower() in c.name.lower()),
+                None,
+            )
         return combatant
 
     def get_group(self, name, create=None, strict=None):
@@ -315,14 +355,20 @@ class Combat:
             If this is ``True``, it will only return a strict match.
         :return: The combatant group.
         """
-        if name in self._combatant_id_map and isinstance(self._combatant_id_map[name], CombatantGroup):
+        if name in self._combatant_id_map and isinstance(
+            self._combatant_id_map[name], CombatantGroup
+        ):
             return self._combatant_id_map[name]
 
         grp = None
         if strict is not False:
-            grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
+            grp = next(
+                (g for g in self.get_groups() if g.name.lower() == name.lower()), None
+            )
         if not grp and not strict:
-            grp = next((g for g in self.get_groups() if name.lower() in g.name.lower()), None)
+            grp = next(
+                (g for g in self.get_groups() if name.lower() in g.name.lower()), None
+            )
 
         if grp is None and create is not None:
             grp = CombatantGroup.new(self, name, init=create, ctx=self.ctx)
@@ -356,8 +402,9 @@ class Combat:
 
         order = []
         for combatant, init_roll in sorted(
-                rolls.items(), key=lambda r: (r[1].total, int(r[0].init_skill)),
-                reverse=True
+            rolls.items(),
+            key=lambda r: (r[1].total, int(r[0].init_skill)),
+            reverse=True,
         ):
             order.append(f"{init_roll.result}: {combatant.name}")
 
@@ -383,8 +430,12 @@ class Combat:
         :return: The selected Combatant, or None if the search failed.
         """
         return await search_and_select(
-            self.ctx, self.get_combatants(select_group), name, lambda c: c.name,
-            message=choice_message, selectkey=lambda c: f"{c.name} {c.hp_str()}"
+            self.ctx,
+            self.get_combatants(select_group),
+            name,
+            lambda c: c.name,
+            message=choice_message,
+            selectkey=lambda c: f"{c.name} {c.hp_str()}",
         )
 
     def advance_turn(self):
@@ -402,7 +453,7 @@ class Combat:
             self._current_index = 0
             self._round += 1
         elif self.index + 1 >= len(self._combatants):  # new round
-            if self.options.get('dynamic'):
+            if self.options.get("dynamic"):
                 messages.append(f"New initiatives:\n{self.reroll_dynamic()}")
             self._current_index = 0
             self._round += 1
@@ -458,7 +509,7 @@ class Combat:
         for com in self.get_combatants():
             com.on_turn(num_rounds)
             com.on_turn_end(num_rounds)
-        if self.options.get('dynamic'):
+        if self.options.get("dynamic"):
             messages.append(f"New initiatives:\n{self.reroll_dynamic()}")
 
         return messages
@@ -485,14 +536,18 @@ class Combat:
             combatants = combatant.get_combatants()
             combatant_statuses = "\n".join([co.get_status() for co in combatants])
             mentions = ", ".join({co.controller_mention() for co in combatants})
-            out = f"**Initiative {self.turn_num} (round {self.round_num})**: {combatant.name} ({mentions})\n" \
-                  f"```md\n{combatant_statuses}```"
+            out = (
+                f"**Initiative {self.turn_num} (round {self.round_num})**: {combatant.name} ({mentions})\n"
+                f"```md\n{combatant_statuses}```"
+            )
 
         else:
-            out = f"**Initiative {self.turn_num} (round {self.round_num})**: {combatant.name} " \
-                  f"({combatant.controller_mention()})\n```md\n{combatant.get_status()}```"
+            out = (
+                f"**Initiative {self.turn_num} (round {self.round_num})**: {combatant.name} "
+                f"({combatant.controller_mention()})\n```md\n{combatant.get_status()}```"
+            )
 
-        if self.options.get('turnnotif'):
+        if self.options.get("turnnotif"):
             nextTurn = self.next_combatant
             out += f"**Next up**: {nextTurn.name} ({nextTurn.controller_mention()})\n"
         return out
@@ -503,34 +558,45 @@ class Combat:
             return discord.AllowedMentions.none()
         if isinstance(self.current_combatant, CombatantGroup):
             # noinspection PyUnresolvedReferences
-            user_ids = {discord.Object(id=int(comb.controller)) for comb in self.current_combatant.get_combatants()}
+            user_ids = {
+                discord.Object(id=int(comb.controller))
+                for comb in self.current_combatant.get_combatants()
+            }
         else:
             user_ids = {discord.Object(id=int(self.current_combatant.controller))}
 
-        if self.options.get('turnnotif') and self.next_combatant is not None:
+        if self.options.get("turnnotif") and self.next_combatant is not None:
             user_ids.add(discord.Object(id=int(self.next_combatant.controller)))
         return discord.AllowedMentions(users=list(user_ids))
 
     def get_summary(self, private=False):
         """Returns the generated summary message (pinned) content."""
         combatants = self._combatants
-        name = self.options.get('name') if self.options.get('name') else "Current initiative"
+        name = (
+            self.options.get("name")
+            if self.options.get("name")
+            else "Current initiative"
+        )
 
         out = f"```md\n{name}: {self.turn_num} (round {self.round_num})\n"
         out += f"{'=' * (len(out) - 7)}\n"
 
         combatant_strs = []
         for c in combatants:
-            combatant_str = ("# " if self.index == c.index else "  ") + c.get_summary(private)
+            combatant_str = ("# " if self.index == c.index else "  ") + c.get_summary(
+                private
+            )
             combatant_strs.append(combatant_str)
 
         out += "{}```"
-        if len(out.format('\n'.join(combatant_strs))) > 2000:
+        if len(out.format("\n".join(combatant_strs))) > 2000:
             combatant_strs = []
             for c in combatants:
-                combatant_str = ("# " if self.index == c.index else "  ") + c.get_summary(private, no_notes=True)
+                combatant_str = (
+                    "# " if self.index == c.index else "  "
+                ) + c.get_summary(private, no_notes=True)
                 combatant_strs.append(combatant_str)
-        return out.format('\n'.join(combatant_strs))
+        return out.format("\n".join(combatant_strs))
 
     # db
     async def commit(self):
@@ -543,7 +609,7 @@ class Combat:
         await self.ctx.bot.mdb.combats.update_one(
             {"channel": self.channel},
             {"$set": self.to_dict(), "$currentDate": {"lastchanged": True}},
-            upsert=True
+            upsert=True,
         )
 
     async def final(self):

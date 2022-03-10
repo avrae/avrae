@@ -16,7 +16,13 @@ class CoinsArgs:
 
     @property
     def total(self) -> float:
-        return (self.pp * 10) + self.gp + (self.ep * 0.5) + (self.sp * 0.1) + (self.cp * 0.01)
+        return (
+            (self.pp * 10)
+            + self.gp
+            + (self.ep * 0.5)
+            + (self.sp * 0.1)
+            + (self.cp * 0.01)
+        )
 
 
 class Coinpurse(HasIntegrationMixin):
@@ -49,7 +55,13 @@ class Coinpurse(HasIntegrationMixin):
 
     @property
     def total(self):
-        return (self.pp * 10) + self.gp + (self.ep * 0.5) + (self.sp * 0.1) + (self.cp * 0.01)
+        return (
+            (self.pp * 10)
+            + self.gp
+            + (self.ep * 0.5)
+            + (self.sp * 0.1)
+            + (self.cp * 0.01)
+        )
 
     @classmethod
     def from_dict(cls, d):
@@ -57,7 +69,11 @@ class Coinpurse(HasIntegrationMixin):
 
     def to_dict(self):
         return {
-            "pp": self.pp, "gp": self.gp, "ep": self.ep, "sp": self.sp, "cp": self.cp
+            "pp": self.pp,
+            "gp": self.gp,
+            "ep": self.ep,
+            "sp": self.sp,
+            "cp": self.cp,
         }
 
     def auto_convert_down(self, coins: CoinsArgs) -> CoinsArgs:
@@ -68,23 +84,25 @@ class Coinpurse(HasIntegrationMixin):
         This modifies the given ``CoinsArgs`` in place.
         """
         if self.cp + coins.cp < 0:
-            sp_borrowed = ((coins.cp + self.cp) // 10)
+            sp_borrowed = (coins.cp + self.cp) // 10
             coins.cp -= sp_borrowed * 10
             coins.sp += sp_borrowed
         if self.sp + coins.sp < 0:
-            ep_borrowed = ((coins.sp + self.sp) // 5)
+            ep_borrowed = (coins.sp + self.sp) // 5
             coins.sp -= ep_borrowed * 5
             coins.ep += ep_borrowed
         if self.ep + coins.ep < 0:
-            gp_borrowed = ((coins.ep + self.ep) // 2)
+            gp_borrowed = (coins.ep + self.ep) // 2
             coins.ep -= gp_borrowed * 2
             coins.gp += gp_borrowed
         if self.gp + coins.gp < 0:
-            pp_borrowed = ((coins.gp + self.gp) // 10)
+            pp_borrowed = (coins.gp + self.gp) // 10
             coins.gp -= pp_borrowed * 10
             coins.pp += pp_borrowed
         if self.pp + coins.pp < 0:
-            raise InvalidArgument("You do not have enough coins to cover this transaction.")
+            raise InvalidArgument(
+                "You do not have enough coins to cover this transaction."
+            )
         return coins
 
     def consolidate_coins(self) -> CoinsArgs:
@@ -99,33 +117,41 @@ class Coinpurse(HasIntegrationMixin):
         total_cp -= new_sp * 10
         new_cp = int(total_cp)
 
-        delta = CoinsArgs(pp=new_pp - self.pp, gp=new_gp - self.gp, ep=new_ep - self.ep, sp=new_sp - self.sp,
-                          cp=new_cp - self.cp)
+        delta = CoinsArgs(
+            pp=new_pp - self.pp,
+            gp=new_gp - self.gp,
+            ep=new_ep - self.ep,
+            sp=new_sp - self.sp,
+            cp=new_cp - self.cp,
+        )
         self.set_currency(pp=new_pp, gp=new_gp, ep=new_ep, sp=new_sp, cp=new_cp)
 
         return delta
 
     def update_currency(self, coins=None):
-        self.set_currency(self.pp + coins.pp, self.gp + coins.gp, self.ep + coins.ep,
-                          self.sp + coins.sp, self.cp + coins.cp)
+        self.set_currency(
+            self.pp + coins.pp,
+            self.gp + coins.gp,
+            self.ep + coins.ep,
+            self.sp + coins.sp,
+            self.cp + coins.cp,
+        )
 
-    def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
-        if not all((
-            isinstance(pp, int),
-            isinstance(gp, int),
-            isinstance(ep, int),
-            isinstance(sp, int),
-            isinstance(cp, int)
-        )):
+    def set_currency(
+        self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0
+    ):
+        if not all(
+            (
+                isinstance(pp, int),
+                isinstance(gp, int),
+                isinstance(ep, int),
+                isinstance(sp, int),
+                isinstance(cp, int),
+            )
+        ):
             raise TypeError("All values must be numeric.")
 
-        if not all((
-            pp >= 0,
-            gp >= 0,
-            ep >= 0,
-            sp >= 0,
-            cp >= 0
-        )):
+        if not all((pp >= 0, gp >= 0, ep >= 0, sp >= 0, cp >= 0)):
             raise InvalidArgument("You cannot put a currency into negative numbers.")
 
         self.pp = pp

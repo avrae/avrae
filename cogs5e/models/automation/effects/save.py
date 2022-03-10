@@ -18,8 +18,8 @@ class Save(Effect):
 
     @classmethod
     def from_data(cls, data):
-        data['fail'] = Effect.deserialize(data['fail'])
-        data['success'] = Effect.deserialize(data['success'])
+        data["fail"] = Effect.deserialize(data["fail"])
+        data["success"] = Effect.deserialize(data["success"])
         return super(Save, cls).from_data(data)
 
     def to_dict(self):
@@ -34,15 +34,17 @@ class Save(Effect):
     def run(self, autoctx):
         super().run(autoctx)
         if autoctx.target is None:
-            raise TargetException("Tried to make a save without a target! Make sure all Save effects are inside "
-                                  "of a Target effect.")
+            raise TargetException(
+                "Tried to make a save without a target! Make sure all Save effects are inside "
+                "of a Target effect."
+            )
 
         # ==== args ====
-        save = autoctx.args.last('save') or self.stat
-        sb = autoctx.args.get('sb', ephem=True)
-        auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
-        auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
-        hide = autoctx.args.last('h', type_=bool)
+        save = autoctx.args.last("save") or self.stat
+        sb = autoctx.args.get("sb", ephem=True)
+        auto_pass = autoctx.args.last("pass", type_=bool, ephem=True)
+        auto_fail = autoctx.args.last("fail", type_=bool, ephem=True)
+        hide = autoctx.args.last("h", type_=bool)
 
         # ==== dc ====
         dc_override = None
@@ -54,15 +56,26 @@ class Save(Effect):
 
         # dc hierarchy: arg > self.dc > spell cast override > spellbook dc
         dc = dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
-        if 'dc' in autoctx.args:
-            dc = maybe_mod(autoctx.args.last('dc'), dc)
+        if "dc" in autoctx.args:
+            dc = maybe_mod(autoctx.args.last("dc"), dc)
 
         if dc is None:
-            raise NoSpellDC("No spell save DC found. Use the `-dc` argument to specify one!")
+            raise NoSpellDC(
+                "No spell save DC found. Use the `-dc` argument to specify one!"
+            )
         try:
-            save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',
-                                          'intelligenceSave', 'wisdomSave', 'charismaSave') if
-                              save.lower() in s.lower())
+            save_skill = next(
+                s
+                for s in (
+                    "strengthSave",
+                    "dexteritySave",
+                    "constitutionSave",
+                    "intelligenceSave",
+                    "wisdomSave",
+                    "charismaSave",
+                )
+                if save.lower() in s.lower()
+            )
             stat = save_skill[:3]
         except StopIteration:
             raise InvalidSaveType()
@@ -70,27 +83,27 @@ class Save(Effect):
         # ==== ieffects ====
         if autoctx.target.combatant:
             # Combine args/ieffect advantages - adv/dis (#1552)
-            sadv_effects = autoctx.target.combatant.active_effects('sadv')
-            sdis_effects = autoctx.target.combatant.active_effects('sdis')
-            sadv = 'all' in sadv_effects or stat in sadv_effects
-            sdis = 'all' in sdis_effects or stat in sdis_effects
+            sadv_effects = autoctx.target.combatant.active_effects("sadv")
+            sdis_effects = autoctx.target.combatant.active_effects("sdis")
+            sadv = "all" in sadv_effects or stat in sadv_effects
+            sdis = "all" in sdis_effects or stat in sdis_effects
             adv = reconcile_adv(
-                adv=autoctx.args.last('sadv', type_=bool, ephem=True) or sadv,
-                dis=autoctx.args.last('sdis', type_=bool, ephem=True) or sdis
+                adv=autoctx.args.last("sadv", type_=bool, ephem=True) or sadv,
+                dis=autoctx.args.last("sdis", type_=bool, ephem=True) or sdis,
             )
         else:
-            adv = autoctx.args.adv(custom={'adv': 'sadv', 'dis': 'sdis'})
+            adv = autoctx.args.adv(custom={"adv": "sadv", "dis": "sdis"})
 
         # ==== execution ====
         save_roll = None
-        autoctx.metavars['lastSaveRollTotal'] = 0
-        autoctx.metavars['lastSaveNaturalRoll'] = 0  # 1495
-        autoctx.metavars['lastSaveDC'] = dc
-        autoctx.metavars['lastSaveAbility'] = verbose_stat(stat)
+        autoctx.metavars["lastSaveRollTotal"] = 0
+        autoctx.metavars["lastSaveNaturalRoll"] = 0  # 1495
+        autoctx.metavars["lastSaveDC"] = dc
+        autoctx.metavars["lastSaveAbility"] = verbose_stat(stat)
         autoctx.meta_queue(f"**DC**: {dc}")
 
         if not autoctx.target.is_simple:
-            save_blurb = f'{stat.upper()} Save'
+            save_blurb = f"{stat.upper()} Save"
             if auto_pass:
                 is_success = True
                 autoctx.queue(f"**{save_blurb}:** Automatic success!")
@@ -105,10 +118,10 @@ class Save(Effect):
                 # get natural roll
                 d20_value = d20.utils.leftmost(save_roll.expr).total
 
-                autoctx.metavars['lastSaveRollTotal'] = save_roll.total  # 1362
-                autoctx.metavars['lastSaveNaturalRoll'] = d20_value  # 1495
+                autoctx.metavars["lastSaveRollTotal"] = save_roll.total  # 1362
+                autoctx.metavars["lastSaveNaturalRoll"] = d20_value  # 1495
 
-                success_str = ("; Success!" if is_success else "; Failure!")
+                success_str = "; Success!" if is_success else "; Failure!"
                 out = f"**{save_blurb}**: {save_roll.result}{success_str}"
                 if not hide:
                     autoctx.queue(out)
@@ -116,7 +129,7 @@ class Save(Effect):
                     autoctx.add_pm(str(autoctx.ctx.author.id), out)
                     autoctx.queue(f"**{save_blurb}**: 1d20...{success_str}")
         else:
-            autoctx.meta_queue(f'{stat.upper()} Save')
+            autoctx.meta_queue(f"{stat.upper()} Save")
             is_success = False
 
         # Disable critical damage state for children (#1556)
@@ -130,15 +143,21 @@ class Save(Effect):
 
         autoctx.in_save = original  # Restore proper crit state (#1556)
 
-        return SaveResult(dc=dc, ability=save_skill, save_roll=save_roll, adv=adv, did_save=is_success,
-                          children=children)
+        return SaveResult(
+            dc=dc,
+            ability=save_skill,
+            save_roll=save_roll,
+            adv=adv,
+            did_save=is_success,
+            children=children,
+        )
 
     def on_success(self, autoctx):
-        autoctx.metavars['lastSaveDidPass'] = True
+        autoctx.metavars["lastSaveDidPass"] = True
         return self.run_children(self.success, autoctx)
 
     def on_fail(self, autoctx):
-        autoctx.metavars['lastSaveDidPass'] = False
+        autoctx.metavars["lastSaveDidPass"] = False
         return self.run_children(self.fail, autoctx)
 
     def build_str(self, caster, evaluator):

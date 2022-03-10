@@ -21,11 +21,16 @@ class DicecloudIntegration(LiveIntegration):
     async def _do_sync_hp(self):
         try:
             DicecloudClient.getInstance().meteor_client.update(
-                'characters',
-                {'_id': self.character.upstream_id},
-                {'$set': {
-                    "hitPoints.adjustment": self.character.hp - self.character.max_hp}
-                }, callback=update_callback)
+                "characters",
+                {"_id": self.character.upstream_id},
+                {
+                    "$set": {
+                        "hitPoints.adjustment": self.character.hp
+                        - self.character.max_hp
+                    }
+                },
+                callback=update_callback,
+            )
         except MeteorClient.MeteorClientException:
             pass
 
@@ -35,12 +40,20 @@ class DicecloudIntegration(LiveIntegration):
     async def _do_sync_slots(self):
         spell_dict = {}
         for lvl in range(1, 10):
-            spell_dict[f'level{lvl}SpellSlots.adjustment'] = \
-                self.character.spellbook.get_slots(lvl) - self.character.spellbook.get_max_slots(lvl)
+            spell_dict[
+                f"level{lvl}SpellSlots.adjustment"
+            ] = self.character.spellbook.get_slots(
+                lvl
+            ) - self.character.spellbook.get_max_slots(
+                lvl
+            )
         try:
-            DicecloudClient.getInstance().meteor_client.update('characters', {'_id': self.character.upstream[10:]},
-                                                               {'$set': spell_dict},
-                                                               callback=update_callback)
+            DicecloudClient.getInstance().meteor_client.update(
+                "characters",
+                {"_id": self.character.upstream[10:]},
+                {"$set": spell_dict},
+                callback=update_callback,
+            )
         except MeteorClient.MeteorClientException:
             pass
 
@@ -48,28 +61,34 @@ class DicecloudIntegration(LiveIntegration):
         used = consumable.get_max() - consumable.value
         try:
             if consumable.live_id in CLASS_RESOURCES:
-                DicecloudClient.getInstance().meteor_client.update('characters',
-                                                                   {'_id': self.character.upstream[10:]},
-                                                                   {'$set': {
-                                                                       f"{consumable.live_id}.adjustment": -used}},
-                                                                   callback=update_callback)
+                DicecloudClient.getInstance().meteor_client.update(
+                    "characters",
+                    {"_id": self.character.upstream[10:]},
+                    {"$set": {f"{consumable.live_id}.adjustment": -used}},
+                    callback=update_callback,
+                )
             else:
-                DicecloudClient.getInstance().meteor_client.update('features', {'_id': consumable.live_id},
-                                                                   {'$set': {"used": used}},
-                                                                   callback=update_callback)
+                DicecloudClient.getInstance().meteor_client.update(
+                    "features",
+                    {"_id": consumable.live_id},
+                    {"$set": {"used": used}},
+                    callback=update_callback,
+                )
         except MeteorClient.MeteorClientException:
             pass
 
     async def _do_sync_death_saves(self):
         try:
             DicecloudClient.getInstance().meteor_client.update(
-                'characters',
-                {'_id': self.character.upstream_id},
-                {'$set': {
-                    "deathSave.pass": self.character.death_saves.successes,
-                    "deathSave.fail": self.character.death_saves.fails
-                }},
-                callback=update_callback
+                "characters",
+                {"_id": self.character.upstream_id},
+                {
+                    "$set": {
+                        "deathSave.pass": self.character.death_saves.successes,
+                        "deathSave.fail": self.character.death_saves.fails,
+                    }
+                },
+                callback=update_callback,
             )
         except MeteorClient.MeteorClientException:
             pass

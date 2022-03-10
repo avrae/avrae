@@ -21,10 +21,8 @@ class CharacterStorageServiceClient(BaseClient):
         :type character_ids: list[int]
         :rtype: SimplifiedCharacterDataResponse
         """
-        data = {
-            "characterIds": character_ids
-        }
-        resp = await self.post(ddb_user, '/characters', json=data)
+        data = {"characterIds": character_ids}
+        resp = await self.post(ddb_user, "/characters", json=data)
         return SimplifiedCharacterDataResponse.parse_obj(resp)
 
 

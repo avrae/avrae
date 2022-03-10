@@ -3,8 +3,18 @@ from .mixins import AutomatibleMixin
 
 
 class Action(AutomatibleMixin):
-    def __init__(self, name, uid, id, type_id, activation_type, source_feature_id, source_feature_type_id,
-                 list_display_override=None, **kwargs):
+    def __init__(
+        self,
+        name,
+        uid,
+        id,
+        type_id,
+        activation_type,
+        source_feature_id,
+        source_feature_type_id,
+        list_display_override=None,
+        **kwargs,
+    ):
         """
         :type name: str
         :type uid: str
@@ -28,10 +38,14 @@ class Action(AutomatibleMixin):
     @classmethod
     def from_data(cls, d):
         return cls(
-            name=d['name'], uid=d['uid'], id=d['id'], type_id=d['type_id'],
-            activation_type=ActivationType(d['activation_type']),
-            source_feature_id=d['source_feature_id'], source_feature_type_id=d['source_feature_type_id'],
-            list_display_override=d.get('list_display_override')
+            name=d["name"],
+            uid=d["uid"],
+            id=d["id"],
+            type_id=d["type_id"],
+            activation_type=ActivationType(d["activation_type"]),
+            source_feature_id=d["source_feature_id"],
+            source_feature_type_id=d["source_feature_type_id"],
+            list_display_override=d.get("list_display_override"),
         ).initialize_automation(d)
 
     @property
@@ -41,6 +55,7 @@ class Action(AutomatibleMixin):
         Usually this is a LimitedUse but can be the same as the source_feature.
         """
         from . import compendium
+
         return compendium.lookup_entity(self.type_id, self.id)
 
     @property
@@ -51,8 +66,13 @@ class Action(AutomatibleMixin):
         :rtype: gamedata.shared.Sourced
         """
         from . import compendium
-        return compendium.lookup_entity(self.source_feature_type_id, self.source_feature_id)
+
+        return compendium.lookup_entity(
+            self.source_feature_type_id, self.source_feature_id
+        )
 
     def __repr__(self):
-        return f"<Action name={self.name!r} uid={self.uid!r} id={self.id!r} type_id={self.type_id!r} " \
-               f"activation_type={self.activation_type!r} automation={self.automation!r}>"
+        return (
+            f"<Action name={self.name!r} uid={self.uid!r} id={self.id!r} type_id={self.type_id!r} "
+            f"activation_type={self.activation_type!r} automation={self.automation!r}>"
+        )

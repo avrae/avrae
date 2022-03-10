@@ -24,8 +24,12 @@ class ManualOverrides:
         return cls(**d)
 
     def to_dict(self):
-        return {"desc": self.desc, "image": self.image, "attacks": self.attacks.to_dict(),
-                "spells": [s.to_dict() for s in self.spells]}
+        return {
+            "desc": self.desc,
+            "image": self.image,
+            "attacks": self.attacks.to_dict(),
+            "spells": [s.to_dict() for s in self.spells],
+        }
 
 
 class DeathSaves:
@@ -72,14 +76,30 @@ class DeathSaves:
 
 
 class CustomCounter:
-    RESET_MAP = {'short': "Short Rest",
-                 'long': "Long Rest",
-                 'reset': "`!cc reset`",
-                 'hp': "Gaining HP"}
+    RESET_MAP = {
+        "short": "Short Rest",
+        "long": "Long Rest",
+        "reset": "`!cc reset`",
+        "hp": "Gaining HP",
+    }
 
-    def __init__(self, character, name, value, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
-                 reset_to=None, reset_by=None, title=None, desc=None,
-                 ddb_source_feature_type=None, ddb_source_feature_id=None):
+    def __init__(
+        self,
+        character,
+        name,
+        value,
+        minv=None,
+        maxv=None,
+        reset=None,
+        display_type=None,
+        live_id=None,
+        reset_to=None,
+        reset_by=None,
+        title=None,
+        desc=None,
+        ddb_source_feature_type=None,
+        ddb_source_feature_id=None,
+    ):
         self._character = character
         self.name = name
 
@@ -107,27 +127,51 @@ class CustomCounter:
         return cls(char, **d)
 
     def to_dict(self):
-        return {"name": self.name, "value": self._value, "minv": self.min, "maxv": self.max, "reset": self.reset_on,
-                "display_type": self.display_type, "live_id": self.live_id, "reset_to": self.reset_to,
-                "reset_by": self.reset_by, "title": self.title, "desc": self.desc,
-                "ddb_source_feature_type": self.ddb_source_feature_type,
-                "ddb_source_feature_id": self.ddb_source_feature_id}
+        return {
+            "name": self.name,
+            "value": self._value,
+            "minv": self.min,
+            "maxv": self.max,
+            "reset": self.reset_on,
+            "display_type": self.display_type,
+            "live_id": self.live_id,
+            "reset_to": self.reset_to,
+            "reset_by": self.reset_by,
+            "title": self.title,
+            "desc": self.desc,
+            "ddb_source_feature_type": self.ddb_source_feature_type,
+            "ddb_source_feature_id": self.ddb_source_feature_id,
+        }
 
     @classmethod
-    def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
-            reset_to=None, reset_by=None, title=None, desc=None):
-        if reset not in ('short', 'long', 'none', None):
+    def new(
+        cls,
+        character,
+        name,
+        minv=None,
+        maxv=None,
+        reset=None,
+        display_type=None,
+        live_id=None,
+        reset_to=None,
+        reset_by=None,
+        title=None,
+        desc=None,
+    ):
+        if reset not in ("short", "long", "none", None):
             raise InvalidArgument("Invalid reset.")
         if any(c in name for c in ".$"):
             raise InvalidArgument("Invalid character in CC name.")
-        if display_type == 'bubble' and (maxv is None or minv is None):
+        if display_type == "bubble" and (maxv is None or minv is None):
             raise InvalidArgument("Bubble display requires a max and min value.")
 
         # sanity checks
-        if reset not in ('none', None) and (maxv is None and
-                                            reset_to is None and
-                                            reset_by is None):
-            raise InvalidArgument("Reset passed but no valid reset value (`max`, `resetto`, `resetby`) passed.")
+        if reset not in ("none", None) and (
+            maxv is None and reset_to is None and reset_by is None
+        ):
+            raise InvalidArgument(
+                "Reset passed but no valid reset value (`max`, `resetto`, `resetby`) passed."
+            )
         if reset_to is not None and reset_by is not None:
             raise InvalidArgument("Both `resetto` and `resetby` arguments found.")
         if not name.strip():
@@ -157,7 +201,9 @@ class CustomCounter:
             try:
                 d20.parse(str(reset_by))
             except d20.RollSyntaxError:
-                raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
+                raise InvalidArgument(
+                    f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string."
+                )
 
         # set initial value
         initial_value = max(0, min_value or 0)
@@ -168,22 +214,34 @@ class CustomCounter:
 
         # length checks
         if desc and len(desc) > 1024:
-            raise InvalidArgument('Description must be less than 1024 characters.')
+            raise InvalidArgument("Description must be less than 1024 characters.")
 
         if title and len(title) >= 256:
-            raise InvalidArgument('Title must be less than 256 characters.')
+            raise InvalidArgument("Title must be less than 256 characters.")
 
         if len(name) > 256:
-            raise InvalidArgument('Name must be less than 256 characters.')
+            raise InvalidArgument("Name must be less than 256 characters.")
 
-        return cls(character, name.strip(), initial_value, minv, maxv, reset, display_type, live_id,
-                   reset_to, reset_by, title, desc)
+        return cls(
+            character,
+            name.strip(),
+            initial_value,
+            minv,
+            maxv,
+            reset,
+            display_type,
+            live_id,
+            reset_to,
+            reset_by,
+            title,
+            desc,
+        )
 
     # ---------- main funcs ----------
     def get_min(self):
         if self._min_value is None:
             if self.min is None:
-                self._min_value = -(2 ** 31)
+                self._min_value = -(2**31)
             else:
                 self._min_value = self._character.evaluate_math(self.min)
         return self._min_value
@@ -191,7 +249,7 @@ class CustomCounter:
     def get_max(self):
         if self._max_value is None:
             if self.max is None:
-                self._max_value = 2 ** 31 - 1
+                self._max_value = 2**31 - 1
             else:
                 self._max_value = self._character.evaluate_math(self.max)
         return self._max_value
@@ -211,9 +269,13 @@ class CustomCounter:
 
         if strict:
             if new_value < minv:
-                raise CounterOutOfBounds(f"You do not have enough remaining uses of {self.name}.")
+                raise CounterOutOfBounds(
+                    f"You do not have enough remaining uses of {self.name}."
+                )
             elif new_value > maxv:
-                raise CounterOutOfBounds(f"{self.name} cannot be set to {new_value} (max {maxv}).")
+                raise CounterOutOfBounds(
+                    f"{self.name} cannot be set to {new_value} (max {maxv})."
+                )
 
         new_value = int(min(max(minv, new_value), maxv))
         old_value = self._value
@@ -229,7 +291,7 @@ class CustomCounter:
 
         :returns CustomCounterResetResult: (new_value: int, old_value: int, target_value: int, delta: str)
         """
-        if self.reset_on == 'none':
+        if self.reset_on == "none":
             raise NoReset()
 
         old_value = self.value
@@ -257,15 +319,19 @@ class CustomCounter:
         else:
             raise NoReset()
 
-        return CustomCounterResetResult(new_value=new_value, old_value=old_value, target_value=target_value,
-                                        delta=delta)
+        return CustomCounterResetResult(
+            new_value=new_value,
+            old_value=old_value,
+            target_value=target_value,
+            delta=delta,
+        )
 
     def full_str(self):
         _min = self.get_min()
         _max = self.get_max()
         _reset = self.RESET_MAP.get(self.reset_on)
 
-        if self.display_type == 'bubble':
+        if self.display_type == "bubble":
             assert self.max is not None
             val = f"{bubble_format(self.value, _max)}\n"
         else:
@@ -287,7 +353,7 @@ class CustomCounter:
     def __str__(self):
         _max = self.get_max()
 
-        if self.display_type == 'bubble':
+        if self.display_type == "bubble":
             assert self.max is not None
             out = bubble_format(self.value, _max)
         else:
@@ -302,5 +368,6 @@ class CustomCounter:
         return f"<{type(self).__name__} name={self.name!r} __str__={self!s}>"
 
 
-CustomCounterResetResult = collections.namedtuple('CustomCounterResetResult',
-                                                  ['new_value', 'old_value', 'target_value', 'delta'])
+CustomCounterResetResult = collections.namedtuple(
+    "CustomCounterResetResult", ["new_value", "old_value", "target_value", "delta"]
+)

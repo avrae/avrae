@@ -8,13 +8,29 @@ from disnake.ext.commands import ArgumentParsingError
 
 from aliasing import evaluators
 from aliasing.api.functions import AliasException
-from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT, VAR_NAME_LIMIT
-from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
+from aliasing.constants import (
+    CVAR_SIZE_LIMIT,
+    GVAR_SIZE_LIMIT,
+    SVAR_SIZE_LIMIT,
+    UVAR_SIZE_LIMIT,
+    VAR_NAME_LIMIT,
+)
+from aliasing.errors import (
+    AliasNameConflict,
+    CollectableNotFound,
+    CollectableRequiresLicenses,
+    EvaluationError,
+)
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
 from aliasing.utils import ExecutionScope
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
+from cogs5e.models.errors import (
+    AvraeException,
+    InvalidArgument,
+    NoCharacter,
+    NotAllowed,
+)
 from gamedata.compendium import compendium
 from gamedata.lookuputils import long_source_name
 from utils.argparser import argquote, argsplit
@@ -64,7 +80,9 @@ async def handle_aliases(ctx):
     await the_alias.log_invocation(ctx, server_invoker)
 
     # setup
-    execution_scope = ExecutionScope.SERVER_ALIAS if server_invoker else ExecutionScope.PERSONAL_ALIAS
+    execution_scope = (
+        ExecutionScope.SERVER_ALIAS if server_invoker else ExecutionScope.PERSONAL_ALIAS
+    )
     try:
         command_code = await handle_alias_arguments(the_alias.code, ctx)
     except ArgumentParsingError as e:
@@ -81,7 +99,7 @@ async def handle_aliases(ctx):
             command_code,
             character=char,
             execution_scope=execution_scope,
-            invoking_object=the_alias
+            invoking_object=the_alias,
         )
     except EvaluationError as err:
         return await handle_alias_exception(ctx, err)
@@ -101,24 +119,24 @@ async def handle_alias_arguments(command, ctx):
     args = argsplit(rawargs)
     tempargs = args[:]
     new_command = command
-    if '%*%' in command:
-        new_command = new_command.replace('%*%', argquote(rawargs))
+    if "%*%" in command:
+        new_command = new_command.replace("%*%", argquote(rawargs))
         tempargs = []
-    if '&*&' in command:
-        new_command = new_command.replace('&*&', rawargs.replace("\"", "\\\""))
+    if "&*&" in command:
+        new_command = new_command.replace("&*&", rawargs.replace('"', '\\"'))
         tempargs = []
-    if '&ARGS&' in command:
-        new_command = new_command.replace('&ARGS&', str(args))
+    if "&ARGS&" in command:
+        new_command = new_command.replace("&ARGS&", str(args))
         tempargs = []
     for index, value in enumerate(args):
-        key = '%{}%'.format(index + 1)
+        key = "%{}%".format(index + 1)
         to_remove = False
         if key in command:
             new_command = new_command.replace(key, argquote(value))
             to_remove = True
-        key = '&{}&'.format(index + 1)
+        key = "&{}&".format(index + 1)
         if key in command:
-            new_command = new_command.replace(key, value.replace("\"", "\\\""))
+            new_command = new_command.replace(key, value.replace('"', '\\"'))
             to_remove = True
         if to_remove:
             try:
@@ -126,24 +144,31 @@ async def handle_alias_arguments(command, ctx):
             except ValueError:
                 pass
 
-    quoted_args = ' '.join(map(argquote, tempargs))
+    quoted_args = " ".join(map(argquote, tempargs))
     return f"{prefix}{new_command} {quoted_args}".strip()
 
 
 # getters
 async def get_collectable_named(
-    ctx, name, personal_cls, workshop_cls, workshop_sub_meth, is_alias,
-    obj_name, obj_name_pl, obj_command_name
+    ctx,
+    name,
+    personal_cls,
+    workshop_cls,
+    workshop_sub_meth,
+    is_alias,
+    obj_name,
+    obj_name_pl,
+    obj_command_name,
 ):
-    binding_key = 'alias_bindings' if is_alias else 'snippet_bindings'
+    binding_key = "alias_bindings" if is_alias else "snippet_bindings"
 
     personal_obj = await personal_cls.get_named(name, ctx)
     # get list of subscription object ids
     subscribed_obj_ids = []
     async for subscription_doc in workshop_sub_meth(ctx):
         for binding in subscription_doc[binding_key]:
-            if binding['name'] == name:
-                subscribed_obj_ids.append(binding['id'])
+            if binding["name"] == name:
+                subscribed_obj_ids.append(binding["id"])
 
     # if only personal, return personal (or none)
     if not subscribed_obj_ids:
@@ -169,36 +194,57 @@ async def get_collectable_named(
 
 async def get_personal_alias_named(ctx, name):
     return await get_collectable_named(
-        ctx, name,
-        personal_cls=Alias, workshop_cls=WorkshopAlias, workshop_sub_meth=WorkshopCollection.my_subs, is_alias=True,
-        obj_name="alias", obj_name_pl="aliases", obj_command_name="alias"
+        ctx,
+        name,
+        personal_cls=Alias,
+        workshop_cls=WorkshopAlias,
+        workshop_sub_meth=WorkshopCollection.my_subs,
+        is_alias=True,
+        obj_name="alias",
+        obj_name_pl="aliases",
+        obj_command_name="alias",
     )
 
 
 async def get_server_alias_named(ctx, name):
     return await get_collectable_named(
-        ctx, name,
-        personal_cls=Servalias, workshop_cls=WorkshopAlias, workshop_sub_meth=WorkshopCollection.guild_active_subs,
+        ctx,
+        name,
+        personal_cls=Servalias,
+        workshop_cls=WorkshopAlias,
+        workshop_sub_meth=WorkshopCollection.guild_active_subs,
         is_alias=True,
-        obj_name="server alias", obj_name_pl="server aliases", obj_command_name="servalias"
+        obj_name="server alias",
+        obj_name_pl="server aliases",
+        obj_command_name="servalias",
     )
 
 
 async def get_personal_snippet_named(ctx, name):
     return await get_collectable_named(
-        ctx, name,
-        personal_cls=Snippet, workshop_cls=WorkshopSnippet, workshop_sub_meth=WorkshopCollection.my_subs,
+        ctx,
+        name,
+        personal_cls=Snippet,
+        workshop_cls=WorkshopSnippet,
+        workshop_sub_meth=WorkshopCollection.my_subs,
         is_alias=False,
-        obj_name="snippet", obj_name_pl="snippets", obj_command_name="snippet"
+        obj_name="snippet",
+        obj_name_pl="snippets",
+        obj_command_name="snippet",
     )
 
 
 async def get_server_snippet_named(ctx, name):
     return await get_collectable_named(
-        ctx, name,
-        personal_cls=Servsnippet, workshop_cls=WorkshopSnippet, workshop_sub_meth=WorkshopCollection.guild_active_subs,
+        ctx,
+        name,
+        personal_cls=Servsnippet,
+        workshop_cls=WorkshopSnippet,
+        workshop_sub_meth=WorkshopCollection.guild_active_subs,
         is_alias=False,
-        obj_name="server snippet", obj_name_pl="server snippets", obj_command_name="servsnippet"
+        obj_name="server snippet",
+        obj_name_pl="server snippets",
+        obj_command_name="servsnippet",
     )
 
 
@@ -211,11 +257,15 @@ def set_cvar(character, name, value):
             "(only contain a-z, A-Z, 0-9, _, and not start with a number)."
         )
     elif len(name) > VAR_NAME_LIMIT:
-        raise InvalidArgument(f'Cvar name must be shorter than {VAR_NAME_LIMIT} characters.')
+        raise InvalidArgument(
+            f"Cvar name must be shorter than {VAR_NAME_LIMIT} characters."
+        )
     elif name in character.get_scope_locals(True):
         raise InvalidArgument(f"The variable `{name}` is already built in.")
     elif len(value) > CVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Cvars must be shorter than {CVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(
+            f"Cvars must be shorter than {CVAR_SIZE_LIMIT} characters."
+        )
 
     character.set_cvar(name, value)
 
@@ -224,7 +274,7 @@ def set_cvar(character, name, value):
 async def get_uvars(ctx):
     uvars = {}
     async for uvar in ctx.bot.mdb.uvars.find({"owner": str(ctx.author.id)}):
-        uvars[uvar['name']] = uvar['value']
+        uvars[uvar["name"]] = uvar["value"]
     return uvars
 
 
@@ -236,13 +286,15 @@ async def set_uvar(ctx, name, value):
             "(only contain a-z, A-Z, 0-9, _, and not start with a number)."
         )
     elif len(name) > VAR_NAME_LIMIT:
-        raise InvalidArgument(f'Uvar name must be shorter than {VAR_NAME_LIMIT} characters.')
+        raise InvalidArgument(
+            f"Uvar name must be shorter than {VAR_NAME_LIMIT} characters."
+        )
     elif len(value) > UVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Uvars must be shorter than {UVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(
+            f"Uvars must be shorter than {UVAR_SIZE_LIMIT} characters."
+        )
     await ctx.bot.mdb.uvars.update_one(
-        {"owner": str(ctx.author.id), "name": name},
-        {"$set": {"value": value}},
-        True
+        {"owner": str(ctx.author.id), "name": name}, {"$set": {"value": value}}, True
     )
 
 
@@ -255,7 +307,9 @@ async def update_uvars(ctx, uvar_dict, changed=None):
             if name in uvar_dict:
                 await set_uvar(ctx, name, uvar_dict[name])
             else:
-                await ctx.bot.mdb.uvars.delete_one({"owner": str(ctx.author.id), "name": name})
+                await ctx.bot.mdb.uvars.delete_one(
+                    {"owner": str(ctx.author.id), "name": name}
+                )
 
 
 # svars
@@ -264,7 +318,7 @@ async def get_svars(ctx):
         return {}
     svars = {}
     async for svar in ctx.bot.mdb.svars.find({"owner": ctx.guild.id}):
-        svars[svar['name']] = svar['value']
+        svars[svar["name"]] = svar["value"]
     return svars
 
 
@@ -274,7 +328,7 @@ async def get_svar(ctx, name):
     svar = await ctx.bot.mdb.svars.find_one({"owner": ctx.guild.id, "name": name})
     if svar is None:
         return None
-    return svar['value']
+    return svar["value"]
 
 
 async def set_svar(ctx, name, value):
@@ -287,13 +341,15 @@ async def set_svar(ctx, name, value):
             "(only contain a-z, A-Z, 0-9, _, and not start with a number)."
         )
     elif len(name) > VAR_NAME_LIMIT:
-        raise InvalidArgument(f'Svar name must be shorter than {VAR_NAME_LIMIT} characters.')
+        raise InvalidArgument(
+            f"Svar name must be shorter than {VAR_NAME_LIMIT} characters."
+        )
     elif len(value) > SVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Svars must be shorter than {SVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(
+            f"Svars must be shorter than {SVAR_SIZE_LIMIT} characters."
+        )
     await ctx.bot.mdb.svars.update_one(
-        {"owner": ctx.guild.id, "name": name},
-        {"$set": {"value": value}},
-        True
+        {"owner": ctx.guild.id, "name": name}, {"$set": {"value": value}}, True
     )
 
 
@@ -301,11 +357,16 @@ async def set_svar(ctx, name, value):
 async def create_gvar(ctx, value):
     value = str(value)
     if len(value) > GVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(
+            f"Gvars must be shorter than {GVAR_SIZE_LIMIT} characters."
+        )
     name = str(uuid.uuid4())
     data = {
-        'key': name, 'owner': str(ctx.author.id), 'owner_name': str(ctx.author), 'value': value,
-        'editors': []
+        "key": name,
+        "owner": str(ctx.author.id),
+        "owner_name": str(ctx.author),
+        "value": value,
+        "editors": [],
     }
     await ctx.bot.mdb.gvars.insert_one(data)
     return name
@@ -316,10 +377,14 @@ async def update_gvar(ctx, gid, value):
     gvar = await ctx.bot.mdb.gvars.find_one({"key": gid})
     if gvar is None:
         raise InvalidArgument("Global variable not found.")
-    elif gvar['owner'] != str(ctx.author.id) and not str(ctx.author.id) in gvar.get('editors', []):
+    elif gvar["owner"] != str(ctx.author.id) and not str(ctx.author.id) in gvar.get(
+        "editors", []
+    ):
         raise NotAllowed("You are not allowed to edit this variable.")
     elif len(value) > GVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(
+            f"Gvars must be shorter than {GVAR_SIZE_LIMIT} characters."
+        )
     await ctx.bot.mdb.gvars.update_one({"key": gid}, {"$set": {"value": value}})
 
 
@@ -362,17 +427,23 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
 
             if the_snippet:
                 # enter the evaluator
-                execution_scope = ExecutionScope.SERVER_SNIPPET if server_invoker else ExecutionScope.PERSONAL_SNIPPET
+                execution_scope = (
+                    ExecutionScope.SERVER_SNIPPET
+                    if server_invoker
+                    else ExecutionScope.PERSONAL_SNIPPET
+                )
                 args[index] = await evaluator.transformed_str_async(
                     the_snippet.code,
                     execution_scope=execution_scope,
-                    invoking_object=the_snippet
+                    invoking_object=the_snippet,
                 )
                 # analytics
                 await the_snippet.log_invocation(ctx, server_invoker)
             else:
                 # in case the user is using old-style on the fly templating
-                arg = await evaluator.transformed_str_async(arg, execution_scope=ExecutionScope.PERSONAL_SNIPPET)
+                arg = await evaluator.transformed_str_async(
+                    arg, execution_scope=ExecutionScope.PERSONAL_SNIPPET
+                )
                 args[index] = argquote(arg)
     finally:
         await evaluator.run_commits()
@@ -386,7 +457,7 @@ async def parse_draconic(
     statblock=None,
     character=None,
     execution_scope: ExecutionScope = ExecutionScope.UNKNOWN,
-    invoking_object=None
+    invoking_object=None,
 ):
     """
     Parses and executes a singular Draconic program in a new interpreter.
@@ -400,9 +471,7 @@ async def parse_draconic(
         evaluator.with_statblock(statblock)
     try:
         out = await evaluator.transformed_str_async(
-            program,
-            execution_scope=execution_scope,
-            invoking_object=invoking_object
+            program, execution_scope=execution_scope, invoking_object=invoking_object
         )
     finally:
         await evaluator.run_commits()
@@ -427,16 +496,18 @@ async def handle_alias_exception(ctx, err):
         locinfo = (e.lineno, e.offset)
 
     # make a pointer to the error so it looks nice
-    point_to_error = ''
+    point_to_error = ""
     if locinfo:
         line, col = locinfo
-        the_line = err.expression.split('\n')[line - 1]
+        the_line = err.expression.split("\n")[line - 1]
         point_to_error = f"{the_line}\n{' ' * col}^\n"
 
     if isinstance(e, draconic.AnnotatedException):
         e = e.original
 
-    tb = ''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))
+    tb = "".join(
+        traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False)
+    )
     # send traceback to user
     if not isinstance(e, AliasException) or e.pm_user:
         with suppress(disnake.HTTPException):
@@ -468,7 +539,10 @@ async def workshop_entitlements_check(ctx, ws_obj):
     await ctx.trigger_typing()
 
     # get licensed objects, mapped by entity type
-    available_ids = {k: await ctx.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k) for k in entitlements}
+    available_ids = {
+        k: await ctx.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k)
+        for k in entitlements
+    }
 
     # get a list of all missing entities for the license error
     missing = []
@@ -505,23 +579,30 @@ async def handle_alias_required_licenses(ctx, err):
         if ddb_user is None:
             blocked_by_ff = False
         else:
-            blocked_by_ff = not (await ctx.bot.ldclient.variation("entitlements-enabled", ddb_user.to_ld_dict(), False))
+            blocked_by_ff = not (
+                await ctx.bot.ldclient.variation(
+                    "entitlements-enabled", ddb_user.to_ld_dict(), False
+                )
+            )
 
         if blocked_by_ff:
             embed.title = "D&D Beyond is currently unavailable"
-            embed.description = f"I was unable to communicate with D&D Beyond to confirm access to:\n" \
-                                f"{', '.join(e.name for e in err.entities)}"
+            embed.description = (
+                f"I was unable to communicate with D&D Beyond to confirm access to:\n"
+                f"{', '.join(e.name for e in err.entities)}"
+            )
         else:
             embed.title = f"Connect your D&D Beyond account to use this customization!"
             embed.url = "https://www.dndbeyond.com/account"
-            embed.description = \
-                "This customization requires access to one or more entities that are not in the SRD.\n" \
-                "Linking your account means that you'll be able to use everything you own on " \
-                "D&D Beyond in Avrae for free - you can link your accounts " \
+            embed.description = (
+                "This customization requires access to one or more entities that are not in the SRD.\n"
+                "Linking your account means that you'll be able to use everything you own on "
+                "D&D Beyond in Avrae for free - you can link your accounts "
                 "[here](https://www.dndbeyond.com/account)."
+            )
             embed.set_footer(
                 text="Already linked your account? It may take up to a minute for Avrae to recognize the "
-                     "link."
+                "link."
             )
     else:
         missing_source_ids = {e.source for e in err.entities}
@@ -536,19 +617,24 @@ async def handle_alias_required_licenses(ctx, err):
             embed.title = f"Unlock {len(missing_source_ids)} sources on D&D Beyond to use this customization!"
             marketplace_url = "https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
 
-        missing = natural_join([f"[{e.name}]({e.marketplace_url})" for e in err.entities], "and")
+        missing = natural_join(
+            [f"[{e.name}]({e.marketplace_url})" for e in err.entities], "and"
+        )
         if len(missing) > 1400:
             missing = f"{len(err.entities)} items"
-        missing_sources = natural_join([long_source_name(e) for e in missing_source_ids], "and")
+        missing_sources = natural_join(
+            [long_source_name(e) for e in missing_source_ids], "and"
+        )
 
-        embed.description = \
-            f"To use this customization and gain access to more integrations in Avrae, unlock **{missing}** by " \
-            f"purchasing {missing_sources} on D&D Beyond.\n\n" \
+        embed.description = (
+            f"To use this customization and gain access to more integrations in Avrae, unlock **{missing}** by "
+            f"purchasing {missing_sources} on D&D Beyond.\n\n"
             f"[Go to Marketplace]({marketplace_url})"
+        )
         embed.url = marketplace_url
 
         embed.set_footer(
             text="Already unlocked? It may take up to a minute for Avrae to recognize the "
-                 "purchase."
+            "purchase."
         )
     await ctx.send(embed=embed)

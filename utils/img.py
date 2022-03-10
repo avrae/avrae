@@ -22,23 +22,25 @@ def preprocess_url(url):
     Current operations:
     www.dndbeyond.com/avatars -> media-waterdeep.cursecdn.com/avatars
     """
-    return url.replace("www.dndbeyond.com/avatars", "media-waterdeep.cursecdn.com/avatars")
+    return url.replace(
+        "www.dndbeyond.com/avatars", "media-waterdeep.cursecdn.com/avatars"
+    )
 
 
 async def generate_token(img_url, is_subscriber=False, token_args=None):
     img_url = preprocess_url(img_url)
-    template = 'res/template-s.png' if is_subscriber else 'res/template-f.png'
+    template = "res/template-s.png" if is_subscriber else "res/template-f.png"
     if token_args:
-        border = token_args.last('border')
-        if border == 'plain':
-            template = 'res/template-f.png'
-        elif border == 'none':
+        border = token_args.last("border")
+        if border == "plain":
+            template = "res/template-f.png"
+        elif border == "none":
             template = None
 
-    def process_img(the_img_bytes, template_fp='res/template-f.png'):
+    def process_img(the_img_bytes, template_fp="res/template-f.png"):
         # open the image
         b = BytesIO(the_img_bytes)
-        img = Image.open(b).convert('RGBA')
+        img = Image.open(b).convert("RGBA")
 
         # crop/resize the token image
         width, height = img.size
@@ -51,8 +53,8 @@ async def generate_token(img_url, is_subscriber=False, token_args=None):
         img = img.resize(TOKEN_SIZE, Image.ANTIALIAS)
 
         # paste mask
-        mask_img = Image.open('res/alphatemplate.tif')
-        mask_img = ImageChops.darker(mask_img, img.getchannel('A'))
+        mask_img = Image.open("res/alphatemplate.tif")
+        mask_img = ImageChops.darker(mask_img, img.getchannel("A"))
         img.putalpha(mask_img)
         mask_img.close()
 
@@ -73,14 +75,20 @@ async def generate_token(img_url, is_subscriber=False, token_args=None):
         async with aiohttp.ClientSession() as session:
             async with session.get(img_url) as resp:
                 if not 199 < resp.status < 300:
-                    raise ExternalImportError(f"I was unable to download the image to tokenize. "
-                                              f"({resp.status} {resp.reason})")
+                    raise ExternalImportError(
+                        f"I was unable to download the image to tokenize. "
+                        f"({resp.status} {resp.reason})"
+                    )
                 # get the image type from the content type header
-                content_type = resp.headers.get("Content-Type", '')
-                if not content_type.startswith('image/'):
-                    raise ExternalImportError(f"This does not look like an image file (content type {content_type}).")
+                content_type = resp.headers.get("Content-Type", "")
+                if not content_type.startswith("image/"):
+                    raise ExternalImportError(
+                        f"This does not look like an image file (content type {content_type})."
+                    )
                 img_bytes = await resp.read()
-        processed = await asyncio.get_event_loop().run_in_executor(None, process_img, img_bytes, template)
+        processed = await asyncio.get_event_loop().run_in_executor(
+            None, process_img, img_bytes, template
+        )
     except Exception:
         raise
 
@@ -98,19 +106,21 @@ async def fetch_monster_image(img_url: str):
     os.makedirs(".cache/monster-tokens", exist_ok=True)
 
     sha = hashlib.sha1(img_url.encode()).hexdigest()
-    cache_path = f'.cache/monster-tokens/{sha}.png'
+    cache_path = f".cache/monster-tokens/{sha}.png"
     if os.path.exists(cache_path):
         return cache_path
 
     async with aiohttp.ClientSession() as session:
         async with session.get(img_url) as resp:
             if not 199 < resp.status < 300:
-                raise ExternalImportError(f"I was unable to retrieve the monster token. "
-                                          f"({resp.status} {resp.reason})")
+                raise ExternalImportError(
+                    f"I was unable to retrieve the monster token. "
+                    f"({resp.status} {resp.reason})"
+                )
             img_bytes = await resp.read()
 
     # cache
-    with open(cache_path, 'wb') as f:
+    with open(cache_path, "wb") as f:
         f.write(img_bytes)
 
     return BytesIO(img_bytes)

@@ -11,8 +11,13 @@ from ..results import RollResult
 
 class Roll(Effect):
     def __init__(
-        self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, hidden: bool = False,
-        **kwargs
+        self,
+        dice: str,
+        name: str,
+        higher: dict = None,
+        cantripScale: bool = None,
+        hidden: bool = False,
+        **kwargs,
     ):
         super().__init__("roll", **kwargs)
         self.dice = dice
@@ -23,26 +28,22 @@ class Roll(Effect):
 
     def to_dict(self):
         out = super().to_dict()
-        out.update(
-            {
-                "dice": self.dice, "name": self.name, "hidden": self.hidden
-            }
-        )
+        out.update({"dice": self.dice, "name": self.name, "hidden": self.hidden})
         if self.higher is not None:
-            out['higher'] = self.higher
+            out["higher"] = self.higher
         if self.cantripScale is not None:
-            out['cantripScale'] = self.cantripScale
+            out["cantripScale"] = self.cantripScale
         return out
 
     def run(self, autoctx):
         super().run(autoctx)
-        d = autoctx.args.join('d', '+', ephem=True)
-        maxdmg = autoctx.args.last('max', None, bool, ephem=True)
-        mi = autoctx.args.last('mi', None, int)
+        d = autoctx.args.join("d", "+", ephem=True)
+        maxdmg = autoctx.args.last("max", None, bool, ephem=True)
+        mi = autoctx.args.last("mi", None, int)
 
         # add on combatant damage effects (#224)
         if autoctx.combatant:
-            effect_d = '+'.join(autoctx.combatant.active_effects('d'))
+            effect_d = "+".join(autoctx.combatant.active_effects("d"))
             if effect_d:
                 if d:
                     d = f"{d}+{effect_d}"
@@ -59,7 +60,7 @@ class Roll(Effect):
 
             if d:
                 d_ast = d20.parse(d)
-                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
+                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, "+", d_ast.roll)
 
             if maxdmg:
                 dice_ast = d20.utils.tree_map(utils.max_mapper, dice_ast)
@@ -71,8 +72,13 @@ class Roll(Effect):
         simplified_expr = copy.deepcopy(rolled.expr)
         d20.utils.simplify_expr(simplified_expr)
         autoctx.metavars[self.name] = RollEffectMetaVar(simplified_expr)
-        autoctx.metavars['lastRoll'] = rolled.total  # #1335
-        return RollResult(result=rolled.total, roll=rolled, simplified_expr=simplified_expr, hidden=self.hidden)
+        autoctx.metavars["lastRoll"] = rolled.total  # #1335
+        return RollResult(
+            result=rolled.total,
+            roll=rolled,
+            simplified_expr=simplified_expr,
+            hidden=self.hidden,
+        )
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
@@ -80,7 +86,7 @@ class Roll(Effect):
             evaluator.builtins[self.name] = evaluator.transformed_str(self.dice)
         except draconic.DraconicException:
             evaluator.builtins[self.name] = self.dice
-        evaluator.builtins['lastRoll'] = 0
+        evaluator.builtins["lastRoll"] = 0
         return ""
 
 

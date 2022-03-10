@@ -13,8 +13,8 @@ from utils.dice import PersistentRollContext
 from utils.functions import camel_to_title, verbose_stat
 from .utils import string_search_adv
 
-INLINE_ROLLING_EMOJI = '\U0001f3b2'  # :game_die:
-INLINE_ROLLING_RE = re.compile(r'\[\[(.+?]?)]]')
+INLINE_ROLLING_EMOJI = "\U0001f3b2"  # :game_die:
+INLINE_ROLLING_RE = re.compile(r"\[\[(.+?]?)]]")
 _sentinel = object()
 
 
@@ -30,21 +30,29 @@ class InlineRoller:
 
         # inline rolling feature flag
         if not await self.bot.ldclient.variation(
-                "cog.dice.inline_rolling.enabled",
-                user=discord_user_to_dict(message.author),
-                default=False
+            "cog.dice.inline_rolling.enabled",
+            user=discord_user_to_dict(message.author),
+            default=False,
         ):
             return
 
         if message.guild is not None:  # (always enabled in pms)
-            guild_settings = await utils.settings.ServerSettings.for_guild(self.bot.mdb, message.guild.id)
+            guild_settings = await utils.settings.ServerSettings.for_guild(
+                self.bot.mdb, message.guild.id
+            )
 
             # if inline rolling is disabled on this server, skip
-            if guild_settings.inline_enabled is utils.settings.guild.InlineRollingType.DISABLED:
+            if (
+                guild_settings.inline_enabled
+                is utils.settings.guild.InlineRollingType.DISABLED
+            ):
                 return
 
             # if inline rolling is set to react only, pop a reaction on it and return (we re-enter from on_reaction)
-            if guild_settings.inline_enabled is utils.settings.guild.InlineRollingType.REACTION:
+            if (
+                guild_settings.inline_enabled
+                is utils.settings.guild.InlineRollingType.REACTION
+            ):
                 try:
                     await message.add_reaction(INLINE_ROLLING_EMOJI)
                 except disnake.HTTPException:
@@ -75,26 +83,33 @@ class InlineRoller:
 
         # inline rolling feature flag
         if not await self.bot.ldclient.variation(
-                "cog.dice.inline_rolling.enabled",
-                user=discord_user_to_dict(message.author),
-                default=False
+            "cog.dice.inline_rolling.enabled",
+            user=discord_user_to_dict(message.author),
+            default=False,
         ):
             return
 
         # if inline rolling is not set to reactions, skip
-        guild_settings = await utils.settings.ServerSettings.for_guild(self.bot.mdb, message.guild.id)
-        if guild_settings.inline_enabled is not utils.settings.guild.InlineRollingType.REACTION:
+        guild_settings = await utils.settings.ServerSettings.for_guild(
+            self.bot.mdb, message.guild.id
+        )
+        if (
+            guild_settings.inline_enabled
+            is not utils.settings.guild.InlineRollingType.REACTION
+        ):
             return
 
         # if this message has already been processed, skip
-        if await self.bot.rdb.get(f"cog.dice.inline_rolling.messages.{message.id}.processed"):
+        if await self.bot.rdb.get(
+            f"cog.dice.inline_rolling.messages.{message.id}.processed"
+        ):
             return
 
         # otherwise save that this message has been processed, remove reactions, and do the rolls
         await self.bot.rdb.setex(
             f"cog.dice.inline_rolling.messages.{message.id}.processed",
             str(time.time()),
-            60 * 60 * 24
+            60 * 60 * 24,
         )
         await self.do_inline_rolls(message)
         try:
@@ -110,8 +125,8 @@ class InlineRoller:
         roller = d20.Roller(context=PersistentRollContext())
         char_replacer = CharacterReplacer(self.bot, message)
         for expr, context_before, context_after in roll_exprs:
-            context_before = context_before.replace('\n', ' ')
-            context_after = context_after.replace('\n', ' ')
+            context_before = context_before.replace("\n", " ")
+            context_after = context_after.replace("\n", " ")
 
             try:
                 expr, char_comment = await char_replacer.replace(expr)
@@ -120,7 +135,9 @@ class InlineRoller:
                 if result.comment:
                     out.append(f"**{result.comment.strip()}**: {result.result}")
                 elif char_comment:
-                    out.append(f"{context_before}({char_comment}: {result.result}){context_after}")
+                    out.append(
+                        f"{context_before}({char_comment}: {result.result}){context_after}"
+                    )
                 else:
                     out.append(f"{context_before}({result.result}){context_after}")
             except d20.RollSyntaxError:
@@ -131,11 +148,13 @@ class InlineRoller:
         if not out:
             return
 
-        await message.reply('\n'.join(out))
+        await message.reply("\n".join(out))
 
     # ==== onboarding ====
     async def inline_rolling_message_onboarding(self, user):
-        if await self.bot.rdb.get(f"cog.dice.inline_rolling.users.{user.id}.onboarded.message"):
+        if await self.bot.rdb.get(
+            f"cog.dice.inline_rolling.users.{user.id}.onboarded.message"
+        ):
             return
 
         embed = embeds.EmbedWithColor()
@@ -144,17 +163,17 @@ class InlineRoller:
         embed.add_field(
             name="What is Inline Rolling?",
             value="Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll reply "
-                  "to it with a roll for each one. You can send messages with multiple, too, like this: ```\n"
-                  "I attack the goblin with my shortsword [[1d20 + 6]] for a total of [[1d6 + 3]] piercing damage.\n"
-                  "```",
-            inline=False
+            "to it with a roll for each one. You can send messages with multiple, too, like this: ```\n"
+            "I attack the goblin with my shortsword [[1d20 + 6]] for a total of [[1d6 + 3]] piercing damage.\n"
+            "```",
+            inline=False,
         )
         # noinspection DuplicatedCode
         embed.add_field(
             name="Learn More",
             value="You can learn more about Inline Rolling in [the Avrae cheatsheets]"
-                  "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
-            inline=False
+            "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
+            inline=False,
         )
         embed.set_footer(text="You won't see this message again.")
 
@@ -162,10 +181,15 @@ class InlineRoller:
             await user.send(embed=embed)
         except disnake.HTTPException:
             return
-        await self.bot.rdb.set(f"cog.dice.inline_rolling.users.{user.id}.onboarded.message", str(time.time()))
+        await self.bot.rdb.set(
+            f"cog.dice.inline_rolling.users.{user.id}.onboarded.message",
+            str(time.time()),
+        )
 
     async def inline_rolling_reaction_onboarding(self, user):
-        if await self.bot.rdb.get(f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction"):
+        if await self.bot.rdb.get(
+            f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction"
+        ):
             return
 
         embed = embeds.EmbedWithColor()
@@ -174,16 +198,16 @@ class InlineRoller:
         embed.add_field(
             name="What is Inline Rolling?",
             value="Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll react "
-                  f"with the {INLINE_ROLLING_EMOJI} emoji. You can click it to have me roll all of the dice in your "
-                  "message, and I'll reply with my own message!",
-            inline=False
+            f"with the {INLINE_ROLLING_EMOJI} emoji. You can click it to have me roll all of the dice in your "
+            "message, and I'll reply with my own message!",
+            inline=False,
         )
         # noinspection DuplicatedCode
         embed.add_field(
             name="Learn More",
             value="You can learn more about Inline Rolling in [the Avrae cheatsheets]"
-                  "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
-            inline=False
+            "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
+            inline=False,
         )
         embed.set_footer(text="You won't see this message again.")
 
@@ -191,7 +215,10 @@ class InlineRoller:
             await user.send(embed=embed)
         except disnake.HTTPException:
             return
-        await self.bot.rdb.set(f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction", str(time.time()))
+        await self.bot.rdb.set(
+            f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction",
+            str(time.time()),
+        )
 
 
 # ==== character-aware rolls ====
@@ -224,10 +251,14 @@ class CharacterReplacer:
 
         character = await self._get_character()
         check_search = skill_match.group(2).lower()
-        if skill_match.group(1) == 'c':
+        if skill_match.group(1) == "c":
             skill_key = next(
-                (c for c in constants.SKILL_NAMES if c.lower().startswith(check_search)),
-                None
+                (
+                    c
+                    for c in constants.SKILL_NAMES
+                    if c.lower().startswith(check_search)
+                ),
+                None,
             )
             if skill_key is None:
                 raise InvalidArgument(f"`{check_search}` is not a valid skill.")
@@ -235,7 +266,7 @@ class CharacterReplacer:
             skill_name = f"{camel_to_title(skill_key)} Check"
             check_dice = skill.d20(
                 reroll=character.options.reroll,
-                min_val=10 * bool(character.options.talent and skill.prof >= 1)
+                min_val=10 * bool(character.options.talent and skill.prof >= 1),
             )
         else:
             try:
@@ -245,7 +276,7 @@ class CharacterReplacer:
                 raise InvalidArgument(f"`{check_search}` is not a valid save.")
             check_dice = skill.d20(reroll=character.options.reroll)
 
-        rest_of_expr = expr[skill_match.end():]
+        rest_of_expr = expr[skill_match.end() :]
         return f"{check_dice}{rest_of_expr}", skill_name
 
 
@@ -308,10 +339,14 @@ def _find_inline_exprs(content, context_before=5, context_after=2, max_context_l
         context_before = before.lstrip()
         context_after = after.rstrip()
 
-        if idx or discarded_before:  # not the first or something was discarded before first
+        if (
+            idx or discarded_before
+        ):  # not the first or something was discarded before first
             context_before = f"...{context_before}"
 
-        if idx + 1 < num_triples or discarded_after:  # not the last or something was discarded after last
+        if (
+            idx + 1 < num_triples or discarded_after
+        ):  # not the last or something was discarded after last
             context_after = f"{context_after}..."
 
         yield expr.strip(), context_before, context_after

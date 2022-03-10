@@ -59,7 +59,7 @@ def compare_embeds(request_embed, embed, *, regex: bool = True):
 
     if isinstance(embed, dict):
         for k, v in embed.items():
-            if k == 'inline':
+            if k == "inline":
                 continue
             elif isinstance(v, (dict, list)):
                 compare_embeds(request_embed[k], embed[k])
@@ -90,16 +90,18 @@ def embed_assertations(embed):
         assert len(embed.author.name) <= 256
 
 
-def message_content_check(request: Request, content: str = None, *, regex: bool = True, embed: Embed = None):
+def message_content_check(
+    request: Request, content: str = None, *, regex: bool = True, embed: Embed = None
+):
     match = None
     if content:
         if regex:
-            match = re.match(content, request.data.get('content'))
+            match = re.match(content, request.data.get("content"))
             assert match
         else:
-            assert request.data.get('content') == content
+            assert request.data.get("content") == content
     if embed:
-        embed_data = request.data.get('embeds')
+        embed_data = request.data.get("embeds")
         assert embed_data is not None and embed_data
         embed_assertations(discord.Embed.from_dict(embed_data[0]))
         compare_embeds(embed_data[0], embed.to_dict(), regex=regex)
@@ -119,7 +121,7 @@ class DiscordHTTPProxy(HTTPClient):
 
     # override d.py's request logic to implement our own
     async def request(self, route, *, files=None, header_bypass_delay=None, **kwargs):
-        req = Request(route.method, route.url, kwargs.get('data') or kwargs.get('json'))
+        req = Request(route.method, route.url, kwargs.get("data") or kwargs.get("json"))
         log.info(str(req))
         await self._request_check_queue.put(req)
 
@@ -164,7 +166,9 @@ class DiscordHTTPProxy(HTTPClient):
         except asyncio.TimeoutError as e:
             raise TimeoutError("Timed out waiting for Avrae response") from e
 
-    async def receive_message(self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None):
+    async def receive_message(
+        self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None
+    ):
         """
         Assert that the bot sends a message, and that it is the message we expect.
         If a regex is passed, this method returns the match object against the content.
@@ -181,7 +185,9 @@ class DiscordHTTPProxy(HTTPClient):
 
         return message_content_check(request, content, regex=regex, embed=embed)
 
-    async def receive_edit(self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None):
+    async def receive_edit(
+        self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None
+    ):
         """
         Assert that the bot edits a message, and that it is the message we expect.
         If a regex is passed, this method returns the match object against the content.
@@ -249,7 +255,9 @@ class DiscordHTTPProxy(HTTPClient):
         encoded_emoji = urllib.parse.quote(emoji)
 
         assert request.method == "PUT"
-        assert request.url.endswith(f"/channels/{channel}/messages/{MESSAGE_ID}/reactions/{encoded_emoji}/@me")
+        assert request.url.endswith(
+            f"/channels/{channel}/messages/{MESSAGE_ID}/reactions/{encoded_emoji}/@me"
+        )
 
     def queue_empty(self):
         return self._request_check_queue.empty()
@@ -299,34 +307,36 @@ def mock_ldclient():
 def message(self, message_content, as_owner=False, dm=False):
     if message_content.startswith("!"):  # use the right prefix
         if not dm:
-            message_content = f"{self.prefixes.get(str(TEST_GUILD_ID), '!')}{message_content[1:]}"
+            message_content = (
+                f"{self.prefixes.get(str(TEST_GUILD_ID), '!')}{message_content[1:]}"
+            )
         else:
             message_content = f"{DEFAULT_PREFIX}{message_content[1:]}"
 
     log.info(f"Sending message {message_content}")
     # pretend we just received a message in our testing channel
     data = {
-        'type': 0,
-        'tts': False,
-        'timestamp': '2021-09-08T20:33:57.337000+00:00',
-        'referenced_message': None,
-        'pinned': False,
-        'nonce': 'blah',
-        'mentions': [],
-        'mention_roles': [],
-        'mention_everyone': False,
-        'id': MESSAGE_ID,
-        'flags': 0,
-        'embeds': [],
-        'edited_timestamp': None,
-        'content': message_content,
-        'components': [],
-        'channel_id': str(TEST_CHANNEL_ID) if not dm else str(TEST_DMCHANNEL_ID),
-        'author': DEFAULT_USER if not as_owner else OWNER_USER,
-        'attachments': []
+        "type": 0,
+        "tts": False,
+        "timestamp": "2021-09-08T20:33:57.337000+00:00",
+        "referenced_message": None,
+        "pinned": False,
+        "nonce": "blah",
+        "mentions": [],
+        "mention_roles": [],
+        "mention_everyone": False,
+        "id": MESSAGE_ID,
+        "flags": 0,
+        "embeds": [],
+        "edited_timestamp": None,
+        "content": message_content,
+        "components": [],
+        "channel_id": str(TEST_CHANNEL_ID) if not dm else str(TEST_DMCHANNEL_ID),
+        "author": DEFAULT_USER if not as_owner else OWNER_USER,
+        "attachments": [],
     }
     if not dm:
-        data['guild_id'] = TEST_GUILD_ID
+        data["guild_id"] = TEST_GUILD_ID
 
     self._connection.parse_message_create(data)
     return MESSAGE_ID
@@ -335,16 +345,13 @@ def message(self, message_content, as_owner=False, dm=False):
 def add_reaction(self, emoji, as_owner=False, dm=False):
     log.info(f"Adding reaction {emoji}")
     data = {
-        'user_id': str(DEFAULT_USER_ID) if not as_owner else str(config.OWNER_ID),
-        'channel_id': str(TEST_CHANNEL_ID) if not dm else str(TEST_DMCHANNEL_ID),
-        'message_id': str(MESSAGE_ID),
-        'emoji': {  # no custom emoji for now
-            'id': None,
-            'name': emoji
-        }
+        "user_id": str(DEFAULT_USER_ID) if not as_owner else str(config.OWNER_ID),
+        "channel_id": str(TEST_CHANNEL_ID) if not dm else str(TEST_DMCHANNEL_ID),
+        "message_id": str(MESSAGE_ID),
+        "emoji": {"id": None, "name": emoji},  # no custom emoji for now
     }
     if not dm:
-        data['guild_id'] = TEST_GUILD_ID
+        data["guild_id"] = TEST_GUILD_ID
 
     self._connection.parse_message_reaction_add(data)
 
@@ -401,10 +408,7 @@ async def avrae(dhttp, mock_ldclient):
 
 
 # ===== Character Fixture =====
-@pytest.fixture(
-    scope="class",
-    params=["ara", "drakro"]
-)
+@pytest.fixture(scope="class", params=["ara", "drakro"])
 def character(request, avrae):
     """Sets up an active character in the user's context, to be used in tests. Cleans up after itself."""
     filename = os.path.join(dir_path, "static", f"char-{request.param}.json")
@@ -415,7 +419,7 @@ def character(request, avrae):
     avrae.mdb.characters.delegate.update_one(
         {"owner": char.owner, "upstream": char.upstream},
         {"$set": char.to_dict()},
-        upsert=True
+        upsert=True,
     )
     if request.cls is not None:
         request.cls.character = char
@@ -467,7 +471,9 @@ async def global_fixture(avrae, dhttp, request):
     """Things to do before and after every test."""
     log.info(f"Starting test: {request.function.__name__}")
     dhttp.clear()
-    random.seed(123)  # we want to make our tests as deterministic as possible, so each one uses the same RNG seed
+    random.seed(
+        123
+    )  # we want to make our tests as deterministic as possible, so each one uses the same RNG seed
     yield
     await dhttp.drain()
     log.info(f"Finished test: {request.function.__name__}")

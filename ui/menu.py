@@ -12,7 +12,7 @@ class MenuBase(disnake.ui.View):
         self.message = None  # type: Optional[disnake.Message]
 
     @classmethod
-    def from_menu(cls, other: 'MenuBase'):
+    def from_menu(cls, other: "MenuBase"):
         inst = cls(owner=other.owner)
         inst.message = other.message
         for attr in cls.__menu_copy_attrs__:
@@ -28,7 +28,9 @@ class MenuBase(disnake.ui.View):
     async def interaction_check(self, interaction: disnake.Interaction) -> bool:
         if interaction.user.id == self.owner.id:
             return True
-        await interaction.response.send_message("You are not the owner of this menu.", ephemeral=True)
+        await interaction.response.send_message(
+            "You are not the owner of this menu.", ephemeral=True
+        )
         return False
 
     async def on_timeout(self):
@@ -63,7 +65,9 @@ class MenuBase(disnake.ui.View):
         self.message = message
         return message
 
-    async def defer_to(self, view_type: Type['MenuBase'], interaction: disnake.Interaction, stop=True):
+    async def defer_to(
+        self, view_type: Type["MenuBase"], interaction: disnake.Interaction, stop=True
+    ):
         """Defers control to another menu item."""
         view = view_type.from_menu(self)
         if stop:
@@ -76,6 +80,10 @@ class MenuBase(disnake.ui.View):
         content_kwargs = await self.get_content()
         if interaction.response.is_done():
             # using interaction feels cleaner, but we could probably do self.message.edit too
-            await interaction.edit_original_message(view=self, **content_kwargs, **kwargs)
+            await interaction.edit_original_message(
+                view=self, **content_kwargs, **kwargs
+            )
         else:
-            await interaction.response.edit_message(view=self, **content_kwargs, **kwargs)
+            await interaction.response.edit_message(
+                view=self, **content_kwargs, **kwargs
+            )

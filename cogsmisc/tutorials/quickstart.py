@@ -33,7 +33,10 @@ class Quickstart(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('roll') and 'd20' in ctx.message.content:
+            if (
+                ctx.command is ctx.bot.get_command("roll")
+                and "d20" in ctx.message.content
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -46,9 +49,13 @@ class Quickstart(Tutorial):
             await ctx.send(embed=embed)
             try:
                 await ctx.get_character()
-                await state_map.transition_with_delay(ctx, self.tutorial.ChecksAttacksSaves, 5)
+                await state_map.transition_with_delay(
+                    ctx, self.tutorial.ChecksAttacksSaves, 5
+                )
             except NoCharacter:
-                await state_map.transition_with_delay(ctx, self.tutorial.ImportCharacter, 5)
+                await state_map.transition_with_delay(
+                    ctx, self.tutorial.ImportCharacter, 5
+                )
 
     @state()
     class ImportCharacter(TutorialState):
@@ -71,11 +78,16 @@ class Quickstart(Tutorial):
                 character = await ctx.get_character()
             except NoCharacter:
                 return
-            if ctx.command in (ctx.bot.get_command('beyond'),
-                               ctx.bot.get_command('import'),
-                               ctx.bot.get_command('update'),
-                               ctx.bot.get_command('char')) \
-                    and character is not None:
+            if (
+                ctx.command
+                in (
+                    ctx.bot.get_command("beyond"),
+                    ctx.bot.get_command("import"),
+                    ctx.bot.get_command("update"),
+                    ctx.bot.get_command("char"),
+                )
+                and character is not None
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -88,7 +100,9 @@ class Quickstart(Tutorial):
             Also, if you change your character sheet, Avrae will need to be updated to know about those changes. Whenever you do so, make sure to run `{ctx.prefix}update` to update your active character!
             """
             await ctx.send(embed=embed)
-            await state_map.transition_with_delay(ctx, self.tutorial.ChecksAttacksSaves, 5)
+            await state_map.transition_with_delay(
+                ctx, self.tutorial.ChecksAttacksSaves, 5
+            )
 
     @state()
     class ChecksAttacksSaves(TutorialState):
@@ -108,27 +122,44 @@ class Quickstart(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            check = ctx.bot.get_command('check')
-            save = ctx.bot.get_command('save')
-            attack = ctx.bot.get_command('action')
+            check = ctx.bot.get_command("check")
+            save = ctx.bot.get_command("save")
+            attack = ctx.bot.get_command("action")
             if ctx.command in (check, save, attack):
                 if ctx.command is check:
-                    state_map.data['has_check'] = True
+                    state_map.data["has_check"] = True
                 elif ctx.command is save:
-                    state_map.data['has_save'] = True
-                elif ctx.command is attack and ' ' in ctx.message.content:  # not just !a, must use actual attack
-                    state_map.data['has_attack'] = True
+                    state_map.data["has_save"] = True
+                elif (
+                    ctx.command is attack and " " in ctx.message.content
+                ):  # not just !a, must use actual attack
+                    state_map.data["has_attack"] = True
                 await state_map.commit(ctx)
                 embed = TutorialEmbed(self, ctx)
                 embed.title = "Objectives"
-                embed.description = checklist([
-                    (f"Make a skill check with `{ctx.prefix}check <skill>`.", state_map.data.get('has_check')),
-                    (f"Make an ability save with `{ctx.prefix}save <ability>`.", state_map.data.get('has_save')),
-                    (f"Make an attack with `{ctx.prefix}action <action>`.", state_map.data.get('has_attack'))
-                ])
+                embed.description = checklist(
+                    [
+                        (
+                            f"Make a skill check with `{ctx.prefix}check <skill>`.",
+                            state_map.data.get("has_check"),
+                        ),
+                        (
+                            f"Make an ability save with `{ctx.prefix}save <ability>`.",
+                            state_map.data.get("has_save"),
+                        ),
+                        (
+                            f"Make an attack with `{ctx.prefix}action <action>`.",
+                            state_map.data.get("has_attack"),
+                        ),
+                    ]
+                )
                 await ctx.send(embed=embed)
 
-            if state_map.data.get('has_check') and state_map.data.get('has_save') and state_map.data.get('has_attack'):
+            if (
+                state_map.data.get("has_check")
+                and state_map.data.get("has_save")
+                and state_map.data.get("has_attack")
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -158,7 +189,7 @@ class Quickstart(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('action') and ctx.args:
+            if ctx.command is ctx.bot.get_command("action") and ctx.args:
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):

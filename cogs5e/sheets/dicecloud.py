@@ -31,10 +31,20 @@ from .abc import SHEET_VERSION, SheetLoaderABC
 log = logging.getLogger(__name__)
 
 CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiorityDice")
-CLASS_RESOURCE_NAMES = {"expertiseDice": "Expertise Dice", "ki": "Ki", "rages": "Rages",
-                        "sorceryPoints": "Sorcery Points", "superiorityDice": "Superiority Dice"}
-CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long',
-                         "sorceryPoints": 'long', "superiorityDice": 'short'}
+CLASS_RESOURCE_NAMES = {
+    "expertiseDice": "Expertise Dice",
+    "ki": "Ki",
+    "rages": "Rages",
+    "sorceryPoints": "Sorcery Points",
+    "superiorityDice": "Superiority Dice",
+}
+CLASS_RESOURCE_RESETS = {
+    "expertiseDice": "short",
+    "ki": "short",
+    "rages": "long",
+    "sorceryPoints": "long",
+    "superiorityDice": "short",
+}
 API_BASE = "https://dicecloud.com/character/"
 DICECLOUD_URL_RE = re.compile(r"(?:https?://)?dicecloud\.com/character/([\d\w]+)/?")
 
@@ -66,9 +76,9 @@ class DicecloudParser(SheetLoaderABC):
         active = False
         sheet_type = "dicecloud"
         import_version = SHEET_VERSION
-        name = self.character_data['characters'][0]['name'].strip()
-        description = self.character_data['characters'][0]['description']
-        image = self.character_data['characters'][0]['picture']
+        name = self.character_data["characters"][0]["name"].strip()
+        description = self.character_data["characters"][0]["description"]
+        image = self.character_data["characters"][0]["picture"]
 
         stats = self.get_stats()
         levels = self.get_levels()
@@ -80,7 +90,7 @@ class DicecloudParser(SheetLoaderABC):
 
         resistances = self.get_resistances()
         ac = self.get_ac()
-        max_hp = int(self.calculate_stat('hitPoints'))
+        max_hp = int(self.calculate_stat("hitPoints"))
         hp = max_hp
         temp_hp = 0
 
@@ -89,19 +99,44 @@ class DicecloudParser(SheetLoaderABC):
         death_saves = {}
 
         consumables = []
-        if not args.last('nocc'):
+        if not args.last("nocc"):
             consumables = self.get_custom_counters()
 
         spellbook = self.get_spellbook()
         live = self.is_live()
-        race = self.character_data['characters'][0]['race'].strip()
-        background = self.character_data['characters'][0]['backstory'].strip()
+        race = self.character_data["characters"][0]["race"].strip()
+        background = self.character_data["characters"][0]["backstory"].strip()
         actions = self.get_actions()
 
         character = Character(
-            owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
-            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
-            spellbook, live, race, background, actions=actions, coinpurse=coinpurse
+            owner_id,
+            upstream,
+            active,
+            sheet_type,
+            import_version,
+            name,
+            description,
+            image,
+            stats,
+            levels,
+            attacks,
+            skills,
+            resistances,
+            saves,
+            ac,
+            max_hp,
+            hp,
+            temp_hp,
+            cvars,
+            overrides,
+            consumables,
+            death_saves,
+            spellbook,
+            live,
+            race,
+            background,
+            actions=actions,
+            coinpurse=coinpurse,
         )
         return character
 
@@ -109,81 +144,103 @@ class DicecloudParser(SheetLoaderABC):
         """Saves the character JSON data to this object."""
         url = self.url
         character = await DicecloudClient.getInstance().get_character(url)
-        character['_id'] = url
+        character["_id"] = url
         self.character_data = character
         return character
 
     def get_stats(self) -> BaseStats:
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         if self.stats:
             return self.stats
         self.get_levels()
 
-        stat_dict = {'proficiencyBonus': int(self.calculate_stat('proficiencyBonus'))}
+        stat_dict = {"proficiencyBonus": int(self.calculate_stat("proficiencyBonus"))}
 
-        for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
+        for stat in (
+            "strength",
+            "dexterity",
+            "constitution",
+            "wisdom",
+            "intelligence",
+            "charisma",
+        ):
             stat_dict[stat] = int(self.calculate_stat(stat))
-            stat_dict[stat + 'Mod'] = int(stat_dict[stat]) // 2 - 5
+            stat_dict[stat + "Mod"] = int(stat_dict[stat]) // 2 - 5
         self.evaluator.names.update(stat_dict)
 
-        stats = BaseStats(stat_dict['proficiencyBonus'], stat_dict['strength'], stat_dict['dexterity'],
-                          stat_dict['constitution'], stat_dict['intelligence'], stat_dict['wisdom'],
-                          stat_dict['charisma'])
+        stats = BaseStats(
+            stat_dict["proficiencyBonus"],
+            stat_dict["strength"],
+            stat_dict["dexterity"],
+            stat_dict["constitution"],
+            stat_dict["intelligence"],
+            stat_dict["wisdom"],
+            stat_dict["charisma"],
+        )
 
         self.stats = stats
         return stats
 
     def get_coinpurse(self):
-        """ Due to the format of the coin handling in DiceCloud, this is going to be slightly messy."""
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        """Due to the format of the coin handling in DiceCloud, this is going to be slightly messy."""
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         if self.coinpurse:
-                return self.coinpurse
+            return self.coinpurse
 
-        coins = {
-            "pp": 0,
-            "gp": 0,
-            "ep": 0,
-            "sp": 0,
-            "cp": 0
-        }
+        coins = {"pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0}
 
-        for i in self.character_data.get('items'):
-            if re.fullmatch(r"^((plat(inum)?|gold|electrum|silver|copper)( coins?|pieces?)?|(pp|gp|ep|sp|cp))", i['name'], re.IGNORECASE):
-                coins[i['name'][0].lower() + 'p'] += int(i['quantity'])
+        for i in self.character_data.get("items"):
+            if re.fullmatch(
+                r"^((plat(inum)?|gold|electrum|silver|copper)( coins?|pieces?)?|(pp|gp|ep|sp|cp))",
+                i["name"],
+                re.IGNORECASE,
+            ):
+                coins[i["name"][0].lower() + "p"] += int(i["quantity"])
 
-        return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])
+        return Coinpurse(
+            pp=coins["pp"],
+            gp=coins["gp"],
+            ep=coins["ep"],
+            sp=coins["sp"],
+            cp=coins["cp"],
+        )
 
     def get_levels(self) -> Levels:
         """Returns a dict with the character's level and class levels."""
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         if self.levels:
             return self.levels
         character = self.character_data
         levels = collections.defaultdict(lambda: 0)
-        for level in character.get('classes', []):
-            if level.get('removed', False): continue
-            level_name = level['name']
-            levels[level_name] += level['level']
+        for level in character.get("classes", []):
+            if level.get("removed", False):
+                continue
+            level_name = level["name"]
+            levels[level_name] += level["level"]
 
         out = {}
         for level, v in levels.items():
-            cleaned_name = re.sub(r'[.$]', '_', level)
+            cleaned_name = re.sub(r"[.$]", "_", level)
             out[cleaned_name] = v
             self.evaluator.names[f"{cleaned_name}Level"] = v
 
         level_obj = Levels(out)
         self.levels = level_obj
-        self.evaluator.names['level'] = level_obj.total_level
+        self.evaluator.names["level"] = level_obj.total_level
         return level_obj
 
     def get_attacks(self):
         """Returns a list of dicts of all of the character's attacks."""
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         character = self.character_data
         attacks = AttackList()
         atk_names = set()
-        for attack in character.get('attacks', []):
-            if attack.get('enabled') and not attack.get('removed'):
+        for attack in character.get("attacks", []):
+            if attack.get("enabled") and not attack.get("removed"):
                 atk = self.parse_attack(attack)
 
                 # unique naming
@@ -198,7 +255,8 @@ class DicecloudParser(SheetLoaderABC):
         return attacks
 
     def get_skills_and_saves(self) -> (Skills, Saves):
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         character = self.character_data
         stats = self.get_stats()
 
@@ -208,74 +266,83 @@ class DicecloudParser(SheetLoaderABC):
         effects = collections.defaultdict(lambda: 0)
 
         # calculate profs
-        for prof in character.get('proficiencies', []):
-            if prof.get('enabled', False) and not prof.get('removed', False):
-                profs[prof.get('name')] = prof.get('value') \
-                    if prof.get('value') > profs.get(prof.get('name', 'None'), 0) \
-                    else profs[prof.get('name')]
+        for prof in character.get("proficiencies", []):
+            if prof.get("enabled", False) and not prof.get("removed", False):
+                profs[prof.get("name")] = (
+                    prof.get("value")
+                    if prof.get("value") > profs.get(prof.get("name", "None"), 0)
+                    else profs[prof.get("name")]
+                )
 
         # and effects
-        for effect in self.character_data.get('effects', []):
-            if effect.get('stat') in NAME_SET \
-                    and effect.get('enabled', True) \
-                    and not effect.get('removed', False):
-                statname = effect.get('stat')
-                if effect.get('operation') == 'disadvantage':
+        for effect in self.character_data.get("effects", []):
+            if (
+                effect.get("stat") in NAME_SET
+                and effect.get("enabled", True)
+                and not effect.get("removed", False)
+            ):
+                statname = effect.get("stat")
+                if effect.get("operation") == "disadvantage":
                     effects[statname] = max(-1, effects[statname] - 1)
-                if effect.get('operation') == 'advantage':
+                if effect.get("operation") == "advantage":
                     effects[statname] = min(1, effects[statname] + 1)
 
         # assign skills
         skills = {}
         for skill in SKILL_NAMES:
             prof_mult = profs.get(skill, 0)
-            base_val = floor(stats.get_mod(SKILL_MAP[skill]) + stats.prof_bonus * prof_mult)
+            base_val = floor(
+                stats.get_mod(SKILL_MAP[skill]) + stats.prof_bonus * prof_mult
+            )
             adv = ADV_INT_MAP.get(effects.get(skill))
             if skill not in STAT_NAMES:
                 value = int(self.calculate_stat(skill, base=base_val))
             else:
                 value = base_val
-            skills[skill] = Skill(
-                value,
-                prof=prof_mult,
-                adv=adv
-            )
+            skills[skill] = Skill(value, prof=prof_mult, adv=adv)
 
         # and saves
         saves = {}
         for save in SAVE_NAMES:
             prof_mult = profs.get(save, 0)
-            base_val = floor(stats.get_mod(SKILL_MAP[save]) + stats.prof_bonus * prof_mult)
+            base_val = floor(
+                stats.get_mod(SKILL_MAP[save]) + stats.prof_bonus * prof_mult
+            )
             adv = ADV_INT_MAP.get(effects.get(save))
             saves[save] = Skill(
-                int(self.calculate_stat(save, base=base_val)),
-                prof=prof_mult,
-                adv=adv
+                int(self.calculate_stat(save, base=base_val)), prof=prof_mult, adv=adv
             )
 
         return Skills(skills), Saves(saves)
 
     def get_resistances(self) -> Resistances:
-        if self.character_data is None: raise Exception('You must call get_character() first.')
-        out = {'resist': [], 'immune': [], 'vuln': []}
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
+        out = {"resist": [], "immune": [], "vuln": []}
         for dmgType in DAMAGE_TYPES:
             mult = self.calculate_stat(f"{dmgType}Multiplier", 1)
             if mult <= 0:
-                out['immune'].append(dmgType)
+                out["immune"].append(dmgType)
             elif mult < 1:
-                out['resist'].append(dmgType)
+                out["resist"].append(dmgType)
             elif mult > 1:
-                out['vuln'].append(dmgType)
+                out["vuln"].append(dmgType)
         return Resistances.from_dict(out)
 
     def get_ac(self) -> int:
-        self.evaluator.names['dexterityArmor'] = self.calculate_stat('dexterityArmor',
-                                                                     base=self.get_stats().get_mod('dex'))
-        return int(self.calculate_stat('armor'))
+        self.evaluator.names["dexterityArmor"] = self.calculate_stat(
+            "dexterityArmor", base=self.get_stats().get_mod("dex")
+        )
+        return int(self.calculate_stat("armor"))
 
     def get_spellbook(self):
-        if self.character_data is None: raise Exception('You must call get_character() first.')
-        potential_spells = [s for s in self.character_data.get('spells', []) if not s.get('removed', False)]
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
+        potential_spells = [
+            s
+            for s in self.character_data.get("spells", [])
+            if not s.get("removed", False)
+        ]
 
         slots = {}
         for lvl in range(1, 10):
@@ -283,41 +350,72 @@ class DicecloudParser(SheetLoaderABC):
             slots[str(lvl)] = num_slots
 
         spell_lists = {}  # list_id: (ab, dc, scam)
-        for sl in self.character_data.get('spellLists', []):
+        for sl in self.character_data.get("spellLists", []):
             try:
-                ab_calc = sl.get('attackBonus')
+                ab_calc = sl.get("attackBonus")
                 ab = int(self.evaluator.eval(ab_calc))
-                dc = int(self.evaluator.eval(sl.get('saveDC')))
+                dc = int(self.evaluator.eval(sl.get("saveDC")))
                 try:
-                    scam = self.get_stats().get_mod(next(m for m in STAT_NAMES if m in ab_calc))
+                    scam = self.get_stats().get_mod(
+                        next(m for m in STAT_NAMES if m in ab_calc)
+                    )
                 except StopIteration:
                     scam = 0
-                spell_lists[sl['_id']] = (ab, dc, scam)
+                spell_lists[sl["_id"]] = (ab, dc, scam)
             except:
                 pass
-        sab, dc, scam = sorted(spell_lists.values(), key=lambda k: k[0], reverse=True)[0] if spell_lists else (0, 0, 0)
+        sab, dc, scam = (
+            sorted(spell_lists.values(), key=lambda k: k[0], reverse=True)[0]
+            if spell_lists
+            else (0, 0, 0)
+        )
 
         spells = []
         for spell in potential_spells:
-            spell_list_id = spell['parent']['id']
-            spell_ab, spell_dc, spell_mod = spell_lists.get(spell_list_id, (None, None, None))
+            spell_list_id = spell["parent"]["id"]
+            spell_ab, spell_dc, spell_mod = spell_lists.get(
+                spell_list_id, (None, None, None)
+            )
             if spell_ab == sab:
                 spell_ab = None
             if spell_dc == dc:
                 spell_dc = None
             if spell_mod == scam:
                 spell_mod = None
-            spell_prepared = spell['prepared'] in ('prepared', 'always') or 'noprep' in self.args
+            spell_prepared = (
+                spell["prepared"] in ("prepared", "always") or "noprep" in self.args
+            )
 
-            result, strict = search(compendium.spells, spell['name'].strip(), lambda sp: sp.name, strict=True)
+            result, strict = search(
+                compendium.spells,
+                spell["name"].strip(),
+                lambda sp: sp.name,
+                strict=True,
+            )
             if result and strict:
-                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,
-                                                        prepared=spell_prepared))
+                spells.append(
+                    SpellbookSpell.from_spell(
+                        result,
+                        sab=spell_ab,
+                        dc=spell_dc,
+                        mod=spell_mod,
+                        prepared=spell_prepared,
+                    )
+                )
             else:
-                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod,
-                                             prepared=spell_prepared))
+                spells.append(
+                    SpellbookSpell(
+                        spell["name"].strip(),
+                        sab=spell_ab,
+                        dc=spell_dc,
+                        mod=spell_mod,
+                        prepared=spell_prepared,
+                    )
+                )
 
-        spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level, scam)
+        spellbook = Spellbook(
+            slots, slots, spells, dc, sab, self.get_levels().total_level, scam
+        )
 
         log.debug(f"Completed parsing spellbook: {spellbook.to_dict()}")
 
@@ -325,9 +423,11 @@ class DicecloudParser(SheetLoaderABC):
 
     def is_live(self):
         dicecloud_client = DicecloudClient.getInstance()
-        if dicecloud_client.user_id in self.character_data['characters'][0]['writers'] \
-                or dicecloud_client.user_id == self.character_data['characters'][0]['owner']:
-            return 'dicecloud'
+        if (
+            dicecloud_client.user_id in self.character_data["characters"][0]["writers"]
+            or dicecloud_client.user_id == self.character_data["characters"][0]["owner"]
+        ):
+            return "dicecloud"
         return None
 
     def get_custom_counters(self):
@@ -336,34 +436,45 @@ class DicecloudParser(SheetLoaderABC):
         for res in CLASS_RESOURCES:
             res_value = int(self.calculate_stat(res))
             if res_value > 0:
-                display_type = 'bubble' if res_value < 6 else None
+                display_type = "bubble" if res_value < 6 else None
                 co = {  # we have to initialize counters this way, which is meh
-                    "name": CLASS_RESOURCE_NAMES.get(res, 'Unknown'),
-                    "value": res_value, "minv": '0', "maxv": str(res_value),
+                    "name": CLASS_RESOURCE_NAMES.get(res, "Unknown"),
+                    "value": res_value,
+                    "minv": "0",
+                    "maxv": str(res_value),
                     "reset": CLASS_RESOURCE_RESETS.get(res),
-                    "display_type": display_type, "live_id": res
+                    "display_type": display_type,
+                    "live_id": res,
                 }
                 counters.append(co)
-        for f in self.character_data.get('features', []):
-            if not f.get('enabled'): continue
-            if f.get('removed'): continue
-            if not ('uses' in f and f['uses']): continue
+        for f in self.character_data.get("features", []):
+            if not f.get("enabled"):
+                continue
+            if f.get("removed"):
+                continue
+            if not ("uses" in f and f["uses"]):
+                continue
             reset = None
-            desc = f.get('description', '').lower()
-            if 'short rest' in desc or 'short or long rest' in desc:
-                reset = 'short'
-            elif 'long rest' in desc:
-                reset = 'long'
+            desc = f.get("description", "").lower()
+            if "short rest" in desc or "short or long rest" in desc:
+                reset = "short"
+            elif "long rest" in desc:
+                reset = "long"
             try:
-                initial_value = int(self.evaluator.eval(f['uses']))
+                initial_value = int(self.evaluator.eval(f["uses"]))
             except draconic.DraconicException:
-                raise ExternalImportError(f"Invalid max uses on limited use feature {f['name']}: {f['uses']}")
-            display_type = 'bubble' if initial_value < 7 else None
+                raise ExternalImportError(
+                    f"Invalid max uses on limited use feature {f['name']}: {f['uses']}"
+                )
+            display_type = "bubble" if initial_value < 7 else None
             co = {
-                "name": f['name'],
-                "value": initial_value, "minv": '0', "maxv": str(initial_value),
+                "name": f["name"],
+                "value": initial_value,
+                "minv": "0",
+                "maxv": str(initial_value),
                 "reset": reset,
-                "display_type": display_type, "live_id": f['_id']
+                "display_type": display_type,
+                "live_id": f["_id"],
             }
             counters.append(co)
 
@@ -371,9 +482,9 @@ class DicecloudParser(SheetLoaderABC):
 
     def get_actions(self):
         feature_names = [
-            f.get('name')
-            for f in self.character_data.get('features', [])
-            if f.get('enabled') and not f.get('removed')
+            f.get("name")
+            for f in self.character_data.get("features", [])
+            if f.get("enabled") and not f.get("removed")
         ]
         actions = get_actions_for_names(feature_names)
         return Actions(actions)
@@ -381,26 +492,37 @@ class DicecloudParser(SheetLoaderABC):
     # helper funcs
     def calculate_stat(self, stat, base=0):
         """Calculates and returns the stat value."""
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         if not base and stat in self._cache:
             return self._cache[stat]
         character = self.character_data
-        effects = character.get('effects', [])
+        effects = character.get("effects", [])
         add = 0
         mult = 1
         maxV = None
         minV = None
         for effect in effects:
-            if effect.get('stat') != stat or not effect.get('enabled', True) or effect.get('removed', False):
+            if (
+                effect.get("stat") != stat
+                or not effect.get("enabled", True)
+                or effect.get("removed", False)
+            ):
                 continue
-            operation = effect.get('operation', 'base')
-            if operation not in ('base', 'add', 'mul', 'min', 'max'):
+            operation = effect.get("operation", "base")
+            if operation not in ("base", "add", "mul", "min", "max"):
                 continue
-            if effect.get('value') is not None:
-                value = effect.get('value')
+            if effect.get("value") is not None:
+                value = effect.get("value")
             else:
-                calculation = effect.get('calculation', '').replace('{', '').replace('}', '').strip()
-                if not calculation: continue
+                calculation = (
+                    effect.get("calculation", "")
+                    .replace("{", "")
+                    .replace("}", "")
+                    .strip()
+                )
+                if not calculation:
+                    continue
                 try:
                     value = self.evaluator.eval(calculation)
                 except SyntaxError:
@@ -409,15 +531,15 @@ class DicecloudParser(SheetLoaderABC):
                     raise
             if not isinstance(value, (int, float)):
                 continue
-            if operation == 'base' and value > base:
+            if operation == "base" and value > base:
                 base = value
-            elif operation == 'add':
+            elif operation == "add":
                 add += value
-            elif operation == 'mul':
+            elif operation == "mul":
                 mult *= value
-            elif operation == 'min':
+            elif operation == "min":
                 minV = value if minV is None else value if value < minV else minV
-            elif operation == 'max':
+            elif operation == "max":
                 maxV = value if maxV is None else value if value > maxV else maxV
         out = (base + add) * mult
         if minV is not None:
@@ -430,40 +552,51 @@ class DicecloudParser(SheetLoaderABC):
 
     def parse_attack(self, atk_dict) -> Attack:
         """Calculates and returns a dict."""
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
 
         log.debug(f"Processing attack {atk_dict.get('name')}")
 
         # setup temporary local vars
         temp_names = {}
-        if atk_dict.get('parent', {}).get('collection') == 'Spells':
-            spellParentID = atk_dict.get('parent', {}).get('id')
+        if atk_dict.get("parent", {}).get("collection") == "Spells":
+            spellParentID = atk_dict.get("parent", {}).get("id")
             try:
-                spellObj = next(s for s in self.character_data.get('spells', []) if s.get('_id') == spellParentID)
+                spellObj = next(
+                    s
+                    for s in self.character_data.get("spells", [])
+                    if s.get("_id") == spellParentID
+                )
             except StopIteration:
                 pass
             else:
-                spellListParentID = spellObj.get('parent', {}).get('id')
+                spellListParentID = spellObj.get("parent", {}).get("id")
                 try:
                     spellListObj = next(
-                        s for s in self.character_data.get('spellLists', []) if s.get('_id') == spellListParentID)
+                        s
+                        for s in self.character_data.get("spellLists", [])
+                        if s.get("_id") == spellListParentID
+                    )
                 except StopIteration:
                     pass
                 else:
                     try:
-                        temp_names['attackBonus'] = int(
-                            self.evaluator.eval(spellListObj.get('attackBonus')))
-                        temp_names['DC'] = int(self.evaluator.eval(spellListObj.get('saveDC')))
+                        temp_names["attackBonus"] = int(
+                            self.evaluator.eval(spellListObj.get("attackBonus"))
+                        )
+                        temp_names["DC"] = int(
+                            self.evaluator.eval(spellListObj.get("saveDC"))
+                        )
                     except Exception as e:
                         log.debug(f"Exception parsing spellvars: {e}")
 
-        temp_names['rageDamage'] = self.calculate_stat('rageDamage')
+        temp_names["rageDamage"] = self.calculate_stat("rageDamage")
         old_names = self.evaluator.names.copy()
         self.evaluator.names.update(temp_names)
         log.debug(f"evaluator tempnames: {temp_names}")
 
         # attack bonus
-        bonus_calc = atk_dict.get('attackBonus', '').replace('{', '').replace('}', '')
+        bonus_calc = atk_dict.get("attackBonus", "").replace("{", "").replace("}", "")
         if not bonus_calc:
             bonus = None
         else:
@@ -482,21 +615,21 @@ class DicecloudParser(SheetLoaderABC):
                 log.debug(f"exception in damage_sub: {ex}")
                 return match.group(0)
 
-        damage_calc = atk_dict.get('damage', '')
-        damage = re.sub(r'{(.*?)}', damage_sub, damage_calc)
-        damage = damage.replace('{', '').replace('}', '')
+        damage_calc = atk_dict.get("damage", "")
+        damage = re.sub(r"{(.*?)}", damage_sub, damage_calc)
+        damage = damage.replace("{", "").replace("}", "")
         if not damage:
             damage = None
         else:
-            damage += ' [{}]'.format(atk_dict.get('damageType'))
+            damage += " [{}]".format(atk_dict.get("damageType"))
 
         # details
-        details = atk_dict.get('details', None)
+        details = atk_dict.get("details", None)
         if details:
-            details = re.sub(r'{([^{}]*)}', damage_sub, details)
+            details = re.sub(r"{([^{}]*)}", damage_sub, details)
 
         # build attack
-        name = atk_dict['name']
+        name = atk_dict["name"]
         attack = Attack.new(name, bonus, damage, details)
 
         self.evaluator.names = old_names
@@ -513,14 +646,21 @@ def larger(x, y):
 
 
 class DicecloudEvaluator(draconic.SimpleInterpreter):
-    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round, 'func_if': func_if,
-                         'larger': larger}
+    DEFAULT_FUNCTIONS = {
+        "ceil": ceil,
+        "floor": floor,
+        "max": max,
+        "min": min,
+        "round": round,
+        "func_if": func_if,
+        "larger": larger,
+    }
 
     def __init__(self):
         super(DicecloudEvaluator, self).__init__(builtins=self.DEFAULT_FUNCTIONS)
 
     def eval(self, expr):
-        expr = re.sub(r'if\s*\(', 'func_if(', expr)  # 0.5ms avg
+        expr = re.sub(r"if\s*\(", "func_if(", expr)  # 0.5ms avg
         return super().eval(expr.strip())
 
     def _preflight(self):
@@ -541,11 +681,11 @@ class DicecloudEvaluator(draconic.SimpleInterpreter):
 
         return func(
             *(self._eval(a) for a in node.args),
-            **dict(self._eval(k) for k in node.keywords)
+            **dict(self._eval(k) for k in node.keywords),
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import asyncio
     import json
     from utils.argparser import argparse
@@ -553,5 +693,7 @@ if __name__ == '__main__':
     while True:
         url_ = input("Dicecloud sheet ID: ")
         parser = DicecloudParser(url_)
-        char = asyncio.get_event_loop().run_until_complete(parser.load_character('', argparse('')))
+        char = asyncio.get_event_loop().run_until_complete(
+            parser.load_character("", argparse(""))
+        )
         print(json.dumps(char.to_dict(), indent=2))

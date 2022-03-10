@@ -20,7 +20,7 @@ from gamedata.shared import Sourced
 from utils import config
 
 log = logging.getLogger(__name__)
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Compendium:
@@ -68,10 +68,12 @@ class Compendium:
         self._entity_lookup = {}
         self._book_lookup = {}
         self._actions_by_uid = {}  # {uuid: Action}
-        self._actions_by_eid = collections.defaultdict(lambda: [])  # {(tid, eid): [Action]}
+        self._actions_by_eid = collections.defaultdict(
+            lambda: []
+        )  # {(tid, eid): [Action]}
         self._epoch = 0
 
-        self._base_path = os.path.relpath('res')
+        self._base_path = os.path.relpath("res")
 
     async def reload_task(self, mdb=None):
         wait_for = int(config.RELOAD_INTERVAL)
@@ -99,52 +101,62 @@ class Compendium:
         if base_path is not None:
             self._base_path = base_path
 
-        self.raw_classes = self.read_json('classes.json', [])
-        self.raw_feats = self.read_json('feats.json', [])
-        self.raw_monsters = self.read_json('monsters.json', [])
-        self.raw_backgrounds = self.read_json('backgrounds.json', [])
-        self.raw_items = self.read_json('items.json', [])
-        self.raw_races = self.read_json('races.json', [])
-        self.raw_subraces = self.read_json('subraces.json', [])
-        self.raw_spells = self.read_json('spells.json', [])
-        self.raw_books = self.read_json('books.json', [])
-        self.raw_actions = self.read_json('actions.json', [])
+        self.raw_classes = self.read_json("classes.json", [])
+        self.raw_feats = self.read_json("feats.json", [])
+        self.raw_monsters = self.read_json("monsters.json", [])
+        self.raw_backgrounds = self.read_json("backgrounds.json", [])
+        self.raw_items = self.read_json("items.json", [])
+        self.raw_races = self.read_json("races.json", [])
+        self.raw_subraces = self.read_json("subraces.json", [])
+        self.raw_spells = self.read_json("spells.json", [])
+        self.raw_books = self.read_json("books.json", [])
+        self.raw_actions = self.read_json("actions.json", [])
 
-        self.names = self.read_json('names.json', [])
-        self.rule_references = self.read_json('srd-references.json', [])
+        self.names = self.read_json("names.json", [])
+        self.rule_references = self.read_json("srd-references.json", [])
 
     async def load_all_mongodb(self, mdb):
-        lookup = {d['key']: d['object'] async for d in mdb.static_data.find({})}
+        lookup = {d["key"]: d["object"] async for d in mdb.static_data.find({})}
 
-        self.raw_classes = lookup.get('classes', [])
-        self.raw_feats = lookup.get('feats', [])
-        self.raw_monsters = lookup.get('monsters', [])
-        self.raw_backgrounds = lookup.get('backgrounds', [])
-        self.raw_items = lookup.get('items', [])
-        self.raw_races = lookup.get('races', [])
-        self.raw_subraces = lookup.get('subraces', [])
-        self.raw_spells = lookup.get('spells', [])
-        self.raw_books = lookup.get('books', [])
-        self.raw_actions = lookup.get('actions', [])
+        self.raw_classes = lookup.get("classes", [])
+        self.raw_feats = lookup.get("feats", [])
+        self.raw_monsters = lookup.get("monsters", [])
+        self.raw_backgrounds = lookup.get("backgrounds", [])
+        self.raw_items = lookup.get("items", [])
+        self.raw_races = lookup.get("races", [])
+        self.raw_subraces = lookup.get("subraces", [])
+        self.raw_spells = lookup.get("spells", [])
+        self.raw_books = lookup.get("books", [])
+        self.raw_actions = lookup.get("actions", [])
 
-        self.names = lookup.get('names', [])
-        self.rule_references = lookup.get('srd-references', [])
+        self.names = lookup.get("names", [])
+        self.rule_references = lookup.get("srd-references", [])
 
     # noinspection DuplicatedCode
     def load_common(self):
         self._entity_lookup = {}
         self._book_lookup = {}
 
-        self.backgrounds = self._deserialize_and_register_lookups(Background, self.raw_backgrounds)
+        self.backgrounds = self._deserialize_and_register_lookups(
+            Background, self.raw_backgrounds
+        )
         self.classes = self._deserialize_and_register_lookups(Class, self.raw_classes)
         self.races = self._deserialize_and_register_lookups(Race, self.raw_races)
-        self.subraces = self._deserialize_and_register_lookups(SubRace, self.raw_subraces)
+        self.subraces = self._deserialize_and_register_lookups(
+            SubRace, self.raw_subraces
+        )
         # if a Feat has the hidden attribute, we skip registering it in the lookup list but still register it in
         # entity lookup so it can grant limiteduse/etc
-        self.feats = self._deserialize_and_register_lookups(Feat, self.raw_feats, skip_out_filter=lambda f: f.hidden)
+        self.feats = self._deserialize_and_register_lookups(
+            Feat, self.raw_feats, skip_out_filter=lambda f: f.hidden
+        )
         self.items = self._deserialize_and_register_lookups(Item, self.raw_items)
-        self.monsters = self._deserialize_and_register_lookups(Monster, self.raw_monsters)
-        self.spells = self._deserialize_and_register_lookups(gamedata.spell.Spell, self.raw_spells)
+        self.monsters = self._deserialize_and_register_lookups(
+            Monster, self.raw_monsters
+        )
+        self.spells = self._deserialize_and_register_lookups(
+            gamedata.spell.Spell, self.raw_spells
+        )
         self.books = self._deserialize_and_register_lookups(Book, self.raw_books)
 
         # generated
@@ -221,10 +233,14 @@ class Compendium:
                 copied.name = f"{race.name}: {feature.name}"
                 yield copied
 
-                self._register_entity_lookup(feature, allow_overwrite=not feature.inherited)
+                self._register_entity_lookup(
+                    feature, allow_overwrite=not feature.inherited
+                )
                 # race feature options (e.g. breath weapon, silver dragon) are registered here as well
                 for rfo in feature.options:
-                    self._register_entity_lookup(rfo, allow_overwrite=not feature.inherited)
+                    self._register_entity_lookup(
+                        rfo, allow_overwrite=not feature.inherited
+                    )
 
         for base_race in self.races:
             self.rfeats.extend(handle_race(base_race))
@@ -243,11 +259,12 @@ class Compendium:
             self._actions_by_eid[(action.type_id, action.id)].append(action)
 
     def _deserialize_and_register_lookups(
-            self,
-            cls: Type[T],
-            data_source: List[dict],
-            skip_out_filter: Callable[[T], bool] = None,
-            **kwargs) -> List[T]:
+        self,
+        cls: Type[T],
+        data_source: List[dict],
+        skip_out_filter: Callable[[T], bool] = None,
+        **kwargs,
+    ) -> List[T]:
         out = []
         for entity_data in data_source:
             entity = cls.from_data(entity_data, **kwargs)
@@ -260,15 +277,21 @@ class Compendium:
         k = (entity.entity_type, entity.entity_id)
         if k in self._entity_lookup:
             if not allow_overwrite:
-                log.debug(f"Entity was not registered due to overwrite rules: {k} "
-                          f"({self._entity_lookup[k].name} -> {entity.name})")
+                log.debug(
+                    f"Entity was not registered due to overwrite rules: {k} "
+                    f"({self._entity_lookup[k].name} -> {entity.name})"
+                )
                 return
             elif entity.name != self._entity_lookup[k].name:
-                log.debug(f"Overwriting existing entity lookup key: {k} "
-                          f"({self._entity_lookup[k].name} -> {entity.name})")
+                log.debug(
+                    f"Overwriting existing entity lookup key: {k} "
+                    f"({self._entity_lookup[k].name} -> {entity.name})"
+                )
             else:
-                log.debug(f"Entity lookup key {k} is registered multiple times: "
-                          f"({self._entity_lookup[k].name}, {entity.name})")
+                log.debug(
+                    f"Entity lookup key {k} is registered multiple times: "
+                    f"({self._entity_lookup[k].name}, {entity.name})"
+                )
         log.debug(f"Registered entity {k}: {entity!r}")
         self._entity_lookup[k] = entity
         kt = (entity.type_id, entity.entity_id)
@@ -287,7 +310,7 @@ class Compendium:
         data = default
         filepath = os.path.join(self._base_path, filename)
         try:
-            with open(filepath, 'r') as f:
+            with open(filepath, "r") as f:
                 data = json.load(f)
         except FileNotFoundError:
             log.warning("File not found: {}".format(filepath))

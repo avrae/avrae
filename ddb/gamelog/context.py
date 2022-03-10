@@ -74,17 +74,23 @@ class GameLogEventContext:
         if self._destination_channel is not _sentinel:
             return self._destination_channel
 
-        if self.event.message_scope == 'gameId':
+        if self.event.message_scope == "gameId":
             self._destination_channel = self.channel
             return self.channel
-        elif self.event.message_scope == 'userId':
-            if self.event.user_id == self.event.message_target:  # optimization: we already got this user (probably)
+        elif self.event.message_scope == "userId":
+            if (
+                self.event.user_id == self.event.message_target
+            ):  # optimization: we already got this user (probably)
                 discord_user = await self.get_discord_user()
             else:
-                discord_user = await ddb_id_to_discord_user(self, self.event.message_target, self.guild)
+                discord_user = await ddb_id_to_discord_user(
+                    self, self.event.message_target, self.guild
+                )
 
             if discord_user is None:  # we did our best to find the user, but oh well
-                raise IgnoreEvent(f"could not find discord user associated with userId: {self.event.message_target!r}")
+                raise IgnoreEvent(
+                    f"could not find discord user associated with userId: {self.event.message_target!r}"
+                )
 
             # try to find an existing dmchannel with the user
             existing_dmchannel = discord_user.dm_channel
@@ -127,15 +133,14 @@ class GameLogEventContext:
             return self._character
 
         # event is not in the character scope
-        if self.event.entity_type != 'character':
+        if self.event.entity_type != "character":
             self._character = None
             return None
 
         ddb_character_upstream = f"beyond-{self.event.entity_id}"
         try:
             self._character = await Character.from_bot_and_ids(
-                self.bot, str(self.discord_user_id),
-                ddb_character_upstream
+                self.bot, str(self.discord_user_id), ddb_character_upstream
             )
         except NoCharacter:
             self._character = None
@@ -149,7 +154,7 @@ class GameLogEventContext:
         """
         if not self.event.entity_id:
             return None
-        return compendium.lookup_entity('monster', int(self.event.entity_id))
+        return compendium.lookup_entity("monster", int(self.event.entity_id))
 
     async def get_statblock(self):
         """:rtype: cogs5e.models.sheet.statblock.StatBlock or None"""

@@ -26,7 +26,7 @@ class Spellcasting(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('cast'):
+            if ctx.command is ctx.bot.get_command("cast"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -53,7 +53,10 @@ class Spellcasting(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('cast') and '-l' in ctx.message.content:
+            if (
+                ctx.command is ctx.bot.get_command("cast")
+                and "-l" in ctx.message.content
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -82,7 +85,10 @@ class Spellcasting(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('cast') and '-t' in ctx.message.content:
+            if (
+                ctx.command is ctx.bot.get_command("cast")
+                and "-t" in ctx.message.content
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -112,25 +118,33 @@ class Spellcasting(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            command = ctx.bot.get_command('game spellslot')
+            command = ctx.bot.get_command("game spellslot")
             if ctx.command is command:
-                if ctx.message.content.endswith('-1'):
-                    state_map.data['has_removed'] = True
-                elif ctx.message.content.endswith('+1'):
-                    state_map.data['has_added'] = True
+                if ctx.message.content.endswith("-1"):
+                    state_map.data["has_removed"] = True
+                elif ctx.message.content.endswith("+1"):
+                    state_map.data["has_added"] = True
                 await state_map.commit(ctx)
 
                 embed = TutorialEmbed(self, ctx)
                 embed.title = "Objectives"
-                embed.description = checklist([
-                    (f"Manually lose a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
-                     f"-<number of spell slots>`.", state_map.data.get('has_removed')),
-                    (f"Manually gain a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
-                     f"+<number of spell slots>`.", state_map.data.get('has_added')),
-                ])
+                embed.description = checklist(
+                    [
+                        (
+                            f"Manually lose a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
+                            f"-<number of spell slots>`.",
+                            state_map.data.get("has_removed"),
+                        ),
+                        (
+                            f"Manually gain a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
+                            f"+<number of spell slots>`.",
+                            state_map.data.get("has_added"),
+                        ),
+                    ]
+                )
                 await ctx.send(embed=embed)
 
-            if state_map.data.get('has_added') and state_map.data.get('has_removed'):
+            if state_map.data.get("has_added") and state_map.data.get("has_removed"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -154,7 +168,7 @@ class Spellcasting(Tutorial):
             try:
                 character = await ctx.get_character()
                 if warlock_level := character.levels.get("Warlock"):
-                    if character.sheet_type == 'beyond':
+                    if character.sheet_type == "beyond":
                         warlock_info = "Since you're a Warlock, your pact slots will reset on a Short Rest, too!"
                     elif warlock_level == character.levels.total_level:
                         warlock_info = f"By the way, since you're a Warlock, you can also set your spell slots to recover on a Short Rest with `{ctx.prefix}csettings srslots true`."
@@ -173,7 +187,7 @@ class Spellcasting(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('game longrest'):
+            if ctx.command is ctx.bot.get_command("game longrest"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):

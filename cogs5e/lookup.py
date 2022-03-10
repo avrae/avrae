@@ -12,16 +12,33 @@ import gamedata
 import ui
 import utils.settings
 from cogs5e.models import errors
-from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
+from cogs5e.models.embeds import (
+    EmbedWithAuthor,
+    add_fields_from_long_text,
+    set_maybe_long_desc,
+)
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
-from gamedata.lookuputils import (HOMEBREW_EMOJI, available, can_access, get_item_choices, get_monster_choices,
-    get_spell_choices, handle_source_footer)
+from gamedata.lookuputils import (
+    HOMEBREW_EMOJI,
+    available,
+    can_access,
+    get_item_choices,
+    get_monster_choices,
+    get_spell_choices,
+    handle_source_footer,
+)
 from gamedata.race import RaceFeature
 from utils import checks, img
 from utils.argparser import argparse
-from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str
+from utils.functions import (
+    chunk_text,
+    get_positivity,
+    search_and_select,
+    smart_trim,
+    trim_str,
+)
 
 LARGE_THRESHOLD = 200
 
@@ -37,14 +54,17 @@ class Lookup(commands.Cog):
     async def _show_reference_options(ctx, destination):
         embed = EmbedWithAuthor(ctx)
         embed.title = "Rules"
-        categories = ', '.join(a['type'] for a in compendium.rule_references)
-        embed.description = f"Use `{ctx.prefix}{ctx.invoked_with} <category>` to look at all actions of " \
-                            f"a certain type.\nCategories: {categories}"
+        categories = ", ".join(a["type"] for a in compendium.rule_references)
+        embed.description = (
+            f"Use `{ctx.prefix}{ctx.invoked_with} <category>` to look at all actions of "
+            f"a certain type.\nCategories: {categories}"
+        )
 
         for actiontype in compendium.rule_references:
             embed.add_field(
-                name=actiontype['fullName'], value=', '.join(a['name'] for a in actiontype['items']),
-                inline=False
+                name=actiontype["fullName"],
+                value=", ".join(a["name"] for a in actiontype["items"]),
+                inline=False,
             )
 
         await destination.send(embed=embed)
@@ -52,26 +72,26 @@ class Lookup(commands.Cog):
     @staticmethod
     async def _show_action_options(ctx, actiontype, destination):
         embed = EmbedWithAuthor(ctx)
-        embed.title = actiontype['fullName']
+        embed.title = actiontype["fullName"]
 
         actions = []
-        for action in actiontype['items']:
+        for action in actiontype["items"]:
             actions.append(f"**{action['name']}** - *{action['short']}*")
 
-        embed.description = '\n'.join(actions)
+        embed.description = "\n".join(actions)
         await destination.send(embed=embed)
 
-    @commands.command(aliases=['status'])
+    @commands.command(aliases=["status"])
     async def condition(self, ctx, *, name: str = None):
         """Looks up a condition."""
         if not name:
-            name = 'condition'
+            name = "condition"
         else:
             name = f"Condition: {name}"
         # this is an invoke instead of an alias to make more sense in docs
         await self.rule(ctx, name=name)
 
-    @commands.command(aliases=['reference'])
+    @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
         destination = await self._get_destination(ctx)
@@ -81,18 +101,22 @@ class Lookup(commands.Cog):
 
         options = []
         for actiontype in compendium.rule_references:
-            if name == actiontype['type']:
+            if name == actiontype["type"]:
                 return await self._show_action_options(ctx, actiontype, destination)
             else:
-                options.extend(actiontype['items'])
+                options.extend(actiontype["items"])
 
-        result, metadata = await search_and_select(ctx, options, name, lambda e: e['fullName'], return_metadata=True)
-        await self._add_training_data("reference", name, result['fullName'], metadata=metadata)
+        result, metadata = await search_and_select(
+            ctx, options, name, lambda e: e["fullName"], return_metadata=True
+        )
+        await self._add_training_data(
+            "reference", name, result["fullName"], metadata=metadata
+        )
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['fullName']
+        embed.title = result["fullName"]
         embed.description = f"*{result['short']}*"
-        add_fields_from_long_text(embed, "Description", result['desc'])
+        add_fields_from_long_text(embed, "Description", result["desc"])
         embed.set_footer(text=f"Rule | {result['source']}")
 
         await destination.send(embed=embed)
@@ -101,13 +125,17 @@ class Lookup(commands.Cog):
     @commands.command()
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
-        result: gamedata.Feat = await self._lookup_search3(ctx, {'feat': compendium.feats}, name)
+        result: gamedata.Feat = await self._lookup_search3(
+            ctx, {"feat": compendium.feats}, name
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
         if result.prerequisite:
-            embed.add_field(name="Prerequisite", value=result.prerequisite, inline=False)
+            embed.add_field(
+                name="Prerequisite", value=result.prerequisite, inline=False
+            )
         add_fields_from_long_text(embed, "Description", result.desc)
         handle_source_footer(embed, result, "Feat")
         await (await self._get_destination(ctx)).send(embed=embed)
@@ -118,8 +146,9 @@ class Lookup(commands.Cog):
         """Looks up a racial feature."""
         result: RaceFeature = await self._lookup_search3(
             ctx,
-            {'race': compendium.rfeats, 'subrace': compendium.subrfeats},
-            name, 'racefeat'
+            {"race": compendium.rfeats, "subrace": compendium.subrfeats},
+            name,
+            "racefeat",
         )
 
         embed = EmbedWithAuthor(ctx)
@@ -135,8 +164,9 @@ class Lookup(commands.Cog):
         """Looks up a race."""
         result: gamedata.Race = await self._lookup_search3(
             ctx,
-            {'race': compendium.races, 'subrace': compendium.subraces},
-            name, 'race'
+            {"race": compendium.races, "subrace": compendium.subraces},
+            name,
+            "race",
         )
 
         embed = EmbedWithAuthor(ctx)
@@ -155,8 +185,9 @@ class Lookup(commands.Cog):
         """Looks up a class feature."""
         result: ClassFeature = await self._lookup_search3(
             ctx,
-            {'class': compendium.cfeats, 'class-feature': compendium.optional_cfeats},
-            name, query_type='classfeat'
+            {"class": compendium.cfeats, "class-feature": compendium.optional_cfeats},
+            name,
+            query_type="classfeat",
         )
 
         embed = EmbedWithAuthor(ctx)
@@ -167,13 +198,15 @@ class Lookup(commands.Cog):
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
-    @commands.command(name='class')
+    @commands.command(name="class")
     async def _class(self, ctx, name: str, level: int = None):
         """Looks up a class, or all features of a certain level."""
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        result: gamedata.Class = await self._lookup_search3(ctx, {'class': compendium.classes}, name)
+        result: gamedata.Class = await self._lookup_search3(
+            ctx, {"class": compendium.classes}, name
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -187,40 +220,54 @@ class Lookup(commands.Cog):
                 feature_names = [feature.name for feature in level_features]
                 if level in result.subclass_feature_levels:
                     feature_names.append(f"{result.subclass_title} Feature")
-                levels.append(', '.join(feature_names))
+                levels.append(", ".join(feature_names))
 
             level_features_str = ""
             for i, l in enumerate(levels):
                 level_features_str += f"`{i + 1}` {l}\n"
             embed.description = level_features_str
 
-            available_ocfs = await available(ctx, result.optional_features, entity_type='class-feature')
+            available_ocfs = await available(
+                ctx, result.optional_features, entity_type="class-feature"
+            )
             if available_ocfs:
-                ocf_names = ', '.join(ocf.name for ocf in available_ocfs)
-                embed.add_field(name="Optional Class Features", value=ocf_names, inline=False)
+                ocf_names = ", ".join(ocf.name for ocf in available_ocfs)
+                embed.add_field(
+                    name="Optional Class Features", value=ocf_names, inline=False
+                )
 
-            embed.add_field(name="Starting Proficiencies", value=result.proficiencies, inline=False)
-            embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
+            embed.add_field(
+                name="Starting Proficiencies", value=result.proficiencies, inline=False
+            )
+            embed.add_field(
+                name="Starting Equipment", value=result.equipment, inline=False
+            )
 
             handle_source_footer(
-                embed, result, f"Use {ctx.prefix}classfeat to look up a feature.",
-                add_source_str=False
+                embed,
+                result,
+                f"Use {ctx.prefix}classfeat to look up a feature.",
+                add_source_str=False,
             )
         else:
             embed.title = f"{result.name}, Level {level}"
 
             level_features = result.levels[level - 1]
 
-            for resource, value in zip(result.table.headers, result.table.levels[level - 1]):
-                if value != '0':
+            for resource, value in zip(
+                result.table.headers, result.table.levels[level - 1]
+            ):
+                if value != "0":
                     embed.add_field(name=resource, value=value)
 
             for f in level_features:
                 embed.add_field(name=f.name, value=trim_str(f.text, 1024), inline=False)
 
             handle_source_footer(
-                embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
-                add_source_str=False
+                embed,
+                result,
+                f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
+                add_source_str=False,
             )
 
         await (await self._get_destination(ctx)).send(embed=embed)
@@ -229,8 +276,7 @@ class Lookup(commands.Cog):
     async def subclass(self, ctx, *, name: str):
         """Looks up a subclass."""
         result: gamedata.Subclass = await self._lookup_search3(
-            ctx, {'class': compendium.subclasses}, name,
-            query_type='subclass'
+            ctx, {"class": compendium.subclasses}, name, query_type="subclass"
         )
 
         embed = EmbedWithAuthor(ctx)
@@ -244,8 +290,10 @@ class Lookup(commands.Cog):
                 embed.add_field(name=feature.name, value=text, inline=False)
 
         handle_source_footer(
-            embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off",
-            add_source_str=True
+            embed,
+            result,
+            f"Use {ctx.prefix}classfeat to look up a feature if it is cut off",
+            add_source_str=True,
         )
 
         await (await self._get_destination(ctx)).send(embed=embed)
@@ -254,7 +302,9 @@ class Lookup(commands.Cog):
     @commands.command()
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
-        result: gamedata.Background = await self._lookup_search3(ctx, {'background': compendium.backgrounds}, name)
+        result: gamedata.Background = await self._lookup_search3(
+            ctx, {"background": compendium.backgrounds}, name
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -290,12 +340,12 @@ class Lookup(commands.Cog):
             visible = True
 
         # #817 -h arg for monster lookup
-        if name.endswith(' -h'):
+        if name.endswith(" -h"):
             name = name[:-3]
             visible = False
 
         choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {'monster': choices}, name)
+        monster = await self._lookup_search3(ctx, {"monster": choices}, name)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -309,7 +359,9 @@ class Lookup(commands.Cog):
             elif len(desc) < 2048:
                 # noinspection PyTypeChecker
                 # I'm adding an Embed to a list of Embeds, shut up.
-                embed_queue.append(discord.Embed(colour=color, description=desc, title=title))
+                embed_queue.append(
+                    discord.Embed(colour=color, description=desc, title=title)
+                )
             else:
                 # noinspection PyTypeChecker
                 embed_queue.append(discord.Embed(colour=color, title=title))
@@ -322,36 +374,46 @@ class Lookup(commands.Cog):
         if visible:
             embed_queue[-1].description = monster.get_meta()
             if monster.traits:
-                trait = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.traits)
+                trait = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.traits)
                 if trait:
                     safe_append("Special Abilities", trait)
             if monster.actions:
-                action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.actions)
+                action = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.actions)
                 if action:
                     safe_append("Actions", action)
             if monster.bonus_actions:
-                bonus_action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.bonus_actions)
+                bonus_action = "\n\n".join(
+                    f"**{a.name}:** {a.desc}" for a in monster.bonus_actions
+                )
                 if bonus_action:
                     safe_append("Bonus Actions", bonus_action)
             if monster.reactions:
-                reaction = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.reactions)
+                reaction = "\n\n".join(
+                    f"**{a.name}:** {a.desc}" for a in monster.reactions
+                )
                 if reaction:
                     safe_append("Reactions", reaction)
             if monster.legactions:
-                proper_name = f'The {monster.name}' if not monster.proper else monster.name
-                legendary = [f"{proper_name} can take {monster.la_per_round} legendary actions, choosing from "
-                             f"the options below. Only one legendary action can be used at a time and only at the "
-                             f"end of another creature's turn. {proper_name} regains spent legendary actions at "
-                             f"the start of its turn."]
+                proper_name = (
+                    f"The {monster.name}" if not monster.proper else monster.name
+                )
+                legendary = [
+                    f"{proper_name} can take {monster.la_per_round} legendary actions, choosing from "
+                    f"the options below. Only one legendary action can be used at a time and only at the "
+                    f"end of another creature's turn. {proper_name} regains spent legendary actions at "
+                    f"the start of its turn."
+                ]
                 for a in monster.legactions:
                     if a.name:
                         legendary.append(f"**{a.name}:** {a.desc}")
                     else:
                         legendary.append(a.desc)
                 if legendary:
-                    safe_append("Legendary Actions", '\n\n'.join(legendary))
+                    safe_append("Legendary Actions", "\n\n".join(legendary))
             if monster.mythic_actions:
-                mythic_action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.mythic_actions)
+                mythic_action = "\n\n".join(
+                    f"**{a.name}:** {a.desc}" for a in monster.mythic_actions
+                )
                 if mythic_action:
                     safe_append("Mythic Actions", mythic_action)
 
@@ -388,25 +450,37 @@ class Lookup(commands.Cog):
 
             languages = len(monster.languages)
 
-            embed_queue[-1].description = f"{size} {_type}.\n" \
-                                          f"**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {monster.speed}\n" \
-                                          f"{monster.get_hidden_stat_array()}\n" \
-                                          f"**Languages:** {languages}\n"
+            embed_queue[-1].description = (
+                f"{size} {_type}.\n"
+                f"**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {monster.speed}\n"
+                f"{monster.get_hidden_stat_array()}\n"
+                f"**Languages:** {languages}\n"
+            )
 
             if monster.traits:
-                embed_queue[-1].add_field(name="Special Abilities", value=str(len(monster.traits)))
+                embed_queue[-1].add_field(
+                    name="Special Abilities", value=str(len(monster.traits))
+                )
 
             if monster.actions:
-                embed_queue[-1].add_field(name="Actions", value=str(len(monster.actions)))
+                embed_queue[-1].add_field(
+                    name="Actions", value=str(len(monster.actions))
+                )
 
             if monster.bonus_actions:
-                embed_queue[-1].add_field(name="Bonus Actions", value=str(len(monster.bonus_actions)))
+                embed_queue[-1].add_field(
+                    name="Bonus Actions", value=str(len(monster.bonus_actions))
+                )
 
             if monster.reactions:
-                embed_queue[-1].add_field(name="Reactions", value=str(len(monster.reactions)))
+                embed_queue[-1].add_field(
+                    name="Reactions", value=str(len(monster.reactions))
+                )
 
             if monster.legactions:
-                embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster.legactions)))
+                embed_queue[-1].add_field(
+                    name="Legendary Actions", value=str(len(monster.legactions))
+                )
 
         handle_source_footer(embed_queue[-1], monster, "Creature")
 
@@ -422,7 +496,7 @@ class Lookup(commands.Cog):
     async def monimage(self, ctx, *, name):
         """Shows a monster's image."""
         choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {'monster': choices}, name)
+        monster = await self._lookup_search3(ctx, {"monster": choices}, name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
         url = monster.get_image_url()
@@ -443,8 +517,8 @@ class Lookup(commands.Cog):
         __Valid Arguments__
         -border <plain|none (player token only)> - Overrides the token border.
         """
-        if name is None or name.startswith('-'):
-            token_cmd = self.bot.get_command('playertoken')
+        if name is None or name.startswith("-"):
+            token_cmd = self.bot.get_command("playertoken")
             if token_cmd is None:
                 return await ctx.send("Error: SheetManager cog not loaded.")
             if name:
@@ -453,7 +527,7 @@ class Lookup(commands.Cog):
 
         # select monster
         choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {'monster': choices}, name)
+        monster = await self._lookup_search3(ctx, {"monster": choices}, name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
         # select border
@@ -466,13 +540,15 @@ class Lookup(commands.Cog):
             if not monster.get_image_url():
                 return await ctx.send("This monster has no image.")
             try:
-                image = await img.generate_token(monster.get_image_url(), is_subscriber, token_args)
+                image = await img.generate_token(
+                    monster.get_image_url(), is_subscriber, token_args
+                )
             except Exception as e:
                 return await ctx.send(f"Error generating token: {e}")
         else:
             # official monsters
             token_url = monster.get_token_url(is_subscriber)
-            if token_args.last('border') == 'plain':
+            if token_args.last("border") == "plain":
                 token_url = monster.get_token_url(False)
 
             if not token_url:
@@ -493,26 +569,33 @@ class Lookup(commands.Cog):
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
         choices = await get_spell_choices(ctx, filter_by_license=False)
-        spell = await self._lookup_search3(ctx, {'spell': choices}, name)
+        spell = await self._lookup_search3(ctx, {"spell": choices}, name)
 
         embed = EmbedWithAuthor(ctx)
         embed.url = spell.url
         color = embed.colour
 
         embed.title = spell.name
-        school_level = f"{spell.get_level()} {spell.get_school().lower()}" if spell.level > 0 \
+        school_level = (
+            f"{spell.get_level()} {spell.get_school().lower()}"
+            if spell.level > 0
             else f"{spell.get_school().lower()} cantrip"
-        embed.description = f"*{school_level}. " \
-                            f"({', '.join(itertools.chain(spell.classes, spell.subclasses))})*"
+        )
+        embed.description = (
+            f"*{school_level}. "
+            f"({', '.join(itertools.chain(spell.classes, spell.subclasses))})*"
+        )
         if spell.ritual:
             time = f"{spell.time} (ritual)"
         else:
             time = spell.time
 
-        meta = f"**Casting Time**: {time}\n" \
-               f"**Range**: {spell.range}\n" \
-               f"**Components**: {spell.components}\n" \
-               f"**Duration**: {spell.duration}"
+        meta = (
+            f"**Casting Time**: {time}\n"
+            f"**Range**: {spell.range}\n"
+            f"**Components**: {spell.components}\n"
+            f"**Duration**: {spell.duration}"
+        )
         embed.add_field(name="Meta", value=meta)
 
         higher_levels = spell.higherlevels
@@ -525,14 +608,18 @@ class Lookup(commands.Cog):
             for i, piece in enumerate(pieces[1::2]):
                 temp_embed = discord.Embed()
                 temp_embed.colour = color
-                if (next_idx := (i + 1) * 2) < len(pieces):  # this is chunked into 1024 pieces, and descs can handle 2
+                if (next_idx := (i + 1) * 2) < len(
+                    pieces
+                ):  # this is chunked into 1024 pieces, and descs can handle 2
                     temp_embed.description = piece + pieces[next_idx]
                 else:
                     temp_embed.description = piece
                 embed_queue.append(temp_embed)
 
         if higher_levels:
-            add_fields_from_long_text(embed_queue[-1], "At Higher Levels", higher_levels)
+            add_fields_from_long_text(
+                embed_queue[-1], "At Higher Levels", higher_levels
+            )
 
         handle_source_footer(embed_queue[-1], spell, "Spell")
         if spell.image:
@@ -544,11 +631,13 @@ class Lookup(commands.Cog):
             await destination.send(embed=embed)
 
     # ==== items ====
-    @commands.command(name='item')
+    @commands.command(name="item")
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
         choices = await get_item_choices(ctx, filter_by_license=False)
-        item = await self._lookup_search3(ctx, {'magic-item': choices}, name, query_type='item')
+        item = await self._lookup_search3(
+            ctx, {"magic-item": choices}, name, query_type="item"
+        )
 
         embed = EmbedWithAuthor(ctx)
 
@@ -560,7 +649,11 @@ class Lookup(commands.Cog):
             if item.attunement is True:  # can be truthy, but not true
                 embed.add_field(name="Attunement", value=f"Requires Attunement")
             else:
-                embed.add_field(name="Attunement", value=f"Requires Attunement {item.attunement}", inline=False)
+                embed.add_field(
+                    name="Attunement",
+                    value=f"Requires Attunement {item.attunement}",
+                    inline=False,
+                )
 
         text = trim_str(item.desc, 5500)
         add_fields_from_long_text(embed, "Description", text)
@@ -581,39 +674,51 @@ class Lookup(commands.Cog):
         """This command has been replaced by `!servsettings`. If you're used to it, it still works like before!"""
         guild_settings = await ctx.get_server_settings()
         if not args:
-            settings_ui = ui.ServerSettingsUI.new(ctx.bot, owner=ctx.author, settings=guild_settings, guild=ctx.guild)
+            settings_ui = ui.ServerSettingsUI.new(
+                ctx.bot, owner=ctx.author, settings=guild_settings, guild=ctx.guild
+            )
             await settings_ui.send_to(ctx)
             return
 
         # old deprecated CLI behaviour
         args = argparse(args)
         out = []
-        if 'req_dm_monster' in args:
-            setting = get_positivity(args.last('req_dm_monster', True))
+        if "req_dm_monster" in args:
+            setting = get_positivity(args.last("req_dm_monster", True))
             guild_settings.lookup_dm_required = setting
-            out.append(f'req_dm_monster set to {setting}!')
-        if 'pm_dm' in args:
-            setting = get_positivity(args.last('pm_dm', True))
+            out.append(f"req_dm_monster set to {setting}!")
+        if "pm_dm" in args:
+            setting = get_positivity(args.last("pm_dm", True))
             guild_settings.lookup_pm_dm = setting
-            out.append(f'pm_dm set to {setting}!')
-        if 'pm_result' in args:
-            setting = get_positivity(args.last('pm_result', True))
+            out.append(f"pm_dm set to {setting}!")
+        if "pm_result" in args:
+            setting = get_positivity(args.last("pm_result", True))
             guild_settings.lookup_pm_result = setting
-            out.append(f'pm_result set to {setting}!')
+            out.append(f"pm_result set to {setting}!")
 
         if out:
             await guild_settings.commit(ctx.bot.mdb)
-            await ctx.send("Lookup settings set:\n" + '\n'.join(out))
+            await ctx.send("Lookup settings set:\n" + "\n".join(out))
         else:
-            await ctx.send(f"No settings found. Try using `{ctx.prefix}lookup_settings` to open an interactive menu.")
+            await ctx.send(
+                f"No settings found. Try using `{ctx.prefix}lookup_settings` to open an interactive menu."
+            )
 
     # ==== helpers ====
-    async def _add_training_data(self, lookup_type, query, result_name, metadata=None, srd=True, could_view=True):
-        data = {"type": lookup_type, "query": query, "result": result_name, "srd": srd, "could_view": could_view}
+    async def _add_training_data(
+        self, lookup_type, query, result_name, metadata=None, srd=True, could_view=True
+    ):
+        data = {
+            "type": lookup_type,
+            "query": query,
+            "result": result_name,
+            "srd": srd,
+            "could_view": could_view,
+        }
         if metadata:
-            data['given_options'] = metadata.get('num_options', 1)
-            data['chosen_index'] = metadata.get('chosen_index', 0)
-            data['homebrew'] = metadata.get('homebrew', False)
+            data["given_options"] = metadata.get("num_options", 1)
+            data["chosen_index"] = metadata.get("chosen_index", 0)
+            data["homebrew"] = metadata.get("homebrew", False)
         await self.bot.mdb.nn_training.insert_one(data)
 
     @staticmethod
@@ -645,7 +750,10 @@ class Lookup(commands.Cog):
         await ctx.trigger_typing()
 
         # get licensed objects, mapped by entity type
-        available_ids = {k: await self.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k) for k in entities}
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k)
+            for k in entities
+        }
 
         # the selection display key
         def selectkey(e):
@@ -663,8 +771,12 @@ class Lookup(commands.Cog):
                 choices.append((entity, entity_entitlement_type))  # entity, entity type
 
         result, metadata = await search_and_select(
-            ctx, choices, query, lambda e: e[0].name, return_metadata=True,
-            selectkey=selectkey
+            ctx,
+            choices,
+            query,
+            lambda e: e[0].name,
+            return_metadata=True,
+            selectkey=selectkey,
         )
 
         # get the entity
@@ -672,13 +784,19 @@ class Lookup(commands.Cog):
 
         # log the query
         await self._add_training_data(
-            query_type, query, entity.name, metadata=metadata, srd=entity.is_free,
-            could_view=can_access(entity, available_ids[entity_entitlement_type])
+            query_type,
+            query,
+            entity.name,
+            metadata=metadata,
+            srd=entity.is_free,
+            could_view=can_access(entity, available_ids[entity_entitlement_type]),
         )
 
         # display error if not srd
         if not can_access(entity, available_ids[entity_entitlement_type]):
-            raise errors.RequiresLicense(entity, available_ids[entity_entitlement_type] is not None)
+            raise errors.RequiresLicense(
+                entity, available_ids[entity_entitlement_type] is not None
+            )
         return entity
 
     # ==== listeners ====
@@ -686,12 +804,16 @@ class Lookup(commands.Cog):
     async def on_guild_join(self, guild):
         # This method automatically allows full monster lookup for new large servers.
         # These settings can be changed by any server admin.
-        existing_guild_settings = await utils.settings.ServerSettings.for_guild(self.bot.mdb, guild.id)
+        existing_guild_settings = await utils.settings.ServerSettings.for_guild(
+            self.bot.mdb, guild.id
+        )
         if existing_guild_settings is not None:
             return
 
         if guild.member_count >= LARGE_THRESHOLD:
-            guild_settings = utils.settings.ServerSettings(guild_id=guild.id, lookup_dm_required=False)
+            guild_settings = utils.settings.ServerSettings(
+                guild_id=guild.id, lookup_dm_required=False
+            )
             await guild_settings.commit(self.bot.mdb)
 
 

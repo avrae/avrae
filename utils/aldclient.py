@@ -12,8 +12,12 @@ class AsyncLaunchDarklyClient(ldclient.LDClient):
         super().__init__(config=config)
         self.loop = loop
 
-    async def variation(self, key, user, default):  # run variation evaluation in a separate thread
-        return await self.loop.run_in_executor(None, super().variation, key, user, default)
+    async def variation(
+        self, key, user, default
+    ):  # run variation evaluation in a separate thread
+        return await self.loop.run_in_executor(
+            None, super().variation, key, user, default
+        )
 
 
 def discord_user_to_dict(user):

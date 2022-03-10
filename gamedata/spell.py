@@ -18,20 +18,36 @@ log = logging.getLogger(__name__)
 
 
 class Spell(AutomatibleMixin, DescribableMixin, Sourced):
-    entity_type = 'spell'
+    entity_type = "spell"
     type_id = 1118725998
 
-    def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
-                 description: str, homebrew: bool, classes=None, subclasses=None, ritual: bool = False,
-                 higherlevels: str = None, concentration: bool = False, image: str = None, **kwargs):
+    def __init__(
+        self,
+        name: str,
+        level: int,
+        school: str,
+        casttime: str,
+        range_: str,
+        components: str,
+        duration: str,
+        description: str,
+        homebrew: bool,
+        classes=None,
+        subclasses=None,
+        ritual: bool = False,
+        higherlevels: str = None,
+        concentration: bool = False,
+        image: str = None,
+        **kwargs,
+    ):
         if classes is None:
             classes = []
         if isinstance(classes, str):
-            classes = [cls.strip() for cls in classes.split(',') if cls.strip()]
+            classes = [cls.strip() for cls in classes.split(",") if cls.strip()]
         if subclasses is None:
             subclasses = []
         if isinstance(subclasses, str):
-            subclasses = [cls.strip() for cls in subclasses.split(',') if cls.strip()]
+            subclasses = [cls.strip() for cls in subclasses.split(",") if cls.strip()]
 
         super().__init__(homebrew=homebrew, **kwargs)
 
@@ -50,22 +66,36 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         self.concentration = concentration
         self.image = image
 
-        if self.concentration and 'Concentration' not in self.duration:
+        if self.concentration and "Concentration" not in self.duration:
             self.duration = f"Concentration, up to {self.duration}"
 
     @classmethod
     def from_data(cls, d):  # local JSON
         return cls(
-            d['name'], d['level'], d['school'], d['casttime'], d['range'], d['components'], d['duration'],
-            d['description'],
-            homebrew=False, classes=d['classes'], subclasses=d['subclasses'], ritual=d['ritual'],
-            higherlevels=d['higherlevels'], concentration=d['concentration'],
-            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
+            d["name"],
+            d["level"],
+            d["school"],
+            d["casttime"],
+            d["range"],
+            d["components"],
+            d["duration"],
+            d["description"],
+            homebrew=False,
+            classes=d["classes"],
+            subclasses=d["subclasses"],
+            ritual=d["ritual"],
+            higherlevels=d["higherlevels"],
+            concentration=d["concentration"],
+            source=d["source"],
+            entity_id=d["id"],
+            page=d["page"],
+            url=d["url"],
+            is_free=d["isFree"],
         ).initialize_automation(d)
 
     @classmethod
     def from_homebrew(cls, data, source):  # homebrew spells
-        data['components'] = parse_homebrew_components(data['components'])
+        data["components"] = parse_homebrew_components(data["components"])
         data["range_"] = data.pop("range")
         return cls(homebrew=True, source=source, **data).initialize_automation(data)
 
@@ -78,7 +108,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             "D": "Divination",
             "N": "Necromancy",
             "T": "Transmutation",
-            "C": "Conjuration"
+            "C": "Conjuration",
         }.get(self.school, self.school)
 
     def get_level(self):
@@ -97,35 +127,35 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         if match:
             num = int(match.group(1))
             unit = match.group(2)
-            if 'round' in unit:
+            if "round" in unit:
                 return num
-            elif 'minute' in unit:
+            elif "minute" in unit:
                 return 10 * num
-            elif 'hour' in unit:
+            elif "hour" in unit:
                 return 600 * num
         return -1
 
     def to_dicecloud(self):
-        mat = re.search(r'\(([^()]+)\)', self.components)
-        text = self.description.replace('\n', '\n  ')
+        mat = re.search(r"\(([^()]+)\)", self.components)
+        text = self.description.replace("\n", "\n  ")
         if self.higherlevels:
             text += f"\n\n**At Higher Levels**: {self.higherlevels}"
         return {
-            'name': self.name,
-            'description': text,
-            'castingTime': self.time,
-            'range': self.range,
-            'duration': self.duration,
-            'components': {
-                'verbal': 'V' in self.components,
-                'somatic': 'S' in self.components,
-                'concentration': self.concentration,
-                'material': mat.group(1) if mat else None,
+            "name": self.name,
+            "description": text,
+            "castingTime": self.time,
+            "range": self.range,
+            "duration": self.duration,
+            "components": {
+                "verbal": "V" in self.components,
+                "somatic": "S" in self.components,
+                "concentration": self.concentration,
+                "material": mat.group(1) if mat else None,
             },
-            'ritual': self.ritual,
-            'level': int(self.level),
-            'school': self.get_school(),
-            'prepared': 'prepared'
+            "ritual": self.ritual,
+            "level": int(self.level),
+            "school": self.get_school(),
+            "prepared": "prepared",
         }
 
     async def cast(self, ctx, caster, targets, args, combat=None):
@@ -144,10 +174,10 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         """
 
         # generic args
-        l = args.last('l', self.level, int)
-        i = args.last('i', type_=bool)
-        title = args.last('title')
-        nopact = args.last('nopact', type_=bool)
+        l = args.last("l", self.level, int)
+        i = args.last("i", type_=bool)
+        title = args.last("title")
+        nopact = args.last("nopact", type_=bool)
 
         # meta checks
         if not self.level <= l <= 9:
@@ -169,16 +199,23 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             # if I'm a warlock, and I didn't have any slots of this level anyway (#655)
             # automatically scale up to our pact slot level (or the next available level s.t. max > 0)
             if (
-                    l > 0
-                    and l == self.level
-                    and not caster.spellbook.get_max_slots(l)
-                    and not caster.spellbook.can_cast(self, l)
+                l > 0
+                and l == self.level
+                and not caster.spellbook.get_max_slots(l)
+                and not caster.spellbook.can_cast(self, l)
             ):
                 if caster.spellbook.pact_slot_level is not None:
                     l = caster.spellbook.pact_slot_level
                 else:
-                    l = next((sl for sl in range(l, 6) if caster.spellbook.get_max_slots(sl)), l)  # only scale up to l5
-                args['l'] = l
+                    l = next(
+                        (
+                            sl
+                            for sl in range(l, 6)
+                            if caster.spellbook.get_max_slots(sl)
+                        ),
+                        l,
+                    )  # only scale up to l5
+                args["l"] = l
 
             # can I cast this spell?
             if not caster.spellbook.can_cast(self, l):
@@ -186,20 +223,29 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
                 embed.title = "Cannot cast spell!"
                 if not caster.spellbook.get_slots(l):
                     # out of spell slots
-                    err = (f"You don't have enough level {l} slots left! Use `-l <level>` to cast at a different "
-                           f"level, `{ctx.prefix}g lr` to take a long rest, or `-i` to ignore spell slots!")
+                    err = (
+                        f"You don't have enough level {l} slots left! Use `-l <level>` to cast at a different "
+                        f"level, `{ctx.prefix}g lr` to take a long rest, or `-i` to ignore spell slots!"
+                    )
                 elif self.name not in caster.spellbook:
                     # don't know spell
-                    err = (f"You don't know this spell! Use `{ctx.prefix}sb add {self.name}` to add it to your "
-                           f"spellbook, or pass `-i` to ignore restrictions.")
+                    err = (
+                        f"You don't know this spell! Use `{ctx.prefix}sb add {self.name}` to add it to your "
+                        f"spellbook, or pass `-i` to ignore restrictions."
+                    )
                 else:
                     # ?
-                    err = ("Not enough spell slots remaining, or spell not in known spell list!\n"
-                           f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, "
-                           f"or pass `-i` to ignore restrictions.")
+                    err = (
+                        "Not enough spell slots remaining, or spell not in known spell list!\n"
+                        f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, "
+                        f"or pass `-i` to ignore restrictions."
+                    )
                 embed.description = err
                 if l > 0:
-                    embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))
+                    embed.add_field(
+                        name="Spell Slots",
+                        value=caster.spellbook.remaining_casts_of(self, l),
+                    )
                 return CastResult(embed=embed, success=False, automation_result=None)
 
             # #1000: is this spell prepared (soft check)?
@@ -207,14 +253,18 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
                 skip_prep_conf = await confirm(
                     ctx,
                     f"{self.name} is not prepared. Do you want to cast it anyway? (Reply with yes/no)",
-                    delete_msgs=True
+                    delete_msgs=True,
                 )
                 if not skip_prep_conf:
                     embed = EmbedWithAuthor(
-                        ctx, title=f"Cannot cast spell!",
+                        ctx,
+                        title=f"Cannot cast spell!",
                         description=f"{self.name} is not prepared! Prepare it on your character sheet and use "
-                                    f"`{ctx.prefix}update` to mark it as prepared, or use `-i` to ignore restrictions.")
-                    return CastResult(embed=embed, success=False, automation_result=None)
+                        f"`{ctx.prefix}update` to mark it as prepared, or use `-i` to ignore restrictions.",
+                    )
+                    return CastResult(
+                        embed=embed, success=False, automation_result=None
+                    )
 
             # use resource
             caster.spellbook.cast(self, l, pact=not nopact)
@@ -222,7 +272,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         # base stat stuff
         mod_arg = args.last("mod", type_=int)
         with_arg = args.last("with")
-        stat_override = ''
+        stat_override = ""
         if mod_arg is not None:
             mod = mod_arg
             prof_bonus = caster.stats.prof_bonus
@@ -241,10 +291,12 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         # begin setup
         embed = discord.Embed()
         if title:
-            embed.title = title.replace('[name]', caster.name) \
-                .replace('[aname]', self.name) \
-                .replace('[sname]', self.name) \
-                .replace('[verb]', 'casts')  # #1514, [aname] is action name now, #1587, add verb to action/cast
+            embed.title = (
+                title.replace("[name]", caster.name)
+                .replace("[aname]", self.name)
+                .replace("[sname]", self.name)
+                .replace("[verb]", "casts")
+            )  # #1514, [aname] is action name now, #1587, add verb to action/cast
         else:
             embed.title = f"{caster.get_title_name()} casts {self.name}{stat_override}!"
         if targets is None:
@@ -254,56 +306,80 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         noconc = args.last("noconc", type_=bool)
         conc_conflict = None
         conc_effect = None
-        if all((self.concentration, isinstance(caster, BaseCombatant), combat, not noconc)):
-            duration = args.last('dur', self.get_combat_duration(), int)
+        if all(
+            (self.concentration, isinstance(caster, BaseCombatant), combat, not noconc)
+        ):
+            duration = args.last("dur", self.get_combat_duration(), int)
             conc_effect = Effect.new(combat, caster, self.name, duration, "", True)
             # noinspection PyUnresolvedReferences
             effect_result = caster.add_effect(conc_effect)
-            conc_conflict = effect_result['conc_conflict']
+            conc_conflict = effect_result["conc_conflict"]
 
         # run
         automation_result = None
         if self.automation and self.automation.effects:
             title = f"{caster.name} cast {self.name}!"
             automation_result = await self.automation.run(
-                ctx, embed, caster, targets, args, combat, self,
-                conc_effect=conc_effect, ab_override=ab_override, dc_override=dc_override,
-                spell_override=spell_override, title=title)
+                ctx,
+                embed,
+                caster,
+                targets,
+                args,
+                combat,
+                self,
+                conc_effect=conc_effect,
+                ab_override=ab_override,
+                dc_override=dc_override,
+                spell_override=spell_override,
+                title=title,
+            )
         else:  # no automation, display spell description
-            phrase = args.join('phrase', '\n')
+            phrase = args.join("phrase", "\n")
             if phrase:
                 embed.description = f"*{phrase}*"
-            embed.add_field(name="Description", value=smart_trim(self.description), inline=False)
+            embed.add_field(
+                name="Description", value=smart_trim(self.description), inline=False
+            )
             embed.set_footer(text="No spell automation found.")
 
         if l != self.level and self.higherlevels:
-            embed.add_field(name="At Higher Levels", value=smart_trim(self.higherlevels), inline=False)
+            embed.add_field(
+                name="At Higher Levels",
+                value=smart_trim(self.higherlevels),
+                inline=False,
+            )
 
         if l > 0 and not i:
-            embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))
+            embed.add_field(
+                name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l)
+            )
 
         if conc_conflict:
-            conflicts = ', '.join(e.name for e in conc_conflict)
-            embed.add_field(name="Concentration", value=f"Dropped {conflicts} due to concentration.")
+            conflicts = ", ".join(e.name for e in conc_conflict)
+            embed.add_field(
+                name="Concentration", value=f"Dropped {conflicts} due to concentration."
+            )
 
-        if 'thumb' in args:
-            embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
+        if "thumb" in args:
+            embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
         elif self.image:
             embed.set_thumbnail(url=self.image)
 
-        add_fields_from_args(embed, args.get('f'))
+        add_fields_from_args(embed, args.get("f"))
         gamedata.lookuputils.handle_source_footer(embed, self, add_source_str=False)
 
-        return CastResult(embed=embed, success=True, automation_result=automation_result)
+        return CastResult(
+            embed=embed, success=True, automation_result=automation_result
+        )
 
 
-CastResult = namedtuple('CastResult', 'embed success automation_result')
+CastResult = namedtuple("CastResult", "embed success automation_result")
 
 
 def parse_homebrew_components(components):
-    v = components.get('verbal')
-    s = components.get('somatic')
-    m = components.get('material')
+    v = components.get("verbal")
+    s = components.get("somatic")
+    m = components.get("material")
     if isinstance(m, bool):
         parsedm = "M"
     else:
@@ -316,7 +392,7 @@ def parse_homebrew_components(components):
         comps.append("S")
     if m:
         comps.append(parsedm)
-    return ', '.join(comps)
+    return ", ".join(comps)
 
 
 class SpellException(AvraeException):

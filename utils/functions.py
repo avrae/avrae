@@ -30,9 +30,9 @@ def get_positivity(string):
     if isinstance(string, bool):  # oi!
         return string
     lowered = string.lower()
-    if lowered in ('yes', 'y', 'true', 't', '1', 'enable', 'on'):
+    if lowered in ("yes", "y", "true", "t", "1", "enable", "on"):
         return True
-    elif lowered in ('no', 'n', 'false', 'f', '0', 'disable', 'off'):
+    elif lowered in ("no", "n", "false", "f", "0", "disable", "off"):
         return False
     else:
         return None
@@ -60,14 +60,25 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
         if len(partial_matches) > 1 or not partial_matches:
             names = [key(d).lower() for d in list_to_search]
             fuzzy_map = {key(d).lower(): d for d in list_to_search}
-            fuzzy_results = [r for r in process.extract(value.lower(), names, scorer=fuzz.ratio) if r[1] >= cutoff]
+            fuzzy_results = [
+                r
+                for r in process.extract(value.lower(), names, scorer=fuzz.ratio)
+                if r[1] >= cutoff
+            ]
             fuzzy_sum = sum(r[1] for r in fuzzy_results)
-            fuzzy_matches_and_confidences = [(fuzzy_map[r[0]], r[1] / fuzzy_sum) for r in fuzzy_results]
+            fuzzy_matches_and_confidences = [
+                (fuzzy_map[r[0]], r[1] / fuzzy_sum) for r in fuzzy_results
+            ]
 
             # display the results in order of confidence
             weighted_results = []
-            weighted_results.extend((match, confidence) for match, confidence in fuzzy_matches_and_confidences)
-            weighted_results.extend((match, len(value) / len(key(match))) for match in partial_matches)
+            weighted_results.extend(
+                (match, confidence)
+                for match, confidence in fuzzy_matches_and_confidences
+            )
+            weighted_results.extend(
+                (match, len(value) / len(key(match))) for match in partial_matches
+            )
             sorted_weighted = sorted(weighted_results, key=lambda e: e[1], reverse=True)
 
             # build results list, unique
@@ -94,9 +105,21 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
             return results[0], True
 
 
-async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, return_key=False, pm=False, message=None,
-                            list_filter=None, selectkey=None, search_func=search, return_metadata=False,
-                            strip_query_quotes=True):
+async def search_and_select(
+    ctx,
+    list_to_search: list,
+    query,
+    key,
+    cutoff=5,
+    return_key=False,
+    pm=False,
+    message=None,
+    list_filter=None,
+    selectkey=None,
+    search_func=search,
+    return_metadata=False,
+    strip_query_quotes=True,
+):
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
     Guaranteed to return a result - raises if there is no result.
@@ -151,12 +174,14 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
                 options = [(r, r) for r in results]
             else:
                 options = [(key(r), r) for r in results]
-            result = await get_selection(ctx, options, pm=pm, message=message, force_select=True)
+            result = await get_selection(
+                ctx, options, pm=pm, message=message, force_select=True
+            )
     if not return_metadata:
         return result
     metadata = {
         "num_options": 1 if strict else len(results),
-        "chosen_index": 0 if strict else results.index(result)
+        "chosen_index": 0 if strict else results.index(result),
     }
     return result, metadata
 
@@ -166,7 +191,9 @@ def paginate(iterable, n, fillvalue=None):
     return [i for i in zip_longest(*args, fillvalue=fillvalue) if i is not None]
 
 
-async def get_selection(ctx, choices, delete=True, pm=False, message=None, force_select=False):
+async def get_selection(
+    ctx, choices, delete=True, pm=False, message=None, force_select=False
+):
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
     If delete is True, will delete the selection message and the response.
     If length of choices is 1, will return the only choice unless force_select is True.
@@ -185,21 +212,27 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
 
     def chk(msg):
         valid = [str(v) for v in range(1, len(choices) + 1)] + ["c", "n", "p"]
-        return msg.author == ctx.author and msg.channel == ctx.channel and msg.content.lower() in valid
+        return (
+            msg.author == ctx.author
+            and msg.channel == ctx.channel
+            and msg.content.lower() in valid
+        )
 
     for n in range(200):
         _choices = pages[page]
         names = [o[0] for o in _choices if o]
         embed = discord.Embed()
         embed.title = "Multiple Matches Found"
-        selectStr = "Which one were you looking for? (Type the number or \"c\" to cancel)\n"
+        selectStr = (
+            'Which one were you looking for? (Type the number or "c" to cancel)\n'
+        )
         if len(pages) > 1:
             selectStr += "`n` to go to the next page, or `p` for previous\n"
             embed.set_footer(text=f"Page {page + 1}/{len(pages)}")
         for i, r in enumerate(names):
             selectStr += f"**[{i + 1 + page * 10}]** - {r}\n"
         embed.description = selectStr
-        embed.colour = random.randint(0, 0xffffff)
+        embed.colour = random.randint(0, 0xFFFFFF)
         if message:
             embed.add_field(name="Note", value=message, inline=False)
         if selectMsg:
@@ -210,24 +243,27 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
         if not pm:
             selectMsg = await ctx.channel.send(embed=embed)
         else:
-            embed.add_field(name="Instructions",
-                            value="Type your response in the channel you called the command. This message was PMed to "
-                                  "you to hide the monster name.", inline=False)
+            embed.add_field(
+                name="Instructions",
+                value="Type your response in the channel you called the command. This message was PMed to "
+                "you to hide the monster name.",
+                inline=False,
+            )
             selectMsg = await ctx.author.send(embed=embed)
 
         try:
-            m = await ctx.bot.wait_for('message', timeout=30, check=chk)
+            m = await ctx.bot.wait_for("message", timeout=30, check=chk)
         except asyncio.TimeoutError:
             m = None
 
         if m is None:
             break
-        if m.content.lower() == 'n':
+        if m.content.lower() == "n":
             if page + 1 < len(pages):
                 page += 1
             else:
                 await ctx.channel.send("You are already on the last page.")
-        elif m.content.lower() == 'p':
+        elif m.content.lower() == "p":
             if page - 1 >= 0:
                 page -= 1
             else:
@@ -260,7 +296,7 @@ async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity
     """
     msg = await ctx.channel.send(message)
     try:
-        reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
+        reply = await ctx.bot.wait_for("message", timeout=30, check=auth_and_chan(ctx))
     except asyncio.TimeoutError:
         return None
     reply_bool = response_check(reply.content) if reply is not None else None
@@ -275,19 +311,24 @@ async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity
 
 # ==== display helpers ====
 def a_or_an(string, upper=False):
-    if string.startswith('^') or string.endswith('^'):
-        return string.strip('^')
-    if re.match('[AEIOUaeiou].*', string):
-        return 'an {0}'.format(string) if not upper else f'An {string}'
-    return 'a {0}'.format(string) if not upper else f'A {string}'
+    if string.startswith("^") or string.endswith("^"):
+        return string.strip("^")
+    if re.match("[AEIOUaeiou].*", string):
+        return "an {0}".format(string) if not upper else f"An {string}"
+    return "a {0}".format(string) if not upper else f"A {string}"
 
 
 def camel_to_title(string):
-    return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
+    return re.sub(r"((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))", r" \1", string).title()
 
 
-def bubble_format(value: int, max_: int, fill_from_right=False, used_char=constants.EMPTY_BUBBLE,
-                  unused_char=constants.FILLED_BUBBLE):
+def bubble_format(
+    value: int,
+    max_: int,
+    fill_from_right=False,
+    used_char=constants.EMPTY_BUBBLE,
+    unused_char=constants.FILLED_BUBBLE,
+):
     """Returns a bubble string to represent a counter's value."""
     if max_ > 100:
         return f"{value}/{max_}"
@@ -319,7 +360,9 @@ def trim_str(text, max_len):
     return f"{text[:max_len - 4]}..."
 
 
-def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ', ', ' '), chunker_i=0):
+def chunk_text(
+    text, max_chunk_size=1024, chunk_on=("\n\n", "\n", ". ", ", ", " "), chunker_i=0
+):
     """
     Recursively chunks *text* into a list of str, with each element no longer than *max_chunk_size*.
     Prefers splitting on the elements of *chunk_on*, in order.
@@ -329,8 +372,10 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ', ', ' 
         return [text]
     if chunker_i >= len(chunk_on):  # we have no more preferred chunk_on characters
         # optimization: instead of merging a thousand characters, just use list slicing
-        return [text[:max_chunk_size],
-                *chunk_text(text[max_chunk_size:], max_chunk_size, chunk_on, chunker_i + 1)]
+        return [
+            text[:max_chunk_size],
+            *chunk_text(text[max_chunk_size:], max_chunk_size, chunk_on, chunker_i + 1),
+        ]
 
     # split on the current character
     chunks = []
@@ -339,7 +384,9 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ', ', ' 
         chunk = f"{chunk}{split_char}"
         if len(chunk) > max_chunk_size:  # this chunk needs to be split more, recurse
             chunks.extend(chunk_text(chunk, max_chunk_size, chunk_on, chunker_i + 1))
-        elif chunks and len(chunk) + len(chunks[-1]) <= max_chunk_size:  # this chunk can be merged
+        elif (
+            chunks and len(chunk) + len(chunks[-1]) <= max_chunk_size
+        ):  # this chunk can be merged
             chunks[-1] += chunk
         else:
             chunks.append(chunk)
@@ -349,7 +396,7 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ', ', ' 
         chunks.pop()
 
     # remove extra split_char from last chunk
-    chunks[-1] = chunks[-1][:-len(split_char)]
+    chunks[-1] = chunks[-1][: -len(split_char)]
     return chunks
 
 
@@ -389,7 +436,7 @@ def maybe_mod(val: str, base=0):
     base = base or 0
 
     try:
-        if val.startswith(('+', '-')):
+        if val.startswith(("+", "-")):
             base += int(val)
         else:
             base = int(val)
@@ -411,7 +458,7 @@ def combine_maybe_mods(vals: list, base=0):
 
     for val in vals:
         try:
-            if val.startswith(('+', '-')):
+            if val.startswith(("+", "-")):
                 sums.append(int(val))
             else:
                 sets.append(int(val))
@@ -433,9 +480,15 @@ async def user_from_id(ctx, the_id):
     async def update_known_user(the_user):
         await ctx.bot.mdb.users.update_one(
             {"id": str(the_user.id)},
-            {"$set": {'username': the_user.name, 'discriminator': the_user.discriminator,
-                      'avatar': the_user.display_avatar.url, 'bot': the_user.bot}},
-            upsert=True
+            {
+                "$set": {
+                    "username": the_user.name,
+                    "discriminator": the_user.discriminator,
+                    "avatar": the_user.display_avatar.url,
+                    "bot": the_user.bot,
+                }
+            },
+            upsert=True,
         )
 
     if ctx.guild:  # try and get member
@@ -503,4 +556,4 @@ def reconcile_adv(adv=False, dis=False, ea=False):
 def maybe_http_url(url: str):
     """Returns a url if one found, otherwise blank string."""
     # Mainly used for embed.set_thumbnail(url=url)
-    return url if 'http' in url else ''
+    return url if "http" in url else ""

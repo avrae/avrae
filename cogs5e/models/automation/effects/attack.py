@@ -16,8 +16,8 @@ class Attack(Effect):
 
     @classmethod
     def from_data(cls, data):
-        data['hit'] = Effect.deserialize(data['hit'])
-        data['miss'] = Effect.deserialize(data['miss'])
+        data["hit"] = Effect.deserialize(data["hit"])
+        data["miss"] = Effect.deserialize(data["miss"])
         return super(Attack, cls).from_data(data)
 
     def to_dict(self):
@@ -32,44 +32,49 @@ class Attack(Effect):
     def run(self, autoctx):
         super().run(autoctx)
         if autoctx.target is None:
-            raise TargetException("Tried to make an attack without a target! Make sure all Attack effects are inside "
-                                  "of a Target effect.")
+            raise TargetException(
+                "Tried to make an attack without a target! Make sure all Attack effects are inside "
+                "of a Target effect."
+            )
 
         # ==== arguments ====
         args = autoctx.args
-        crit = args.last('crit', None, bool, ephem=True) and 1
-        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
-        hit = args.last('hit', None, bool, ephem=True) and 1
-        miss = (args.last('miss', None, bool, ephem=True) and not hit) and 1
-        b = args.join('b', '+', ephem=True)
-        hide = args.last('h', type_=bool)
+        crit = args.last("crit", None, bool, ephem=True) and 1
+        nocrit = args.last("nocrit", default=False, type_=bool, ephem=True)
+        hit = args.last("hit", None, bool, ephem=True) and 1
+        miss = (args.last("miss", None, bool, ephem=True) and not hit) and 1
+        b = args.join("b", "+", ephem=True)
+        hide = args.last("h", type_=bool)
 
-        reroll = args.last('reroll', 0, int)
-        criton = args.last('criton', 20, int)
-        ac = args.last('ac', None, int)
-        force_roll = args.last('attackroll', None, int, ephem=True)
+        reroll = args.last("reroll", 0, int)
+        criton = args.last("criton", 20, int)
+        ac = args.last("ac", None, int)
+        force_roll = args.last("attackroll", None, int, ephem=True)
 
         # ==== caster options ====
         # character-specific arguments
         if autoctx.character:
-            if 'reroll' not in args:
+            if "reroll" not in args:
                 reroll = autoctx.character.options.reroll
-            if 'criton' not in args:
+            if "criton" not in args:
                 criton = autoctx.character.options.crit_on
 
         # check for combatant IEffects
         if autoctx.combatant:
             # bonus (#224)
-            effect_b = '+'.join(autoctx.combatant.active_effects('b'))
+            effect_b = "+".join(autoctx.combatant.active_effects("b"))
             if effect_b and b:
                 b = f"{b}+{effect_b}"
             elif effect_b:
                 b = effect_b
             # Combine args/ieffect advantages - adv/dis (#1552)
             adv = reconcile_adv(
-                adv=args.last('adv', type_=bool, ephem=True) or autoctx.combatant.active_effects('adv'),
-                dis=args.last('dis', type_=bool, ephem=True) or autoctx.combatant.active_effects('dis'),
-                ea=args.last('ea', type_=bool, ephem=True) or autoctx.combatant.active_effects('ea')
+                adv=args.last("adv", type_=bool, ephem=True)
+                or autoctx.combatant.active_effects("adv"),
+                dis=args.last("dis", type_=bool, ephem=True)
+                or autoctx.combatant.active_effects("dis"),
+                ea=args.last("ea", type_=bool, ephem=True)
+                or autoctx.combatant.active_effects("ea"),
             )
         else:
             adv = args.adv(ea=True, ephem=True)
@@ -87,21 +92,25 @@ class Attack(Effect):
             try:
                 attack_bonus = autoctx.parse_intexpression(self.bonus)
             except Exception:
-                raise AutomationException(f"{self.bonus!r} cannot be interpreted as an attack bonus.")
+                raise AutomationException(
+                    f"{self.bonus!r} cannot be interpreted as an attack bonus."
+                )
 
         if attack_bonus is None:
             # if there is no attack bonus specified (i.e. use SAB), and no SAB, use -b arg to specify the to hit bonus
             if b is None:
-                raise NoAttackBonus("No spell attack bonus found. Use the `-b` argument to specify one!")
+                raise NoAttackBonus(
+                    "No spell attack bonus found. Use the `-b` argument to specify one!"
+                )
             # #1463
             attack_bonus = b
             b = None
 
         # reset metavars (#1335)
-        autoctx.metavars['lastAttackDidHit'] = False
-        autoctx.metavars['lastAttackDidCrit'] = False
-        autoctx.metavars['lastAttackRollTotal'] = 0  # 1362
-        autoctx.metavars['lastAttackNaturalRoll'] = 0  # 1495
+        autoctx.metavars["lastAttackDidHit"] = False
+        autoctx.metavars["lastAttackDidCrit"] = False
+        autoctx.metavars["lastAttackRollTotal"] = 0  # 1362
+        autoctx.metavars["lastAttackNaturalRoll"] = 0  # 1495
         did_hit = True
         did_crit = False
         to_hit_roll = None
@@ -113,26 +122,26 @@ class Attack(Effect):
         # roll attack against autoctx.target
         if not (hit or miss):
             # reroll before kh/kl (#1199)
-            reroll_str = ''
+            reroll_str = ""
             if reroll:
                 reroll_str = f"ro{reroll}"
 
             if force_roll:
                 formatted_d20 = f"{force_roll}"
             elif adv == 1:
-                formatted_d20 = f'2d20{reroll_str}kh1'
+                formatted_d20 = f"2d20{reroll_str}kh1"
             elif adv == 2:
-                formatted_d20 = f'3d20{reroll_str}kh1'
+                formatted_d20 = f"3d20{reroll_str}kh1"
             elif adv == -1:
-                formatted_d20 = f'2d20{reroll_str}kl1'
+                formatted_d20 = f"2d20{reroll_str}kl1"
             else:
-                formatted_d20 = f'1d20{reroll_str}'
+                formatted_d20 = f"1d20{reroll_str}"
 
-            to_hit_message = '**To Hit**:'
+            to_hit_message = "**To Hit**:"
             if ac:
-                to_hit_message = f'**To Hit (AC {ac})**:'
+                to_hit_message = f"**To Hit (AC {ac})**:"
             if force_roll:
-                to_hit_message = f'{to_hit_message} Forced Roll!'
+                to_hit_message = f"{to_hit_message} Forced Roll!"
 
             if b:
                 to_hit_roll = d20.roll(f"{formatted_d20}+{attack_bonus}+{b}")
@@ -144,39 +153,49 @@ class Attack(Effect):
             d20_value = d20.utils.leftmost(to_hit_roll.expr).total
 
             # -ac #
-            target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
+            target_has_ac = (
+                not autoctx.target.is_simple and autoctx.target.ac is not None
+            )
             if target_has_ac:
                 ac = ac or autoctx.target.ac
 
             # assign hit values
-            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # natural crit
+            if (
+                d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT
+            ):  # natural crit
                 did_crit = True if not nocrit else False
             elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
                 did_hit = False
             elif ac and to_hit_roll.total < ac:  # miss
                 did_hit = False
-            elif crit and not nocrit:  # if we did hit (#1485), set crit flag if arg passed (#1461)
+            elif (
+                crit and not nocrit
+            ):  # if we did hit (#1485), set crit flag if arg passed (#1461)
                 did_crit = True
             # else: normal hit
 
-            autoctx.metavars['lastAttackRollTotal'] = to_hit_roll.total  # 1362
-            autoctx.metavars['lastAttackNaturalRoll'] = d20_value  # 1495
+            autoctx.metavars["lastAttackRollTotal"] = to_hit_roll.total  # 1362
+            autoctx.metavars["lastAttackNaturalRoll"] = d20_value  # 1495
 
             # output
             if not hide:  # not hidden
                 autoctx.queue(f"{to_hit_message} {to_hit_roll.result}")
             elif target_has_ac:  # hidden
                 if not did_hit:
-                    hit_type = 'MISS'
+                    hit_type = "MISS"
                 elif did_crit:
-                    hit_type = 'CRIT'
+                    hit_type = "CRIT"
                 else:
-                    hit_type = 'HIT'
+                    hit_type = "HIT"
                 autoctx.queue(f"**To Hit**: {formatted_d20}... = `{hit_type}`")
-                autoctx.add_pm(str(autoctx.ctx.author.id), f"{to_hit_message} {to_hit_roll.result}")
+                autoctx.add_pm(
+                    str(autoctx.ctx.author.id), f"{to_hit_message} {to_hit_roll.result}"
+                )
             else:  # hidden, no ac
                 autoctx.queue(f"**To Hit**: {formatted_d20}... = `{to_hit_roll.total}`")
-                autoctx.add_pm(str(autoctx.ctx.author.id), f"{to_hit_message} {to_hit_roll.result}")
+                autoctx.add_pm(
+                    str(autoctx.ctx.author.id), f"{to_hit_message} {to_hit_roll.result}"
+                )
 
             if not did_hit:
                 children = self.on_miss(autoctx)
@@ -200,19 +219,24 @@ class Attack(Effect):
         autoctx.in_save = original  # Restore proper crit state (#1556)
 
         return AttackResult(
-            attack_bonus=attack_bonus, ac=ac, to_hit_roll=to_hit_roll, adv=adv, did_hit=did_hit, did_crit=did_crit,
-            children=children
+            attack_bonus=attack_bonus,
+            ac=ac,
+            to_hit_roll=to_hit_roll,
+            adv=adv,
+            did_hit=did_hit,
+            did_crit=did_crit,
+            children=children,
         )
 
     def on_hit(self, autoctx):
         # assign metavars (#1335)
-        autoctx.metavars['lastAttackDidHit'] = True
+        autoctx.metavars["lastAttackDidHit"] = True
         return self.run_children(self.hit, autoctx)
 
     def on_crit(self, autoctx):
         original = autoctx.in_crit
         autoctx.in_crit = True
-        autoctx.metavars['lastAttackDidCrit'] = True
+        autoctx.metavars["lastAttackDidCrit"] = True
         result = self.on_hit(autoctx)
         autoctx.in_crit = original
         return result
@@ -223,7 +247,9 @@ class Attack(Effect):
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
-        attack_bonus = caster.spellbook.sab if caster.spellbook.sab is not None else float('nan')
+        attack_bonus = (
+            caster.spellbook.sab if caster.spellbook.sab is not None else float("nan")
+        )
         if self.bonus:
             attack_bonus = stringify_intexpr(evaluator, self.bonus)
 

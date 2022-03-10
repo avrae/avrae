@@ -7,7 +7,10 @@ log = logging.getLogger(__name__)
 
 class LiveIntegration(abc.ABC):
     """Interface defining how to sync character resources with upstream. Tied to the character object's lifecycle."""
-    _inflight_tasks = dict()  # map: key -> task to cancel a task if a new one comes along
+
+    _inflight_tasks = (
+        dict()
+    )  # map: key -> task to cancel a task if a new one comes along
 
     def __init__(self, character):
         self.character = character
@@ -17,7 +20,9 @@ class LiveIntegration(abc.ABC):
         self._should_sync_slots = False
         self._should_sync_ccs = {}
         self._should_sync_death_saves = False
-        self._ctx = None  # set for the duration of a commit, use for access to bot stuff
+        self._ctx = (
+            None  # set for the duration of a commit, use for access to bot stuff
+        )
 
     async def _do_sync_hp(self):
         raise NotImplementedError

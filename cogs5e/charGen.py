@@ -23,16 +23,18 @@ class CharGenerator(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='randchar')
+    @commands.command(name="randchar")
     @commands.max_concurrency(1, per=commands.BucketType.user)
     async def randchar(self, ctx, level=None):
         """Rolls up a random 5e character."""
         if level is None:
             rolls = [roll("4d6kh3") for _ in range(6)]
-            stats = '\n'.join(str(r) for r in rolls)
+            stats = "\n".join(str(r) for r in rolls)
             total = sum([r.total for r in rolls])
-            await ctx.send(f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`",
-                           allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
+            await ctx.send(
+                f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`",
+                allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+            )
             return
 
         try:
@@ -47,23 +49,29 @@ class CharGenerator(commands.Cog):
 
         await self.send_character_details(ctx, level)
 
-    @commands.command(aliases=['name'])
+    @commands.command(aliases=["name"])
     async def randname(self, ctx, race=None, option=None):
         """Generates a random name, optionally from a given race."""
         if race is None:
             return await ctx.send(f"Your random name: {self.old_name_gen()}")
 
         embed = EmbedWithAuthor(ctx)
-        race_names = await search_and_select(ctx, compendium.names, race, lambda e: e['race'])
+        race_names = await search_and_select(
+            ctx, compendium.names, race, lambda e: e["race"]
+        )
         if option is None:
-            table = await get_selection(ctx, [(t['name'], t) for t in race_names['tables']])
+            table = await get_selection(
+                ctx, [(t["name"], t) for t in race_names["tables"]]
+            )
         else:
-            table = await search_and_select(ctx, race_names['tables'], option, lambda e: e['name'])
+            table = await search_and_select(
+                ctx, race_names["tables"], option, lambda e: e["name"]
+            )
         embed.title = f"{table['name']} {race_names['race']} Name"
-        embed.description = random.choice(table['choices'])
+        embed.description = random.choice(table["choices"])
         await ctx.send(embed=embed)
 
-    @commands.command(name='charref', hidden=True)
+    @commands.command(name="charref", hidden=True)
     @commands.max_concurrency(1, per=commands.BucketType.user)
     async def charref(self, ctx, level):
         """Gives you reference stats for a 5e character."""
@@ -78,7 +86,9 @@ class CharGenerator(commands.Cog):
 
         race, _class, subclass, background = await self.select_details(ctx)
 
-        await self.send_character_details(ctx, level, race, _class, subclass, background)
+        await self.send_character_details(
+            ctx, level, race, _class, subclass, background
+        )
 
     async def select_details(self, ctx):
         author = ctx.author
@@ -87,48 +97,69 @@ class CharGenerator(commands.Cog):
         def chk(m):
             return m.author == author and m.channel == channel
 
-        await ctx.send(author.mention + " What race?", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
+        await ctx.send(
+            author.mention + " What race?",
+            allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+        )
         try:
-            race_response = await self.bot.wait_for('message', timeout=90, check=chk)
+            race_response = await self.bot.wait_for("message", timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for race.")
         race_choices = await get_race_choices(ctx)
-        race = await search_and_select(ctx, race_choices, race_response.content, lambda e: e.name)
+        race = await search_and_select(
+            ctx, race_choices, race_response.content, lambda e: e.name
+        )
 
-        await ctx.send(author.mention + " What class?", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
+        await ctx.send(
+            author.mention + " What class?",
+            allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+        )
         try:
-            class_response = await self.bot.wait_for('message', timeout=90, check=chk)
+            class_response = await self.bot.wait_for("message", timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for class.")
-        class_choices = await available(ctx, compendium.classes, 'class')
-        _class = await search_and_select(ctx, class_choices, class_response.content, lambda e: e.name)
+        class_choices = await available(ctx, compendium.classes, "class")
+        _class = await search_and_select(
+            ctx, class_choices, class_response.content, lambda e: e.name
+        )
 
-        subclass_choices = await available(ctx, _class.subclasses, 'class')
+        subclass_choices = await available(ctx, _class.subclasses, "class")
         if subclass_choices:
-            await ctx.send(author.mention + " What subclass?",
-                           allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
+            await ctx.send(
+                author.mention + " What subclass?",
+                allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+            )
             try:
-                subclass_response = await self.bot.wait_for('message', timeout=90, check=chk)
+                subclass_response = await self.bot.wait_for(
+                    "message", timeout=90, check=chk
+                )
             except asyncio.TimeoutError:
                 raise InvalidArgument("Timed out waiting for subclass.")
-            subclass = await search_and_select(ctx, subclass_choices, subclass_response.content,
-                                               lambda e: e.name)
+            subclass = await search_and_select(
+                ctx, subclass_choices, subclass_response.content, lambda e: e.name
+            )
         else:
             subclass = None
 
-        await ctx.send(author.mention + " What background?",
-                       allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
+        await ctx.send(
+            author.mention + " What background?",
+            allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+        )
         try:
-            bg_response = await self.bot.wait_for('message', timeout=90, check=chk)
+            bg_response = await self.bot.wait_for("message", timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for background.")
-        background_choices = await available(ctx, compendium.backgrounds, 'background')
-        background = await search_and_select(ctx, background_choices, bg_response.content, lambda e: e.name)
+        background_choices = await available(ctx, compendium.backgrounds, "background")
+        background = await search_and_select(
+            ctx, background_choices, bg_response.content, lambda e: e.name
+        )
         return race, _class, subclass, background
 
-    async def send_character_details(self, ctx, final_level, race=None, _class=None, subclass=None, background=None):
+    async def send_character_details(
+        self, ctx, final_level, race=None, _class=None, subclass=None, background=None
+    ):
         loadingMessage = await ctx.channel.send("Generating character, please wait...")
-        color = random.randint(0, 0xffffff)
+        color = random.randint(0, 0xFFFFFF)
 
         # Name Gen
         #    DMG name gen
@@ -136,7 +167,7 @@ class CharGenerator(commands.Cog):
         # Stat Gen
         #    4d6d1
         #        reroll if too low/high
-        stats = [roll('4d6kh3').total for _ in range(6)]
+        stats = [roll("4d6kh3").total for _ in range(6)]
         await ctx.author.send("**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
@@ -157,9 +188,14 @@ class CharGenerator(commands.Cog):
         #    Class Features
 
         # class
-        _class = _class or random.choice(await available(ctx, compendium.classes, 'class'))
-        subclass = subclass or (random.choice(subclass_choices)
-                                if (subclass_choices := await available(ctx, _class.subclasses, 'class')) else None)
+        _class = _class or random.choice(
+            await available(ctx, compendium.classes, "class")
+        )
+        subclass = subclass or (
+            random.choice(subclass_choices)
+            if (subclass_choices := await available(ctx, _class.subclasses, "class"))
+            else None
+        )
         embed = EmbedWithAuthor(ctx)
 
         embed.title = _class.name
@@ -168,9 +204,11 @@ class CharGenerator(commands.Cog):
         levels = []
         for level in range(1, final_level + 1):
             level = _class.levels[level - 1]
-            levels.append(', '.join([feature.name for feature in level]))
+            levels.append(", ".join([feature.name for feature in level]))
 
-        embed.add_field(name="Starting Proficiencies", value=_class.proficiencies, inline=False)
+        embed.add_field(
+            name="Starting Proficiencies", value=_class.proficiencies, inline=False
+        )
         embed.add_field(name="Starting Equipment", value=_class.equipment, inline=False)
 
         level_features_str = ""
@@ -183,8 +221,10 @@ class CharGenerator(commands.Cog):
         embed = EmbedWithAuthor(ctx)
         embed.title = f"{_class.name}, Level {final_level}"
 
-        for resource, value in zip(_class.table.headers, _class.table.levels[final_level - 1]):
-            if value != '0':
+        for resource, value in zip(
+            _class.table.headers, _class.table.levels[final_level - 1]
+        ):
+            if value != "0":
                 embed.add_field(name=resource, value=value)
 
         embed.colour = color
@@ -209,7 +249,7 @@ class CharGenerator(commands.Cog):
                 level_features = source.levels[level - 1]
                 for f in level_features:
                     for field in embeds.get_long_field_args(f.text, f.name):
-                        inc_fields(field['value'])
+                        inc_fields(field["value"])
                         embed_queue[-1].add_field(**field)
 
         add_levels(_class)
@@ -222,13 +262,22 @@ class CharGenerator(commands.Cog):
 
         # Background Gen
         #    Inventory/Trait Gen
-        background = background or random.choice(await available(ctx, compendium.backgrounds, 'background'))
+        background = background or random.choice(
+            await available(ctx, compendium.backgrounds, "background")
+        )
         embed = EmbedWithAuthor(ctx)
         embed.title = background.name
         embed.set_footer(text=f"Background | {background.source_str()}")
 
-        ignored_fields = ['suggested characteristics', 'personality trait', 'ideal', 'bond', 'flaw', 'specialty',
-                          'harrowing event']
+        ignored_fields = [
+            "suggested characteristics",
+            "personality trait",
+            "ideal",
+            "bond",
+            "flaw",
+            "specialty",
+            "harrowing event",
+        ]
         for trait in background.traits:
             if trait.name.lower() in ignored_fields:
                 continue
@@ -237,22 +286,86 @@ class CharGenerator(commands.Cog):
         embed.colour = color
         await ctx.author.send(embed=embed)
 
-        out = f"{ctx.author.mention}\n" \
-              f"{name}, {race.name} {subclass.name if subclass else ''} {_class.name} {final_level}. " \
-              f"{background.name} Background.\n" \
-              f"Stat Array: `{stats}`\nI have PM'd you full character details."
+        out = (
+            f"{ctx.author.mention}\n"
+            f"{name}, {race.name} {subclass.name if subclass else ''} {_class.name} {final_level}. "
+            f"{background.name} Background.\n"
+            f"Stat Array: `{stats}`\nI have PM'd you full character details."
+        )
 
-        await loadingMessage.edit(content=out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
+        await loadingMessage.edit(
+            content=out, allowed_mentions=discord.AllowedMentions(users=[ctx.author])
+        )
 
     @staticmethod
     def old_name_gen():
         name = ""
-        beginnings = ["", "", "", "", "A", "Be", "De", "El", "Fa", "Jo", "Ki", "La", "Ma", "Na", "O", "Pa", "Re", "Si",
-                      "Ta", "Va"]
-        middles = ["bar", "ched", "dell", "far", "gran", "hal", "jen", "kel", "lim", "mor", "net", "penn", "quill",
-                   "rond", "sark", "shen", "tur", "vash", "yor", "zen"]
-        ends = ["", "a", "ac", "ai", "al", "am", "an", "ar", "ea", "el", "er", "ess", "ett", "ic", "id", "il", "is",
-                "in", "or", "us"]
+        beginnings = [
+            "",
+            "",
+            "",
+            "",
+            "A",
+            "Be",
+            "De",
+            "El",
+            "Fa",
+            "Jo",
+            "Ki",
+            "La",
+            "Ma",
+            "Na",
+            "O",
+            "Pa",
+            "Re",
+            "Si",
+            "Ta",
+            "Va",
+        ]
+        middles = [
+            "bar",
+            "ched",
+            "dell",
+            "far",
+            "gran",
+            "hal",
+            "jen",
+            "kel",
+            "lim",
+            "mor",
+            "net",
+            "penn",
+            "quill",
+            "rond",
+            "sark",
+            "shen",
+            "tur",
+            "vash",
+            "yor",
+            "zen",
+        ]
+        ends = [
+            "",
+            "a",
+            "ac",
+            "ai",
+            "al",
+            "am",
+            "an",
+            "ar",
+            "ea",
+            "el",
+            "er",
+            "ess",
+            "ett",
+            "ic",
+            "id",
+            "il",
+            "is",
+            "in",
+            "or",
+            "us",
+        ]
         name += random.choice(beginnings) + random.choice(middles) + random.choice(ends)
         name = name.capitalize()
         return name

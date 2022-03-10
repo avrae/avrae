@@ -61,10 +61,13 @@ def is_owner():
 
 def role_or_permissions(role_name, **perms):
     def predicate(ctx):
-        if _role_or_permissions(ctx, lambda r: r.name.lower() == role_name.lower(), **perms):
+        if _role_or_permissions(
+            ctx, lambda r: r.name.lower() == role_name.lower(), **perms
+        ):
             return True
         raise commands.CheckFailure(
-            f"You require a role named {role_name} or these permissions to run this command: {', '.join(perms)}")
+            f"You require a role named {role_name} or these permissions to run this command: {', '.join(perms)}"
+        )
 
     return commands.check(predicate)
 
@@ -72,10 +75,13 @@ def role_or_permissions(role_name, **perms):
 def admin_or_permissions(**perms):
     def predicate(ctx):
         admin_role = "Bot Admin"
-        if _role_or_permissions(ctx, lambda r: r.name.lower() == admin_role.lower(), **perms):
+        if _role_or_permissions(
+            ctx, lambda r: r.name.lower() == admin_role.lower(), **perms
+        ):
             return True
         raise commands.CheckFailure(
-            f"You require a role named Bot Admin or these permissions to run this command: {', '.join(perms)}")
+            f"You require a role named Bot Admin or these permissions to run this command: {', '.join(perms)}"
+        )
 
     return commands.check(predicate)
 
@@ -85,13 +91,15 @@ BREWER_ROLES = ("server brewer", "dragonspeaker")
 
 def can_edit_serverbrew():
     def predicate(ctx):
-        if ctx.author.guild_permissions.manage_guild or \
-                any(r.name.lower() in BREWER_ROLES for r in ctx.author.roles) or \
-                author_is_owner(ctx):
+        if (
+            ctx.author.guild_permissions.manage_guild
+            or any(r.name.lower() in BREWER_ROLES for r in ctx.author.roles)
+            or author_is_owner(ctx)
+        ):
             return True
         raise commands.CheckFailure(
             "You do not have permission to manage server homebrew. Either __Manage Server__ "
-            "Discord permissions or a role named \"Server Brewer\" or \"Dragonspeaker\" "
+            'Discord permissions or a role named "Server Brewer" or "Dragonspeaker" '
             "is required."
         )
 

@@ -9,11 +9,18 @@ from ..utils import stringify_intexpr
 
 
 class UseCounter(Effect):
-    def __init__(self, counter, amount: str, allowOverflow: bool = False, errorBehaviour: str = 'warn', **kwargs):
+    def __init__(
+        self,
+        counter,
+        amount: str,
+        allowOverflow: bool = False,
+        errorBehaviour: str = "warn",
+        **kwargs,
+    ):
         """
         :type counter: str or SpellSlotReference or AbilityReference
         """
-        super().__init__('counter', **kwargs)
+        super().__init__("counter", **kwargs)
         self.counter = counter
         self.amount = amount
         self.allow_overflow = allowOverflow
@@ -21,41 +28,47 @@ class UseCounter(Effect):
 
     @classmethod
     def from_data(cls, data):
-        if not isinstance(data['counter'], str):
-            data['counter'] = deserialize_usecounter_target(data['counter'])
+        if not isinstance(data["counter"], str):
+            data["counter"] = deserialize_usecounter_target(data["counter"])
         return super().from_data(data)
 
     def to_dict(self):
         out = super().to_dict()
-        counter = self.counter if isinstance(self.counter, str) else self.counter.to_dict()
-        out.update({
-            'counter': counter,
-            'amount': self.amount,
-            'allowOverflow': self.allow_overflow,
-            'errorBehaviour': self.error_behaviour
-        })
+        counter = (
+            self.counter if isinstance(self.counter, str) else self.counter.to_dict()
+        )
+        out.update(
+            {
+                "counter": counter,
+                "amount": self.amount,
+                "allowOverflow": self.allow_overflow,
+                "errorBehaviour": self.error_behaviour,
+            }
+        )
         return out
 
     def run(self, autoctx):
         super().run(autoctx)
 
         # set to default values in case of error
-        autoctx.metavars['lastCounterName'] = None
-        autoctx.metavars['lastCounterRemaining'] = 0
-        autoctx.metavars['lastCounterUsedAmount'] = 0
-        autoctx.metavars['lastCounterRequestedAmount'] = 0  # 1491
+        autoctx.metavars["lastCounterName"] = None
+        autoctx.metavars["lastCounterRemaining"] = 0
+        autoctx.metavars["lastCounterUsedAmount"] = 0
+        autoctx.metavars["lastCounterRequestedAmount"] = 0  # 1491
 
         # handle -amt, -l, -i
-        amt = autoctx.args.last('amt', None, int, ephem=True)
-        ignore = autoctx.args.last('i')
+        amt = autoctx.args.last("amt", None, int, ephem=True)
+        ignore = autoctx.args.last("i")
         # -l handled in use_spell_slot
 
         try:
             amount = amt or autoctx.parse_intexpression(self.amount)
         except Exception:
-            raise AutomationException(f"{self.amount!r} cannot be interpreted as an amount (in Use Counter)")
+            raise AutomationException(
+                f"{self.amount!r} cannot be interpreted as an amount (in Use Counter)"
+            )
 
-        autoctx.metavars['lastCounterRequestedAmount'] = amount  # 1491
+        autoctx.metavars["lastCounterRequestedAmount"] = amount  # 1491
 
         try:
             if isinstance(self.counter, SpellSlotReference):  # spell slot
@@ -64,41 +77,53 @@ class UseCounter(Effect):
                 result = self.get_and_use_counter(autoctx, amount, ignore)
         except Exception as e:
             result = UseCounterResult(skipped=True, requested_amount=amount)
-            if self.error_behaviour == 'warn':
+            if self.error_behaviour == "warn":
                 autoctx.meta_queue(f"**Warning**: Could not use counter - {e}")
-            elif self.error_behaviour == 'raise':
+            elif self.error_behaviour == "raise":
                 raise StopExecution(f"Could not use counter: {e}") from e
 
-        autoctx.metavars['lastCounterName'] = result.counter_name
-        autoctx.metavars['lastCounterRemaining'] = result.counter_remaining
-        autoctx.metavars['lastCounterUsedAmount'] = result.used_amount
+        autoctx.metavars["lastCounterName"] = result.counter_name
+        autoctx.metavars["lastCounterRemaining"] = result.counter_remaining
+        autoctx.metavars["lastCounterUsedAmount"] = result.used_amount
         return result
 
     def get_and_use_counter(self, autoctx, amount, ignore_resources: bool = False):
         if ignore_resources:  # handled here to return counter name (#1582)
             if isinstance(self.counter, AbilityReference):
-                name = self.counter.entity.name if self.counter.entity is not None else "Unknown Ability"
+                name = (
+                    self.counter.entity.name
+                    if self.counter.entity is not None
+                    else "Unknown Ability"
+                )
             else:
                 name = self.counter
-            return UseCounterResult(counter_name=name, requested_amount=amount, skipped=True)
+            return UseCounterResult(
+                counter_name=name, requested_amount=amount, skipped=True
+            )
 
         if autoctx.character is None:
             raise NoCounterFound("The caster does not have custom counters.")
 
         if isinstance(self.counter, AbilityReference):
-            counter = abilityreference_counter_discovery(self.counter, autoctx.character)
+            counter = abilityreference_counter_discovery(
+                self.counter, autoctx.character
+            )
         else:  # str - get counter by match
             counter = autoctx.character.get_consumable(self.counter)
             if counter is None:
-                raise NoCounterFound(f"No counter with the name {self.counter!r} was found.")
+                raise NoCounterFound(
+                    f"No counter with the name {self.counter!r} was found."
+                )
 
         return self.use_custom_counter(autoctx, counter, amount)
 
     def use_spell_slot(self, autoctx, amount, ignore_resources: bool = False):
         spellref_level = autoctx.parse_intexpression(self.counter.slot)
-        level = autoctx.args.last('l', spellref_level, int)
+        level = autoctx.args.last("l", spellref_level, int)
         if ignore_resources:  # handled here to return counter name (#1582)
-            return UseCounterResult(counter_name=str(level), requested_amount=amount, skipped=True)
+            return UseCounterResult(
+                counter_name=str(level), requested_amount=amount, skipped=True
+            )
 
         autoctx.caster_needs_commit = True
         old_value = autoctx.caster.spellbook.get_slots(level)
@@ -106,7 +131,9 @@ class UseCounter(Effect):
 
         # if allow overflow is on, clip to bounds
         if self.allow_overflow:
-            new_value = max(min(target_value, autoctx.caster.spellbook.get_max_slots(level)), 0)
+            new_value = max(
+                min(target_value, autoctx.caster.spellbook.get_max_slots(level)), 0
+            )
 
         # use the slot(s) and output
         autoctx.caster.spellbook.set_slots(level, new_value)
@@ -119,12 +146,16 @@ class UseCounter(Effect):
 
         # queue resource usage in own field
         overflow_str = f"\n({overflow} overflow)" if overflow else ""
-        autoctx.postflight_queue_field(name="Spell Slots", value=f"{slots_str} ({delta:+}){overflow_str}")
+        autoctx.postflight_queue_field(
+            name="Spell Slots", value=f"{slots_str} ({delta:+}){overflow_str}"
+        )
 
-        return UseCounterResult(counter_name=str(level),
-                                counter_remaining=new_value,
-                                used_amount=old_value - new_value,
-                                requested_amount=amount)
+        return UseCounterResult(
+            counter_name=str(level),
+            counter_remaining=new_value,
+            used_amount=old_value - new_value,
+            requested_amount=amount,
+        )
 
     def use_custom_counter(self, autoctx, counter, amount):
         autoctx.caster_needs_commit = True
@@ -138,12 +169,16 @@ class UseCounter(Effect):
 
         # queue resource usage in own field
         overflow_str = f"\n({overflow} overflow)" if overflow else ""
-        autoctx.postflight_queue_field(name=counter.name, value=f"{str(counter)} ({delta:+}){overflow_str}")
+        autoctx.postflight_queue_field(
+            name=counter.name, value=f"{str(counter)} ({delta:+}){overflow_str}"
+        )
 
-        return UseCounterResult(counter_name=counter.name,
-                                counter_remaining=final_value,
-                                used_amount=-delta,
-                                requested_amount=amount)
+        return UseCounterResult(
+            counter_name=counter.name,
+            counter_remaining=final_value,
+            used_amount=-delta,
+            requested_amount=amount,
+        )
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
@@ -151,14 +186,14 @@ class UseCounter(Effect):
         amount = stringify_intexpr(evaluator, self.amount)
 
         # guaranteed metavars
-        evaluator.builtins['lastCounterName'] = str(self.counter)
-        evaluator.builtins['lastCounterRequestedAmount'] = amount
-        evaluator.builtins['lastCounterUsedAmount'] = amount
+        evaluator.builtins["lastCounterName"] = str(self.counter)
+        evaluator.builtins["lastCounterRequestedAmount"] = amount
+        evaluator.builtins["lastCounterUsedAmount"] = amount
 
         # counter name
         plural = abs(amount) != 1
         if isinstance(self.counter, str):
-            charges = 'charges' if plural else 'charge'
+            charges = "charges" if plural else "charge"
             counter_name = f"{charges} of {self.counter}"
         else:
             counter_name = self.counter.build_str(caster, evaluator, plural=plural)
@@ -177,14 +212,16 @@ def deserialize_usecounter_target(target):
     """
     if isinstance(target, str):
         return target
-    elif 'slot' in target:
+    elif "slot" in target:
         return SpellSlotReference.from_data(target)
-    elif 'id' in target:
+    elif "id" in target:
         return AbilityReference.from_data(target)
     raise ValueError(f"Unknown usecounter target: {target!r}")
 
 
-class _UseCounterTarget(abc.ABC):  # this is just here for type niceness because python doesn't have interfaces <.<
+class _UseCounterTarget(
+    abc.ABC
+):  # this is just here for type niceness because python doesn't have interfaces <.<
     def __init__(self, **kwargs):
         pass
 
@@ -208,11 +245,11 @@ class SpellSlotReference(_UseCounterTarget):
         self.slot = slot
 
     def to_dict(self):
-        return {'slot': self.slot}
+        return {"slot": self.slot}
 
     def build_str(self, caster, evaluator, plural):
         level = stringify_intexpr(evaluator, self.slot)
-        slots = 'slots' if plural else 'slot'
+        slots = "slots" if plural else "slot"
         return f"level {level} spell {slots}"
 
     def __str__(self):
@@ -234,13 +271,13 @@ class AbilityReference(_UseCounterTarget):
 
     @classmethod
     def from_data(cls, data):
-        return cls(id=data['id'], type_id=data['typeId'])
+        return cls(id=data["id"], type_id=data["typeId"])
 
     def to_dict(self):
-        return {'id': self.id, 'typeId': self.type_id}
+        return {"id": self.id, "typeId": self.type_id}
 
     def build_str(self, caster, evaluator, plural):
-        charges = 'charges' if plural else 'charge'
+        charges = "charges" if plural else "charge"
         entity_name = self.entity.name if self.entity is not None else "Unknown Ability"
         return f"{charges} of {entity_name}"
 
@@ -278,7 +315,10 @@ def abilityreference_counter_discovery(ref, char):
 
     if e is None:
         raise NoCounterFound("Invalid ability specified in AbilityReference!")
-    if not (isinstance(e, gamedata.mixins.LimitedUseGrantorMixin) or isinstance(e, gamedata.LimitedUse)):
+    if not (
+        isinstance(e, gamedata.mixins.LimitedUseGrantorMixin)
+        or isinstance(e, gamedata.LimitedUse)
+    ):
         raise NoCounterFound(f"{e.name} has no custom counter information.")
 
     # register mappings
@@ -287,10 +327,10 @@ def abilityreference_counter_discovery(ref, char):
     consumables_by_feature_id = {}
     for cc in char.consumables:
         consumables_by_name[cc.name] = cc
-        if char.sheet_type == 'beyond':
+        if char.sheet_type == "beyond":
             if cc.live_id is not None:
                 try:
-                    lu_id, lu_tid = cc.live_id.split('-', 1)
+                    lu_id, lu_tid = cc.live_id.split("-", 1)
                     consumables_by_lu_id[int(lu_tid), int(lu_id)] = cc
                 except ValueError:
                     pass
@@ -350,7 +390,9 @@ def abilityreference_counter_discovery(ref, char):
         consumables_by_root[cc_feature_root].append((cc, depth))
 
     if consumables_by_root[root_feature]:
-        root_feature_cc, depth = sorted(consumables_by_root[root_feature], key=lambda pair: pair[1])[0]
+        root_feature_cc, depth = sorted(
+            consumables_by_root[root_feature], key=lambda pair: pair[1]
+        )[0]
         return root_feature_cc
 
     # 6: cc with same name as any source entity parent, or 7: same name as any cc granted by source entity parent
@@ -359,7 +401,9 @@ def abilityreference_counter_discovery(ref, char):
             return parent_name_cc
 
         for granted_lu in parent_feature.limited_use:
-            if (parent_lu_name_cc := consumables_by_name.get(granted_lu.name)) is not None:
+            if (
+                parent_lu_name_cc := consumables_by_name.get(granted_lu.name)
+            ) is not None:
                 return parent_lu_name_cc
 
     # error

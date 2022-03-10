@@ -25,9 +25,13 @@ def feature_flag(flag_name, default=False):
             # note: this means that feature flag targeting can only be controlled by global or individual user id
             # but still, better than nothing
             user_id = gctx.event.user_id
-            flag_on = await gctx.bot.ldclient.variation(flag_name, {"key": user_id}, default)
+            flag_on = await gctx.bot.ldclient.variation(
+                flag_name, {"key": user_id}, default
+            )
             if not flag_on:
-                raise IgnoreEvent(f"Feature flag {flag_name!r} is disabled for user {user_id}")
+                raise IgnoreEvent(
+                    f"Feature flag {flag_name!r} is disabled for user {user_id}"
+                )
             return await inner(self, gctx, *args, **kwargs)
 
         return wrapped

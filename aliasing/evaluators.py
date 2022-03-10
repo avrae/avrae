@@ -18,8 +18,20 @@ import aliasing.api.combat as combat_api
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.context import AliasContext
-from aliasing.api.functions import (_roll, _vroll, create_signature, err, rand, randchoice, randint, roll, safe_range,
-    typeof, verify_signature, vroll)
+from aliasing.api.functions import (
+    _roll,
+    _vroll,
+    create_signature,
+    err,
+    rand,
+    randchoice,
+    randint,
+    roll,
+    safe_range,
+    typeof,
+    verify_signature,
+    vroll,
+)
 from aliasing.api.legacy import LegacyRawCharacter
 from aliasing.errors import EvaluationError, FunctionRequiresCharacter
 from aliasing.personal import _CustomizationBase
@@ -31,19 +43,36 @@ from utils.dice import PersistentRollContext
 
 DEFAULT_BUILTINS = {
     # builtins
-    'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min, 'enumerate': enumerate,
-    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'abs': abs, 'time': time.time,
+    "floor": floor,
+    "ceil": ceil,
+    "round": round,
+    "len": len,
+    "max": max,
+    "min": min,
+    "enumerate": enumerate,
+    "range": safe_range,
+    "sqrt": sqrt,
+    "sum": sum,
+    "any": any,
+    "all": all,
+    "abs": abs,
+    "time": time.time,
     # ours
-    'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof,
-    'rand': rand, 'randint': randint, 'randchoice': randchoice,
+    "roll": roll,
+    "vroll": vroll,
+    "err": err,
+    "typeof": typeof,
+    "rand": rand,
+    "randint": randint,
+    "randchoice": randchoice,
 }
 SCRIPTING_RE = re.compile(
-    r'(?<!\\)(?:'  # backslash-escape
-    r'{{(?P<drac1>.+?)}}'  # {{drac1}}
-    r'|(?<!{){(?P<roll>.+?)}'  # {roll}
-    r'|<drac2>(?P<drac2>(?:.|\n)+?)</drac2>'  # <drac2>drac2</drac2>
-    r'|<(?P<lookup>[^\s]+?)>'  # <lookup>
-    r')'
+    r"(?<!\\)(?:"  # backslash-escape
+    r"{{(?P<drac1>.+?)}}"  # {{drac1}}
+    r"|(?<!{){(?P<roll>.+?)}"  # {roll}
+    r"|<drac2>(?P<drac2>(?:.|\n)+?)</drac2>"  # <drac2>drac2</drac2>
+    r"|<(?P<lookup>[^\s]+?)>"  # <lookup>
+    r")"
 )
 # an alias/snippet that can invoke draconic code
 _CodeInvokerT = Optional[Union[_CustomizationBase, WorkshopCollectableObject]]
@@ -56,7 +85,7 @@ class MathEvaluator(draconic.SimpleInterpreter):
     def with_character(cls, character, spell_override=None):
         names = character.get_scope_locals()
         if spell_override is not None:
-            names['spell'] = spell_override
+            names["spell"] = spell_override
 
         builtins = {**names, **DEFAULT_BUILTINS}
         return cls(builtins=builtins)
@@ -73,7 +102,9 @@ class MathEvaluator(draconic.SimpleInterpreter):
     def transformed_str(self, string):
         """Transforms a dicecloud-formatted string (evaluating text in {})."""
         try:
-            return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1).strip())), string)
+            return re.sub(
+                r"(?<!\\){(.+?)}", lambda m: str(self.eval(m.group(1).strip())), string
+            )
         except Exception as ex:
             raise EvaluationError(ex, string)
 
@@ -85,44 +116,62 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         super().__init__(*args, **kwargs)
 
         self.builtins.update(  # fixme character-only functions, all deprecated now
-            get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
-            get_cc_min=self.needs_char, mod_cc=self.needs_char,
-            cc_exists=self.needs_char, create_cc_nx=self.needs_char, create_cc=self.needs_char,
-            get_slots=self.needs_char, get_slots_max=self.needs_char, set_slots=self.needs_char,
+            get_cc=self.needs_char,
+            set_cc=self.needs_char,
+            get_cc_max=self.needs_char,
+            get_cc_min=self.needs_char,
+            mod_cc=self.needs_char,
+            cc_exists=self.needs_char,
+            create_cc_nx=self.needs_char,
+            create_cc=self.needs_char,
+            get_slots=self.needs_char,
+            get_slots_max=self.needs_char,
+            set_slots=self.needs_char,
             use_slot=self.needs_char,
-            get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char, hp_str=self.needs_char,
-            get_temphp=self.needs_char, set_temphp=self.needs_char,
-            set_cvar=self.needs_char, delete_cvar=self.needs_char, set_cvar_nx=self.needs_char,
-            get_raw=self.needs_char
+            get_hp=self.needs_char,
+            set_hp=self.needs_char,
+            mod_hp=self.needs_char,
+            hp_str=self.needs_char,
+            get_temphp=self.needs_char,
+            set_temphp=self.needs_char,
+            set_cvar=self.needs_char,
+            delete_cvar=self.needs_char,
+            set_cvar_nx=self.needs_char,
+            get_raw=self.needs_char,
         )
 
         # char-agnostic globals
         self.builtins.update(
-            set=self.set, exists=self.exists, get=self.get,
-            combat=self.combat, character=self.character,
+            set=self.set,
+            exists=self.exists,
+            get=self.get,
+            combat=self.combat,
+            character=self.character,
             get_gvar=self.get_gvar,
             get_svar=self.get_svar,
-            set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
+            set_uvar=self.set_uvar,
+            delete_uvar=self.delete_uvar,
+            set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
-            chanid=self.chanid, servid=self.servid,  # fixme deprecated - use ctx instead
-            load_json=self.load_json, dump_json=self.dump_json,
-            load_yaml=self.load_yaml, dump_yaml=self.dump_yaml,
-            argparse=argparse, ctx=AliasContext(ctx),
-            signature=self.signature, verify_signature=self.verify_signature
+            chanid=self.chanid,
+            servid=self.servid,  # fixme deprecated - use ctx instead
+            load_json=self.load_json,
+            dump_json=self.dump_json,
+            load_yaml=self.load_yaml,
+            dump_yaml=self.dump_yaml,
+            argparse=argparse,
+            ctx=AliasContext(ctx),
+            signature=self.signature,
+            verify_signature=self.verify_signature,
         )
 
         # roll limiting
-        self._roller = d20.Roller(context=PersistentRollContext(max_rolls=1_000, max_total_rolls=10_000))
-        self.builtins.update(
-            vroll=self._limited_vroll,
-            roll=self._limited_roll
+        self._roller = d20.Roller(
+            context=PersistentRollContext(max_rolls=1_000, max_total_rolls=10_000)
         )
+        self.builtins.update(vroll=self._limited_vroll, roll=self._limited_roll)
 
-        self._cache = {
-            "gvars": {},
-            "svars": {},
-            "uvars": {}
-        }
+        self._cache = {"gvars": {}, "svars": {}, "uvars": {}}
 
         self.ctx = ctx
         self.character_changed = False
@@ -135,7 +184,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     async def new(cls, ctx):
         uvars = await helpers.get_uvars(ctx)
         inst = cls(ctx, builtins=DEFAULT_BUILTINS, initial_names=uvars)
-        inst._cache['uvars'].update(uvars)
+        inst._cache["uvars"].update(uvars)
         return inst
 
     def with_statblock(self, statblock):
@@ -145,7 +194,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     def with_character(self, character):
         self.with_statblock(character)
 
-        self._cache['character'] = character_api.AliasCharacter(character, self)
+        self._cache["character"] = character_api.AliasCharacter(character, self)
 
         # define character-specific functions
         # fixme deprecated
@@ -153,7 +202,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         # helpers
         def _get_consumable(name):
             name = str(name)
-            consumable = next((con for con in character.consumables if con.name == name), None)
+            consumable = next(
+                (con for con in character.consumables if con.name == name), None
+            )
             if consumable is None:
                 raise ConsumableException(f"There is no counter named {name}.")
             return consumable
@@ -186,7 +237,13 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             character.consumables.remove(to_delete)
             self.character_changed = True
 
-        def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None, dispType: str = None):
+        def create_cc_nx(
+            name: str,
+            minVal: str = None,
+            maxVal: str = None,
+            reset: str = None,
+            dispType: str = None,
+        ):
             if minVal is not None:
                 minVal = str(minVal)
             if maxVal is not None:
@@ -196,7 +253,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             if dispType is not None:
                 dispType = str(dispType)
             if not cc_exists(name):
-                new_consumable = player_api.CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
+                new_consumable = player_api.CustomCounter.new(
+                    character, name, minVal, maxVal, reset, dispType
+                )
                 character.consumables.append(new_consumable)
                 self.character_changed = True
 
@@ -275,25 +334,48 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         self.builtins.update(
             combat=combat,
-            get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
-            delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, create_cc=create_cc, cc_str=cc_str,
-            get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
+            get_cc=get_cc,
+            set_cc=set_cc,
+            get_cc_max=get_cc_max,
+            get_cc_min=get_cc_min,
+            mod_cc=mod_cc,
+            delete_cc=delete_cc,
+            cc_exists=cc_exists,
+            create_cc_nx=create_cc_nx,
+            create_cc=create_cc,
+            cc_str=cc_str,
+            get_slots=get_slots,
+            get_slots_max=get_slots_max,
+            set_slots=set_slots,
+            use_slot=use_slot,
             slots_str=slots_str,
-            get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, hp_str=hp_str,
-            get_temphp=get_temphp, set_temphp=set_temphp,
-            set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
-            get_raw=get_raw
+            get_hp=get_hp,
+            set_hp=set_hp,
+            mod_hp=mod_hp,
+            hp_str=hp_str,
+            get_temphp=get_temphp,
+            set_temphp=set_temphp,
+            set_cvar=set_cvar,
+            delete_cvar=delete_cvar,
+            set_cvar_nx=set_cvar_nx,
+            get_raw=get_raw,
         )
 
         return self
 
     async def run_commits(self):
-        if self.character_changed and 'character' in self._cache:
-            await self._cache['character'].func_commit(self.ctx)
-        if self.combat_changed and 'combat' in self._cache and self._cache['combat']:
-            await self._cache['combat'].func_commit()
-        if self.uvars_changed and 'uvars' in self._cache and self._cache['uvars'] is not None:
-            await helpers.update_uvars(self.ctx, self._cache['uvars'], self.uvars_changed)
+        if self.character_changed and "character" in self._cache:
+            await self._cache["character"].func_commit(self.ctx)
+        if self.combat_changed and "combat" in self._cache and self._cache["combat"]:
+            await self._cache["combat"].func_commit()
+        if (
+            self.uvars_changed
+            and "uvars" in self._cache
+            and self._cache["uvars"] is not None
+        ):
+            await helpers.update_uvars(
+                self.ctx, self._cache["uvars"], self.uvars_changed
+            )
 
     # helpers
     def needs_char(self, *args, **kwargs):
@@ -329,10 +411,10 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         :rtype: :class:`~aliasing.api.combat.SimpleCombat`
         """
-        if 'combat' not in self._cache:
-            self._cache['combat'] = combat_api.SimpleCombat.from_ctx(self.ctx)
+        if "combat" not in self._cache:
+            self._cache["combat"] = combat_api.SimpleCombat.from_ctx(self.ctx)
         self.combat_changed = True
-        return self._cache['combat']
+        return self._cache["combat"]
 
     def character(self):
         """
@@ -340,10 +422,10 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         :rtype: :class:`~aliasing.api.character.AliasCharacter`
         """
-        if 'character' not in self._cache:
+        if "character" not in self._cache:
             raise FunctionRequiresCharacter()
         self.character_changed = True
-        return self._cache['character']
+        return self._cache["character"]
 
     def uvar_exists(self, name):
         """
@@ -352,7 +434,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :rtype: bool
         """
         name = str(name)
-        return self.exists(name) and name in self._cache['uvars']
+        return self.exists(name) and name in self._cache["uvars"]
 
     def get_gvar(self, address):
         """
@@ -363,12 +445,12 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :rtype: str
         """
         address = str(address)
-        if address not in self._cache['gvars']:
+        if address not in self._cache["gvars"]:
             result = self.ctx.bot.mdb.gvars.delegate.find_one({"key": address})
             if result is None:
                 return None
-            self._cache['gvars'][address] = result['value']
-        return self._cache['gvars'][address]
+            self._cache["gvars"][address] = result["value"]
+        return self._cache["gvars"][address]
 
     def get_svar(self, name, default=None):
         """
@@ -382,12 +464,14 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         name = str(name)
         if self.ctx.guild is None:
             return default
-        if name not in self._cache['svars']:
-            result = self.ctx.bot.mdb.svars.delegate.find_one({"owner": self.ctx.guild.id, "name": name})
+        if name not in self._cache["svars"]:
+            result = self.ctx.bot.mdb.svars.delegate.find_one(
+                {"owner": self.ctx.guild.id, "name": name}
+            )
             if result is None:
                 return default
-            self._cache['svars'][name] = result['value']
-        return self._cache['svars'][name]
+            self._cache["svars"][name] = result["value"]
+        return self._cache["svars"][name]
 
     def set_uvar(self, name: str, value: str):
         """
@@ -400,7 +484,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         value = str(value)
         if not name.isidentifier():
             raise InvalidArgument("Uvar contains invalid character.")
-        self._cache['uvars'][name] = value
+        self._cache["uvars"][name] = value
         self._names[name] = value
         self.uvars_changed.add(name)
 
@@ -422,8 +506,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :param str name: The name of the variable to delete.
         """
         name = str(name)
-        if name in self._cache['uvars']:
-            del self._cache['uvars'][name]
+        if name in self._cache["uvars"]:
+            del self._cache["uvars"][name]
             self.uvars_changed.add(name)
 
     def chanid(self):
@@ -518,48 +602,42 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 data.update(value)
 
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:null',
-            yaml.constructor.SafeConstructor.construct_yaml_null
+            "tag:yaml.org,2002:null",
+            yaml.constructor.SafeConstructor.construct_yaml_null,
         )
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:bool',
-            yaml.constructor.SafeConstructor.construct_yaml_bool
+            "tag:yaml.org,2002:bool",
+            yaml.constructor.SafeConstructor.construct_yaml_bool,
         )
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:int',
-            yaml.constructor.SafeConstructor.construct_yaml_int
+            "tag:yaml.org,2002:int", yaml.constructor.SafeConstructor.construct_yaml_int
         )
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:float',
-            yaml.constructor.SafeConstructor.construct_yaml_float
+            "tag:yaml.org,2002:float",
+            yaml.constructor.SafeConstructor.construct_yaml_float,
         )
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:omap',
-            yaml.constructor.SafeConstructor.construct_yaml_omap
+            "tag:yaml.org,2002:omap",
+            yaml.constructor.SafeConstructor.construct_yaml_omap,
         )
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:pairs',
-            yaml.constructor.SafeConstructor.construct_yaml_pairs
+            "tag:yaml.org,2002:pairs",
+            yaml.constructor.SafeConstructor.construct_yaml_pairs,
         )
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:set',
-            DraconicConstructor.construct_yaml_set
+            "tag:yaml.org,2002:set", DraconicConstructor.construct_yaml_set
         )
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:str',
-            DraconicConstructor.construct_yaml_str
+            "tag:yaml.org,2002:str", DraconicConstructor.construct_yaml_str
         )
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:seq',
-            DraconicConstructor.construct_yaml_seq
+            "tag:yaml.org,2002:seq", DraconicConstructor.construct_yaml_seq
         )
         DraconicConstructor.add_constructor(
-            'tag:yaml.org,2002:map',
-            DraconicConstructor.construct_yaml_map
+            "tag:yaml.org,2002:map", DraconicConstructor.construct_yaml_map
         )
         DraconicConstructor.add_constructor(
-            None,
-            DraconicConstructor.construct_yaml_str
+            None, DraconicConstructor.construct_yaml_str
         )
 
         class DraconicLoader(
@@ -568,7 +646,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             yaml.parser.Parser,
             yaml.composer.Composer,
             DraconicConstructor,
-            yaml.resolver.Resolver
+            yaml.resolver.Resolver,
         ):
             def __init__(self, stream):
                 yaml.reader.Reader.__init__(self, stream)
@@ -590,8 +668,14 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Serializes an object to a YAML string. See `yaml.safe_dump <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
         """
-        return yaml.dump(obj, Dumper=self._yaml_dumper, default_flow_style=False, line_break=True, indent=indent,
-                        sort_keys=False)
+        return yaml.dump(
+            obj,
+            Dumper=self._yaml_dumper,
+            default_flow_style=False,
+            line_break=True,
+            indent=indent,
+            sort_keys=False,
+        )
 
     # ==== json ====
     def _json_decoder(self):
@@ -670,7 +754,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             self.ctx,
             execution_scope=self.execution_scope,
             user_data=data,
-            workshop_collection_id=workshop_collection_id
+            workshop_collection_id=workshop_collection_id,
         )
 
     def verify_signature(self, data):
@@ -711,22 +795,18 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         self,
         string,
         execution_scope: ExecutionScope = ExecutionScope.UNKNOWN,
-        invoking_object: _CodeInvokerT = None
+        invoking_object: _CodeInvokerT = None,
     ):
         """Async convenience method around :meth:`ScriptingEvaluator.transformed_str`."""
         return await asyncio.get_event_loop().run_in_executor(
-            None,
-            self.transformed_str,
-            string,
-            execution_scope,
-            invoking_object
+            None, self.transformed_str, string, execution_scope, invoking_object
         )
 
     def transformed_str(
         self,
         string,
         execution_scope: ExecutionScope = ExecutionScope.UNKNOWN,
-        invoking_object: _CodeInvokerT = None
+        invoking_object: _CodeInvokerT = None,
     ):
         """
         Parses a scripting string (evaluating text in {{}}). The caller should pass the execution scope and invoking
@@ -737,13 +817,15 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):
-            if match.group('lookup'):  # <>
-                if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
+            if match.group("lookup"):  # <>
+                if re.match(
+                    r"<a?([@#]|:.+:)[&!]{0,2}\d+>", match.group(0)
+                ):  # ignore mentions
                     return match.group(0)
-                out = match.group('lookup')
+                out = match.group("lookup")
                 evalresult = str(self.names.get(out, out))
-            elif match.group('roll'):  # {}
-                varstr = match.group('roll')
+            elif match.group("roll"):  # {}
+                varstr = match.group("roll")
                 curlyout = ""
                 for substr in re.split(ops, varstr):
                     temp = substr.strip()
@@ -751,15 +833,15 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 try:
                     evalresult = str(self._limited_roll(curlyout))
                 except:
-                    evalresult = '0'
-            elif match.group('drac1'):  # {{}}
-                expr = match.group('drac1').strip()
+                    evalresult = "0"
+            elif match.group("drac1"):  # {{}}
+                expr = match.group("drac1").strip()
                 try:
                     evalresult = self.eval(expr)
                 except Exception as ex:
                     raise EvaluationError(ex, expr)
-            elif match.group('drac2'):  # <drac2>...</drac2>
-                expr = textwrap.dedent(match.group('drac2')).strip()
+            elif match.group("drac2"):  # <drac2>...</drac2>
+                expr = textwrap.dedent(match.group("drac2")).strip()
                 try:
                     evalresult = self.execute(expr)
                 except Exception as ex:
@@ -767,7 +849,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             else:
                 evalresult = None
 
-            return str(evalresult) if evalresult is not None else ''
+            return str(evalresult) if evalresult is not None else ""
 
         output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
@@ -779,7 +861,7 @@ class AutomationEvaluator(MathEvaluator):
     def with_caster(cls, caster, spell_override=None):
         names = caster.get_scope_locals()
         if spell_override is not None:
-            names['spell'] = spell_override
+            names["spell"] = spell_override
 
         builtins = {**names, **DEFAULT_BUILTINS}
         return cls(builtins=builtins)
@@ -793,11 +875,11 @@ class AutomationEvaluator(MathEvaluator):
 
         def evalrepl(match):
             try:
-                if match.group('drac1'):  # {{}}
-                    evalresult = self.eval(match.group('drac1').strip())
-                elif match.group('roll'):  # {}
+                if match.group("drac1"):  # {{}}
+                    evalresult = self.eval(match.group("drac1").strip())
+                elif match.group("roll"):  # {}
                     try:
-                        evalresult = self.eval(match.group('roll').strip())
+                        evalresult = self.eval(match.group("roll").strip())
                     except:
                         evalresult = match.group(0)
                 else:
@@ -805,7 +887,7 @@ class AutomationEvaluator(MathEvaluator):
             except Exception as ex:
                 raise EvaluationError(ex, match.group(0))
 
-            return str(evalresult) if evalresult is not None else ''
+            return str(evalresult) if evalresult is not None else ""
 
         output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
@@ -815,7 +897,7 @@ class AutomationEvaluator(MathEvaluator):
         return output
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     e = ScriptingEvaluator(None)
     while True:
         print(e.eval(input()))

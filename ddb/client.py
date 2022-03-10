@@ -10,7 +10,11 @@ from cogsmisc.stats import Stats
 from ddb import auth, character, entitlements, waterdeep
 from ddb.errors import AuthException
 from ddb.utils import update_user_map
-from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, DYNAMO_ENTITLEMENTS_TABLE, DYNAMO_REGION
+from utils.config import (
+    DDB_AUTH_SERVICE_URL as AUTH_BASE_URL,
+    DYNAMO_ENTITLEMENTS_TABLE,
+    DYNAMO_REGION,
+)
 
 # dynamo
 # env: AWS_ACCESS_KEY_ID
@@ -63,7 +67,9 @@ class BeyondClient(BeyondClientBase):
     async def _initialize(self):
         """Initialize our async resources: aioboto3"""
         boto_session = get_session()
-        self._dynamo = await boto_session.create_client('dynamodb', region_name=DYNAMO_REGION).__aenter__()
+        self._dynamo = await boto_session.create_client(
+            "dynamodb", region_name=DYNAMO_REGION
+        ).__aenter__()
         log.info("DDB client initialized")
 
     # ==== methods ====
@@ -124,7 +130,9 @@ class BeyondClient(BeyondClientBase):
 
         if token is None:
             # cache unlinked if user is unlinked
-            await ctx.bot.rdb.jsetex(user_cache_key, unlinked_sentinel, USER_ENTITLEMENT_TTL)
+            await ctx.bot.rdb.jsetex(
+                user_cache_key, unlinked_sentinel, USER_ENTITLEMENT_TTL
+            )
             # remove any ddb -> discord user mapping
             await ctx.bot.mdb.ddb_account_map.delete_one({"discord_id": user_id})
             return None
@@ -133,7 +141,7 @@ class BeyondClient(BeyondClientBase):
         await asyncio.gather(
             ctx.bot.rdb.jsetex(user_cache_key, user.to_dict(), ttl),
             Stats.count_ddb_link(ctx, user_id, user),
-            update_user_map(ctx, ddb_id=user.user_id, discord_id=user_id)
+            update_user_map(ctx, ddb_id=user.user_id, discord_id=user_id),
         )
         return user
 
@@ -153,7 +161,11 @@ class BeyondClient(BeyondClientBase):
         l1_user_entitlements = USER_ENTITLEMENT_CACHE.get(user_id)
         if l1_user_entitlements is not None:
             log.debug("found user entitlements in l1 (memory) cache")
-            return l1_user_entitlements if l1_user_entitlements is not USER_ENTITLEMENTS_NONE_SENTINEL else None
+            return (
+                l1_user_entitlements
+                if l1_user_entitlements is not USER_ENTITLEMENTS_NONE_SENTINEL
+                else None
+            )
 
         # L2: Redis
         user_entitlement_cache_key = f"entitlements.user.{user_id}"
@@ -170,7 +182,9 @@ class BeyondClient(BeyondClientBase):
             return None
 
         # feature flag: is this user allowed to use entitlements?
-        enabled_ff = await ctx.bot.ldclient.variation("entitlements-enabled", user.to_ld_dict(), False)
+        enabled_ff = await ctx.bot.ldclient.variation(
+            "entitlements-enabled", user.to_ld_dict(), False
+        )
         if not enabled_ff:
             log.debug(f"hit false entitlements flag - skipping user entitlements")
             return None
@@ -179,9 +193,7 @@ class BeyondClient(BeyondClientBase):
         # cache entitlements
         USER_ENTITLEMENT_CACHE[user_id] = user_e10s
         await ctx.bot.rdb.jsetex(
-            user_entitlement_cache_key,
-            user_e10s.to_dict(),
-            USER_ENTITLEMENT_TTL
+            user_entitlement_cache_key, user_e10s.to_dict(), USER_ENTITLEMENT_TTL
         )
         return user_e10s
 
@@ -204,7 +216,10 @@ class BeyondClient(BeyondClientBase):
         l2_entity_entitlements = await ctx.bot.rdb.jget(entity_entitlement_cache_key)
         if l2_entity_entitlements is not None:
             log.debug("found entity entitlements in l2 (redis) cache")
-            return [entitlements.EntityEntitlements.from_dict(e) for e in l2_entity_entitlements]
+            return [
+                entitlements.EntityEntitlements.from_dict(e)
+                for e in l2_entity_entitlements
+            ]
 
         # fetch from DDB
         entity_e10s = await self._fetch_entities(entity_type)
@@ -214,7 +229,7 @@ class BeyondClient(BeyondClientBase):
         await ctx.bot.rdb.jsetex(
             entity_entitlement_cache_key,
             [e.to_dict() for e in entity_e10s],
-            ENTITY_ENTITLEMENT_TTL
+            ENTITY_ENTITLEMENT_TTL,
         )
         return entity_e10s
 
@@ -231,16 +246,24 @@ class BeyondClient(BeyondClientBase):
         try:
             async with self.http.post(AUTH_DISCORD, json=body) as resp:
                 if not 199 < resp.status < 300:
-                    log.warning(f"Auth Service returned {resp.status}: {await resp.text()}")
-                    raise AuthException(f"D&D Beyond returned an error: {resp.status} {resp.reason}")
+                    log.warning(
+                        f"Auth Service returned {resp.status}: {await resp.text()}"
+                    )
+                    raise AuthException(
+                        f"D&D Beyond returned an error: {resp.status} {resp.reason}"
+                    )
                 try:
                     data = await resp.json()
                 except (aiohttp.ContentTypeError, ValueError, TypeError):
-                    log.warning(f"Cannot deserialize Auth Service response: {resp.status}: {await resp.text()}")
+                    log.warning(
+                        f"Cannot deserialize Auth Service response: {resp.status}: {await resp.text()}"
+                    )
                     raise AuthException("Could not deserialize D&D Beyond response.")
         except aiohttp.ServerTimeoutError:
-            raise AuthException("Timed out connecting to D&D Beyond. Please try again in a few minutes.")
-        return data['token'], data.get('ttl')
+            raise AuthException(
+                "Timed out connecting to D&D Beyond. Please try again in a few minutes."
+            )
+        return data["token"], data.get("ttl")
 
     async def _fetch_user_entitlements(self, ddb_id: int):
         """
@@ -253,14 +276,14 @@ class BeyondClient(BeyondClientBase):
             TableName=DYNAMO_ENTITLEMENTS_TABLE,
             Key={
                 "PartitionKey": {"S": f"USER#{ddb_id}"},
-                "SortKey": {"S": str(ddb_id)}
-            }
+                "SortKey": {"S": str(ddb_id)},
+            },
         )
-        if 'Item' not in user_r:
+        if "Item" not in user_r:
             return entitlements.UserEntitlements([], [])
-        result = user_r['Item']
+        result = user_r["Item"]
         log.debug(f"fetched user entitlements for DDB user {ddb_id}: {result}")
-        return entitlements.UserEntitlements.from_dict(json.loads(result['JSON']['S']))
+        return entitlements.UserEntitlements.from_dict(json.loads(result["JSON"]["S"]))
 
     async def _fetch_entities(self, etype: str):
         """
@@ -271,13 +294,14 @@ class BeyondClient(BeyondClientBase):
         :rtype: list[entitlements.EntityEntitlements]
         """
         log.debug(f"fetching entity entitlements for etype {etype}")
-        return [entitlements.EntityEntitlements.from_dict(e)
-                async for e in
-                self.query(
-                    TableName=DYNAMO_ENTITLEMENTS_TABLE,
-                    KeyConditionExpression="PartitionKey = :entityTypeKey",
-                    ExpressionAttributeValues={":entityTypeKey": {"S": f"ENTITY#{etype}"}}
-                )]
+        return [
+            entitlements.EntityEntitlements.from_dict(e)
+            async for e in self.query(
+                TableName=DYNAMO_ENTITLEMENTS_TABLE,
+                KeyConditionExpression="PartitionKey = :entityTypeKey",
+                ExpressionAttributeValues={":entityTypeKey": {"S": f"ENTITY#{etype}"}},
+            )
+        ]
 
     # ---- helpers ----
     async def query(self, **kwargs):
@@ -289,10 +313,10 @@ class BeyondClient(BeyondClientBase):
             else:
                 response = await self._dynamo.query(ExclusiveStartKey=lek, **kwargs)
 
-            lek = response.get('LastEvaluatedKey')
-            for obj in response['Items']:
+            lek = response.get("LastEvaluatedKey")
+            for obj in response["Items"]:
                 try:
-                    yield json.loads(obj['JSON']['S'])
+                    yield json.loads(obj["JSON"]["S"])
                 except json.JSONDecodeError:
                     log.warning(f"Could not decode entitlement object: {obj!r}")
 

@@ -37,6 +37,7 @@ class CollectableNotFound(AvraeException):
 
 class AliasNameConflict(AvraeException):
     """Unable to run command because two aliases share the same name."""
+
     pass
 
 
@@ -44,7 +45,9 @@ class CollectableRequiresLicenses(AvraeException):
     """Unable to invoke collectable because one or more licenses are missing"""
 
     def __init__(self, entities, collectable, has_connected_ddb):
-        super().__init__(f"insufficient license to view {', '.join(e.name for e in entities)}")
+        super().__init__(
+            f"insufficient license to view {', '.join(e.name for e in entities)}"
+        )
         self.entities = entities
         self.collectable = collectable
         self.has_connected_ddb = has_connected_ddb

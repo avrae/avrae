@@ -22,8 +22,10 @@ class PlayerInitiative(Tutorial):
             # preflight: must be in a guild
             if ctx.guild is None:
                 await state_map.end_tutorial(ctx)
-                raise PrerequisiteFailed("This tutorial cannot be run in private messages, since initiative tracking "
-                                         "is tied to a server's channel. Try again in a server!")
+                raise PrerequisiteFailed(
+                    "This tutorial cannot be run in private messages, since initiative tracking "
+                    "is tied to a server's channel. Try again in a server!"
+                )
 
             # preflight: channel not in combat
             try:
@@ -33,7 +35,8 @@ class PlayerInitiative(Tutorial):
             else:
                 await state_map.end_tutorial(ctx)
                 raise PrerequisiteFailed(
-                    "This channel is already in combat. You'll need a channel to yourself to run this tutorial!")
+                    "This channel is already in combat. You'll need a channel to yourself to run this tutorial!"
+                )
 
             # first message
             character = await ctx.get_character()
@@ -51,19 +54,23 @@ class PlayerInitiative(Tutorial):
 
             await ctx.trigger_typing()
             await asyncio.sleep(4)
-            state_map.persist_data['channel_id'] = ctx.channel.id
+            state_map.persist_data["channel_id"] = ctx.channel.id
             await state_map.commit(ctx)
 
-            await ctx.bot.get_command('init begin')(ctx)
+            await ctx.bot.get_command("init begin")(ctx)
             combat = await ctx.get_combat()
             await add_tarrasque(ctx, combat)
-            await ctx.send("TA1 was added to combat with initiative 1d20 (12) + 0 = `12`.")  # rolling dice is hard
+            await ctx.send(
+                "TA1 was added to combat with initiative 1d20 (12) + 0 = `12`."
+            )  # rolling dice is hard
             await ctx.trigger_typing()
             await asyncio.sleep(2)
 
         async def objective(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
-                await ctx.send(f"This tutorial can only be run in <#{state_map.persist_data.get('channel_id')}>.")
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
+                await ctx.send(
+                    f"This tutorial can only be run in <#{state_map.persist_data.get('channel_id')}>."
+                )
                 return
 
             # objective
@@ -82,11 +89,11 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed2)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
 
             # The tutorial person ran !init join, there is an active combat, and the character is in combat
-            if ctx.command is ctx.bot.get_command('init join'):
+            if ctx.command is ctx.bot.get_command("init join"):
                 pc = await get_pc(ctx)
                 if pc:
                     await self.transition(ctx, state_map)
@@ -105,8 +112,10 @@ class PlayerInitiative(Tutorial):
     @state()
     class PlayerStatus(TutorialState):
         async def objective(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
-                await ctx.send(f"This tutorial can only be run in <#{state_map.persist_data.get('channel_id')}>.")
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
+                await ctx.send(
+                    f"This tutorial can only be run in <#{state_map.persist_data.get('channel_id')}>."
+                )
                 return
 
             # go to character in init
@@ -114,7 +123,10 @@ class PlayerInitiative(Tutorial):
             pc = await get_pc(ctx)
             if combat.current_combatant is not pc:
                 combat.goto_turn(pc, is_combatant=True)
-                await ctx.send(combat.get_turn_str(), allowed_mentions=combat.get_turn_str_mentions())
+                await ctx.send(
+                    combat.get_turn_str(),
+                    allowed_mentions=combat.get_turn_str_mentions(),
+                )
                 await combat.final()
 
             embed = TutorialEmbed(self, ctx)
@@ -130,9 +142,9 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
-            if ctx.command is ctx.bot.get_command('i status'):
+            if ctx.command is ctx.bot.get_command("i status"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -163,12 +175,9 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
-            if ctx.command in (
-                    ctx.bot.get_command('i a'),
-                    ctx.bot.get_command('a')
-            ):
+            if ctx.command in (ctx.bot.get_command("i a"), ctx.bot.get_command("a")):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -195,9 +204,9 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
-            if ctx.command is ctx.bot.get_command('i a'):
+            if ctx.command is ctx.bot.get_command("i a"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -234,11 +243,11 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
             if ctx.command in (
-                    ctx.bot.get_command('i cast'),
-                    ctx.bot.get_command('cast')
+                ctx.bot.get_command("i cast"),
+                ctx.bot.get_command("cast"),
             ):
                 await self.transition(ctx, state_map)
 
@@ -261,9 +270,9 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
-            if ctx.command is ctx.bot.get_command('i cast'):
+            if ctx.command is ctx.bot.get_command("i cast"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -294,13 +303,14 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
             character = await ctx.get_character()
-            if ctx.command in (
-                    ctx.bot.get_command('i hp'),
-                    ctx.bot.get_command('g hp')
-            ) and character.hp < character.max_hp:
+            if (
+                ctx.command
+                in (ctx.bot.get_command("i hp"), ctx.bot.get_command("g hp"))
+                and character.hp < character.max_hp
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -327,14 +337,18 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
             terry = await get_terry(ctx)
-            if ctx.command in (
-                    ctx.bot.get_command('i hp'),
-                    ctx.bot.get_command('i hp mod'),
-                    ctx.bot.get_command('i hp set')
-            ) and terry.hp == 300:
+            if (
+                ctx.command
+                in (
+                    ctx.bot.get_command("i hp"),
+                    ctx.bot.get_command("i hp mod"),
+                    ctx.bot.get_command("i hp set"),
+                )
+                and terry.hp == 300
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -357,8 +371,8 @@ class PlayerInitiative(Tutorial):
                 pc,
                 name="Future Lunch",
                 duration=-1,
-                effect_args=argparse('-vuln piercing -vuln acid'),
-                desc="A hungry tarrasque has your scent!"
+                effect_args=argparse("-vuln piercing -vuln acid"),
+                desc="A hungry tarrasque has your scent!",
             )
             pc.add_effect(effect_obj)
             await ctx.send(f"Added effect Future Lunch to {pc.name}.")
@@ -378,9 +392,9 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
-            if ctx.command is ctx.bot.get_command('i status'):
+            if ctx.command is ctx.bot.get_command("i status"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -390,7 +404,7 @@ class PlayerInitiative(Tutorial):
     class Effects2(TutorialState):
         async def objective(self, ctx, state_map):
             pc = await get_pc(ctx)
-            pc_name = pc.name if ' ' not in pc.name else f'"{pc.name}"'
+            pc_name = pc.name if " " not in pc.name else f'"{pc.name}"'
             embed = TutorialEmbed(self, ctx)
             embed.title = "Effects II"
             embed.description = f"""
@@ -404,10 +418,13 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
             pc = await get_pc(ctx)
-            if ctx.command is ctx.bot.get_command('i re') and pc.get_effect('Future Lunch') is None:
+            if (
+                ctx.command is ctx.bot.get_command("i re")
+                and pc.get_effect("Future Lunch") is None
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -432,9 +449,9 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+            if ctx.channel.id != state_map.persist_data.get("channel_id"):
                 return
-            if ctx.command is ctx.bot.get_command('i next'):
+            if ctx.command is ctx.bot.get_command("i next"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -455,7 +472,9 @@ class PlayerInitiative(Tutorial):
                 summary = combat.get_summary_msg()
                 await combat.end()
                 await ctx.send("Combat ended.")
-                await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
+                await summary.edit(
+                    content=combat.get_summary() + " ```-----COMBAT ENDED-----```"
+                )
                 await summary.unpin()
             except Exception:
                 pass
@@ -479,17 +498,28 @@ async def add_tarrasque(ctx, combat):
 
 async def get_pc(ctx):
     character = await ctx.get_character()
-    caster, _, _ = await targetutils.maybe_combat(ctx, character, ParsedArguments.empty_args())
+    caster, _, _ = await targetutils.maybe_combat(
+        ctx, character, ParsedArguments.empty_args()
+    )
     if isinstance(caster, PlayerCombatant):
         return caster
-    raise PrerequisiteFailed(f"You are no longer in combat. Try rejoining with `{ctx.prefix}init join`!")
+    raise PrerequisiteFailed(
+        f"You are no longer in combat. Try rejoining with `{ctx.prefix}init join`!"
+    )
 
 
 async def get_terry(ctx):
     combat = await ctx.get_combat()
-    terry = next((c for c in combat.get_combatants()
-                  if isinstance(c, MonsterCombatant) and c.monster_id == 17034), None)
+    terry = next(
+        (
+            c
+            for c in combat.get_combatants()
+            if isinstance(c, MonsterCombatant) and c.monster_id == 17034
+        ),
+        None,
+    )
     if terry is None:
         raise PrerequisiteFailed(
-            f"The tarrasque appears to no longer be in combat. Try readding it with `{ctx.prefix}i madd tarrasque`!")
+            f"The tarrasque appears to no longer be in combat. Try readding it with `{ctx.prefix}i madd tarrasque`!"
+        )
     return terry

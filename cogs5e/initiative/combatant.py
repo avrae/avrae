@@ -23,18 +23,46 @@ class Combatant(BaseCombatant, StatBlock):
     def __init__(
         self,
         # init metadata
-        ctx, combat, id: str, name: str, controller_id: str, private: bool, init: int, index: int = None,
-        notes: str = None, effects: list = None, group_id: str = None,
+        ctx,
+        combat,
+        id: str,
+        name: str,
+        controller_id: str,
+        private: bool,
+        init: int,
+        index: int = None,
+        notes: str = None,
+        effects: list = None,
+        group_id: str = None,
         # statblock info
-        stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
-        skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
-        spellbook: Spellbook = None, ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+        stats: BaseStats = None,
+        levels: Levels = None,
+        attacks: AttackList = None,
+        skills: Skills = None,
+        saves: Saves = None,
+        resistances: Resistances = None,
+        spellbook: Spellbook = None,
+        ac: int = None,
+        max_hp: int = None,
+        hp: int = None,
+        temp_hp: int = 0,
         creature_type: str = None,
-        **_
+        **_,
     ):
         super().__init__(
-            name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellbook, ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
+            name=name,
+            stats=stats,
+            levels=levels,
+            attacks=attacks,
+            skills=skills,
+            saves=saves,
+            resistances=resistances,
+            spellbook=spellbook,
+            ac=ac,
+            max_hp=max_hp,
+            hp=hp,
+            temp_hp=temp_hp,
+            creature_type=creature_type,
         )
         if effects is None:
             effects = []
@@ -54,16 +82,35 @@ class Combatant(BaseCombatant, StatBlock):
 
     @classmethod
     def new(
-        cls, name: str, controller_id: str, init: int, init_skill: Skill, max_hp: int, ac: int, private: bool,
-        resists: Resistances, ctx, combat
+        cls,
+        name: str,
+        controller_id: str,
+        init: int,
+        init_skill: Skill,
+        max_hp: int,
+        ac: int,
+        private: bool,
+        resists: Resistances,
+        ctx,
+        combat,
     ):
         skills = Skills.default()
         skills.update({"initiative": init_skill})
         levels = Levels({"Monster": 0})
         id = create_combatant_id()
         return cls(
-            ctx, combat, id, name, controller_id, private, init,
-            levels=levels, resistances=resists, skills=skills, max_hp=max_hp, ac=ac
+            ctx,
+            combat,
+            id,
+            name,
+            controller_id,
+            private,
+            init,
+            levels=levels,
+            resistances=resists,
+            skills=skills,
+            max_hp=max_hp,
+            ac=ac,
         )
 
     @classmethod
@@ -71,8 +118,8 @@ class Combatant(BaseCombatant, StatBlock):
         for key, klass in cls.DESERIALIZE_MAP.items():
             if key in raw:
                 raw[key] = klass.from_dict(raw[key])
-        del raw['type']
-        effects = raw.pop('effects')
+        del raw["type"]
+        effects = raw.pop("effects")
         inst = cls(ctx, combat, **raw)
         inst._effects = [Effect.from_dict(e, combat, inst) for e in effects]
         return inst
@@ -81,9 +128,15 @@ class Combatant(BaseCombatant, StatBlock):
         d = super().to_dict()
         d.update(
             {
-                'controller_id': self.controller, 'init': self.init, 'private': self.is_private,
-                'index': self.index, 'notes': self.notes, 'effects': [e.to_dict() for e in self._effects],
-                'group_id': self._group_id, 'type': self.type.value, 'id': self.id
+                "controller_id": self.controller,
+                "init": self.init,
+                "private": self.is_private,
+                "index": self.index,
+                "notes": self.notes,
+                "effects": [e.to_dict() for e in self._effects],
+                "group_id": self._group_id,
+                "type": self.type.value,
+                "id": self.id,
             }
         )
         return d
@@ -119,7 +172,7 @@ class Combatant(BaseCombatant, StatBlock):
     @property
     def max_hp(self):
         _maxhp = self._max_hp
-        _maxhp = combine_maybe_mods(self.active_effects('maxhp'), base=_maxhp)
+        _maxhp = combine_maybe_mods(self.active_effects("maxhp"), base=_maxhp)
         return _maxhp
 
     @max_hp.setter
@@ -138,17 +191,17 @@ class Combatant(BaseCombatant, StatBlock):
 
     def hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
-        out = ''
+        out = ""
         if not self.is_private or private:
             if self.max_hp is not None and self.hp is not None:
-                out = f'<{self.hp}/{self.max_hp} HP>'
+                out = f"<{self.hp}/{self.max_hp} HP>"
             elif self.hp is not None:
-                out = f'<{self.hp} HP>'
+                out = f"<{self.hp} HP>"
             else:
-                out = ''
+                out = ""
 
             if self.temp_hp and self.temp_hp > 0:
-                out += f' (+{self.temp_hp} temp)'
+                out += f" (+{self.temp_hp} temp)"
         elif self.max_hp is not None and self.max_hp > 0:
             ratio = self.hp / self.max_hp
             if ratio >= 1:
@@ -166,7 +219,7 @@ class Combatant(BaseCombatant, StatBlock):
     @property
     def ac(self):
         _ac = self._ac
-        _ac = combine_maybe_mods(self.active_effects('ac'), base=_ac)
+        _ac = combine_maybe_mods(self.active_effects("ac"), base=_ac)
         return _ac
 
     @ac.setter
@@ -184,7 +237,10 @@ class Combatant(BaseCombatant, StatBlock):
     @property
     def resistances(self):
         out = self._resistances.copy()
-        out.update(Resistances.from_dict({k: self.active_effects(k) for k in RESIST_TYPES}), overwrite=False)
+        out.update(
+            Resistances.from_dict({k: self.active_effects(k) for k in RESIST_TYPES}),
+            overwrite=False,
+        )
         return out
 
     def set_resist(self, damage_type: str, resist_type: str):
@@ -196,18 +252,22 @@ class Combatant(BaseCombatant, StatBlock):
         for rt in RESIST_TYPES:
             for resist in reversed(self._resistances[rt]):
                 # remove any existing identical resistances, or any filtered variant of a given non-complex resistance
-                if resist == resistance or (not resistance.is_complex and resist.dtype == resistance.dtype):
+                if resist == resistance or (
+                    not resistance.is_complex and resist.dtype == resistance.dtype
+                ):
                     self._resistances[rt].remove(resist)
 
-        if resist_type != 'neutral' or resistance.is_complex:
+        if resist_type != "neutral" or resistance.is_complex:
             self._resistances[resist_type].append(resistance)
 
     @property
     def attacks(self):
-        if 'attacks' not in self._cache:
+        if "attacks" not in self._cache:
             # attacks granted by effects are cached so that the same object is referenced in initTracker (#950)
-            self._cache['attacks'] = self._attacks + AttackList.from_dict(self.active_effects('attack'))
-        return self._cache['attacks']
+            self._cache["attacks"] = self._attacks + AttackList.from_dict(
+                self.active_effects("attack")
+            )
+        return self._cache["attacks"]
 
     @property
     def index(self):
@@ -242,13 +302,16 @@ class Combatant(BaseCombatant, StatBlock):
 
     def set_group(self, group_name):
         current = self.combat.current_combatant
-        was_current = (current is not None
-                       and (self is current
-                            or (current.type == CombatantType.GROUP
-                                and self in current
-                                and len(current) == 1)))
+        was_current = current is not None and (
+            self is current
+            or (
+                current.type == CombatantType.GROUP
+                and self in current
+                and len(current) == 1
+            )
+        )
         self.combat.remove_combatant(self, ignore_remove_hook=True)
-        if isinstance(group_name, str) and group_name.lower() == 'none':
+        if isinstance(group_name, str) and group_name.lower() == "none":
             group_name = None
         if group_name is None:
             self.combat.add_combatant(self)
@@ -292,7 +355,9 @@ class Combatant(BaseCombatant, StatBlock):
         if strict:
             return next((c for c in self.get_effects() if c.name == name), None)
         else:
-            return next((c for c in self.get_effects() if name.lower() in c.name.lower()), None)
+            return next(
+                (c for c in self.get_effects() if name.lower() in c.name.lower()), None
+            )
 
     async def select_effect(self, name):
         """
@@ -302,7 +367,9 @@ class Combatant(BaseCombatant, StatBlock):
         :param name: The name of the effect to search for.
         :return: The selected Effect, or None if the search failed.
         """
-        return await search_and_select(self.ctx, self.get_effects(), name, lambda e: e.name)
+        return await search_and_select(
+            self.ctx, self.get_effects(), name, lambda e: e.name
+        )
 
     def remove_effect(self, effect):
         try:
@@ -324,7 +391,7 @@ class Combatant(BaseCombatant, StatBlock):
         return to_remove
 
     def active_effects(self, key=None):
-        if 'parsed_effects' not in self._cache:
+        if "parsed_effects" not in self._cache:
             parsed_effects = {}
             for effect in self.get_effects():
                 for k, v in effect.effect.items():
@@ -334,16 +401,16 @@ class Combatant(BaseCombatant, StatBlock):
                         parsed_effects[k].append(v)
                     else:
                         parsed_effects[k].extend(v)
-            self._cache['parsed_effects'] = parsed_effects
+            self._cache["parsed_effects"] = parsed_effects
         if key:
-            return self._cache['parsed_effects'].get(key, [])
-        return self._cache['parsed_effects']
+            return self._cache["parsed_effects"].get(key, [])
+        return self._cache["parsed_effects"]
 
     def _invalidate_effect_cache(self):
-        if 'parsed_effects' in self._cache:
-            del self._cache['parsed_effects']
-        if 'attacks' in self._cache:
-            del self._cache['attacks']
+        if "parsed_effects" in self._cache:
+            del self._cache["parsed_effects"]
+        if "attacks" in self._cache:
+            del self._cache["attacks"]
 
     def is_concentrating(self):
         return any(e.concentration for e in self.get_effects())
@@ -393,9 +460,11 @@ class Combatant(BaseCombatant, StatBlock):
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        hp_str = f"{self.hp_str(private)} " if self.hp_str(private) else ''
+        hp_str = f"{self.hp_str(private)} " if self.hp_str(private) else ""
         if not no_notes:
-            return f"{self.init:>2}: {self.name} {hp_str}{self._get_effects_and_notes()}"
+            return (
+                f"{self.init:>2}: {self.name} {hp_str}{self._get_effects_and_notes()}"
+            )
         else:
             return f"{self.init:>2}: {self.name} {hp_str}"
 
@@ -408,17 +477,17 @@ class Combatant(BaseCombatant, StatBlock):
         name = self.name
         hp_ac = self._get_hp_and_ac(private)
         resists = self._get_resist_string(private)
-        notes = '\n# ' + self.notes if self.notes else ''
+        notes = "\n# " + self.notes if self.notes else ""
         effects = self._get_long_effects()
         return f"{name} {hp_ac} {resists}{notes}\n{effects}".strip()
 
     def _get_long_effects(self):
-        return '\n'.join(f"* {str(e)}" for e in self.get_effects())
+        return "\n".join(f"* {str(e)}" for e in self.get_effects())
 
     def _get_effects_and_notes(self):
         out = []
         if (self._ac is not None or self.ac) and not self.is_private:
-            out.append(f'AC {self.ac}')
+            out.append(f"AC {self.ac}")
         for e in self.get_effects():
             out.append(e.get_short_str())
         if self.notes:
@@ -431,19 +500,27 @@ class Combatant(BaseCombatant, StatBlock):
         out = [self.hp_str(private)]
         if (self._ac is not None or self.ac) and (not self.is_private or private):
             out.append(f"(AC {self.ac})")
-        return ' '.join(out)
+        return " ".join(out)
 
     def _get_resist_string(self, private: bool = False):
-        resist_str = ''
+        resist_str = ""
         if not self.is_private or private:
             if len(self.resistances.resist) > 0:
-                resist_str += "\n> Resistances: " + ', '.join([str(r) for r in self.resistances.resist])
+                resist_str += "\n> Resistances: " + ", ".join(
+                    [str(r) for r in self.resistances.resist]
+                )
             if len(self.resistances.immune) > 0:
-                resist_str += "\n> Immunities: " + ', '.join([str(r) for r in self.resistances.immune])
+                resist_str += "\n> Immunities: " + ", ".join(
+                    [str(r) for r in self.resistances.immune]
+                )
             if len(self.resistances.vuln) > 0:
-                resist_str += "\n> Vulnerabilities: " + ', '.join([str(r) for r in self.resistances.vuln])
+                resist_str += "\n> Vulnerabilities: " + ", ".join(
+                    [str(r) for r in self.resistances.vuln]
+                )
             if len(self.resistances.neutral) > 0:
-                resist_str += "\n> Ignored: " + ', '.join([str(r) for r in self.resistances.neutral])
+                resist_str += "\n> Ignored: " + ", ".join(
+                    [str(r) for r in self.resistances.neutral]
+                )
         return resist_str
 
     def __str__(self):
@@ -460,27 +537,67 @@ class MonsterCombatant(Combatant):
     def __init__(
         self,
         # init metadata
-        ctx, combat, id: str, name: str, controller_id: str, private: bool, init: int, index: int = None,
-        notes: str = None, effects: list = None, group_id: str = None,
+        ctx,
+        combat,
+        id: str,
+        name: str,
+        controller_id: str,
+        private: bool,
+        init: int,
+        index: int = None,
+        notes: str = None,
+        effects: list = None,
+        group_id: str = None,
         # statblock info
-        stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
-        skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
+        stats: BaseStats = None,
+        levels: Levels = None,
+        attacks: AttackList = None,
+        skills: Skills = None,
+        saves: Saves = None,
+        resistances: Resistances = None,
         spellbook: Spellbook = None,
-        ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+        ac: int = None,
+        max_hp: int = None,
+        hp: int = None,
+        temp_hp: int = 0,
         # monster specific
-        monster_name=None, monster_id=None, creature_type=None,
-        **_
+        monster_name=None,
+        monster_id=None,
+        creature_type=None,
+        **_,
     ):
         super(MonsterCombatant, self).__init__(
-            ctx, combat, id, name, controller_id, private, init, index, notes, effects, group_id,
-            stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp,
-            creature_type=creature_type
+            ctx,
+            combat,
+            id,
+            name,
+            controller_id,
+            private,
+            init,
+            index,
+            notes,
+            effects,
+            group_id,
+            stats,
+            levels,
+            attacks,
+            skills,
+            saves,
+            resistances,
+            spellbook,
+            ac,
+            max_hp,
+            hp,
+            temp_hp,
+            creature_type=creature_type,
         )
         self._monster_name = monster_name
         self._monster_id = monster_id
 
     @classmethod
-    def from_monster(cls, monster, ctx, combat, name, controller_id, init, private, hp=None, ac=None):
+    def from_monster(
+        cls, monster, ctx, combat, name, controller_id, init, private, hp=None, ac=None
+    ):
         monster_name = monster.name
         creature_type = monster.creature_type
         hp = int(monster.hp) if not hp else int(hp)
@@ -496,30 +613,40 @@ class MonsterCombatant(Combatant):
         resistances = monster.resistances.copy()
 
         return cls(
-            ctx, combat, id, name, controller_id, private, init,
+            ctx,
+            combat,
+            id,
+            name,
+            controller_id,
+            private,
+            init,
             # statblock info
-            stats=monster.stats, levels=monster.levels, attacks=monster.attacks,
-            skills=monster.skills, saves=monster.saves, resistances=resistances,
-            spellbook=spellbook, ac=ac, max_hp=hp,
+            stats=monster.stats,
+            levels=monster.levels,
+            attacks=monster.attacks,
+            skills=monster.skills,
+            saves=monster.saves,
+            resistances=resistances,
+            spellbook=spellbook,
+            ac=ac,
+            max_hp=hp,
             # monster specific
-            monster_name=monster_name, monster_id=monster.entity_id, creature_type=creature_type
+            monster_name=monster_name,
+            monster_id=monster.entity_id,
+            creature_type=creature_type,
         )
 
     # ser/deser
     @classmethod
     def from_dict(cls, raw, ctx, combat):
         inst = super().from_dict(raw, ctx, combat)
-        inst._monster_name = raw['monster_name']
-        inst._monster_id = raw.get('monster_id')
+        inst._monster_name = raw["monster_name"]
+        inst._monster_id = raw.get("monster_id")
         return inst
 
     def to_dict(self):
         raw = super().to_dict()
-        raw.update(
-            {
-                'monster_name': self._monster_name, 'monster_id': self._monster_id
-            }
-        )
+        raw.update({"monster_name": self._monster_name, "monster_id": self._monster_id})
         return raw
 
     # members
@@ -538,20 +665,45 @@ class PlayerCombatant(Combatant):
     def __init__(
         self,
         # init metadata
-        ctx, combat, id: str, name: str, controller_id: str, private: bool, init: int, index: int = None,
-        notes: str = None, effects: list = None, group_id: str = None,
+        ctx,
+        combat,
+        id: str,
+        name: str,
+        controller_id: str,
+        private: bool,
+        init: int,
+        index: int = None,
+        notes: str = None,
+        effects: list = None,
+        group_id: str = None,
         # statblock info
-        attacks: AttackList = None, resistances: Resistances = None,
-        ac: int = None, max_hp: int = None,
+        attacks: AttackList = None,
+        resistances: Resistances = None,
+        ac: int = None,
+        max_hp: int = None,
         # character specific
-        character_id=None, character_owner=None,
-        **_
+        character_id=None,
+        character_owner=None,
+        **_,
     ):
         # note that the player combatant doesn't initialize the statblock
         # because we want the combatant statblock attrs to reference the character attrs
         super().__init__(
-            ctx, combat, id, name, controller_id, private, init, index, notes, effects, group_id,
-            attacks=attacks, resistances=resistances, ac=ac, max_hp=max_hp
+            ctx,
+            combat,
+            id,
+            name,
+            controller_id,
+            private,
+            init,
+            index,
+            notes,
+            effects,
+            group_id,
+            attacks=attacks,
+            resistances=resistances,
+            ac=ac,
+            max_hp=max_hp,
         )
         self.character_id = character_id
         self.character_owner = character_owner
@@ -562,11 +714,18 @@ class PlayerCombatant(Combatant):
     async def from_character(cls, character, ctx, combat, controller_id, init, private):
         id = create_combatant_id()
         inst = cls(
-            ctx, combat, id, character.name, controller_id, private, init,
+            ctx,
+            combat,
+            id,
+            character.name,
+            controller_id,
+            private,
+            init,
             # statblock copies
             resistances=character.resistances.copy(),
             # character specific
-            character_id=character.upstream, character_owner=character.owner
+            character_id=character.upstream,
+            character_owner=character.owner,
         )
         inst._character = character
         return inst
@@ -575,8 +734,8 @@ class PlayerCombatant(Combatant):
     @classmethod
     async def from_dict(cls, raw, ctx, combat):
         inst = super().from_dict(raw, ctx, combat)
-        inst.character_id = raw['character_id']
-        inst.character_owner = raw['character_owner']
+        inst.character_id = raw["character_id"]
+        inst.character_owner = raw["character_owner"]
 
         try:
             inst._character = await cogs5e.models.character.Character.from_bot_and_ids(
@@ -593,8 +752,8 @@ class PlayerCombatant(Combatant):
     @classmethod
     def from_dict_sync(cls, raw, ctx, combat):
         inst = super().from_dict(raw, ctx, combat)
-        inst.character_id = raw['character_id']
-        inst.character_owner = raw['character_owner']
+        inst.character_id = raw["character_id"]
+        inst.character_owner = raw["character_owner"]
 
         try:
             inst._character = cogs5e.models.character.Character.from_bot_and_ids_sync(
@@ -608,14 +767,20 @@ class PlayerCombatant(Combatant):
         return inst
 
     def to_dict(self):
-        ignored_attributes = ("stats", "levels", "skills", "saves", "spellbook", "hp", "temp_hp")
+        ignored_attributes = (
+            "stats",
+            "levels",
+            "skills",
+            "saves",
+            "spellbook",
+            "hp",
+            "temp_hp",
+        )
         raw = super().to_dict()
         for attr in ignored_attributes:
             del raw[attr]
         raw.update(
-            {
-                'character_id': self.character_id, 'character_owner': self.character_owner
-            }
+            {"character_id": self.character_id, "character_owner": self.character_owner}
         )
         return raw
 
@@ -666,7 +831,7 @@ class PlayerCombatant(Combatant):
     @property
     def ac(self):
         _ac = self._ac or self.character.ac
-        _ac = combine_maybe_mods(self.active_effects('ac'), base=_ac)
+        _ac = combine_maybe_mods(self.active_effects("ac"), base=_ac)
         return _ac
 
     @ac.setter
@@ -683,7 +848,7 @@ class PlayerCombatant(Combatant):
     @property
     def max_hp(self):
         _maxhp = self._max_hp or self.character.max_hp
-        _maxhp = combine_maybe_mods(self.active_effects('maxhp'), base=_maxhp)
+        _maxhp = combine_maybe_mods(self.active_effects("maxhp"), base=_maxhp)
         return _maxhp
 
     @max_hp.setter

@@ -18,7 +18,11 @@ from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
 from aliasing.errors import CollectableRequiresLicenses, EvaluationError
-from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
+from aliasing.helpers import (
+    handle_alias_exception,
+    handle_alias_required_licenses,
+    handle_aliases,
+)
 from cogs5e.models.errors import AvraeException, RequiresLicense
 from ddb import BeyondClient, BeyondClientBase
 from ddb.gamelog import GameLogClient
@@ -31,10 +35,22 @@ from utils.redisIO import RedisIO
 
 # -----COGS-----
 COGS = (
-    "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
-    "cogs5e.gametrack", "cogs5e.initiative", "cogs5e.sheetManager", "cogs5e.gamelog",
-    "cogsmisc.customization", "cogsmisc.core",
-    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils", "cogsmisc.tutorials"
+    "cogs5e.dice",
+    "cogs5e.charGen",
+    "cogs5e.homebrew",
+    "cogs5e.lookup",
+    "cogs5e.pbpUtils",
+    "cogs5e.gametrack",
+    "cogs5e.initiative",
+    "cogs5e.sheetManager",
+    "cogs5e.gamelog",
+    "cogsmisc.customization",
+    "cogsmisc.core",
+    "cogsmisc.publicity",
+    "cogsmisc.stats",
+    "cogsmisc.repl",
+    "cogsmisc.adminUtils",
+    "cogsmisc.tutorials",
 )
 
 
@@ -48,8 +64,13 @@ async def get_prefix(the_bot, message):
 class Avrae(commands.AutoShardedBot):
     def __init__(self, prefix, description=None, **options):
         super().__init__(
-            prefix, help_command=help_command, description=description, test_guilds=config.COMMAND_TEST_GUILD_IDS,
-            sync_commands=False, sync_commands_debug=config.TESTING, **options
+            prefix,
+            help_command=help_command,
+            description=description,
+            test_guilds=config.COMMAND_TEST_GUILD_IDS,
+            sync_commands=False,
+            sync_commands_debug=config.TESTING,
+            **options,
         )
         self.state = "init"
 
@@ -71,7 +92,11 @@ class Avrae(commands.AutoShardedBot):
             release = None
             if config.GIT_COMMIT_SHA:
                 release = f"avrae-bot@{config.GIT_COMMIT_SHA}"
-            sentry_sdk.init(dsn=config.SENTRY_DSN, environment=config.ENVIRONMENT.title(), release=release)
+            sentry_sdk.init(
+                dsn=config.SENTRY_DSN,
+                environment=config.ENVIRONMENT.title(),
+                release=release,
+            )
 
         # ddb entitlements
         if config.TESTING and config.DDB_AUTH_SERVICE_URL is None:
@@ -80,14 +105,18 @@ class Avrae(commands.AutoShardedBot):
             self.ddb = BeyondClient(self.loop)
 
         # launchdarkly
-        self.ldclient = AsyncLaunchDarklyClient(self.loop, sdk_key=config.LAUNCHDARKLY_SDK_KEY)
+        self.ldclient = AsyncLaunchDarklyClient(
+            self.loop, sdk_key=config.LAUNCHDARKLY_SDK_KEY
+        )
 
         # ddb game log
         self.glclient = GameLogClient(self)
         self.glclient.init()
 
     async def setup_rdb(self):
-        return RedisIO(await aioredis.create_redis_pool(config.REDIS_URL, db=config.REDIS_DB_NUM))
+        return RedisIO(
+            await aioredis.create_redis_pool(config.REDIS_URL, db=config.REDIS_DB_NUM)
+        )
 
     async def get_guild_prefix(self, guild: discord.Guild) -> str:
         guild_id = str(guild.id)
@@ -144,7 +173,7 @@ class Avrae(commands.AutoShardedBot):
         log.info(f"Launched {len(self.shards)} shards!")
 
         if self.is_cluster_0:
-            await self.rdb.incr('build_num')
+            await self.rdb.incr("build_num")
 
     async def before_identify_hook(self, shard_id, *, initial=False):
         bucket_id = shard_id % self.launch_max_concurrency
@@ -164,11 +193,15 @@ class Avrae(commands.AutoShardedBot):
                 t = random.uniform(5, 15)
                 log.info(f"[C{self.cluster_id}] CPU usage is high, waiting {t:.2f}s!")
                 await asyncio.sleep(t)
-                if time.monotonic() - wait_start > 300:  # liveness: wait no more than 5 minutes
+                if (
+                    time.monotonic() - wait_start > 300
+                ):  # liveness: wait no more than 5 minutes
                     break
 
         # wait until the bucket is available and try to acquire the lock
-        await clustering.wait_bucket_available(shard_id, bucket_id, self.rdb, pre_lock_hook=pre_lock_check)
+        await clustering.wait_bucket_available(
+            shard_id, bucket_id, self.rdb, pre_lock_hook=pre_lock_check
+        )
 
     async def get_context(self, *args, **kwargs) -> context.AvraeContext:
         return await super().get_context(*args, cls=context.AvraeContext, **kwargs)
@@ -198,36 +231,50 @@ desc = (
     "[Privacy Policy](https://www.fandom.com/privacy-policy) | [Terms of Use](https://www.fandom.com/terms-of-use)"
 )
 intents = discord.Intents(
-    guilds=True, members=True, messages=True, reactions=True,
-    bans=False, emojis=False, integrations=False, webhooks=False, invites=False, voice_states=False, presences=False,
-    typing=False
+    guilds=True,
+    members=True,
+    messages=True,
+    reactions=True,
+    bans=False,
+    emojis=False,
+    integrations=False,
+    webhooks=False,
+    invites=False,
+    voice_states=False,
+    presences=False,
+    typing=False,
 )  # https://discord.com/developers/docs/topics/gateway#gateway-intents
 bot = Avrae(
-    prefix=get_prefix, description=desc, pm_help=True, testing=config.TESTING,
-    activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'),
-    allowed_mentions=discord.AllowedMentions.none(), intents=intents, chunk_guilds_at_startup=False
+    prefix=get_prefix,
+    description=desc,
+    pm_help=True,
+    testing=config.TESTING,
+    activity=discord.Game(name=f"D&D 5e | {config.DEFAULT_PREFIX}help"),
+    allowed_mentions=discord.AllowedMentions.none(),
+    intents=intents,
+    chunk_guilds_at_startup=False,
 )
 
-log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
+log_formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(log_formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
-log = logging.getLogger('bot')
+log = logging.getLogger("bot")
 
 
 @bot.event
 async def on_ready():
-    log.info('Logged in as')
+    log.info("Logged in as")
     log.info(bot.user.name)
     log.info(bot.user.id)
-    log.info('------')
+    log.info("------")
 
 
 @bot.event
 async def on_resumed():
-    log.info('resumed.')
+    log.info("resumed.")
 
 
 @bot.event
@@ -238,9 +285,13 @@ async def on_command_error(ctx, error):
     elif isinstance(error, AvraeException):
         return await ctx.send(str(error))
 
-    elif isinstance(error, (commands.UserInputError, commands.NoPrivateMessage, ValueError)):
+    elif isinstance(
+        error, (commands.UserInputError, commands.NoPrivateMessage, ValueError)
+    ):
         return await ctx.send(
-            f"Error: {str(error)}\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help."
+            f"Error: {str(error)}\nUse `{ctx.prefix}help "
+            + ctx.command.qualified_name
+            + "` for help."
         )
 
     elif isinstance(error, commands.CheckFailure):
@@ -248,7 +299,9 @@ async def on_command_error(ctx, error):
         return await ctx.send(f"Error: {msg}")
 
     elif isinstance(error, commands.CommandOnCooldown):
-        return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
+        return await ctx.send(
+            "This command is on cooldown for {:.1f} seconds.".format(error.retry_after)
+        )
 
     elif isinstance(error, commands.MaxConcurrencyReached):
         return await ctx.send(str(error))
@@ -278,21 +331,32 @@ async def on_command_error(ctx, error):
                 )
             except HTTPException:
                 try:
-                    return await ctx.send(f"Error: I cannot send messages to this user.")
+                    return await ctx.send(
+                        f"Error: I cannot send messages to this user."
+                    )
                 except HTTPException:
                     return
 
         elif isinstance(original, NotFound):
-            return await ctx.send("Error: I tried to edit or delete a message that no longer exists.")
+            return await ctx.send(
+                "Error: I tried to edit or delete a message that no longer exists."
+            )
 
-        elif isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError)):
+        elif isinstance(
+            original,
+            (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError),
+        ):
             return await ctx.send("Error in Discord API. Please try again.")
 
         elif isinstance(original, HTTPException):
             if original.response.status == 400:
-                return await ctx.send(f"Error: Message is too long, malformed, or empty.\n{original.text}")
+                return await ctx.send(
+                    f"Error: Message is too long, malformed, or empty.\n{original.text}"
+                )
             elif 499 < original.response.status < 600:
-                return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
+                return await ctx.send(
+                    "Error: Internal server error on Discord's end. Please try again."
+                )
 
     # send error to sentry.io
     if isinstance(error, CommandInvokeError):
@@ -322,7 +386,9 @@ async def on_message(message):
     ctx = await bot.get_context(message)
     if ctx.valid:  # builtins first
         await bot.invoke(ctx)
-    elif ctx.invoked_with:  # then aliases if there is some word (and not just the prefix)
+    elif (
+        ctx.invoked_with
+    ):  # then aliases if there is some word (and not just the prefix)
         await handle_aliases(ctx)
 
 
@@ -336,13 +402,17 @@ async def on_command(ctx):
             )
         )
     except AttributeError:
-        log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
+        log.debug(
+            "Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(
+                ctx
+            )
+        )
 
 
 for cog in COGS:
     bot.load_extension(cog)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     faulthandler.enable()  # assumes we log errors to stderr, traces segfaults
     bot.state = "run"
     bot.loop.create_task(compendium.reload_task(bot.mdb))

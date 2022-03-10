@@ -35,7 +35,7 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('sheet'):
+            if ctx.command is ctx.bot.get_command("sheet"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -55,7 +55,7 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('g status'):
+            if ctx.command is ctx.bot.get_command("g status"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -81,7 +81,7 @@ class PlayingTheGame(Tutorial):
 
         async def listener(self, ctx, state_map):
             character = await ctx.get_character()
-            if ctx.command is ctx.bot.get_command('g hp') and not character.temp_hp:
+            if ctx.command is ctx.bot.get_command("g hp") and not character.temp_hp:
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -102,7 +102,7 @@ class PlayingTheGame(Tutorial):
 
         async def listener(self, ctx, state_map):
             character = await ctx.get_character()
-            if ctx.command is ctx.bot.get_command('g thp') and character.temp_hp:
+            if ctx.command is ctx.bot.get_command("g thp") and character.temp_hp:
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -123,7 +123,7 @@ class PlayingTheGame(Tutorial):
 
         async def listener(self, ctx, state_map):
             character = await ctx.get_character()
-            if ctx.command is ctx.bot.get_command('g hp') and not character.temp_hp:
+            if ctx.command is ctx.bot.get_command("g hp") and not character.temp_hp:
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -144,8 +144,9 @@ class PlayingTheGame(Tutorial):
 
         async def listener(self, ctx, state_map):
             character = await ctx.get_character()
-            if ctx.command is ctx.bot.get_command('g hp set') \
-                    and (character.hp < character.max_hp or character.hp == 1):
+            if ctx.command is ctx.bot.get_command("g hp set") and (
+                character.hp < character.max_hp or character.hp == 1
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -165,7 +166,7 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('g hp max'):
+            if ctx.command is ctx.bot.get_command("g hp max"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -187,7 +188,7 @@ class PlayingTheGame(Tutorial):
                 maxv="3",
                 minv="0",
                 reset="long",
-                display_type="bubble"
+                display_type="bubble",
             )
             character.consumables.append(new_counter)
             await character.commit(ctx)
@@ -208,7 +209,7 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('cc list'):
+            if ctx.command is ctx.bot.get_command("cc list"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -232,11 +233,13 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('cc'):
+            if ctx.command is ctx.bot.get_command("cc"):
                 character = await ctx.get_character()
                 counter = character.get_consumable("Tutorial Counter")
                 if counter is None:
-                    await self.tutorial.Counters1.setup(ctx, state_map)  # recreate the counter
+                    await self.tutorial.Counters1.setup(
+                        ctx, state_map
+                    )  # recreate the counter
                 elif counter.value < counter.get_max():
                     await self.transition(ctx, state_map)
 
@@ -262,7 +265,7 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('cc reset'):
+            if ctx.command is ctx.bot.get_command("cc reset"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -294,8 +297,10 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if (ctx.command is ctx.bot.get_command('save') and 'death' in ctx.message.content) \
-                    or ctx.command is ctx.bot.get_command('g ds'):
+            if (
+                ctx.command is ctx.bot.get_command("save")
+                and "death" in ctx.message.content
+            ) or ctx.command is ctx.bot.get_command("g ds"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -322,7 +327,7 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('g lr'):
+            if ctx.command is ctx.bot.get_command("g lr"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):

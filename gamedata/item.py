@@ -4,7 +4,7 @@ from .shared import Sourced
 
 class Item(DescribableMixin, Sourced):
     # not necessarily true for nonmagical items...
-    entity_type = 'magic-item'
+    entity_type = "magic-item"
     type_id = 112130694
 
     def __init__(self, name, desc, attunement, meta=None, image=None, **kwargs):
@@ -24,15 +24,31 @@ class Item(DescribableMixin, Sourced):
 
     @classmethod
     def from_data(cls, d):
-        return cls(d['name'], d['desc'], d['attunement'],
-                   d.get('meta'), d.get('image'),
-                   homebrew=False, source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'],
-                   is_free=d['isFree'])
+        return cls(
+            d["name"],
+            d["desc"],
+            d["attunement"],
+            d.get("meta"),
+            d.get("image"),
+            homebrew=False,
+            source=d["source"],
+            entity_id=d["id"],
+            page=d["page"],
+            url=d["url"],
+            is_free=d["isFree"],
+        )
 
     @classmethod
     def from_homebrew(cls, d, source):
-        return cls(d['name'], d['desc'], False, d.get('meta'), d.get('image'),
-                   source=source, homebrew=True)
+        return cls(
+            d["name"],
+            d["desc"],
+            False,
+            d.get("meta"),
+            d.get("image"),
+            source=source,
+            homebrew=True,
+        )
 
     @property
     def description(self):

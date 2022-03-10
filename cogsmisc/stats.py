@@ -56,7 +56,9 @@ class Stats(commands.Cog):
 
     async def publish_shared_statistics(self):
         cluster_servers = len(self.bot.guilds)
-        await self.bot.rdb.hset(GUILD_RDB_KEY, str(self.bot.cluster_id), cluster_servers)
+        await self.bot.rdb.hset(
+            GUILD_RDB_KEY, str(self.bot.cluster_id), cluster_servers
+        )
 
     # ===== analytic loggers =====
     async def user_activity(self, ctx):
@@ -64,9 +66,9 @@ class Stats(commands.Cog):
             {"user_id": ctx.author.id},
             {
                 "$inc": {"commands_called": 1},
-                "$currentDate": {"last_command_time": True}
+                "$currentDate": {"last_command_time": True},
             },
-            upsert=True
+            upsert=True,
         )
 
     async def guild_activity(self, ctx):
@@ -79,9 +81,9 @@ class Stats(commands.Cog):
             {"guild_id": guild_id},
             {
                 "$inc": {"commands_called": 1},
-                "$currentDate": {"last_command_time": True}
+                "$currentDate": {"last_command_time": True},
             },
-            upsert=True
+            upsert=True,
         )
 
     async def command_activity(self, ctx):
@@ -91,9 +93,9 @@ class Stats(commands.Cog):
             {"name": ctx.command.qualified_name},
             {
                 "$inc": {"num_invocations": 1},  # yay, atomic operations
-                "$currentDate": {"last_invoked_time": True}
+                "$currentDate": {"last_invoked_time": True},
             },
-            upsert=True
+            upsert=True,
         )
         # log event
         guild_id = 0 if ctx.guild is None else ctx.guild.id
@@ -102,7 +104,7 @@ class Stats(commands.Cog):
                 "timestamp": datetime.datetime.utcnow(),
                 "command_name": ctx.command.qualified_name,
                 "user_id": ctx.author.id,
-                "guild_id": guild_id
+                "guild_id": guild_id,
             }
         )
 
@@ -114,11 +116,16 @@ class Stats(commands.Cog):
         ctx = _ContextProxy(self.bot)
 
         commands_used_life = await self.get_statistic(ctx, "commands_used_life")
-        num_characters = await self.bot.mdb.characters.estimated_document_count()  # fast
+        num_characters = (
+            await self.bot.mdb.characters.estimated_document_count()
+        )  # fast
 
         try:
-            num_inits_began = (await self.bot.mdb.analytics_command_activity.find_one({"name": "init begin"})) \
-                .get("num_invocations", 0)
+            num_inits_began = (
+                await self.bot.mdb.analytics_command_activity.find_one(
+                    {"name": "init begin"}
+                )
+            ).get("num_invocations", 0)
         except AttributeError:
             num_inits_began = 0
 
@@ -129,7 +136,9 @@ class Stats(commands.Cog):
             "num_characters": num_characters,
             "num_inits_began": num_inits_began,
             "num_init_turns": await self.get_statistic(ctx, "turns_init_tracked_life"),
-            "num_init_rounds": await self.get_statistic(ctx, "rounds_init_tracked_life")
+            "num_init_rounds": await self.get_statistic(
+                ctx, "rounds_init_tracked_life"
+            ),
         }
         await self.bot.mdb.analytics_over_time.insert_one(data)
 
@@ -149,8 +158,8 @@ class Stats(commands.Cog):
         else:
             common = counter.most_common()[limit:]
 
-        output = '\n'.join('{0:<{1}}: {2}'.format(k, width, c) for k, c in common)
-        await ctx.send(f'```\n{output}\n{total} total\n```')
+        output = "\n".join("{0:<{1}}: {2}".format(k, width, c) for k, c in common)
+        await ctx.send(f"```\n{output}\n{total} total\n```")
 
     # ===== event listeners =====
     # we can update our server count as we join/leave servers
@@ -166,17 +175,14 @@ class Stats(commands.Cog):
     @staticmethod
     async def increase_stat(ctx, stat):
         await ctx.bot.mdb.random_stats.update_one(
-            {"key": stat},
-            {"$inc": {"value": 1}},
-            upsert=True
+            {"key": stat}, {"$inc": {"value": 1}}, upsert=True
         )
 
     @staticmethod
     async def get_statistic(ctx, stat):
         try:
             value = int(
-                (await ctx.bot.mdb.random_stats.find_one({"key": stat}))
-                    .get("value", 0)
+                (await ctx.bot.mdb.random_stats.find_one({"key": stat})).get("value", 0)
             )
         except AttributeError:
             value = 0
@@ -196,9 +202,9 @@ class Stats(commands.Cog):
                 "$set": {"ddb_id": ddb_user.user_id},
                 "$inc": {"link_usage": 1},
                 "$currentDate": {"last_link_time": True},
-                "$setOnInsert": {"first_link_time": datetime.datetime.utcnow()}
+                "$setOnInsert": {"first_link_time": datetime.datetime.utcnow()},
             },
-            upsert=True
+            upsert=True,
         )
 
 

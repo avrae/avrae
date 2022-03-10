@@ -8,7 +8,12 @@ import aliasing.evaluators
 from cogs5e.models.ddbsync import DDBSheetSync
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharacter, NoReset
+from cogs5e.models.errors import (
+    ExternalImportError,
+    InvalidArgument,
+    NoCharacter,
+    NoReset,
+)
 from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
@@ -27,6 +32,7 @@ log = logging.getLogger(__name__)
 
 # constants at bottom (yay execution order)
 
+
 class Character(StatBlock):
     # cache characters for 10 seconds to avoid race conditions
     # this makes sure that multiple calls to Character.from_ctx() in the same invocation or two simultaneous ones
@@ -34,17 +40,42 @@ class Character(StatBlock):
     # caches based on (owner, upstream)
     _cache = cachetools.TTLCache(maxsize=50, ttl=5)
 
-    def __init__(self, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
-                 name: str, description: str, image: str, stats: BaseStats, levels: Levels, attacks: AttackList,
-                 skills: Skills, resistances: Resistances, saves: Saves, ac: int, max_hp: int, hp: int, temp_hp: int,
-                 cvars: dict, overrides: dict, consumables: list, death_saves: dict,
-                 spellbook: Spellbook,
-                 live, race: str, background: str,
-                 creature_type: str = None,
-                 ddb_campaign_id: str = None, actions: Actions = None, active_guilds: list = None,
-                 options_v2: CharacterSettings = None, 
-                 coinpurse=None,
-                 **kwargs):
+    def __init__(
+        self,
+        owner: str,
+        upstream: str,
+        active: bool,
+        sheet_type: str,
+        import_version: int,
+        name: str,
+        description: str,
+        image: str,
+        stats: BaseStats,
+        levels: Levels,
+        attacks: AttackList,
+        skills: Skills,
+        resistances: Resistances,
+        saves: Saves,
+        ac: int,
+        max_hp: int,
+        hp: int,
+        temp_hp: int,
+        cvars: dict,
+        overrides: dict,
+        consumables: list,
+        death_saves: dict,
+        spellbook: Spellbook,
+        live,
+        race: str,
+        background: str,
+        creature_type: str = None,
+        ddb_campaign_id: str = None,
+        actions: Actions = None,
+        active_guilds: list = None,
+        options_v2: CharacterSettings = None,
+        coinpurse=None,
+        **kwargs,
+    ):
         if actions is None:
             actions = Actions()
         if active_guilds is None:
@@ -52,8 +83,8 @@ class Character(StatBlock):
         if coinpurse is None:
             coinpurse = Coinpurse()
         if options_v2 is None:
-            if 'options' in kwargs:  # options v1 -> v2 migration (options rewrite)
-                options_v2 = CharacterSettings.from_old_csettings(kwargs.pop('options'))
+            if "options" in kwargs:  # options v1 -> v2 migration (options rewrite)
+                options_v2 = CharacterSettings.from_old_csettings(kwargs.pop("options"))
             else:
                 options_v2 = CharacterSettings()
         if kwargs:
@@ -70,8 +101,19 @@ class Character(StatBlock):
 
         # StatBlock super call
         super().__init__(
-            name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellbook, ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp, creature_type=creature_type
+            name=name,
+            stats=stats,
+            levels=levels,
+            attacks=attacks,
+            skills=skills,
+            saves=saves,
+            resistances=resistances,
+            spellbook=spellbook,
+            ac=ac,
+            max_hp=max_hp,
+            hp=hp,
+            temp_hp=temp_hp,
+            creature_type=creature_type,
         )
 
         # main character info
@@ -111,8 +153,8 @@ class Character(StatBlock):
     # ---------- Deserialization ----------
     @classmethod
     def from_dict(cls, d):
-        if '_id' in d:
-            del d['_id']
+        if "_id" in d:
+            del d["_id"]
         for key, klass in DESERIALIZE_MAP.items():
             if key in d:
                 d[key] = klass.from_dict(d[key])
@@ -124,19 +166,23 @@ class Character(StatBlock):
         active_character = None
         if ctx.guild is not None and not ignore_guild:
             guild_id = str(ctx.guild.id)
-            active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
+            active_character = await ctx.bot.mdb.characters.find_one(
+                {"owner": owner_id, "active_guilds": guild_id}
+            )
         if active_character is None:
-            active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
+            active_character = await ctx.bot.mdb.characters.find_one(
+                {"owner": owner_id, "active": True}
+            )
         if active_character is None:
             raise NoCharacter()
 
         try:
             # return from cache if available
-            return cls._cache[owner_id, active_character['upstream']]
+            return cls._cache[owner_id, active_character["upstream"]]
         except KeyError:
             # otherwise deserialize and write to cache
             inst = cls.from_dict(active_character)
-            cls._cache[owner_id, active_character['upstream']] = inst
+            cls._cache[owner_id, active_character["upstream"]] = inst
             return inst
 
     @classmethod
@@ -149,7 +195,9 @@ class Character(StatBlock):
         except KeyError:
             pass
 
-        character = await bot.mdb.characters.find_one({"owner": owner_id, "upstream": character_id})
+        character = await bot.mdb.characters.find_one(
+            {"owner": owner_id, "upstream": character_id}
+        )
         if character is None:
             raise NoCharacter()
         # write to cache
@@ -167,7 +215,9 @@ class Character(StatBlock):
         except KeyError:
             pass
 
-        character = bot.mdb.characters.delegate.find_one({"owner": owner_id, "upstream": character_id})
+        character = bot.mdb.characters.delegate.find_one(
+            {"owner": owner_id, "upstream": character_id}
+        )
         if character is None:
             raise NoCharacter()
         # write to cache
@@ -178,20 +228,36 @@ class Character(StatBlock):
     # ---------- Serialization ----------
     def to_dict(self):
         d = super().to_dict()
-        d.update({
-            "owner": self._owner, "upstream": self._upstream, "active": self._active,
-            "sheet_type": self._sheet_type, "import_version": self._import_version, "description": self._description,
-            "image": self._image, "cvars": self.cvars,
-            "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
-            "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
-            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id, "actions": self.actions.to_dict(),
-            "active_guilds": self._active_guilds, "options_v2": self.options.dict(), "coinpurse": self.coinpurse.to_dict(),
-        })
+        d.update(
+            {
+                "owner": self._owner,
+                "upstream": self._upstream,
+                "active": self._active,
+                "sheet_type": self._sheet_type,
+                "import_version": self._import_version,
+                "description": self._description,
+                "image": self._image,
+                "cvars": self.cvars,
+                "overrides": self.overrides.to_dict(),
+                "consumables": [co.to_dict() for co in self.consumables],
+                "death_saves": self.death_saves.to_dict(),
+                "live": self._live,
+                "race": self.race,
+                "background": self.background,
+                "ddb_campaign_id": self.ddb_campaign_id,
+                "actions": self.actions.to_dict(),
+                "active_guilds": self._active_guilds,
+                "options_v2": self.options.dict(),
+                "coinpurse": self.coinpurse.to_dict(),
+            }
+        )
         return d
 
     @staticmethod
     async def delete(ctx, owner_id, upstream):
-        await ctx.bot.mdb.characters.delete_one({"owner": owner_id, "upstream": upstream})
+        await ctx.bot.mdb.characters.delete_one(
+            {"owner": owner_id, "upstream": upstream}
+        )
         try:
             del Character._cache[owner_id, upstream]
         except KeyError:
@@ -199,7 +265,11 @@ class Character(StatBlock):
 
     # ---------- Basic CRUD ----------
     def get_color(self) -> int:
-        return self.options.color if self.options.color is not None else super().get_color()
+        return (
+            self.options.color
+            if self.options.color is not None
+            else super().get_color()
+        )
 
     @property
     def owner(self) -> str:
@@ -216,7 +286,7 @@ class Character(StatBlock):
 
     @property
     def upstream_id(self) -> str:
-        return self._upstream.split('-', 1)[-1]
+        return self._upstream.split("-", 1)[-1]
 
     @property
     def sheet_type(self) -> str:
@@ -232,14 +302,14 @@ class Character(StatBlock):
 
     @property
     def image(self) -> str:
-        return self.overrides.image or self._image or ''
+        return self.overrides.image or self._image or ""
 
     # ---------- SCRIPTING ----------
     def evaluate_math(self, varstr):
         """Evaluates a cvar expression in a MathEvaluator.
         :param varstr - the expression to evaluate.
         :returns int - the value of the expression."""
-        varstr = str(varstr).strip('<>{}')
+        varstr = str(varstr).strip("<>{}")
         evaluator = aliasing.evaluators.MathEvaluator.with_character(self)
 
         try:
@@ -250,38 +320,55 @@ class Character(StatBlock):
     def set_cvar(self, name: str, val: str):
         """Sets a cvar to a string value."""
         if not name.isidentifier():
-            raise InvalidArgument("Cvar name must be a valid identifier "
-                                  "(contains only a-z, A-Z, 0-9, and _, and not start with a number).")
+            raise InvalidArgument(
+                "Cvar name must be a valid identifier "
+                "(contains only a-z, A-Z, 0-9, and _, and not start with a number)."
+            )
         self.cvars[name] = str(val)
 
     def get_scope_locals(self, no_cvars=False):
         out = super().get_scope_locals()
         if not no_cvars:
             out.update(self.cvars.copy())
-        out.update({
-            "description": self.description, "image": self.image, "color": hex(self.get_color())[2:]
-        })
+        out.update(
+            {
+                "description": self.description,
+                "image": self.image,
+                "color": hex(self.get_color())[2:],
+            }
+        )
         return out
 
     # ---------- DATABASE ----------
     async def commit(self, ctx, do_live_integrations=True):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
-        data.pop('active')  # #1472 - may regress when doing atomic commits, be careful
-        data.pop('active_guilds')
+        data.pop("active")  # #1472 - may regress when doing atomic commits, be careful
+        data.pop("active_guilds")
         try:
             await ctx.bot.mdb.characters.update_one(
                 {"owner": self._owner, "upstream": self._upstream},
                 {
                     "$set": data,
-                    "$setOnInsert": {'active': self._active, 'active_guilds': self._active_guilds}  # also #1472
+                    "$setOnInsert": {
+                        "active": self._active,
+                        "active_guilds": self._active_guilds,
+                    },  # also #1472
                 },
-                upsert=True
+                upsert=True,
             )
         except OverflowError:
-            raise ExternalImportError("A number on the character sheet is too large to store.")
-        if self._live_integration is not None and do_live_integrations and self.options.sync_outbound:
-            self._live_integration.commit_soon(ctx)  # creates a task to commit eventually
+            raise ExternalImportError(
+                "A number on the character sheet is too large to store."
+            )
+        if (
+            self._live_integration is not None
+            and do_live_integrations
+            and self.options.sync_outbound
+        ):
+            self._live_integration.commit_soon(
+                ctx
+            )  # creates a task to commit eventually
 
     async def set_active(self, ctx):
         """Sets the character as globally active and unsets any server-active character in the current context."""
@@ -292,7 +379,7 @@ class Character(StatBlock):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
             result = await ctx.bot.mdb.characters.update_many(
                 {"owner": owner_id, "active_guilds": guild_id},
-                {"$pull": {"active_guilds": guild_id}}
+                {"$pull": {"active_guilds": guild_id}},
             )
             did_unset_server_active = result.modified_count > 0
             try:
@@ -301,13 +388,11 @@ class Character(StatBlock):
                 pass
         # for all characters owned by this owner who are globally active, make them inactive
         await ctx.bot.mdb.characters.update_many(
-            {"owner": owner_id, "active": True},
-            {"$set": {"active": False}}
+            {"owner": owner_id, "active": True}, {"$set": {"active": False}}
         )
         # make this character active
         await ctx.bot.mdb.characters.update_one(
-            {"owner": owner_id, "upstream": self._upstream},
-            {"$set": {"active": True}}
+            {"owner": owner_id, "upstream": self._upstream}, {"$set": {"active": True}}
         )
         self._active = True
         return SetActiveResult(did_unset_server_active=did_unset_server_active)
@@ -324,12 +409,12 @@ class Character(StatBlock):
         # unset anyone else that might be active on this server
         unset_result = await ctx.bot.mdb.characters.update_many(
             {"owner": owner_id, "active_guilds": guild_id},
-            {"$pull": {"active_guilds": guild_id}}
+            {"$pull": {"active_guilds": guild_id}},
         )
         # set us as active on this server
         await ctx.bot.mdb.characters.update_one(
             {"owner": owner_id, "upstream": self._upstream},
-            {"$addToSet": {"active_guilds": guild_id}}
+            {"$addToSet": {"active_guilds": guild_id}},
         )
         if guild_id not in self._active_guilds:
             self._active_guilds.append(guild_id)
@@ -346,7 +431,7 @@ class Character(StatBlock):
         # if and only if this character is active in this server, unset me as active on this server
         unset_result = await ctx.bot.mdb.characters.update_one(
             {"owner": str(ctx.author.id), "upstream": self._upstream},
-            {"$pull": {"active_guilds": guild_id}}
+            {"$pull": {"active_guilds": guild_id}},
         )
         try:
             self._active_guilds.remove(guild_id)
@@ -362,7 +447,9 @@ class Character(StatBlock):
     @hp.setter
     def hp(self, value):
         old_hp = self._hp
-        self._hp = max(0, value)  # reimplements the setter, but super().(property) = x doesn't work (py-14965)
+        self._hp = max(
+            0, value
+        )  # reimplements the setter, but super().(property) = x doesn't work (py-14965)
         self.on_hp()
         if self._live_integration and self._hp != old_hp:
             self._live_integration.sync_hp()
@@ -408,12 +495,16 @@ class Character(StatBlock):
         if sb_spell not in self.overrides.spells:
             raise InvalidArgument("This spell is not in the overrides.")
         self.overrides.spells.remove(sb_spell)
-        spell_in_book = next(s for s in self.spellbook.spells if s.name == sb_spell.name)
+        spell_in_book = next(
+            s for s in self.spellbook.spells if s.name == sb_spell.name
+        )
         self.spellbook.spells.remove(spell_in_book)
 
     # ---------- CUSTOM COUNTERS ----------
     async def select_consumable(self, ctx, name):
-        return await search_and_select(ctx, self.consumables, name, lambda ctr: ctr.name)
+        return await search_and_select(
+            ctx, self.consumables, name, lambda ctr: ctr.name
+        )
 
     def get_consumable(self, name):
         """Gets the next custom counter with the exact given name (case-sensitive). Returns None if not found."""
@@ -445,7 +536,7 @@ class Character(StatBlock):
         Resets but does not return Death Saves.
         """
         reset = []
-        reset.extend(self._reset_custom('hp'))
+        reset.extend(self._reset_custom("hp"))
         if self.hp > 0:
             self.death_saves.reset()
         return reset
@@ -458,7 +549,7 @@ class Character(StatBlock):
         reset = []
         if cascade:
             reset.extend(self.on_hp())
-        reset.extend(self._reset_custom('short'))
+        reset.extend(self._reset_custom("short"))
         if self.options.srslots:
             self.spellbook.reset_slots()  # reset as if it was a long rest (legacy)
         else:
@@ -475,7 +566,7 @@ class Character(StatBlock):
         if cascade:
             reset.extend(self.on_hp())
             reset.extend(self.short_rest(cascade=False))
-        reset.extend(self._reset_custom('long'))
+        reset.extend(self._reset_custom("long"))
         self.reset_hp()
         self.spellbook.reset_slots()
         return reset
@@ -514,9 +605,12 @@ class Character(StatBlock):
 
         # consumables: no duplicate name or live (upstream) ids
         new_cc_names = set(con.name.lower() for con in self.consumables)
-        new_cc_upstreams = set(con.live_id for con in self.consumables if con.live_id is not None)
+        new_cc_upstreams = set(
+            con.live_id for con in self.consumables if con.live_id is not None
+        )
         self.consumables.extend(
-            con for con in old_character.consumables
+            con
+            for con in old_character.consumables
             if con.name.lower() not in new_cc_names
             and con.live_id not in new_cc_upstreams
         )
@@ -540,7 +634,7 @@ class Character(StatBlock):
             sb.num_pact_slots = min(
                 old_character.spellbook.num_pact_slots or 0,  # pact slots before update
                 sb.max_pact_slots,  # cannot have more then max
-                sb.get_slots(sb.pact_slot_level)  # cannot gain slots out of nowhere
+                sb.get_slots(sb.pact_slot_level),  # cannot gain slots out of nowhere
             )
 
             # sanity check:             num_non_pact <= max_non_pact
@@ -548,7 +642,9 @@ class Character(StatBlock):
             #                         num_pact_slots >= max_pact_slots - get_max(pact_level) + get_slots(pact_level)
             sb.num_pact_slots = max(
                 sb.num_pact_slots,
-                sb.max_pact_slots - sb.get_max_slots(sb.pact_slot_level) + sb.get_slots(sb.pact_slot_level)
+                sb.max_pact_slots
+                - sb.get_max_slots(sb.pact_slot_level)
+                + sb.get_slots(sb.pact_slot_level),
             )
 
         if (self.owner, self.upstream) in Character._cache:
@@ -579,14 +675,16 @@ class Character(StatBlock):
         skill_profs = str(self.skills)
         if skill_profs:
             desc_details.append(f"**Skill Proficiencies**: {skill_profs}")
-        desc_details.append(f"**Senses**: passive Perception {10 + self.skills.perception.value}")
+        desc_details.append(
+            f"**Senses**: passive Perception {10 + self.skills.perception.value}"
+        )
 
         # resists
         resists = str(self.resistances)
         if resists:
             desc_details.append(resists)
 
-        embed.description = '\n'.join(desc_details)
+        embed.description = "\n".join(desc_details)
 
         # attacks
         atk_str = self.attacks.build_str(self)
@@ -600,8 +698,10 @@ class Character(StatBlock):
 
         # sheet url?
         if self._import_version < SHEET_VERSION:
-            embed.set_footer(text=f"You are using an old sheet version ({self.sheet_type} v{self._import_version}). "
-                                  f"Please run !update.")
+            embed.set_footer(
+                text=f"You are using an old sheet version ({self.sheet_type} v{self._import_version}). "
+                f"Please run !update."
+            )
 
         return embed
 
@@ -623,7 +723,7 @@ class Character(StatBlock):
         base_urls = {
             "beyond": "https://ddb.ac/characters/",
             "dicecloud": "https://dicecloud.com/character/",
-            "google": "https://docs.google.com/spreadsheets/d/"
+            "google": "https://docs.google.com/spreadsheets/d/",
         }
         if self.sheet_type in base_urls:
             return f"{base_urls[self.sheet_type]}{self.upstream_id}"
@@ -639,8 +739,13 @@ class CharacterSpellbook(HasIntegrationMixin, Spellbook):
             self._live_integration.sync_slots()
 
 
-SetActiveResult = namedtuple('SetActiveResult', 'did_unset_server_active')
+SetActiveResult = namedtuple("SetActiveResult", "did_unset_server_active")
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
-DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook, "actions": Actions,
-                   "options_v2": CharacterSettings, "coinpurse": Coinpurse}
+DESERIALIZE_MAP = {
+    **_DESER,
+    "spellbook": CharacterSpellbook,
+    "actions": Actions,
+    "options_v2": CharacterSettings,
+    "coinpurse": Coinpurse,
+}

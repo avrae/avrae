@@ -28,15 +28,21 @@ ROLLED_DICE_PATTERN = r"\((~*(\**\d+\**( -> )?)+~*(, )?)+\)"
 # 1d20 (**20**)
 # 2d20kh1 (15, ~~2~~) = `15`
 # 3d20kh1 (~~13~~, 16, ~~**1**~~)
-D20_PATTERN = rf"\d?d20(\w+[lh<>]?\d+)? *{ROLLED_DICE_PATTERN}( *[+-] *\d+)?( *= *`\d+`)?"
+D20_PATTERN = (
+    rf"\d?d20(\w+[lh<>]?\d+)? *{ROLLED_DICE_PATTERN}( *[+-] *\d+)?( *= *`\d+`)?"
+)
 
 # dice: any combination of valid dice, rolled or unrolled
-DICE_PATTERN = rf"((\()? *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+" \
-               rf"(\))?( *[\/\*] *\d)?( *= *`\d+`)?"
+DICE_PATTERN = (
+    rf"((\()? *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+"
+    rf"(\))?( *[\/\*] *\d)?( *= *`\d+`)?"
+)
 
 # to hit: a to-hit section of an attack
-TO_HIT_PATTERN = rf"\*\*To Hit:?\*\*:? ((\d?d20\.\.\. = `(\d+|HIT|MISS)`)|({D20_PATTERN}{DICE_PATTERN} = `\d+`)|" \
-                 rf"(Automatic (hit|miss)!))"
+TO_HIT_PATTERN = (
+    rf"\*\*To Hit:?\*\*:? ((\d?d20\.\.\. = `(\d+|HIT|MISS)`)|({D20_PATTERN}{DICE_PATTERN} = `\d+`)|"
+    rf"(Automatic (hit|miss)!))"
+)
 
 # damage: a damage section of an attack
 DAMAGE_PATTERN = rf"((\*\*Damage( \(CRIT!\))?:?\*\*:? {DICE_PATTERN})|(\*\*Miss!\*\*))"
@@ -72,7 +78,9 @@ def requires_data():
     Spells: Fire Bolt, Fireball
     """
     if not compendium.spells:  # if spells have not loaded, no data has
-        compendium.load_all_json(base_path=os.path.join(dir_path, "static", "compendium"))
+        compendium.load_all_json(
+            base_path=os.path.join(dir_path, "static", "compendium")
+        )
         compendium.load_common()
 
     if not compendium.spells:  # we have no data, then
@@ -108,8 +116,8 @@ class ContextBotProxy:
     def __init__(self, bot):
         self.bot = bot
         # to make draconic tests work
-        self.prefix = '!'
-        self.invoked_with = 'foo'
+        self.prefix = "!"
+        self.invoked_with = "foo"
 
     @property
     def channel(self):

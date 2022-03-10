@@ -7,8 +7,17 @@ from ..results import IEffectResult
 
 class IEffect(Effect):
     def __init__(
-        self, name: str, duration: int, effects: str, end: bool = False, conc: bool = False,
-        desc: str = None, stacking: bool = False, save_as: str = None, parent: str = None, **kwargs
+        self,
+        name: str,
+        duration: int,
+        effects: str,
+        end: bool = False,
+        conc: bool = False,
+        desc: str = None,
+        stacking: bool = False,
+        save_as: str = None,
+        parent: str = None,
+        **kwargs,
     ):
         super().__init__("ieffect", **kwargs)
         self.name = name
@@ -25,9 +34,15 @@ class IEffect(Effect):
         out = super().to_dict()
         out.update(
             {
-                "name": self.name, "duration": self.duration, "effects": self.effects, "end": self.tick_on_end,
-                "conc": self.concentration, "desc": self.desc, "stacking": self.stacking, "save_as": self.save_as,
-                "parent": self.parent
+                "name": self.name,
+                "duration": self.duration,
+                "effects": self.effects,
+                "end": self.tick_on_end,
+                "conc": self.concentration,
+                "desc": self.desc,
+                "stacking": self.stacking,
+                "save_as": self.save_as,
+                "parent": self.parent,
             }
         )
         return out
@@ -44,7 +59,9 @@ class IEffect(Effect):
             try:
                 duration = autoctx.parse_intexpression(self.duration)
             except Exception:
-                raise AutomationException(f"{self.duration} is not an integer (in effect duration)")
+                raise AutomationException(
+                    f"{self.duration} is not an integer (in effect duration)"
+                )
         else:
             duration = self.duration
 
@@ -55,25 +72,39 @@ class IEffect(Effect):
         else:
             desc = None
 
-        duration = autoctx.args.last('dur', duration, int)
+        duration = autoctx.args.last("dur", duration, int)
         conc_conflict = []
         if isinstance(autoctx.target.target, init.Combatant):
             effect = init.Effect.new(
-                autoctx.target.target.combat, autoctx.target.target, self.name,
-                duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
-                concentration=self.concentration, desc=desc
+                autoctx.target.target.combat,
+                autoctx.target.target,
+                self.name,
+                duration,
+                autoctx.parse_annostr(self.effects),
+                tick_on_end=self.tick_on_end,
+                concentration=self.concentration,
+                desc=desc,
             )
             conc_parent = None
             stack_parent = None
 
             # concentration spells
             if autoctx.conc_effect:
-                if autoctx.conc_effect.combatant is autoctx.target.target and self.concentration:
-                    raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
+                if (
+                    autoctx.conc_effect.combatant is autoctx.target.target
+                    and self.concentration
+                ):
+                    raise InvalidArgument(
+                        "Concentration spells cannot add concentration effects to the caster."
+                    )
                 conc_parent = autoctx.conc_effect
 
             # stacking
-            if self.stacking and (stack_parent := autoctx.target.target.get_effect(effect.name, strict=True)):
+            if self.stacking and (
+                stack_parent := autoctx.target.target.get_effect(
+                    effect.name, strict=True
+                )
+            ):
                 count = 2
                 effect.desc = None
                 effect.duration = effect.remaining = -1
@@ -86,7 +117,10 @@ class IEffect(Effect):
 
             # parenting
             explicit_parent = None
-            if self.parent is not None and (parent_ref := autoctx.metavars.get(self.parent, None)) is not None:
+            if (
+                self.parent is not None
+                and (parent_ref := autoctx.metavars.get(self.parent, None)) is not None
+            ):
                 if not isinstance(parent_ref, IEffectMetaVar):
                     raise InvalidArgument(
                         f"Could not set IEffect parent: The variable `{self.parent}` is not an IEffectMetaVar "
@@ -101,16 +135,24 @@ class IEffect(Effect):
             # add
             effect_result = autoctx.target.target.add_effect(effect)
             autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
-            if conc_conflict := effect_result['conc_conflict']:
-                autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
+            if conc_conflict := effect_result["conc_conflict"]:
+                autoctx.queue(
+                    f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}"
+                )
 
             # save as
             if self.save_as is not None:
                 autoctx.metavars[self.save_as] = IEffectMetaVar(effect)
         else:
             effect = init.Effect.new(
-                None, None, self.name, duration, autoctx.parse_annostr(self.effects),
-                tick_on_end=self.tick_on_end, concentration=self.concentration, desc=desc
+                None,
+                None,
+                self.name,
+                duration,
+                autoctx.parse_annostr(self.effects),
+                tick_on_end=self.tick_on_end,
+                concentration=self.concentration,
+                desc=desc,
             )
             autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
 

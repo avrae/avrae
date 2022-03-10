@@ -28,11 +28,13 @@ class ExternalImportError(AvraeException):
 
 class InvalidArgument(AvraeException):
     """Raised when an argument is invalid."""
+
     pass
 
 
 class NotAllowed(AvraeException):
     """Raised when a user tries to do something they are not allowed to do by role or dependency."""
+
     pass
 
 
@@ -40,7 +42,10 @@ class OutdatedSheet(AvraeException):
     """Raised when a feature is used that requires an updated sheet."""
 
     def __init__(self, msg=None):
-        super().__init__(msg or "This command requires an updated character sheet. Try running `!update`.")
+        super().__init__(
+            msg
+            or "This command requires an updated character sheet. Try running `!update`."
+        )
 
 
 class InvalidSaveType(AvraeException):
@@ -50,6 +55,7 @@ class InvalidSaveType(AvraeException):
 
 class ConsumableException(AvraeException):
     """A base exception for consumable exceptions to stem from."""
+
     pass
 
 
@@ -76,6 +82,7 @@ class InvalidSpellLevel(ConsumableException):
 
 class SelectionException(AvraeException):
     """A base exception for message awaiting exceptions to stem from."""
+
     pass
 
 

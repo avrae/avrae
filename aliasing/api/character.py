@@ -4,7 +4,7 @@ import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
-from cogs5e.utils.gameutils import parse_coin_args
+from cogs5e.models.sheet.coinpurse import CoinsArgs
 from utils.constants import COIN_TYPES
 
 
@@ -697,18 +697,27 @@ class AliasCoinpurse:
         """
         return self._coinpurse.compact_string()
 
-    def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
+    def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0, autoconvert: bool = True):
         """
-        Modifies your coinpurse based on the provided values.
+        Modifies your coinpurse based on the provided values. If ``autoconvert`` is enabled, it will convert down higher
+        value coins if necessary to handle the transaction. Returns a dict representation of the deltas.
 
         :param int pp: Platinum Pieces. Defaults to ``0``.
         :param int gp: Gold Pieces. Defaults to ``0``.
         :param int ep: Electrum Pieces. Defaults to ``0``.
         :param int sp: Silver Pieces. Defaults to ``0``.
         :param int cp: Copper Pieces. Defaults to ``0``.
+        :param bool autoconvert: Whether it should attempt to convert down higher value coins. Defaults to ``True``
+        :return: A dict representation of the delta changes for each coin type.
+        :rtype: dict
         """
-        self._coinpurse.set_currency(self._coinpurse.pp + pp, self._coinpurse.gp + gp, self._coinpurse.ep + ep,
-                                     self._coinpurse.sp + sp, self._coinpurse.cp + cp)
+        coins = CoinsArgs(pp, gp, ep, sp, cp)
+        if autoconvert:
+            coins = self._coinpurse.auto_convert_down(coins)
+        self._coinpurse.set_currency(self._coinpurse.pp + coins.pp, self._coinpurse.gp + coins.gp,
+                                     self._coinpurse.ep + coins.ep, self._coinpurse.sp + coins.sp,
+                                     self._coinpurse.cp + coins.cp)
+        return {"pp": coins.pp, "gp": coins.gp, "ep": coins.ep, "sp": coins.sp, "cp": coins.cp, "total": coins.total}
 
     def set_coins(self, pp: int, gp: int, ep: int, sp: int, cp: int):
         """

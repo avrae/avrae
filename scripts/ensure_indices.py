@@ -152,11 +152,6 @@ INDICES = {
         IndexModel('campaign_id', unique=True),
         IndexModel('channel_id')
     ],
-
-    # upenn nlp project recordings
-    "nlp_recordings": [
-        IndexModel('combat_id', unique=True)
-    ]
 }
 
 

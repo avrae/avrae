@@ -4,7 +4,7 @@ import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
-from cogs5e.utils.gameutils import parse_coin_args
+from cogs5e.models.sheet.coinpurse import CoinsArgs
 from utils.constants import COIN_TYPES
 
 
@@ -667,6 +667,15 @@ class AliasCoinpurse:
             return self._coinpurse.compact_string()
         return str(self._coinpurse)
 
+    @property
+    def total(self) -> float:
+        """
+        Returns the total amount of coins in your bag, converted to float gold.
+
+        :rtype: float
+        """
+        return self._coinpurse.total
+
     def coin_str(self, cointype: str) -> str:
         """
         Returns a string representation of the chosen coin type.
@@ -688,18 +697,27 @@ class AliasCoinpurse:
         """
         return self._coinpurse.compact_string()
 
-    def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
+    def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0, autoconvert: bool = True):
         """
-        Modifies your coinpurse based on the provided values.
+        Modifies your coinpurse based on the provided values. If ``autoconvert`` is enabled, it will convert down higher
+        value coins if necessary to handle the transaction. Returns a dict representation of the deltas.
 
         :param int pp: Platinum Pieces. Defaults to ``0``.
         :param int gp: Gold Pieces. Defaults to ``0``.
         :param int ep: Electrum Pieces. Defaults to ``0``.
         :param int sp: Silver Pieces. Defaults to ``0``.
         :param int cp: Copper Pieces. Defaults to ``0``.
+        :param bool autoconvert: Whether it should attempt to convert down higher value coins. Defaults to ``True``
+        :return: A dict representation of the delta changes for each coin type.
+        :rtype: dict
         """
-        self._coinpurse.set_currency(self._coinpurse.pp + pp, self._coinpurse.gp + gp, self._coinpurse.ep + ep,
-                                     self._coinpurse.sp + sp, self._coinpurse.cp + cp)
+        coins = CoinsArgs(pp, gp, ep, sp, cp)
+        if autoconvert:
+            coins = self._coinpurse.auto_convert_down(coins)
+        self._coinpurse.set_currency(self._coinpurse.pp + coins.pp, self._coinpurse.gp + coins.gp,
+                                     self._coinpurse.ep + coins.ep, self._coinpurse.sp + coins.sp,
+                                     self._coinpurse.cp + coins.cp)
+        return {"pp": coins.pp, "gp": coins.gp, "ep": coins.ep, "sp": coins.sp, "cp": coins.cp, "total": coins.total}
 
     def set_coins(self, pp: int, gp: int, ep: int, sp: int, cp: int):
         """
@@ -724,21 +742,8 @@ class AliasCoinpurse:
         """
         Returns a dict of your current coinpurse.
 
-        :return: A dict of your current coinpurse, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3}``
+        :return: A dict of your current coinpurse, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":2, "cp":3, "total": 1.23}``
         :rtype: dict
         """
-        return self._coinpurse.to_dict()
-
-    @staticmethod
-    def parse(args: str) -> dict:
-        """
-        Parses a user's coin string into a representation of each currency.
-        If the user input is a decimal number, assumes gold pieces.
-        Otherwise, allows the user to specify currencies in the form '+1gp -2sp 3cp'
-
-        :return: A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3, "total": 0.83}``
-        :rtype: dict
-        """
-        coin_args = parse_coin_args(args)
-        return {"pp": coin_args.pp, "gp": coin_args.gp, "ep": coin_args.ep, "sp": coin_args.sp, "cp": coin_args.cp,
-                "total": coin_args.total}
+        return {"pp": self._coinpurse.pp, "gp": self._coinpurse.gp, "ep": self._coinpurse.ep,
+                "sp": self._coinpurse.sp, "cp": self._coinpurse.cp, "total":  self._coinpurse.total}

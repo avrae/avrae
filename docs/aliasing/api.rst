@@ -489,7 +489,9 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.uvar_exists(name)
 
-.. autofunction:: aliasing.api.functions.vroll(rollStr, multiply=1, add=0)
+.. autofunction:: aliasing.api.functions.vroll(rollStr, multiply=1, add=0
+
+.. autofunction:: aliasing.api.functions.parse_coins(args: str) -> dict
 
 .. warning::
     The following functions are deprecated and should be avoided:

@@ -18,4 +18,4 @@ COPY --chown=avrae:avrae . .
 # Download AWS pubkey to connect to documentDB
 RUN if [ "$ENVIRONMENT" = "production" ]; then wget https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem; fi
 
-ENTRYPOINT python dbot.py $DBOT_ARGS
+ENTRYPOINT ddtrace-run python dbot.py $DBOT_ARGS

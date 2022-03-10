@@ -11,7 +11,7 @@ from disnake.ext.commands import NoPrivateMessage
 
 from aliasing import helpers
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
+from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, EmbedWithColor
 from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
@@ -1404,12 +1404,34 @@ class InitTracker(commands.Cog):
         """
         server_settings = await ctx.get_server_settings()
         if server_settings.upenn_nlp_opt_in:
-            await ctx.send(
-                "This server is contributing data to the Natural Language AI Training project! "
-                "To opt out, ask a server administrator to disable "
-                "`Contribute Message Data to Natural Language AI Training` in the "
-                f"`{ctx.clean_prefix}servsettings` command."
+            embed = EmbedWithColor()
+            embed.description = "This server is contributing data to the Natural Language AI Training project!"
+            embed.add_field(
+                name="To Opt Out",
+                value="To opt out, ask a server administrator to disable `Contribute Message Data to Natural Language "
+                      f"AI Training` in the `{ctx.clean_prefix}servsettings` command.",
+                inline=False
             )
+            embed.add_field(
+                name="Learn More",
+                value="You can learn more about the Avrae NLP project "
+                      "[here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html).",
+                inline=False
+            )
+            embed.add_field(
+                name="Subcommands",
+                value="**list** - List all channels in this server currently recording message data.\n"
+                      "**stopall** - Stop all message recording currently active on this server. "
+                      "Requires *Manage Messages* Discord permissions."
+            )
+            embed.add_field(
+                name="Links",
+                value="[Project Description](https://www.cis.upenn.edu/~ccb/language-to-avrae.html) "
+                      "\u2022 [Privacy Policy](https://www.fandom.com/privacy-policy)",
+                inline=False
+            )
+            await ctx.send(embed=embed)
+
         else:
             await ctx.send(
                 "This server has not opted in to contribute data to the Natural Language AI Training project. "

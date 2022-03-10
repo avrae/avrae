@@ -667,6 +667,15 @@ class AliasCoinpurse:
             return self._coinpurse.compact_string()
         return str(self._coinpurse)
 
+    @property
+    def total(self) -> float:
+        """
+        Returns the total amount of coins in your bag, converted to float gold.
+
+        :rtype: float
+        """
+        return self._coinpurse.total
+
     def coin_str(self, cointype: str) -> str:
         """
         Returns a string representation of the chosen coin type.
@@ -724,7 +733,8 @@ class AliasCoinpurse:
         """
         Returns a dict of your current coinpurse.
 
-        :return: A dict of your current coinpurse, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3}``
+        :return: A dict of your current coinpurse, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":2, "cp":3, "total": 1.23}``
         :rtype: dict
         """
-        return self._coinpurse.to_dict()
+        return {"pp": self._coinpurse.pp, "gp": self._coinpurse.gp, "ep": self._coinpurse.ep,
+                "sp": self._coinpurse.sp, "cp": self._coinpurse.cp, "total":  self._coinpurse.total}

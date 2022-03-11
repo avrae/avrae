@@ -14,8 +14,8 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType, NoPrivateMessage
 
-import ui
 import aliasing.utils
+import ui
 from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
 from aliasing.workshop import WORKSHOP_ADDRESS_RE
@@ -702,7 +702,7 @@ class Customization(commands.Cog):
     async def test(self, ctx, *, teststr):
         """Parses `str` as if it were in an alias, for testing."""
         try:
-            char = await Character.from_ctx(ctx)
+            char = await ctx.get_character()
         except NoCharacter:
             char = None
 
@@ -730,7 +730,7 @@ class Customization(commands.Cog):
         -t [timeout (0..600)]
         """
         try:
-            char = await Character.from_ctx(ctx)
+            char = await ctx.get_character()
         except NoCharacter:
             char = None
 
@@ -757,7 +757,7 @@ class Customization(commands.Cog):
         if name is None:
             return await self.list_cvar(ctx)
 
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
 
         if value is None:  # display value
             cvar = character.get_scope_locals().get(name)
@@ -773,7 +773,7 @@ class Customization(commands.Cog):
     @cvar.command(name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
         """Deletes a cvar from the currently active character."""
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         if name not in char.cvars:
             return await ctx.send('Character variable not found.')
 
@@ -785,7 +785,7 @@ class Customization(commands.Cog):
     @cvar.command(name='deleteall', aliases=['removeall'])
     async def cvar_deleteall(self, ctx):
         """Deletes ALL character variables for the active character."""
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         if not await confirm(
                 ctx,
                 f"This will delete **ALL** of your character variables for {char.name}. "
@@ -803,7 +803,7 @@ class Customization(commands.Cog):
     @cvar.command(name='list')
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         await ctx.send(
             '{}\'s character variables:\n{}'.format(
                 character.name,

@@ -1,7 +1,13 @@
+import asyncio
+from functools import cached_property
+from typing import Any, List, Optional, TYPE_CHECKING
+
 import cachetools
 import discord
+import disnake.ext.commands
 from d20 import roll
 
+from cogs5e.models.errors import NoCharacter
 from utils.functions import search_and_select
 from .combatant import Combatant, MonsterCombatant, PlayerCombatant
 from .errors import *
@@ -10,7 +16,16 @@ from .types import CombatantType
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
+# ==== typing ====
+_NLPRecorderT = Any
+if TYPE_CHECKING:
+    import cogs5e.initiative
+    from .upenn_nlp import NLPRecorder
 
+    _NLPRecorderT = NLPRecorder
+
+
+# ==== code ====
 class Combat:
     # cache combats for 10 seconds to avoid race conditions
     # this makes sure that multiple calls to Combat.from_ctx() in the same invocation or two simultaneous ones
@@ -20,9 +35,18 @@ class Combat:
     _cache = cachetools.TTLCache(maxsize=50, ttl=10)
 
     def __init__(
-        self, channel_id, message_id, dm_id, options, ctx,
-        combatants=None, round_num=0, turn_num=0, current_index=None,
-        metadata=None
+        self,
+        channel_id: str,
+        message_id: int,
+        dm_id: str,
+        options: dict,
+        ctx: disnake.ext.commands.Context,
+        combatants: List[Combatant] = None,
+        round_num: int = 0,
+        turn_num: int = 0,
+        current_index: Optional[int] = None,
+        metadata: dict = None,
+        nlp_record_session_id: str = None,
     ):
         if combatants is None:
             combatants = []
@@ -38,6 +62,7 @@ class Combat:
         self._current_index = current_index
         self.ctx = ctx
         self._metadata = metadata
+        self.nlp_record_session_id = nlp_record_session_id
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
@@ -66,20 +91,10 @@ class Combat:
     async def from_dict(cls, raw, ctx):
         inst = cls(
             raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-            raw['turn'], raw['current'], raw.get('metadata')
+            raw['turn'], raw['current'], raw.get('metadata'), raw.get('nlp_record_session_id')
         )
         for c in raw['combatants']:
-            ctype = CombatantType(c['type'])
-            if ctype == CombatantType.GENERIC:
-                inst._combatants.append(Combatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.MONSTER:
-                inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.PLAYER:
-                inst._combatants.append(await PlayerCombatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.GROUP:
-                inst._combatants.append(await CombatantGroup.from_dict(c, ctx, inst))
-            else:
-                raise CombatException(f"Unknown combatant type: {c['type']}")
+            inst._combatants.append(await deserialize_combatant(c, ctx, inst))
         return inst
 
     # sync deser/ser
@@ -101,27 +116,18 @@ class Combat:
     def from_dict_sync(cls, raw, ctx):
         inst = cls(
             raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
-            raw['turn'], raw['current'], raw.get('metadata')
+            raw['turn'], raw['current'], raw.get('metadata'), raw.get('nlp_record_session_id')
         )
         for c in raw['combatants']:
-            ctype = CombatantType(c['type'])
-            if ctype == CombatantType.GENERIC:
-                inst._combatants.append(Combatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.MONSTER:
-                inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
-            elif ctype == CombatantType.PLAYER:
-                inst._combatants.append(PlayerCombatant.from_dict_sync(c, ctx, inst))
-            elif ctype == CombatantType.GROUP:
-                inst._combatants.append(CombatantGroup.from_dict_sync(c, ctx, inst))
-            else:
-                raise CombatException(f"Unknown combatant type: {c['type']}")
+            inst._combatants.append(deserialize_combatant_sync(c, ctx, inst))
         return inst
 
     def to_dict(self):
         return {
             'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
             'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-            'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata
+            'round': self.round_num, 'current': self._current_index, 'metadata': self._metadata,
+            'nlp_record_session_id': self.nlp_record_session_id
         }
 
     # members
@@ -202,6 +208,15 @@ class Combat:
         else:
             index = self.index + 1
         return self._combatants[index]
+
+    @cached_property
+    def nlp_recorder(self) -> Optional[_NLPRecorderT]:
+        if self.nlp_record_session_id is None or self.ctx is None:
+            return None
+        combat_cog = self.ctx.bot.get_cog("InitTracker")  # type: Optional[cogs5e.initiative.InitTracker]
+        if combat_cog is None:
+            return None
+        return combat_cog.nlp
 
     def get_combatants(self, groups=False):
         """
@@ -547,9 +562,18 @@ class Combat:
         )
 
     async def final(self):
-        """Final commit/update."""
-        await self.commit()
-        await self.update_summary()
+        """Commit, update the summary message, and fire any recorder events in parallel."""
+        if self.nlp_recorder is None:
+            await asyncio.gather(
+                self.commit(),
+                self.update_summary()
+            )
+        else:
+            await asyncio.gather(
+                self.commit(),
+                self.update_summary(),
+                self.nlp_recorder.on_combat_commit(self)
+            )
 
     # misc
     @staticmethod
@@ -578,3 +602,43 @@ class Combat:
 
     def __str__(self):
         return f"Initiative in <#{self.channel}>"
+
+
+async def deserialize_combatant(raw_combatant, ctx, combat):
+    ctype = CombatantType(raw_combatant['type'])
+    if ctype == CombatantType.GENERIC:
+        return Combatant.from_dict(raw_combatant, ctx, combat)
+    elif ctype == CombatantType.MONSTER:
+        return MonsterCombatant.from_dict(raw_combatant, ctx, combat)
+    elif ctype == CombatantType.PLAYER:
+        try:
+            return await PlayerCombatant.from_dict(raw_combatant, ctx, combat)
+        except NoCharacter:
+            # if the character was deleted, make a best effort to restore what we know
+            # note: PlayerCombatant.from_dict mutates raw_combatant so we don't have to call the normal from_dict
+            # operations here (this is hacky)
+            return Combatant(ctx, combat, **raw_combatant)
+    elif ctype == CombatantType.GROUP:
+        return await CombatantGroup.from_dict(raw_combatant, ctx, combat)
+    else:
+        raise CombatException(f"Unknown combatant type: {raw_combatant['type']}")
+
+
+def deserialize_combatant_sync(raw_combatant, ctx, combat):
+    ctype = CombatantType(raw_combatant['type'])
+    if ctype == CombatantType.GENERIC:
+        return Combatant.from_dict(raw_combatant, ctx, combat)
+    elif ctype == CombatantType.MONSTER:
+        return MonsterCombatant.from_dict(raw_combatant, ctx, combat)
+    elif ctype == CombatantType.PLAYER:
+        try:
+            return PlayerCombatant.from_dict_sync(raw_combatant, ctx, combat)
+        except NoCharacter:
+            # if the character was deleted, make a best effort to restore what we know
+            # note: PlayerCombatant.from_dict mutates raw_combatant so we don't have to call the normal from_dict
+            # operations here (this is hacky)
+            return Combatant(ctx, combat, **raw_combatant)
+    elif ctype == CombatantType.GROUP:
+        return CombatantGroup.from_dict_sync(raw_combatant, ctx, combat)
+    else:
+        raise CombatException(f"Unknown combatant type: {raw_combatant['type']}")

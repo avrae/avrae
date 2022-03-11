@@ -577,17 +577,9 @@ class PlayerCombatant(Combatant):
         inst = super().from_dict(raw, ctx, combat)
         inst.character_id = raw['character_id']
         inst.character_owner = raw['character_owner']
-
-        try:
-            inst._character = await cogs5e.models.character.Character.from_bot_and_ids(
-                ctx.bot, inst.character_owner, inst.character_id
-            )
-        except NoCharacter:
-            raise CombatException(
-                f"A character in combat was deleted. "
-                f"Please run `{ctx.prefix}init end -force` to end combat."
-            )
-
+        inst._character = await cogs5e.models.character.Character.from_bot_and_ids(
+            ctx.bot, inst.character_owner, inst.character_id
+        )
         return inst
 
     @classmethod
@@ -595,16 +587,9 @@ class PlayerCombatant(Combatant):
         inst = super().from_dict(raw, ctx, combat)
         inst.character_id = raw['character_id']
         inst.character_owner = raw['character_owner']
-
-        try:
-            inst._character = cogs5e.models.character.Character.from_bot_and_ids_sync(
-                ctx.bot, inst.character_owner, inst.character_id
-            )
-        except NoCharacter:
-            raise CombatException(
-                f"A character in combat was deleted. "
-                f"Please run `{ctx.prefix}init end -force` to end combat."
-            )
+        inst._character = cogs5e.models.character.Character.from_bot_and_ids_sync(
+            ctx.bot, inst.character_owner, inst.character_id
+        )
         return inst
 
     def to_dict(self):

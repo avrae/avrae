@@ -22,6 +22,7 @@ class ServerSettings(SettingsBaseModel):
     lookup_pm_result: bool = False
     inline_enabled: InlineRollingType = InlineRollingType.DISABLED
     show_campaign_cta: bool = True
+    upenn_nlp_opt_in: bool = False
 
     # ==== lifecycle ====
     @classmethod

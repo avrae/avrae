@@ -441,8 +441,8 @@ async def start_init(avrae, dhttp):
     avrae.message("!init begin")
     await dhttp.receive_delete()
     await dhttp.receive_message()
-    await dhttp.receive_edit()
     await dhttp.receive_pin()
+    await dhttp.receive_edit()
     await dhttp.receive_message()
 
 

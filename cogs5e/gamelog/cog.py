@@ -6,7 +6,6 @@ from discord.ext import commands
 
 from cogs5e.models import embeds
 from cogs5e.models.automation.results import AttackResult, DamageResult, RollResult, SaveResult, TempHPResult
-from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
 from ddb.dice import RollContext, RollKind, RollRequest, RollRequestRoll, RollType
 from ddb.gamelog import CampaignLink
@@ -67,7 +66,8 @@ class GameLog(commands.Cog):
         elif existing_link is not None:
             result = await confirm(
                 ctx,
-                "This campaign is already linked to another channel. Link it to this one instead? (Reply with yes/no)")
+                "This campaign is already linked to another channel. Link it to this one instead? (Reply with yes/no)"
+            )
             if not result:
                 return await ctx.send("Ok, canceling.")
 
@@ -79,8 +79,10 @@ class GameLog(commands.Cog):
             # the invite link match will only work 77% of the time because the hash can start w/ 0 - try using the
             # main link instead
             if invite_link_match:
-                await ctx.send("You are not allowed to link this campaign. "
-                               "Try using the campaign URL (in your browser bar) rather than the invite link!")
+                await ctx.send(
+                    "You are not allowed to link this campaign. "
+                    "Try using the campaign URL (in your browser bar) rather than the invite link!"
+                )
                 return
             raise
 
@@ -89,11 +91,13 @@ class GameLog(commands.Cog):
         embed.description = (f"Linked {result.campaign_name} to this channel! Your players' rolls from D&D Beyond "
                              f"will show up here, and checks, saves, and attacks made by characters in your campaign "
                              f"here will appear in D&D Beyond!")
-        embed.add_field(name="Not Seeing Rolls?",
-                        value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
-                              f"and Discord accounts are linked](https://www.dndbeyond.com/account) and their "
-                              f"[characters are imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)! "
-                              f"You can check your players' link status with `{ctx.prefix}ddb`.")
+        embed.add_field(
+            name="Not Seeing Rolls?",
+            value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
+                  f"and Discord accounts are linked](https://www.dndbeyond.com/account) and their "
+                  f"[characters are imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)! "
+                  f"You can check your players' link status with `{ctx.prefix}ddb`."
+        )
         await ctx.send(embed=embed)
 
     @campaign.command(name='list')
@@ -103,19 +107,23 @@ class GameLog(commands.Cog):
         """Lists all campaigns connected to this channel."""
         existing_links = await CampaignLink.get_channel_links(ctx)
         if not existing_links:
-            return await ctx.send(f"This channel is not linked to any D&D Beyond campaigns. "
-                                  f"Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/...` to have "
-                                  f"your and your players' rolls show up here in real time!")
+            return await ctx.send(
+                f"This channel is not linked to any D&D Beyond campaigns. "
+                f"Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/...` to have "
+                f"your and your players' rolls show up here in real time!"
+            )
         embed = embeds.EmbedWithAuthor(ctx)
         embed.title = "D&D Beyond Campaign Links"
         embed.description = (f"This channel is linked to {len(existing_links)} "
                              f"{'campaign' if len(existing_links) == 1 else 'campaigns'}:\n"
                              f"{', '.join(cl.campaign_name for cl in existing_links)}")
-        embed.add_field(name="Not Seeing Rolls?",
-                        value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
-                              f"and Discord accounts are linked](https://www.dndbeyond.com/account) and their "
-                              f"[characters are imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)! "
-                              f"You can check your players' link status with `{ctx.prefix}ddb`.")
+        embed.add_field(
+            name="Not Seeing Rolls?",
+            value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
+                  f"and Discord accounts are linked](https://www.dndbeyond.com/account) and their "
+                  f"[characters are imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)! "
+                  f"You can check your players' link status with `{ctx.prefix}ddb`."
+        )
         await ctx.send(embed=embed)
 
     @campaign.command(name='remove')
@@ -129,17 +137,21 @@ class GameLog(commands.Cog):
         """
         existing_links = await CampaignLink.get_channel_links(ctx)
         if not existing_links:
-            return await ctx.send(f"This channel is not linked to any D&D Beyond campaigns. "
-                                  f"Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/...` to have "
-                                  f"your and your players' rolls show up here in real time!")
+            return await ctx.send(
+                f"This channel is not linked to any D&D Beyond campaigns. "
+                f"Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/...` to have "
+                f"your and your players' rolls show up here in real time!"
+            )
         the_link = await search_and_select(ctx, existing_links, name, key=lambda cl: cl.campaign_name)
 
         # check: is the invoker the linker or do they have manage server?
         if not (the_link.campaign_connector == ctx.author.id
                 or ctx.author.guild_permissions.manage_guild):
-            return await ctx.send("You do not have permission to unlink this campaign. "
-                                  "You must be the DM of the campaign or have Manage Server permissions to remove it "
-                                  "from a channel.")
+            return await ctx.send(
+                "You do not have permission to unlink this campaign. "
+                "You must be the DM of the campaign or have Manage Server permissions to remove it "
+                "from a channel."
+            )
 
         # remove campaign link
         await the_link.delete(ctx.bot.mdb)
@@ -189,7 +201,7 @@ class GameLog(commands.Cog):
         """
         # while roll doesn't require character, sendback to ddb does
         try:
-            character = await Character.from_ctx(ctx)
+            character = await ctx.get_character()
         except NoCharacter:
             return
         campaign_id, ddb_user = await self._send_preflight(ctx, character)
@@ -256,29 +268,37 @@ class GameLog(commands.Cog):
         def dfs(node):
             if isinstance(node, AttackResult):
                 if node.to_hit_roll is not None:
-                    roll_request_rolls.append(RollRequestRoll.from_d20(
-                        node.to_hit_roll, roll_type=RollType.TO_HIT,
-                        roll_kind=RollKind.from_d20_adv(node.adv)
-                    ))
+                    roll_request_rolls.append(
+                        RollRequestRoll.from_d20(
+                            node.to_hit_roll, roll_type=RollType.TO_HIT,
+                            roll_kind=RollKind.from_d20_adv(node.adv)
+                        )
+                    )
             elif isinstance(node, SaveResult):
                 if node.save_roll is not None:
-                    roll_request_rolls.append(RollRequestRoll.from_d20(
-                        node.save_roll, roll_type=RollType.SAVE,
-                        roll_kind=RollKind.from_d20_adv(node.adv)
-                    ))
+                    roll_request_rolls.append(
+                        RollRequestRoll.from_d20(
+                            node.save_roll, roll_type=RollType.SAVE,
+                            roll_kind=RollKind.from_d20_adv(node.adv)
+                        )
+                    )
             elif isinstance(node, DamageResult):
-                roll_request_rolls.append(RollRequestRoll.from_d20(
-                    node.damage_roll, roll_type=RollType.DAMAGE,
-                    roll_kind=RollKind.CRITICAL_HIT if node.in_crit else RollKind.NONE
-                ))
+                roll_request_rolls.append(
+                    RollRequestRoll.from_d20(
+                        node.damage_roll, roll_type=RollType.DAMAGE,
+                        roll_kind=RollKind.CRITICAL_HIT if node.in_crit else RollKind.NONE
+                    )
+                )
             elif isinstance(node, TempHPResult):
                 roll_request_rolls.append(RollRequestRoll.from_d20(node.amount_roll, roll_type=RollType.HEAL))
             elif isinstance(node, RollResult):
                 if not node.hidden:
-                    roll_request_rolls.append(RollRequestRoll.from_d20(
-                        node.roll,
-                        roll_type=RollType.SPELL if automation_result.is_spell else RollType.ROLL
-                    ))
+                    roll_request_rolls.append(
+                        RollRequestRoll.from_d20(
+                            node.roll,
+                            roll_type=RollType.SPELL if automation_result.is_spell else RollType.ROLL
+                        )
+                    )
             for child in node.get_children():
                 dfs(child)
 

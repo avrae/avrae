@@ -93,11 +93,22 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             value=await self.get_inline_rolling_desc(),
             inline=False
         )
+
+        nlp_enabled_description = ""
+        nlp_feature_flag = await self.bot.ldclient.variation(
+            "cog.initiative.upenn_nlp.enabled",
+            user=discord_user_to_dict(self.owner),
+            default=False
+        )
+        if nlp_feature_flag:
+            nlp_enabled_description = f"\n**Contribute Message Data to NLP Training**: {self.settings.upenn_nlp_opt_in}"
         embed.add_field(
             name="Miscellaneous Settings",
-            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}",
+            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}"
+                  f"{nlp_enabled_description}",
             inline=False
         )
+
         return {"embed": embed}
 
 
@@ -307,11 +318,30 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
+    @disnake.ui.button(label='Toggle NLP Opt In', style=disnake.ButtonStyle.primary, row=1)
+    async def toggle_upenn_nlp_opt_in(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        self.settings.upenn_nlp_opt_in = not self.settings.upenn_nlp_opt_in
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
     @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=4)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
 
     # ==== content ====
+    async def _before_send(self):
+        if TYPE_CHECKING:
+            self.toggle_upenn_nlp_opt_in: disnake.ui.Button
+
+        # nlp feature flag
+        flag_enabled = await self.bot.ldclient.variation(
+            "cog.initiative.upenn_nlp.enabled",
+            user=discord_user_to_dict(self.owner),
+            default=False
+        )
+        if not flag_enabled:
+            self.remove_item(self.toggle_upenn_nlp_opt_in)
+
     async def get_content(self):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Miscellaneous Settings",
@@ -324,4 +354,23 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
                   f"you import a character in an unlinked campaign.*",
             inline=False
         )
+
+        nlp_feature_flag = await self.bot.ldclient.variation(
+            "cog.initiative.upenn_nlp.enabled",
+            user=discord_user_to_dict(self.owner),
+            default=False
+        )
+        if nlp_feature_flag:
+            embed.add_field(
+                name="Contribute Message Data to Natural Language AI Training",
+                value=f"**{self.settings.upenn_nlp_opt_in}**\n"
+                      f"*If this is enabled, the contents of messages, usernames, character names, and snapshots "
+                      f"of a character's resources will be recorded in channels **with an active combat.***\n"
+                      f"*This data will be used in a project to make advances in interactive fiction and text "
+                      f"generation using artificial intelligence at the University of Pennsylvania.*\n"
+                      f"*Read more about the project [here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html), "
+                      f"and our data handling and Privacy Policy [here](https://www.fandom.com/privacy-policy).*",
+                inline=False
+            )
+
         return {"embed": embed}

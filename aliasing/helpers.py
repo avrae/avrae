@@ -1,3 +1,4 @@
+import copy
 import traceback
 import uuid
 from contextlib import suppress
@@ -76,7 +77,10 @@ async def handle_aliases(ctx):
 
     # interpret
     try:
-        ctx.message.content = await parse_draconic(
+        # do a copy before rewriting the content so we don't mess with cache
+        # or references to same message in on_message events
+        message_copy = copy.copy(ctx.message)
+        message_copy.content = await parse_draconic(
             ctx,
             command_code,
             character=char,
@@ -88,8 +92,10 @@ async def handle_aliases(ctx):
     except Exception as e:
         return await ctx.send(e)
 
-    # send it back around to be reprocessed
-    await ctx.bot.process_commands(ctx.message)
+    # use a reimplementation of await ctx.bot.process_commands(message_copy) to set additional metadata
+    new_ctx = await ctx.bot.get_context(message_copy)
+    new_ctx.nlp_is_alias = True
+    await ctx.bot.invoke(new_ctx)
 
 
 async def handle_alias_arguments(command, ctx):

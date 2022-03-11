@@ -48,8 +48,9 @@ DDB_AUTH_AUDIENCE = os.getenv('DDB_AUTH_AUDIENCE', 'avrae.io')
 DDB_AUTH_ISSUER = os.getenv('DDB_AUTH_ISSUER', 'dndbeyond.com')
 DDB_AUTH_EXPIRY_SECONDS = int(os.getenv('DDB_AUTH_EXPIRY_SECONDS', 5 * 60))
 DDB_AUTH_SERVICE_URL = os.getenv('DDB_AUTH_SERVICE_URL')
-DYNAMO_REGION = os.getenv('DYNAMO_REGION', 'us-east-1')
+DYNAMO_REGION = os.getenv('DYNAMO_REGION', 'us-east-1')  # actually AWS_REGION for all resources :p
 DYNAMO_ENTITLEMENTS_TABLE = os.getenv('DYNAMO_ENTITLEMENTS_TABLE', 'entitlements-live')
+NLP_KINESIS_DELIVERY_STREAM = os.getenv('NLP_KINESIS_DELIVERY_STREAM')
 # env: AWS_ACCESS_KEY_ID
 # env: AWS_SECRET_ACCESS_KEY
 

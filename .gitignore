@@ -15,8 +15,7 @@ venv/
 temp/
 tempvenv/
 
-/.cache/
-/.pytest_cache/
+/.*cache/
 
 *.json
 !*.spec.json

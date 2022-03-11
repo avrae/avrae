@@ -1,3 +1,13 @@
+from utils import config
+
+# datadog - if DD_SERVICE not set, don't do any tracing/patching
+# patches all happen before any imports
+if config.DD_SERVICE is not None:
+    from utils import datadog
+
+    datadog.do_patches()
+    datadog.start_profiler()
+
 import asyncio
 import faulthandler
 import logging
@@ -13,6 +23,7 @@ import motor.motor_asyncio
 import psutil
 import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
+from ddtrace import tracer
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError

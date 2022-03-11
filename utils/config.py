@@ -31,6 +31,7 @@ DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 
 # ---- monitoring ----
 SENTRY_DSN = os.getenv('SENTRY_DSN')
+DD_SERVICE = os.getenv('DD_SERVICE')
 
 # ---- character sheets ---
 NO_DICECLOUD = os.environ.get('NO_DICECLOUD', 'DICECLOUD_USER' not in os.environ)

@@ -23,7 +23,6 @@ import motor.motor_asyncio
 import psutil
 import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
-from ddtrace import tracer
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError

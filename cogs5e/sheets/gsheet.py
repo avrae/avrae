@@ -10,9 +10,11 @@ import json
 import logging
 import re
 from contextlib import contextmanager
+from urllib.parse import urlparse
 
 import google.oauth2.service_account
 import gspread
+from d20 import RollSyntaxError
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
 from gspread import SpreadsheetNotFound
@@ -28,7 +30,7 @@ from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
-from cogs5e.sheets.errors import MissingAttribute
+from cogs5e.sheets.errors import MissingAttribute, AttackSyntaxError, InvalidImageURL, InvalidCoin
 from cogs5e.sheets.utils import get_actions_for_names
 from gamedata.compendium import compendium
 from utils import config
@@ -282,8 +284,16 @@ class GoogleSheet(SheetLoaderABC):
         try:
             await self.get_character()
         except (KeyError, SpreadsheetNotFound, APIError):
+            if config.GOOGLE_SERVICE_ACCOUNT is not None:
+                email = Credentials.from_service_account_info(
+                    json.loads(config.GOOGLE_SERVICE_ACCOUNT),
+                    scopes=SCOPES).signer_email
+            else:
+                email = Credentials.from_service_account_file(
+                    "avrae-google.json",
+                    scopes=SCOPES).signer_email
             raise ExternalImportError("Invalid character sheet. Make sure you've shared it with me at "
-                                      "`avrae-320@avrae-bot.iam.gserviceaccount.com`!")
+                                      f"`{email}`, or made the sheet viewable to 'Anyone with the link'!")
         except Exception:
             raise
         return await asyncio.get_event_loop().run_in_executor(None, self._load_character, owner_id, args)
@@ -295,7 +305,7 @@ class GoogleSheet(SheetLoaderABC):
         import_version = SHEET_VERSION
         name = self.character_data.value("C6").strip() or "Unnamed"
         description = self.get_description()
-        image = self.character_data.value("C176").strip()
+        image = self.get_image()
 
         stats = self.get_stats()
         levels = self.get_levels()
@@ -372,7 +382,7 @@ class GoogleSheet(SheetLoaderABC):
         try:
             prof_bonus = int(character.value("H14"))
         except (TypeError, ValueError):
-            raise MissingAttribute("Proficiency Bonus")
+            raise MissingAttribute("Proficiency Bonus", "H14", character.worksheet.title)
 
         index = 15
         stat_dict = {}
@@ -381,7 +391,7 @@ class GoogleSheet(SheetLoaderABC):
                 stat_dict[stat] = int(character.value("C" + str(index)))
                 index += 5
             except (TypeError, ValueError):
-                raise MissingAttribute(stat)
+                raise MissingAttribute(stat, "C" + str(index), character.worksheet.title)
 
         stats = BaseStats(prof_bonus, **stat_dict)
         self._stats = stats
@@ -393,9 +403,20 @@ class GoogleSheet(SheetLoaderABC):
 
         for c_type in COIN_TYPES:
             if self.version >= (2, 1):
-                coins[c_type] = int(self.inventory.value(COIN_TYPES[c_type]['gSheet']['v2']) or 0)
+                coin_value = self.inventory.value(COIN_TYPES[c_type]['gSheet']['v2']) or 0
             else:
-                coins[c_type] = int(self.character_data.value(COIN_TYPES[c_type]['gSheet']['v14']) or 0)
+                coin_value = self.character_data.value(COIN_TYPES[c_type]['gSheet']['v14']) or 0
+
+            try:
+                coins[c_type] = int(coin_value)
+            except ValueError as e:
+                if self.version >= (2, 1):
+                    cell = COIN_TYPES[c_type]['gSheet']['v2']
+                    sheet = self.inventory.worksheet.title
+                else:
+                    cell = COIN_TYPES[c_type]['gSheet']['v14']
+                    sheet = self.character_data.worksheet.title
+                raise InvalidCoin(cell, sheet, COIN_TYPES[c_type]['name'], e)
 
         return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])
 
@@ -405,7 +426,7 @@ class GoogleSheet(SheetLoaderABC):
             total_level = int(self.character_data.value("AL6"))
             self.total_level = total_level
         except ValueError:
-            raise MissingAttribute("Character level")
+            raise MissingAttribute("Character level", "AL5", self.character_data.worksheet.title)
 
         level_dict = {}
         if self.additional:
@@ -464,7 +485,7 @@ class GoogleSheet(SheetLoaderABC):
                 # add bonuses manually since the cell does not include them
                 value = int(character.value(cell)) + all_check_bonus + joat_bonus
             except (TypeError, ValueError):
-                raise MissingAttribute(skill)
+                raise MissingAttribute(skill, cell, character.worksheet.title)
 
             prof = 0
             if is_joat:
@@ -484,7 +505,7 @@ class GoogleSheet(SheetLoaderABC):
             try:
                 value = int(character.value(cell))
             except (TypeError, ValueError):
-                raise MissingAttribute(skill)
+                raise MissingAttribute(skill, cell, character.worksheet.title)
 
             adv = None
             if self.version >= (2, 0) and advcell:
@@ -534,13 +555,13 @@ class GoogleSheet(SheetLoaderABC):
         try:
             return int(self.character_data.value("R12"))
         except (TypeError, ValueError):
-            raise MissingAttribute("AC")
+            raise MissingAttribute("AC", "R12", self.character_data.worksheet.title)
 
     def get_hp(self):
         try:
             return int(self.character_data.unformatted_value("U16"))
         except (TypeError, ValueError):
-            raise MissingAttribute("Max HP")
+            raise MissingAttribute("Max HP", "U16", self.character_data.worksheet.title)
 
     def get_race(self):
         return self.character_data.value('T7').strip()
@@ -549,6 +570,18 @@ class GoogleSheet(SheetLoaderABC):
         if self.version >= (2, 0):
             return self.character_data.value('AJ11').strip()
         return self.character_data.value('Z5').strip()
+
+    def get_image(self):
+        image = self.character_data.value("C176").strip()
+        if image:
+            try:
+                result = urlparse(image)
+                if not all([result.scheme, result.netloc]):
+                    raise InvalidImageURL(self.character_data.worksheet.title, f"Invalid URL: {image}")
+                return image
+            except ValueError as e:
+                raise InvalidImageURL(self.character_data.worksheet.title, e)
+        return None
 
     def get_spellbook(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')
@@ -638,7 +671,11 @@ class GoogleSheet(SheetLoaderABC):
             if '|' in damage:
                 damage, details = damage.split('|', 1)
 
-            dice, comment = get_roll_comment(damage)
+            try:
+                dice, comment = get_roll_comment(damage.strip())
+            except RollSyntaxError as e:
+                raise AttackSyntaxError(name, damage_index, wksht.worksheet.title, e)
+
             if details:
                 details = details.strip()
 

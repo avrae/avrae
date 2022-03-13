@@ -42,88 +42,160 @@ log = logging.getLogger(__name__)
 
 POS_RE = re.compile(r"([A-Z]+)(\d+)")
 IGNORED_SPELL_VALUES = {
-    'MAX', 'SLOTS', 'CANTRIPS', '1ST LEVEL', '2ND LEVEL', '3RD LEVEL', '4TH LEVEL', '5TH LEVEL',
-    '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL', '\u25c9', '\u25cd',
-    "You can hide each level of spells individually by hiding the rows (on the left)."
+    "MAX",
+    "SLOTS",
+    "CANTRIPS",
+    "1ST LEVEL",
+    "2ND LEVEL",
+    "3RD LEVEL",
+    "4TH LEVEL",
+    "5TH LEVEL",
+    "6TH LEVEL",
+    "7TH LEVEL",
+    "8TH LEVEL",
+    "9TH LEVEL",
+    "\u25c9",
+    "\u25cd",
+    "You can hide each level of spells individually by hiding the rows (on the left).",
 }
 SPELL_RANGES = [  # list of (col, prep col, rownums)
     # cantrips
-    ("N", None, range(96, 99)), ("X", None, range(96, 99)), ("AH", None, range(96, 99)),
-    # l1
-    ("D", "C", range(100, 105)), ("N", "M", range(100, 105)), ("X", "W", range(100, 105)),
-    # l2
-    ("N", "M", range(106, 111)), ("X", "W", range(106, 111)), ("AH", "AG", range(106, 111)),
-    # l3
-    ("D", "C", range(112, 117)), ("N", "M", range(112, 117)), ("X", "W", range(112, 117)),
-    # l4
-    ("N", "M", range(118, 122)), ("X", "W", range(118, 122)), ("AH", "AG", range(118, 122)),
-    # l5
-    ("D", "C", range(123, 127)), ("N", "M", range(123, 127)), ("X", "W", range(123, 127)),
-    # l6
-    ("N", "M", range(128, 132)), ("X", "W", range(128, 132)), ("AH", "AG", range(128, 132)),
-    # l7
-    ("D", "C", range(133, 136)), ("N", "M", range(133, 136)), ("X", "W", range(133, 136)),
-    # l8
-    ("N", "M", range(137, 140)), ("X", "W", range(137, 140)), ("AH", "AG", range(137, 140)),
-    # l9
-    ("D", "C", range(141, 144)), ("N", "M", range(141, 144)), ("X", "W", range(141, 144))
+    ("N", None, range(96, 99)),
+    ("X", None, range(96, 99)),
+    ("AH", None, range(96, 99)),
+    # level 1
+    ("D", "C", range(100, 105)),
+    ("N", "M", range(100, 105)),
+    ("X", "W", range(100, 105)),
+    # level 2
+    ("N", "M", range(106, 111)),
+    ("X", "W", range(106, 111)),
+    ("AH", "AG", range(106, 111)),
+    # level 3
+    ("D", "C", range(112, 117)),
+    ("N", "M", range(112, 117)),
+    ("X", "W", range(112, 117)),
+    # level 4
+    ("N", "M", range(118, 122)),
+    ("X", "W", range(118, 122)),
+    ("AH", "AG", range(118, 122)),
+    # level 5
+    ("D", "C", range(123, 127)),
+    ("N", "M", range(123, 127)),
+    ("X", "W", range(123, 127)),
+    # level 6
+    ("N", "M", range(128, 132)),
+    ("X", "W", range(128, 132)),
+    ("AH", "AG", range(128, 132)),
+    # level 7
+    ("D", "C", range(133, 136)),
+    ("N", "M", range(133, 136)),
+    ("X", "W", range(133, 136)),
+    # level 8
+    ("N", "M", range(137, 140)),
+    ("X", "W", range(137, 140)),
+    ("AH", "AG", range(137, 140)),
+    # level 9
+    ("D", "C", range(141, 144)),
+    ("N", "M", range(141, 144)),
+    ("X", "W", range(141, 144)),
 ]
 SPELL_RANGES_ADDITIONAL = [
     # cantrips
-    ("N", None, range(17, 20)), ("X", None, range(17, 20)), ("AH", None, range(17, 20)),
-    # l1
-    ("D", "C", range(21, 26)), ("N", "M", range(21, 26)), ("X", "W", range(21, 26)),
-    # l2
-    ("N", "M", range(27, 32)), ("X", "W", range(27, 32)), ("AH", "AG", range(27, 32)),
-    # l3
-    ("D", "C", range(33, 38)), ("N", "M", range(33, 38)), ("X", "W", range(33, 38)),
-    # l4
-    ("N", "M", range(39, 43)), ("X", "W", range(39, 43)), ("AH", "AG", range(39, 43)),
-    # l5
-    ("D", "C", range(44, 48)), ("N", "M", range(44, 48)), ("X", "W", range(44, 48)),
-    # l6
-    ("N", "M", range(49, 53)), ("X", "W", range(49, 53)), ("AH", "AG", range(49, 53)),
-    # l7
-    ("D", "C", range(54, 57)), ("N", "M", range(54, 57)), ("X", "W", range(54, 57)),
-    # l8
-    ("N", "M", range(58, 61)), ("X", "W", range(58, 61)), ("AH", "AG", range(58, 61)),
-    # l9
-    ("D", "C", range(62, 65)), ("N", "M", range(62, 65)), ("X", "W", range(62, 65))
+    ("N", None, range(17, 20)),
+    ("X", None, range(17, 20)),
+    ("AH", None, range(17, 20)),
+    # level 1
+    ("D", "C", range(21, 26)),
+    ("N", "M", range(21, 26)),
+    ("X", "W", range(21, 26)),
+    # level 2
+    ("N", "M", range(27, 32)),
+    ("X", "W", range(27, 32)),
+    ("AH", "AG", range(27, 32)),
+    # level 3
+    ("D", "C", range(33, 38)),
+    ("N", "M", range(33, 38)),
+    ("X", "W", range(33, 38)),
+    # level 4
+    ("N", "M", range(39, 43)),
+    ("X", "W", range(39, 43)),
+    ("AH", "AG", range(39, 43)),
+    # level 5
+    ("D", "C", range(44, 48)),
+    ("N", "M", range(44, 48)),
+    ("X", "W", range(44, 48)),
+    # level 6
+    ("N", "M", range(49, 53)),
+    ("X", "W", range(49, 53)),
+    ("AH", "AG", range(49, 53)),
+    # level 7
+    ("D", "C", range(54, 57)),
+    ("N", "M", range(54, 57)),
+    ("X", "W", range(54, 57)),
+    # level 8
+    ("N", "M", range(58, 61)),
+    ("X", "W", range(58, 61)),
+    ("AH", "AG", range(58, 61)),
+    # level 9
+    ("D", "C", range(62, 65)),
+    ("N", "M", range(62, 65)),
+    ("X", "W", range(62, 65)),
 ]
 BASE_ABILITY_CHECKS = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
-    ('C13', 'strength', None), ('C18', 'dexterity', None), ('C23', 'constitution', None),
-    ('C33', 'wisdom', None), ('C28', 'intelligence', None), ('C38', 'charisma', None)
+    ("C13", "strength", None),
+    ("C18", "dexterity", None),
+    ("C23", "constitution", None),
+    ("C33", "wisdom", None),
+    ("C28", "intelligence", None),
+    ("C38", "charisma", None),
 )
 SKILL_CELL_MAP = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
-    (25, 'acrobatics', None), (26, 'animalHandling', None), (27, 'arcana', None),
-    (28, 'athletics', None), (22, 'charismaSave', None), (19, 'constitutionSave', None),
-    (29, 'deception', None), (18, 'dexteritySave', None), (30, 'history', None),
-    ('V12', 'initiative', 'V11'), (31, 'insight', None), (20, 'intelligenceSave', None),
-    (32, 'intimidation', None), (33, 'investigation', None), (34, 'medicine', None),
-    (35, 'nature', None), (36, 'perception', None), (37, 'performance', None),
-    (38, 'persuasion', None), (39, 'religion', None), (40, 'sleightOfHand', None),
-    (41, 'stealth', None), (17, 'strengthSave', None), (42, 'survival', None),
-    (21, 'wisdomSave', None)
+    (25, "acrobatics", None),
+    (26, "animalHandling", None),
+    (27, "arcana", None),
+    (28, "athletics", None),
+    (22, "charismaSave", None),
+    (19, "constitutionSave", None),
+    (29, "deception", None),
+    (18, "dexteritySave", None),
+    (30, "history", None),
+    ("V12", "initiative", "V11"),
+    (31, "insight", None),
+    (20, "intelligenceSave", None),
+    (32, "intimidation", None),
+    (33, "investigation", None),
+    (34, "medicine", None),
+    (35, "nature", None),
+    (36, "perception", None),
+    (37, "performance", None),
+    (38, "persuasion", None),
+    (39, "religion", None),
+    (40, "sleightOfHand", None),
+    (41, "stealth", None),
+    (17, "strengthSave", None),
+    (42, "survival", None),
+    (21, "wisdomSave", None),
 )
-RESIST_COLS = (('resist', 'T'),  # T69:T79, 1.4/2.x
-               ('immune', 'AE'),  # AE69:AE79, 1.4/2.0
-               ('immune', 'AB'),  # AB69:AB79, 2.1 only
-               ('vuln', 'AI'))  # AI69:AI79, 2.1 only
-SCOPES = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+RESIST_COLS = (
+    ("resist", "T"),  # T69:T79, 1.4/2.x
+    ("immune", "AE"),  # AE69:AE79, 1.4/2.0
+    ("immune", "AB"),  # AB69:AB79, 2.1 only
+    ("vuln", "AI"),
+)  # AI69:AI79, 2.1 only
+SCOPES = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-URL_KEY_V1_RE = re.compile(r'key=([^&#]+)')
-URL_KEY_V2_RE = re.compile(r'/spreadsheets/d/([a-zA-Z0-9-_]+)')
+URL_KEY_V1_RE = re.compile(r"key=([^&#]+)")
+URL_KEY_V2_RE = re.compile(r"/spreadsheets/d/([a-zA-Z0-9-_]+)")
 
 
 def extract_gsheet_id_from_url(url):
     m2 = URL_KEY_V2_RE.search(url)
     if m2:
         return m2.group(1)
-
     m1 = URL_KEY_V1_RE.search(url)
     if m1:
         return m1.group(1)
-
     raise ExternalImportError("This is not a valid Google Sheets link.")
 
 
@@ -150,10 +222,10 @@ class TempCharacter:
 
     def _get_all_unformatted_values(self):
         data = self.worksheet.spreadsheet.values_get(
-            self.worksheet.title,
-            params={'valueRenderOption': "UNFORMATTED_VALUE"})
+            self.worksheet.title, params={"valueRenderOption": "UNFORMATTED_VALUE"}
+        )
         try:
-            return fill_gaps(data['values'])
+            return fill_gaps(data["values"])
         except KeyError:
             return []
 
@@ -178,13 +250,13 @@ class TempCharacter:
 
     def value_range(self, rng):
         """Returns a list of values in a range."""
-        start, end = rng.split(':')
+        start, end = rng.split(":")
         (row_offset, column_offset) = a1_to_rowcol(start)
         (last_row, last_column) = a1_to_rowcol(end)
 
         out = []
-        for col in self.values[row_offset - 1:last_row]:
-            out.extend(col[column_offset - 1:last_column])
+        for col in self.values[row_offset - 1 : last_row]:
+            out.extend(col[column_offset - 1 : last_column])
         return out
 
 
@@ -217,15 +289,14 @@ class GoogleSheet(SheetLoaderABC):
     @staticmethod
     async def _init_gsheet_client():
         with GoogleSheet._client_lock():
+
             def _():
                 if config.GOOGLE_SERVICE_ACCOUNT is not None:
                     credentials = Credentials.from_service_account_info(
-                        json.loads(config.GOOGLE_SERVICE_ACCOUNT),
-                        scopes=SCOPES)
+                        json.loads(config.GOOGLE_SERVICE_ACCOUNT), scopes=SCOPES
+                    )
                 else:
-                    credentials = Credentials.from_service_account_file(
-                        "avrae-google.json",
-                        scopes=SCOPES)
+                    credentials = Credentials.from_service_account_file("avrae-google.json", scopes=SCOPES)
                 return gspread.authorize(credentials)
 
             try:
@@ -235,17 +306,19 @@ class GoogleSheet(SheetLoaderABC):
                 raise
         # noinspection PyProtectedMember
         GoogleSheet._token_expiry = datetime.datetime.now() + datetime.timedelta(
-            seconds=google.oauth2.service_account._DEFAULT_TOKEN_LIFETIME_SECS)
+            seconds=google.oauth2.service_account._DEFAULT_TOKEN_LIFETIME_SECS
+        )
         log.info("Logged in to google")
 
     @staticmethod
     async def _refresh_google_token():
         with GoogleSheet._client_lock():
+
             def _():
                 GoogleSheet.g_client.auth.refresh(request=Request())
-                GoogleSheet.g_client.session.headers.update({
-                    'Authorization': 'Bearer %s' % GoogleSheet.g_client.auth.token
-                })
+                GoogleSheet.g_client.session.headers.update(
+                    {"Authorization": "Bearer %s" % GoogleSheet.g_client.auth.token}
+                )
 
             try:
                 await asyncio.get_event_loop().run_in_executor(None, _)
@@ -263,14 +336,13 @@ class GoogleSheet(SheetLoaderABC):
         doc = GoogleSheet.g_client.open_by_key(self.url)
         self.character_data = TempCharacter(doc.sheet1)
         vcell = self.character_data.value("AQ4")
-        if '1.3' in vcell:
+        if "1.3" in vcell:
             self.version = (1, 3)
         elif vcell:
-            self.additional = TempCharacter(doc.worksheet('Additional'))
+            self.additional = TempCharacter(doc.worksheet("Additional"))
             self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
             if self.version >= (2, 1):
-                self.inventory = TempCharacter(doc.worksheet('Inventory'))
-
+                self.inventory = TempCharacter(doc.worksheet("Inventory"))
 
     # main loading methods
     async def load_character(self, ctx, args):
@@ -286,14 +358,14 @@ class GoogleSheet(SheetLoaderABC):
         except (KeyError, SpreadsheetNotFound, APIError):
             if config.GOOGLE_SERVICE_ACCOUNT is not None:
                 email = Credentials.from_service_account_info(
-                    json.loads(config.GOOGLE_SERVICE_ACCOUNT),
-                    scopes=SCOPES).signer_email
+                    json.loads(config.GOOGLE_SERVICE_ACCOUNT), scopes=SCOPES
+                ).signer_email
             else:
-                email = Credentials.from_service_account_file(
-                    "avrae-google.json",
-                    scopes=SCOPES).signer_email
-            raise ExternalImportError("Invalid character sheet. Make sure you've shared it with me at "
-                                      f"`{email}`, or made the sheet viewable to 'Anyone with the link'!")
+                email = Credentials.from_service_account_file("avrae-google.json", scopes=SCOPES).signer_email
+            raise ExternalImportError(
+                "Invalid character sheet. Make sure you've shared it with me at "
+                f"`{email}`, or made the sheet viewable to 'Anyone with the link'!"
+            )
         except Exception:
             raise
         return await asyncio.get_event_loop().run_in_executor(None, self._load_character, owner_id, args)
@@ -333,9 +405,34 @@ class GoogleSheet(SheetLoaderABC):
         actions = self.get_actions()
 
         character = Character(
-            owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
-            skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, overrides, consumables, death_saves,
-            spellbook, live, race, background, actions=actions, coinpurse=coinpurse
+            owner_id,
+            upstream,
+            active,
+            sheet_type,
+            import_version,
+            name,
+            description,
+            image,
+            stats,
+            levels,
+            attacks,
+            skills,
+            resistances,
+            saves,
+            ac,
+            max_hp,
+            hp,
+            temp_hp,
+            cvars,
+            overrides,
+            consumables,
+            death_saves,
+            spellbook,
+            live,
+            race,
+            background,
+            actions=actions,
+            coinpurse=coinpurse,
         )
         return character
 
@@ -349,85 +446,88 @@ class GoogleSheet(SheetLoaderABC):
 
     # calculator functions
     def get_description(self):
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         character = self.character_data
         g = character.value("C150").lower()
         n = character.value("C6")
         pronoun = "She" if g == "female" else "He" if g == "male" else "They"
         verb1 = "is" if pronoun != "They" else "are"
         verb2 = "has" if pronoun != "They" else "have"
-        desc = "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}. " \
-               "{4} {12} {8} eyes, {9} hair, and {10} skin."
-        desc = desc.format(n,
-                           character.value("AL6"),
-                           character.value("T7"),
-                           character.value("T5"),
-                           pronoun,
-                           character.value("C148") or "unknown",
-                           character.value("F148") or "unknown",
-                           character.value("I148") or "unknown",
-                           character.value("F150").lower() or "unknown",
-                           character.value("I150").lower() or "unknown",
-                           character.value("L150").lower() or "unknown",
-                           verb1, verb2)
+        desc = (
+            "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}. "
+            "{4} {12} {8} eyes, {9} hair, and {10} skin."
+        )
+        desc = desc.format(
+            n,
+            character.value("AL6"),
+            character.value("T7"),
+            character.value("T5"),
+            pronoun,
+            character.value("C148") or "unknown",
+            character.value("F148") or "unknown",
+            character.value("I148") or "unknown",
+            character.value("F150").lower() or "unknown",
+            character.value("I150").lower() or "unknown",
+            character.value("L150").lower() or "unknown",
+            verb1,
+            verb2,
+        )
         return desc
 
     def get_stats(self):
         """Returns a dict of stats."""
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         character = self.character_data
         if self._stats is not None:
             return self._stats
-
         try:
             prof_bonus = int(character.value("H14"))
         except (TypeError, ValueError):
             raise MissingAttribute("Proficiency Bonus", "H14", character.worksheet.title)
-
         index = 15
         stat_dict = {}
-        for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
+        for stat in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"):
             try:
                 stat_dict[stat] = int(character.value("C" + str(index)))
                 index += 5
             except (TypeError, ValueError):
                 raise MissingAttribute(stat, "C" + str(index), character.worksheet.title)
-
         stats = BaseStats(prof_bonus, **stat_dict)
         self._stats = stats
         return stats
 
     def get_coinpurse(self):
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         coins = {}
 
         for c_type in COIN_TYPES:
             if self.version >= (2, 1):
-                coin_value = self.inventory.value(COIN_TYPES[c_type]['gSheet']['v2']) or 0
+                coin_value = self.inventory.value(COIN_TYPES[c_type]["gSheet"]["v2"]) or 0
             else:
-                coin_value = self.character_data.value(COIN_TYPES[c_type]['gSheet']['v14']) or 0
-
+                coin_value = self.character_data.value(COIN_TYPES[c_type]["gSheet"]["v14"]) or 0
             try:
                 coins[c_type] = int(coin_value)
             except ValueError as e:
                 if self.version >= (2, 1):
-                    cell = COIN_TYPES[c_type]['gSheet']['v2']
+                    cell = COIN_TYPES[c_type]["gSheet"]["v2"]
                     sheet = self.inventory.worksheet.title
                 else:
-                    cell = COIN_TYPES[c_type]['gSheet']['v14']
+                    cell = COIN_TYPES[c_type]["gSheet"]["v14"]
                     sheet = self.character_data.worksheet.title
-                raise InvalidCoin(cell, sheet, COIN_TYPES[c_type]['name'], e)
-
+                raise InvalidCoin(cell, sheet, COIN_TYPES[c_type]["name"], e)
         return Coinpurse(pp=coins["pp"], gp=coins["gp"], ep=coins["ep"], sp=coins["sp"], cp=coins["cp"])
 
     def get_levels(self):
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         try:
             total_level = int(self.character_data.value("AL6"))
             self.total_level = total_level
         except ValueError:
             raise MissingAttribute("Character level", "AL5", self.character_data.worksheet.title)
-
         level_dict = {}
         if self.additional:
             for rownum in range(69, 79):  # sheet2, C69:C78
@@ -435,18 +535,18 @@ class GoogleSheet(SheetLoaderABC):
                 levelcell = f"N{rownum}"
                 classname = self.additional.value(namecell)
                 if classname:
-                    classname = re.sub(r'[.$]', '_', classname)  # sentry-H7 - invalid class names
+                    classname = re.sub(r"[.$]", "_", classname)  # sentry-H7 - invalid class names
                     classlevel = int(self.additional.value(levelcell))
                     level_dict[classname] = classlevel
                 else:  # classes should be top-aligned
                     break
-
         levels = Levels(level_dict, total_level)
         return levels
 
     def get_attacks(self):
         """Returns an attack list."""
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         attacks = AttackList()
         for rownum in range(32, 37):  # sht1, R32:R36
             a = self.parse_attack(f"R{rownum}", f"Y{rownum}", f"AC{rownum}")
@@ -463,7 +563,8 @@ class GoogleSheet(SheetLoaderABC):
         return attacks
 
     def get_skills_and_saves(self):
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         character = self.character_data
         skills = {}
         saves = {}
@@ -476,7 +577,6 @@ class GoogleSheet(SheetLoaderABC):
         elif self.version == (2, 1):
             is_joat = bool(character.value("AQ59"))
             all_check_bonus = int(character.value("AR58"))
-
         joat_bonus = int(is_joat and self.get_stats().prof_bonus // 2)
 
         # calculate str, dex, con, etc checks
@@ -486,14 +586,11 @@ class GoogleSheet(SheetLoaderABC):
                 value = int(character.value(cell)) + all_check_bonus + joat_bonus
             except (TypeError, ValueError):
                 raise MissingAttribute(skill, cell, character.worksheet.title)
-
             prof = 0
             if is_joat:
                 prof = 0.5
-
             skl_obj = Skill(value, prof)
             skills[skill] = skl_obj
-
         # read the value of the rest of the skills
         for cell, skill, advcell in SKILL_CELL_MAP:
             if isinstance(cell, int):
@@ -506,40 +603,35 @@ class GoogleSheet(SheetLoaderABC):
                 value = int(character.value(cell))
             except (TypeError, ValueError):
                 raise MissingAttribute(skill, cell, character.worksheet.title)
-
             adv = None
             if self.version >= (2, 0) and advcell:
                 advtype = character.unformatted_value(advcell)
-                if advtype in {'a', 'adv', 'advantage'}:
+                if advtype in {"a", "adv", "advantage"}:
                     adv = True
-                elif advtype in {'d', 'dis', 'disadvantage'}:
+                elif advtype in {"d", "dis", "disadvantage"}:
                     adv = False
-
             prof = 0
             if "Save" not in skill and is_joat:
                 prof = 0.5
             if profcell:
                 proftype = character.unformatted_value(profcell)
-                if proftype == 'e':
+                if proftype == "e":
                     prof = 2
-                elif proftype and proftype != '0':
+                elif proftype and proftype != "0":
                     prof = 1
-
             skl_obj = Skill(value, prof, adv=adv)
             if "Save" in skill:
                 saves[skill] = skl_obj
             else:
                 skills[skill] = skl_obj
-
         skills = Skills(skills)
         saves = Saves(saves)
         return skills, saves
 
     def get_resistances(self):
-        out = {'resist': [], 'immune': [], 'vuln': []}
+        out = {"resist": [], "immune": [], "vuln": []}
         if not self.additional:  # requires 2.0
             return Resistances.from_dict(out)
-
         for rownum in range(69, 80):
             for resist_type, col in RESIST_COLS:
                 try:
@@ -548,7 +640,6 @@ class GoogleSheet(SheetLoaderABC):
                     dtype = None
                 if dtype:
                     out[resist_type].append(dtype.lower())
-
         return Resistances.from_dict(out)
 
     def get_ac(self):
@@ -564,12 +655,12 @@ class GoogleSheet(SheetLoaderABC):
             raise MissingAttribute("Max HP", "U16", self.character_data.worksheet.title)
 
     def get_race(self):
-        return self.character_data.value('T7').strip()
+        return self.character_data.value("T7").strip()
 
     def get_background(self):
         if self.version >= (2, 0):
-            return self.character_data.value('AJ11').strip()
-        return self.character_data.value('Z5').strip()
+            return self.character_data.value("AJ11").strip()
+        return self.character_data.value("Z5").strip()
 
     def get_image(self):
         image = self.character_data.value("C176").strip()
@@ -584,18 +675,19 @@ class GoogleSheet(SheetLoaderABC):
         return None
 
     def get_spellbook(self):
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
         # max slots
         slots = {
-            '1': int(self.character_data.value("AK101") or 0),
-            '2': int(self.character_data.value("E107") or 0),
-            '3': int(self.character_data.value("AK113") or 0),
-            '4': int(self.character_data.value("E119") or 0),
-            '5': int(self.character_data.value("AK124") or 0),
-            '6': int(self.character_data.value("E129") or 0),
-            '7': int(self.character_data.value("AK134") or 0),
-            '8': int(self.character_data.value("E138") or 0),
-            '9': int(self.character_data.value("AK142") or 0)
+            "1": int(self.character_data.value("AK101") or 0),
+            "2": int(self.character_data.value("E107") or 0),
+            "3": int(self.character_data.value("AK113") or 0),
+            "4": int(self.character_data.value("E119") or 0),
+            "5": int(self.character_data.value("AK124") or 0),
+            "6": int(self.character_data.value("E129") or 0),
+            "7": int(self.character_data.value("AK134") or 0),
+            "8": int(self.character_data.value("E138") or 0),
+            "9": int(self.character_data.value("AK142") or 0),
         }
 
         potential_spells = self._get_potential_spells()
@@ -610,19 +702,16 @@ class GoogleSheet(SheetLoaderABC):
                     spells.append(SpellbookSpell(result.name, True, prepared=prepared))
                 else:
                     spells.append(SpellbookSpell(spell_name.strip(), prepared=prepared))
-
         # dc
         try:
             dc = int(self.character_data.value("AB91") or 0)
         except ValueError:
             dc = None
-
         # sab
         try:
             sab = int(self.character_data.value("AI91") or 0)
         except ValueError:
             sab = None
-
         # spellcasting mod
         spell_mod_value = self.character_data.value("U91")
         spell_mod = None
@@ -634,7 +723,6 @@ class GoogleSheet(SheetLoaderABC):
                     spell_mod = int(spell_mod_value)
                 except (TypeError, ValueError):
                     spell_mod = None
-
         spellbook = Spellbook(slots, slots, spells, dc, sab, self.total_level, spell_mod)
         return spellbook
 
@@ -645,14 +733,14 @@ class GoogleSheet(SheetLoaderABC):
             feature_names = self.character_data.value_range("C59:AC84")
         else:
             feature_names = self.character_data.value_range("Z45:AH56")
-
         actions = get_actions_for_names(feature_names)
         return Actions(actions)
 
     # helper methods
     def parse_attack(self, name_index, bonus_index, damage_index, sheet=None):
         """Calculates and returns a dict."""
-        if self.character_data is None: raise Exception('You must call get_character() first.')
+        if self.character_data is None:
+            raise Exception("You must call get_character() first.")
 
         wksht = sheet or self.character_data
 
@@ -663,29 +751,24 @@ class GoogleSheet(SheetLoaderABC):
 
         if not name:
             return None
-
         if not damage:
             damage = None
         else:
             details = None
-            if '|' in damage:
-                damage, details = damage.split('|', 1)
-
+            if "|" in damage:
+                damage, details = damage.split("|", 1)
             try:
                 dice, comment = get_roll_comment(damage.strip())
             except RollSyntaxError as e:
                 raise AttackSyntaxError(name, damage_index, wksht.worksheet.title, e)
-
             if details:
                 details = details.strip()
-
             if any(d in comment.lower() for d in DAMAGE_TYPES):
                 damage = "{}[{}]".format(dice, comment)
             else:
                 damage = dice
                 if comment.strip() and not details:
                     damage = comment.strip()
-
         if bonus:
             try:
                 bonus = int(bonus)
@@ -693,13 +776,12 @@ class GoogleSheet(SheetLoaderABC):
                 bonus = None
         else:
             bonus = None
-
         attack = Attack.new(name, bonus, damage, details)
         return attack
 
     def _get_potential_spells(self):
         """Return a list of tuples of (spell_name, prepared)"""
-        if 'noprep' in self.args:
+        if "noprep" in self.args:
             # spells C96:AH143
             potential_spells = [(sn, True) for sn in self.character_data.value_range("D96:AH143")]
             if self.additional:
@@ -708,11 +790,9 @@ class GoogleSheet(SheetLoaderABC):
             potential_spells = []
             for spell_col, prep_col, rows in SPELL_RANGES:
                 potential_spells.extend(self._process_spell_range(spell_col, prep_col, rows, self.character_data))
-
             if self.additional:
                 for spell_col, prep_col, rows in SPELL_RANGES_ADDITIONAL:
                     potential_spells.extend(self._process_spell_range(spell_col, prep_col, rows, self.additional))
-
         return potential_spells
 
     def _process_spell_range(self, spell_col, prep_col, rows, worksheet):
@@ -726,5 +806,5 @@ class GoogleSheet(SheetLoaderABC):
             else:
                 prepared_cell = f"{prep_col}{row}"
                 val = worksheet.unformatted_value(prepared_cell)
-                prepared = val and val != '0'
+                prepared = val and val != "0"
             yield spell_name, prepared

@@ -6,7 +6,6 @@ Created on May 6, 2017
 
 
 class MissingAttribute(Exception):
-
     def __init__(self, attribute, cell, sheet):
         self.attribute = attribute
         self.cell = cell
@@ -15,18 +14,17 @@ class MissingAttribute(Exception):
 
 
 class AttackSyntaxError(Exception):
-
     def __init__(self, attack_name, cell, sheet, error):
         self.attack_name = attack_name
         self.cell = cell
         self.sheet = sheet
         self.error = error
-        super().__init__(f"Attack syntax issue for attack '{attack_name}' in cell {cell} on sheet '{sheet}':\n"
-                         f"> {error}")
+        super().__init__(
+            f"Attack syntax issue for attack '{attack_name}' in cell {cell} on sheet '{sheet}':\n" f"> {error}"
+        )
 
 
 class InvalidImageURL(Exception):
-
     def __init__(self, sheet, error):
         self.sheet = sheet
         self.error = error
@@ -34,7 +32,6 @@ class InvalidImageURL(Exception):
 
 
 class InvalidCoin(Exception):
-
     def __init__(self, cell, sheet, coin_type, error):
         self.cell = cell
         self.sheet = sheet

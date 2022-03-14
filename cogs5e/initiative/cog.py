@@ -100,14 +100,15 @@ class InitTracker(commands.Cog):
             await temp_summary_msg.pin()
         out = (
             f"Everyone roll for initiative!\n"
-            f"If you have a character set up with SheetManager: `{ctx.prefix}init join`\n"
-            f"If it's a 5e monster: `{ctx.prefix}init madd <monster name>`\n"
-            f"Otherwise: `{ctx.prefix}init add <modifier> <name>`"
+            f"If you have a character set up with SheetManager: `{ctx.clean_prefix}init join`\n"
+            f"If it's a 5e monster: `{ctx.clean_prefix}init madd <monster name>`\n"
+            f"Otherwise: `{ctx.clean_prefix}init add <modifier> <name>`"
         )
         if guild_settings.upenn_nlp_opt_in and await utils.nlp_feature_flag_enabled(self.bot):
             out = (
                 f"{out}\nMessages sent in this channel during combat will be recorded for research purposes. "
-                f"For more information, see `{ctx.clean_prefix}init nlp`."
+                f"By sending messages in this channel during this combat, you agree to participate in the Avrae NLP "
+                f"study. See `{ctx.clean_prefix}init nlp` for more information."
             )
             combat.nlp_record_session_id = utils.create_nlp_record_session_id()
             await self.nlp.on_combat_start(combat)
@@ -1417,11 +1418,16 @@ class InitTracker(commands.Cog):
         server_settings = await ctx.get_server_settings()
         if server_settings.upenn_nlp_opt_in:
             embed = EmbedWithColor()
-            embed.description = "This server is contributing data to the Natural Language AI Training project!"
+            embed.description = (
+                "This server is contributing data to the Natural Language AI Training project! Messages sent in a "
+                "channel with an active combat will be recorded for research purposes."
+            )
             embed.add_field(
                 name="To Opt Out",
-                value="To opt out, ask a server administrator to disable `Contribute Message Data to Natural Language "
-                f"AI Training` in the `{ctx.clean_prefix}servsettings` command.",
+                value="To opt out, you may choose not to participate in any recorded channel. You may also ask a "
+                f"server moderator to use the `{ctx.clean_prefix}init nlp stopall` command, or ask a server "
+                "administrator to disable `Contribute Message Data to Natural Language AI Training` in the "
+                f"`{ctx.clean_prefix}servsettings` command.",
                 inline=False,
             )
             embed.add_field(

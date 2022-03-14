@@ -356,15 +356,9 @@ class GoogleSheet(SheetLoaderABC):
         try:
             await self.get_character()
         except (KeyError, SpreadsheetNotFound, APIError):
-            if config.GOOGLE_SERVICE_ACCOUNT is not None:
-                email = Credentials.from_service_account_info(
-                    json.loads(config.GOOGLE_SERVICE_ACCOUNT), scopes=SCOPES
-                ).signer_email
-            else:
-                email = Credentials.from_service_account_file("avrae-google.json", scopes=SCOPES).signer_email
             raise ExternalImportError(
                 "Invalid character sheet. Make sure you've shared it with me at "
-                f"`{email}`, or made the sheet viewable to 'Anyone with the link'!"
+                f"`{GoogleSheet.g_client.auth.signer_email}`, or made the sheet viewable to 'Anyone with the link'!"
             )
         except Exception:
             raise

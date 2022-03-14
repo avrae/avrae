@@ -236,7 +236,7 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def admin_dd_sample_rate(self, ctx, sample_rate: float):
         """Sets the DataDog sample rate."""
-        if not 0. <= sample_rate <= 1.:
+        if not 0.0 <= sample_rate <= 1.0:
             return await ctx.send("sample rate must be between 0 and 1")
         resp = await self.pscall("set_dd_sample_rate", kwargs={"sample_rate": sample_rate})
         await self._send_replies(ctx, resp)
@@ -391,12 +391,9 @@ class AdminUtils(commands.Cog):
         if config.DD_SERVICE is None:
             return "no DD_SERVICE set, this process is not sampling"
         import ddtrace.sampler
+
         ddtrace.tracer.configure(
-            sampler=ddtrace.sampler.DatadogSampler(
-                rules=[
-                    ddtrace.sampler.SamplingRule(sample_rate=sample_rate)
-                ]
-            )
+            sampler=ddtrace.sampler.DatadogSampler(rules=[ddtrace.sampler.SamplingRule(sample_rate=sample_rate)])
         )
         return f"sample rate set to {sample_rate}"
 

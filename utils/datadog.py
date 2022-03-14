@@ -12,15 +12,9 @@ def do_patches():
     ddtrace.config.service = config.DD_SERVICE
     ddtrace.config.version = config.GIT_COMMIT_SHA
     ddtrace.tracer.configure(
-        sampler=ddtrace.sampler.DatadogSampler(
-            rules=[
-                ddtrace.sampler.SamplingRule(sample_rate=0.01)
-            ]
-        )
+        sampler=ddtrace.sampler.DatadogSampler(rules=[ddtrace.sampler.SamplingRule(sample_rate=0.01)])
     )
-    ddtrace.patch_all(
-        logging=True
-    )
+    ddtrace.patch_all(logging=True)
     _patch_logging()
     _patch_discord()
     _patch_aliasing()
@@ -38,12 +32,12 @@ def start_profiler():
 # ==== monkey-patches ====
 def _patch_logging():
     logging.basicConfig(
-        format='%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] '
-               '[dd.service=%(dd.service)s dd.env=%(dd.env)s '
-               'dd.version=%(dd.version)s '
-               'dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s]'
-               '- %(message)s',
-        level=logging.INFO
+        format="%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] "
+        "[dd.service=%(dd.service)s dd.env=%(dd.env)s "
+        "dd.version=%(dd.version)s "
+        "dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s]"
+        "- %(message)s",
+        level=logging.INFO,
     )
 
 
@@ -60,6 +54,7 @@ def _patch_discord():
 
 def _patch_aliasing():
     import aliasing.helpers
+
     real_handle_aliases = aliasing.helpers.handle_aliases
 
     async def _handle_aliases(*args, **kwargs):

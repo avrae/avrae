@@ -37,6 +37,7 @@ class CollectableNotFound(AvraeException):
 
 class AliasNameConflict(AvraeException):
     """Unable to run command because two aliases share the same name."""
+
     pass
 
 

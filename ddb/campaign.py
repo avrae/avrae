@@ -9,8 +9,9 @@ class ActiveCampaign:
     https://www.dndbeyond.com/api/campaign/active-campaigns
     """
 
-    def __init__(self, _id: str, name: str, dm_username: str, date_created: datetime.date, player_count: int,
-                 dm_id: str):
+    def __init__(
+        self, _id: str, name: str, dm_username: str, date_created: datetime.date, player_count: int, dm_id: str
+    ):
         self.id = _id
         self.name = name
         self.dm_username = dm_username
@@ -20,6 +21,12 @@ class ActiveCampaign:
 
     @classmethod
     def from_json(cls, j):
-        date_created = datetime.datetime.strptime(j['dateCreated'], '%m/%d/%Y').date()
-        return cls(_id=str(j['id']), name=j['name'], dm_username=j['dmUsername'], date_created=date_created,
-                   player_count=j['playerCount'], dm_id=str(j['dmId']))
+        date_created = datetime.datetime.strptime(j["dateCreated"], "%m/%d/%Y").date()
+        return cls(
+            _id=str(j["id"]),
+            name=j["name"],
+            dm_username=j["dmUsername"],
+            date_created=date_created,
+            player_count=j["playerCount"],
+            dm_id=str(j["dmId"]),
+        )

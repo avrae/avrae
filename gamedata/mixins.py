@@ -20,7 +20,7 @@ class LimitedUseGrantorMixin:
         Given an instance that is in the process of being constructed, set up the LimitedUses and return the instance
         (for initialization chaining).
         """
-        self.limited_use = [LimitedUse.from_dict(lu, self) for lu in data.get('grantedLimitedUse', [])]
+        self.limited_use = [LimitedUse.from_dict(lu, self) for lu in data.get("grantedLimitedUse", [])]
         return self
 
 
@@ -40,10 +40,12 @@ class AutomatibleMixin:
         (for initialization chaining).
         """
         from cogs5e.models.automation import Automation
-        self.automation = Automation.from_data(data['automation'])
+
+        self.automation = Automation.from_data(data["automation"])
         return self
 
 
 class DescribableMixin:
     """This entity has a singular description that can be displayed in a single field"""
+
     description: str = ...

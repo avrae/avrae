@@ -20,8 +20,9 @@ async def test_variables(avrae, dhttp):
     match = await dhttp.receive_message("Created global variable `([0-9a-f-]+)`.")
     address = match.group(1)
 
-    avrae.message("!alias foobar echo <foobar> {foobar} {{foobar}}\n" +
-                  f"{{{{get_gvar('{address}')}}}}")  # {{get_gvar('1234...')}}
+    avrae.message(
+        "!alias foobar echo <foobar> {foobar} {{foobar}}\n" + f"{{{{get_gvar('{address}')}}}}"
+    )  # {{get_gvar('1234...')}}
     await dhttp.receive_message()
     avrae.message("!foobar")
     await dhttp.receive_delete()
@@ -48,9 +49,9 @@ async def test_alias_percent_arguments(avrae, dhttp):
     await dhttp.receive_message(".+: the first argument is foo yay bar")
 
     # 1 arg, 1 given with quotes
-    avrae.message("!foobar \"foo bar\"")
+    avrae.message('!foobar "foo bar"')
     await dhttp.receive_delete()
-    await dhttp.receive_message(".+: the first argument is \"foo bar\" yay")
+    await dhttp.receive_message('.+: the first argument is "foo bar" yay')
 
 
 async def test_alias_ampersand_arguments(avrae, dhttp):
@@ -73,7 +74,7 @@ async def test_alias_ampersand_arguments(avrae, dhttp):
     await dhttp.receive_message(".+: the first argument is foo yay bar")
 
     # 1 arg, 1 given with quotes
-    avrae.message("!foobar \"foo bar\"")
+    avrae.message('!foobar "foo bar"')
     await dhttp.receive_delete()
     await dhttp.receive_message(".+: the first argument is foo bar yay")
 
@@ -98,7 +99,7 @@ async def test_alias_ampersand_all_arguments(avrae, dhttp):
     await dhttp.receive_message(r".+: the arguments are \['foo', 'bar'\]")
 
     # 1 quoted arg
-    avrae.message("!foobar \"foo bar\"")
+    avrae.message('!foobar "foo bar"')
     await dhttp.receive_delete()
     await dhttp.receive_message(r".+: the arguments are \['foo bar'\]")
 
@@ -129,23 +130,30 @@ async def test_alias_vs_servalias(avrae, dhttp):
 class TestCharacterAliases:
     async def test_echo_attributes(self, avrae, dhttp):
         character = await active_character(avrae)
-        avrae.message("!alias foobar echo {charismaMod} {proficiencyBonus} {charismaMod+proficiencyBonus}\n"
-                      "<name> <color>")
+        avrae.message(
+            "!alias foobar echo {charismaMod} {proficiencyBonus} {charismaMod+proficiencyBonus}\n" "<name> <color>"
+        )
         await dhttp.receive_message()
 
         avrae.message("!foobar")
         await dhttp.receive_delete()
-        await dhttp.receive_message(f".+: {character.stats.get_mod('cha')} {character.stats.prof_bonus} "
-                                    f"{character.stats.get_mod('cha') + character.stats.prof_bonus}\n"
-                                    f"{character.get_title_name()} [0-9a-f]+")
+        await dhttp.receive_message(
+            f".+: {character.stats.get_mod('cha')} {character.stats.prof_bonus} "
+            f"{character.stats.get_mod('cha') + character.stats.prof_bonus}\n"
+            f"{character.get_title_name()} [0-9a-f]+"
+        )
 
     async def test_echo_attributes_new(self, avrae, dhttp):
         character = await active_character(avrae)
-        avrae.message("!alias foobar echo {{c=character()}} {{c.stats.charisma}} {{c.stats.prof_bonus}} "
-                      "{{c.stats.charisma+c.stats.prof_bonus}}")
+        avrae.message(
+            "!alias foobar echo {{c=character()}} {{c.stats.charisma}} {{c.stats.prof_bonus}} "
+            "{{c.stats.charisma+c.stats.prof_bonus}}"
+        )
         await dhttp.receive_message()
 
         avrae.message("!foobar")
         await dhttp.receive_delete()
-        await dhttp.receive_message(f".+: {character.stats.charisma} {character.stats.prof_bonus} "
-                                    f"{character.stats.charisma + character.stats.prof_bonus}")
+        await dhttp.receive_message(
+            f".+: {character.stats.charisma} {character.stats.prof_bonus} "
+            f"{character.stats.charisma + character.stats.prof_bonus}"
+        )

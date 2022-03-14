@@ -66,13 +66,13 @@ class RedisIO:
     async def get_whole_dict(self, key, default=None):
         if default is None:
             default = {}
-        out = await self._db.hgetall(key, encoding='utf-8')
+        out = await self._db.hgetall(key, encoding="utf-8")
         if out is None:
             return default
         return out
 
     async def hget(self, key, field, default=None):
-        out = await self._db.hget(key, field, encoding='utf-8')
+        out = await self._db.hget(key, field, encoding="utf-8")
         return out if out is not None else default
 
     async def hset(self, key, field, value):
@@ -160,7 +160,7 @@ class _PubSubMessageBase(abc.ABC):
 
 class PubSubCommand(_PubSubMessageBase):
     def __init__(self, id, sender, command, args, kwargs):
-        super().__init__('cmd', id, sender)
+        super().__init__("cmd", id, sender)
         self.command = command
         self.args = args
         self.kwargs = kwargs
@@ -182,7 +182,7 @@ class PubSubCommand(_PubSubMessageBase):
 
 class PubSubReply(_PubSubMessageBase):
     def __init__(self, id, sender, reply_to, data):
-        super().__init__('reply', id, sender)
+        super().__init__("reply", id, sender)
         self.reply_to = reply_to
         self.data = data
 
@@ -197,15 +197,12 @@ class PubSubReply(_PubSubMessageBase):
         return inst
 
 
-PS_DESER_MAP = {
-    "cmd": PubSubCommand,
-    "reply": PubSubReply
-}
+PS_DESER_MAP = {"cmd": PubSubCommand, "reply": PubSubReply}
 
 
 def deserialize_ps_msg(message: str):
     data = json.loads(message)
-    t = data.pop('type')
+    t = data.pop("type")
     if t not in PS_DESER_MAP:
         raise TypeError(f"{t} is not a valid pubsub message type.")
     return PS_DESER_MAP[t].from_dict(data)

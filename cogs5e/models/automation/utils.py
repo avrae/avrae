@@ -39,7 +39,7 @@ def upcast_scaled_dice(effect, autoctx, dice_ast):
         higher = effect.higher.get(str(autoctx.get_cast_level()))
         if higher:
             higher_ast = d20.parse(higher)
-            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', higher_ast.roll)
+            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, "+", higher_ast.roll)
 
     return dice_ast
 
@@ -49,7 +49,7 @@ def mi_mapper(minimum: int) -> Callable[[d20.ast.Node], d20.ast.Node]:
 
     def mapper(node: d20.ast.Node):
         if isinstance(node, d20.ast.Dice):
-            miX = d20.ast.SetOperator('mi', [d20.ast.SetSelector(None, int(minimum))])
+            miX = d20.ast.SetOperator("mi", [d20.ast.SetSelector(None, int(minimum))])
             return d20.ast.OperatedDice(node, miX)
         return node
 
@@ -59,7 +59,7 @@ def mi_mapper(minimum: int) -> Callable[[d20.ast.Node], d20.ast.Node]:
 def max_mapper(node: d20.ast.Node):
     """A function that maps Dice AST objects to OperatedDice that set their values to their maximum."""
     if isinstance(node, d20.ast.Dice):
-        miX = d20.ast.SetOperator('mi', [d20.ast.SetSelector(None, node.size)])
+        miX = d20.ast.SetOperator("mi", [d20.ast.SetSelector(None, node.size)])
         return d20.ast.OperatedDice(node, miX)
     return node
 
@@ -106,7 +106,7 @@ def stringify_intexpr(evaluator, expr):
     try:
         return int(evaluator.eval(str(expr)))
     except (TypeError, ValueError, draconic.DraconicException):
-        return float('nan')
+        return float("nan")
 
 
 def target_hp_or_default(target, default):

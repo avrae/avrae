@@ -33,7 +33,7 @@ class SimpleCombat:
                 self.current = SimpleCombatant(current)
         else:
             self.current = None
-        self.name = self._combat.options.get('name')
+        self.name = self._combat.options.get("name")
 
     @classmethod
     def from_ctx(cls, ctx):
@@ -147,8 +147,7 @@ class SimpleCombat:
     # private functions
     def func_set_character(self, character):
         me = next(
-            (c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
-            None
+            (c for c in self._combat.get_combatants() if getattr(c, "character_id", None) == character.upstream), None
         )
         if not me:
             return
@@ -190,7 +189,9 @@ class SimpleCombatant(AliasStatBlock):
             self._race = combatant.character.race
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
-        self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
+        self.level = (
+            self._combatant.spellbook.caster_level
+        )  # use .spellbook.caster_level or .levels.total_level instead
 
     @property
     def id(self):
@@ -261,7 +262,7 @@ class SimpleCombatant(AliasStatBlock):
         except ValueError:
             raise InvalidSaveType
 
-        sb = self._combatant.active_effects('sb')
+        sb = self._combatant.active_effects("sb")
         saveroll = save.d20(base_adv=adv)
         if sb:
             saveroll = f'{saveroll}+{"+".join(sb)}'
@@ -297,23 +298,20 @@ class SimpleCombatant(AliasStatBlock):
                 self.in_crit = crit
                 self.target = AutomationTarget(target)
 
-        args = ParsedArguments.from_dict(
-            {
-                'critdice': [critdice]
-            }
-        )
+        args = ParsedArguments.from_dict({"critdice": [critdice]})
         if d:
-            args['d'] = d
+            args["d"] = d
         if c:
-            args['c'] = c
+            args["c"] = c
         damage = Damage(dice_str, overheal=overheal)
         autoctx = _SimpleAutomationContext(StatBlock("generic"), self._combatant, args, self._combatant.combat, crit)
 
         result = damage.run(autoctx)
         roll_for = "Damage" if not result.in_crit else "Damage (CRIT!)"
         return {
-            'damage': f"**{roll_for}**: {result.damage_roll.result}", 'total': result.damage,
-            'roll': SimpleRollResult(result.damage_roll)
+            "damage": f"**{roll_for}**: {result.damage_roll.result}",
+            "total": result.damage,
+            "roll": SimpleRollResult(result.damage_roll),
         }
 
     def set_ac(self, ac: int):
@@ -399,8 +397,14 @@ class SimpleCombatant(AliasStatBlock):
         return None
 
     def add_effect(
-        self, name: str, args: str, duration: int = -1, concentration: bool = False, parent=None,
-        end: bool = False, desc: str = None
+        self,
+        name: str,
+        args: str,
+        duration: int = -1,
+        concentration: bool = False,
+        parent=None,
+        end: bool = False,
+        desc: str = None,
     ):
         """
         Adds an effect to the combatant.
@@ -422,8 +426,14 @@ class SimpleCombatant(AliasStatBlock):
         if existing:
             existing.remove()
         effectObj = init.Effect.new(
-            self._combatant.combat, self._combatant, duration=duration, name=name,
-            effect_args=args, concentration=concentration, tick_on_end=end, desc=desc
+            self._combatant.combat,
+            self._combatant,
+            duration=duration,
+            name=name,
+            effect_args=args,
+            concentration=concentration,
+            tick_on_end=end,
+            desc=desc,
         )
         if parent:
             effectObj.set_parent(parent._effect)
@@ -540,15 +550,15 @@ class SimpleGroup:
 
     def get_combatant(self, name, strict=None):
         """
-       Gets a :class:`~aliasing.api.combat.SimpleCombatant` from the group.
+        Gets a :class:`~aliasing.api.combat.SimpleCombatant` from the group.
 
-        :param str name: The name of the combatant to get.
-        :param strict: Whether combatant name must be a full case insensitive match.
-            If this is ``None`` (default), attempts a strict match with fallback to partial match.
-            If this is ``False``, it returns the first partial match.
-            If this is ``True``, it will only return a strict match.
-        :return: The combatant or None.
-        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
+         :param str name: The name of the combatant to get.
+         :param strict: Whether combatant name must be a full case insensitive match.
+             If this is ``None`` (default), attempts a strict match with fallback to partial match.
+             If this is ``False``, it returns the first partial match.
+             If this is ``True``, it will only return a strict match.
+         :return: The combatant or None.
+         :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
         name = str(name)
         combatant = None

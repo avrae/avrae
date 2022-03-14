@@ -21,8 +21,23 @@ class Automation:
     def to_dict(self):
         return [e.to_dict() for e in self.effects]
 
-    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None, ab_override=None,
-                  dc_override=None, spell_override=None, title=None, before=None, after=None):
+    async def run(
+        self,
+        ctx,
+        embed,
+        caster,
+        targets,
+        args,
+        combat=None,
+        spell=None,
+        conc_effect=None,
+        ab_override=None,
+        dc_override=None,
+        spell_override=None,
+        title=None,
+        before=None,
+        after=None,
+    ):
         """
         Runs automation.
 
@@ -58,8 +73,9 @@ class Automation:
         """
         if not targets:
             targets = [None]  # outputs a single iteration of effects in a generic meta field
-        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect, ab_override,
-                                    dc_override, spell_override)
+        autoctx = AutomationContext(
+            ctx, embed, caster, targets, args, combat, spell, conc_effect, ab_override, dc_override, spell_override
+        )
 
         results = []
 
@@ -80,14 +96,15 @@ class Automation:
             try:
                 member = await get_guild_member(ctx.guild, int(user))
                 if title:
-                    await member.send(f"{title}\n" + '\n'.join(msgs))
+                    await member.send(f"{title}\n" + "\n".join(msgs))
                 else:
-                    await member.send('\n'.join(msgs))
+                    await member.send("\n".join(msgs))
             except:
                 pass
 
-        return AutomationResult(children=results, is_spell=spell is not None,
-                                caster_needs_commit=autoctx.caster_needs_commit)
+        return AutomationResult(
+            children=results, is_spell=spell is not None, caster_needs_commit=autoctx.caster_needs_commit
+        )
 
     def build_str(self, caster):
         """
@@ -96,10 +113,10 @@ class Automation:
         if not self.effects:
             return "No effects."
         evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster)
-        evaluator.builtins['caster'] = aliasing.api.statblock.AliasStatBlock(caster)
+        evaluator.builtins["caster"] = aliasing.api.statblock.AliasStatBlock(caster)
         inner = Effect.build_child_str(self.effects, caster, evaluator)
         if not inner:
-            inner = ', '.join(e.type for e in self.effects)
+            inner = ", ".join(e.type for e in self.effects)
         return f"{inner[0].upper()}{inner[1:]}."
 
     def __str__(self):

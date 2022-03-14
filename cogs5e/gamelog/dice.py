@@ -9,14 +9,14 @@ from .callback import GameLogCallbackHandler, callback
 
 
 class DiceHandler(GameLogCallbackHandler):
-    @callback('dice/roll/pending')
+    @callback("dice/roll/pending")
     async def dice_roll_begin(self, gctx):
         """
         Sends a typing indicator to the linked channel to indicate that something is about to happen.
         """
         await gctx.trigger_typing()
 
-    @callback('dice/roll/fulfilled')
+    @callback("dice/roll/fulfilled")
     async def dice_roll(self, gctx, roll_request: ddb.dice.RollRequest):
         """
         Sends a message with the result of the roll, similar to `!r`.
@@ -24,8 +24,9 @@ class DiceHandler(GameLogCallbackHandler):
         if not roll_request.rolls:  # do nothing if there are no rolls actually made
             return
         elif len(roll_request.rolls) > 1:  # if there are multiple rolls in the same event, just use the default handler
-            await self.dice_roll_roll(gctx, roll_request,
-                                      comment_getter=gamelogutils.default_comment_getter(roll_request))
+            await self.dice_roll_roll(
+                gctx, roll_request, comment_getter=gamelogutils.default_comment_getter(roll_request)
+            )
             return
         first_roll = roll_request.rolls[0]
 
@@ -35,7 +36,7 @@ class DiceHandler(GameLogCallbackHandler):
             ddb.dice.RollType.TO_HIT: self.dice_roll_to_hit,
             ddb.dice.RollType.DAMAGE: self.dice_roll_damage,
             ddb.dice.RollType.SPELL: self.dice_roll_spell,
-            ddb.dice.RollType.HEAL: self.dice_roll_heal
+            ddb.dice.RollType.HEAL: self.dice_roll_heal,
         }
 
         # noinspection PyArgumentList
@@ -65,9 +66,9 @@ class DiceHandler(GameLogCallbackHandler):
             results.append(str(rr.to_d20(stringifier=VerboseMDStringifier(), comment=comment_getter(rr))))
 
         if sum(len(r) for r in results) > 1950:  # some len removed for other stuff
-            final_results = '\n'.join(f"**{comment_getter(rr)}**: {rr.result.total}" for rr in roll_request.rolls)
+            final_results = "\n".join(f"**{comment_getter(rr)}**: {rr.result.total}" for rr in roll_request.rolls)
         else:
-            final_results = '\n'.join(results)
+            final_results = "\n".join(results)
 
         out = f"<@!{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{final_results}"
         # the user knows they rolled - don't need to ping them in discord
@@ -82,8 +83,9 @@ class DiceHandler(GameLogCallbackHandler):
         # check for valid caster
         caster = await gctx.get_statblock()
         if caster is None:
-            await self.dice_roll_roll(gctx, roll_request,
-                                      comment_getter=gamelogutils.default_comment_getter(roll_request))
+            await self.dice_roll_roll(
+                gctx, roll_request, comment_getter=gamelogutils.default_comment_getter(roll_request)
+            )
             return
 
         # only listen to the first roll
@@ -101,21 +103,22 @@ class DiceHandler(GameLogCallbackHandler):
         check_name = roll_request.action
         if check_name in constants.STAT_ABBREVIATIONS:
             check_name = verbose_stat(check_name)
-        await self._dice_roll_embed_common(gctx, roll_request, "{name} makes {check} check!",
-                                           check=a_or_an(check_name.title()))
+        await self._dice_roll_embed_common(
+            gctx, roll_request, "{name} makes {check} check!", check=a_or_an(check_name.title())
+        )
 
     async def dice_roll_save(self, gctx, roll_request):
         """Save: Display like ``!s``."""
         save_name = roll_request.action
         if save_name in constants.STAT_ABBREVIATIONS:
             save_name = verbose_stat(save_name)
-        await self._dice_roll_embed_common(gctx, roll_request, "{name} makes {save} Save!",
-                                           save=a_or_an(save_name.title()))
+        await self._dice_roll_embed_common(
+            gctx, roll_request, "{name} makes {save} Save!", save=a_or_an(save_name.title())
+        )
 
     async def dice_roll_heal(self, gctx, roll_request):
         """Healing and temp HP. Displays like a check/save/attack"""
-        await self._dice_roll_embed_common(gctx, roll_request, "{name} heals with {heal}!",
-                                           heal=roll_request.action)
+        await self._dice_roll_embed_common(gctx, roll_request, "{name} heals with {heal}!", heal=roll_request.action)
 
     async def dice_roll_spell(self, gctx, roll_request):
         """Unknown when this is used. Set roll comment and pass to default roll handler."""
@@ -173,8 +176,7 @@ class DiceHandler(GameLogCallbackHandler):
         if action is not None:
             embed = gamelogutils.embed_for_action(gctx, action, caster, attack_roll, damage_roll)
         else:
-            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, caster,
-                                                        attack_roll, damage_roll)
+            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, caster, attack_roll, damage_roll)
 
         # either update the old message or post a new one
         if pending is not None:

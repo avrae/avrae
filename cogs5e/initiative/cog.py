@@ -63,7 +63,7 @@ class InitTracker(commands.Cog):
         self.nlp.close()
 
     # ==== commands ====
-    @commands.group(aliases=['i'], invoke_without_command=True)
+    @commands.group(aliases=["i"], invoke_without_command=True)
     async def init(self, ctx):
         """Commands to help track initiative."""
         await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
@@ -83,14 +83,14 @@ class InitTracker(commands.Cog):
         options = {}
 
         args = argparse(args)
-        if args.last('dyn', False, bool):  # rerolls all inits at the start of each round
-            options['dynamic'] = True
-        if 'name' in args:
-            options['name'] = args.last('name')
-        if args.last('turnnotif', False, bool):
-            options['turnnotif'] = True
-        if args.last('deathdelete', False, bool):
-            options['deathdelete'] = True
+        if args.last("dyn", False, bool):  # rerolls all inits at the start of each round
+            options["dynamic"] = True
+        if "name" in args:
+            options["name"] = args.last("name")
+        if args.last("turnnotif", False, bool):
+            options["turnnotif"] = True
+        if args.last("deathdelete", False, bool):
+            options["deathdelete"] = True
 
         temp_summary_msg = await ctx.send("```Awaiting combatants...```")
 
@@ -146,14 +146,14 @@ class InitTracker(commands.Cog):
         args = argparse(args)
         adv = args.adv(boolwise=True)
 
-        thp = args.last('thp', type_=int)
+        thp = args.last("thp", type_=int)
 
-        if args.last('h', type_=bool):
+        if args.last("h", type_=bool):
             private = True
 
-        if args.get('p'):
+        if args.get("p"):
             try:
-                place_arg = args.last('p')
+                place_arg = args.last("p")
                 if place_arg is True:
                     place = modifier
                 else:
@@ -161,22 +161,22 @@ class InitTracker(commands.Cog):
             except (ValueError, TypeError):
                 place = modifier
 
-        if args.last('controller'):
-            controller_name = args.last('controller')
+        if args.last("controller"):
+            controller_name = args.last("controller")
             member = await commands.MemberConverter().convert(ctx, controller_name)
             controller = str(member.id) if member is not None and not member.bot else controller
-        if args.last('group'):
-            group = args.last('group')
-        if args.last('hp'):
-            hp = args.last('hp', type_=int)
+        if args.last("group"):
+            group = args.last("group")
+        if args.last("hp"):
+            hp = args.last("hp", type_=int)
             if hp < 1:
                 return await ctx.send("You must pass in a positive, nonzero HP with the -hp tag.")
-        if args.last('ac'):
-            ac = args.last('ac', type_=int)
+        if args.last("ac"):
+            ac = args.last("ac", type_=int)
 
-        note = args.last('note')
+        note = args.last("note")
 
-        for k in ('resist', 'immune', 'vuln'):
+        for k in ("resist", "immune", "vuln"):
             resists[k] = args.get(k)
 
         combat = await ctx.get_combat()
@@ -196,8 +196,7 @@ class InitTracker(commands.Cog):
             init_roll_skeleton = str(init)
 
         me = Combatant.new(
-            name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx,
-            combat
+            name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx, combat
         )
 
         # -thp (#1142)
@@ -240,25 +239,25 @@ class InitTracker(commands.Cog):
         monster = await select_monster_full(ctx, monster_name, pm=True)
 
         args = argparse(args)
-        private = not args.last('h', type_=bool)
+        private = not args.last("h", type_=bool)
         controller = str(ctx.author.id)
-        group = args.last('group')
+        group = args.last("group")
         adv = args.adv(boolwise=True)
-        b = args.join('b', '+')
-        p = args.last('p', type_=int)
-        rollhp = args.last('rollhp', False, bool)
-        hp = args.last('hp', type_=int)
-        thp = args.last('thp', type_=int)
-        ac = args.last('ac', type_=int)
-        n = args.last('n', 1)
-        note = args.last('note')
-        name_template = args.last('name', monster.name[:2].upper() + '#')
+        b = args.join("b", "+")
+        p = args.last("p", type_=int)
+        rollhp = args.last("rollhp", False, bool)
+        hp = args.last("hp", type_=int)
+        thp = args.last("thp", type_=int)
+        ac = args.last("ac", type_=int)
+        n = args.last("n", 1)
+        note = args.last("note")
+        name_template = args.last("name", monster.name[:2].upper() + "#")
         init_skill = monster.skills.initiative
 
         combat = await ctx.get_combat()
 
-        out = ''
-        to_pm = ''
+        out = ""
+        to_pm = ""
 
         try:  # Attempt to get the add as a number
             n_result = int(n)
@@ -271,14 +270,14 @@ class InitTracker(commands.Cog):
 
         name_num = 1
         for i in range(recursion):
-            name = name_template.replace('#', str(name_num))
+            name = name_template.replace("#", str(name_num))
             raw_name = name_template
             to_continue = False
 
             while combat.get_combatant(name) and name_num < 100:  # keep increasing to avoid duplicates
-                if '#' in raw_name:
+                if "#" in raw_name:
                     name_num += 1
-                    name = raw_name.replace('#', str(name_num))
+                    name = raw_name.replace("#", str(name_num))
                 else:
                     out += "Combatant already exists.\n"
                     to_continue = True
@@ -291,7 +290,7 @@ class InitTracker(commands.Cog):
                 check_roll = None  # to make things happy
                 if p is None:
                     if b:
-                        check_roll = roll(f'{init_skill.d20(base_adv=adv)}+{b}')
+                        check_roll = roll(f"{init_skill.d20(base_adv=adv)}+{b}")
                     else:
                         check_roll = roll(init_skill.d20(base_adv=adv))
                     init = check_roll.total
@@ -299,8 +298,8 @@ class InitTracker(commands.Cog):
                     init = int(p)
 
                 # -controller (#1368)
-                if args.last('controller'):
-                    controller_name = args.last('controller')
+                if args.last("controller"):
+                    controller_name = args.last("controller")
                     member = await commands.MemberConverter().convert(ctx, controller_name)
                     controller = str(member.id) if member is not None and not member.bot else controller
 
@@ -312,8 +311,7 @@ class InitTracker(commands.Cog):
                     rolled_hp = max(rolled_hp.total, 1)
 
                 me = MonsterCombatant.from_monster(
-                    monster, ctx, combat, name, controller, init, private,
-                    hp=hp or rolled_hp, ac=ac
+                    monster, ctx, combat, name, controller, init, private, hp=hp or rolled_hp, ac=ac
                 )
 
                 # -thp (#1142)
@@ -333,7 +331,7 @@ class InitTracker(commands.Cog):
                     out += f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.\n"
 
             except Exception as e:
-                log.warning('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
+                log.warning("\n".join(traceback.format_exception(type(e), e, e.__traceback__)))
                 out += "Error adding combatant: {}\n".format(e)
 
         await combat.final()
@@ -341,8 +339,8 @@ class InitTracker(commands.Cog):
         if to_pm:
             await ctx.author.send(to_pm)
 
-    @init.command(name='join', aliases=['cadd', 'dcadd'])
-    async def join(self, ctx, *, args: str = ''):
+    @init.command(name="join", aliases=["cadd", "dcadd"])
+    async def join(self, ctx, *, args: str = ""):
         """
         Adds the current active character to combat. A character must be loaded through the SheetManager module first.
         __Valid Arguments__
@@ -362,16 +360,16 @@ class InitTracker(commands.Cog):
 
         embed = EmbedWithCharacter(char, False)
 
-        p = args.last('p', type_=int)
-        group = args.last('group')
-        note = args.last('note')
+        p = args.last("p", type_=int)
+        group = args.last("group")
+        note = args.last("note")
         check_result = None
 
         if p is None:
-            args.ignore('rr')
-            args.ignore('dc')
+            args.ignore("rr")
+            args.ignore("dc")
             checkutils.update_csetting_args(char, args, char.skills.initiative)
-            check_result = checkutils.run_check('initiative', char, args, embed)
+            check_result = checkutils.run_check("initiative", char, args, embed)
             init = check_result.rolls[-1].total
         else:
             init = p
@@ -379,7 +377,7 @@ class InitTracker(commands.Cog):
             embed.description = "Placed at initiative `{}`.".format(init)
 
         controller = str(ctx.author.id)
-        private = args.last('h', type_=bool)
+        private = args.last("h", type_=bool)
 
         combat = await ctx.get_combat()
 
@@ -403,10 +401,10 @@ class InitTracker(commands.Cog):
 
         await combat.final()
         await ctx.send(embed=embed)
-        if (gamelog := self.bot.get_cog('GameLog')) and check_result is not None:
+        if (gamelog := self.bot.get_cog("GameLog")) and check_result is not None:
             await gamelog.send_check(ctx, me.character, check_result.skill_name, check_result.rolls)
 
-    @init.command(name="next", aliases=['n'])
+    @init.command(name="next", aliases=["n"])
     async def init_next(self, ctx):
         """
         Moves to the next turn in initiative order.
@@ -424,10 +422,10 @@ class InitTracker(commands.Cog):
         # check: is the user allowed to move combat on
         author_id = str(ctx.author.id)
         allowed_to_pass = (
-                (combat.index is None)  # no one's turn
-                or author_id == combat.current_combatant.controller  # user's turn
-                or author_id == combat.dm  # user is combat starter
-                or servsettings.is_dm(ctx.author)  # user is DM
+            (combat.index is None)  # no one's turn
+            or author_id == combat.current_combatant.controller  # user's turn
+            or author_id == combat.dm  # user is combat starter
+            or servsettings.is_dm(ctx.author)  # user is DM
         )
         if not allowed_to_pass:
             await ctx.send("It is not your turn.")
@@ -436,7 +434,7 @@ class InitTracker(commands.Cog):
         # get the list of combatants to remove, but don't remove them yet (we need to advance the turn first
         # to prevent a re-sort happening if the last combatant on a turn is removed)
         to_remove = []
-        if combat.current_combatant is not None and not combat.options.get('deathdelete', False):
+        if combat.current_combatant is not None and not combat.options.get("deathdelete", False):
             if isinstance(combat.current_combatant, CombatantGroup):
                 this_turn = combat.current_combatant.get_combatants()
             else:
@@ -461,7 +459,7 @@ class InitTracker(commands.Cog):
 
         # build the output
         if combat.current_combatant is None:
-            out.append('\nNo combatants remain.')
+            out.append("\nNo combatants remain.")
         else:
             out.append(combat.get_turn_str())
         out.extend(removed_messages)
@@ -470,7 +468,7 @@ class InitTracker(commands.Cog):
         await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
-    @init.command(name="prev", aliases=['previous', 'rewind'])
+    @init.command(name="prev", aliases=["previous", "rewind"])
     async def init_prev(self, ctx):
         """Moves to the previous turn in initiative order."""
 
@@ -485,7 +483,7 @@ class InitTracker(commands.Cog):
         await ctx.send(combat.get_turn_str(), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
-    @init.command(name="move", aliases=['goto'])
+    @init.command(name="move", aliases=["goto"])
     async def init_move(self, ctx, target=None):
         """Moves to a certain initiative.
         `target` can be either a number, to go to that initiative, or a name.
@@ -512,7 +510,7 @@ class InitTracker(commands.Cog):
         await ctx.send(combat.get_turn_str(), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
-    @init.command(name="skipround", aliases=['round', 'skiprounds'])
+    @init.command(name="skipround", aliases=["round", "skiprounds"])
     async def skipround(self, ctx, numrounds: int = 1):
         """Skips one or more rounds of initiative."""
         combat = await ctx.get_combat()
@@ -537,7 +535,7 @@ class InitTracker(commands.Cog):
         await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
-    @init.command(name="reroll", aliases=['shuffle'])
+    @init.command(name="reroll", aliases=["shuffle"])
     async def reroll(self, ctx, *args):
         """
         Rerolls initiative for all combatants, and starts a new round of combat.
@@ -551,7 +549,7 @@ class InitTracker(commands.Cog):
         await ctx.send(f"Rerolled initiative! New order:\n{new_order}")
 
         # -restart (#1053)
-        if a.last('restart'):
+        if a.last("restart"):
             combat.round_num = 0
 
         # repost summary message
@@ -566,7 +564,7 @@ class InitTracker(commands.Cog):
 
         await combat.final()
 
-    @init.command(name="meta", aliases=['metaset'])
+    @init.command(name="meta", aliases=["metaset"])
     async def metasetting(self, ctx, *settings):
         """
         Changes the settings of the active combat.
@@ -581,31 +579,31 @@ class InitTracker(commands.Cog):
         options = combat.options
         out = ""
 
-        if args.last('dyn', False, bool):  # rerolls all inits at the start of each round
-            options['dynamic'] = not options.get('dynamic')
+        if args.last("dyn", False, bool):  # rerolls all inits at the start of each round
+            options["dynamic"] = not options.get("dynamic")
             out += f"Dynamic initiative turned {'on' if options['dynamic'] else 'off'}.\n"
-        if args.last('name'):
-            options['name'] = args.last('name')
+        if args.last("name"):
+            options["name"] = args.last("name")
             out += f"Name set to {options['name']}.\n"
-        if args.last('turnnotif', False, bool):
-            options['turnnotif'] = not options.get('turnnotif')
+        if args.last("turnnotif", False, bool):
+            options["turnnotif"] = not options.get("turnnotif")
             out += f"Turn notification turned {'on' if options['turnnotif'] else 'off'}.\n"
-        if args.last('deathdelete', default=False, type_=bool):
-            options['deathdelete'] = not options.get('deathdelete', False)
+        if args.last("deathdelete", default=False, type_=bool):
+            options["deathdelete"] = not options.get("deathdelete", False)
             out += f"Monsters at 0 HP will be {'left' if options['deathdelete'] else 'removed'}.\n"
 
         combat.options = options
         await combat.commit()
-        out = out if out else 'No Settings Changed'
+        out = out if out else "No Settings Changed"
         await ctx.send(out)
 
-    @init.command(name="list", aliases=['summary'])
+    @init.command(name="list", aliases=["summary"])
     async def init_list(self, ctx, *args):
         """Lists the combatants.
         __Valid Arguments__
         private - Sends the list in a private message."""
         combat = await ctx.get_combat()
-        private = 'private' in args
+        private = "private" in args
         destination = ctx if not private else ctx.author
         if private and str(ctx.author.id) == combat.dm:
             out = combat.get_summary(True)
@@ -614,7 +612,7 @@ class InitTracker(commands.Cog):
         await destination.send(out)
 
     @init.command()
-    async def note(self, ctx, name: str, *, note: str = ''):
+    async def note(self, ctx, name: str, *, note: str = ""):
         """Attaches a note to a combatant."""
         combat = await ctx.get_combat()
 
@@ -623,13 +621,13 @@ class InitTracker(commands.Cog):
             return await ctx.send("Combatant not found.")
 
         combatant.notes = note
-        if note == '':
+        if note == "":
             await ctx.send("Removed note.")
         else:
             await ctx.send("Added note.")
         await combat.final()
 
-    @init.command(aliases=['opts'])
+    @init.command(aliases=["opts"])
     async def opt(self, ctx, name: str, *args):
         """
         Edits the options of a combatant.
@@ -678,6 +676,7 @@ class InitTracker(commands.Cog):
                             return
                         run_once.add(func_name)
                         return await old_func(comb, *a, **k)  # pop the combatant argument and sub in group
+
                 func = options[func_name] = functools.partial(func, **kwargs)
                 return func
 
@@ -685,7 +684,7 @@ class InitTracker(commands.Cog):
 
         def mod_or_set(opt_name, old_value):
             new_value = args.last(opt_name, type_=int)
-            if args.last(opt_name).startswith(('-', '+')):
+            if args.last(opt_name).startswith(("-", "+")):
                 new_value = (old_value or 0) + new_value
             return new_value, old_value
 
@@ -696,7 +695,7 @@ class InitTracker(commands.Cog):
 
         @option()
         async def controller(combatant):
-            controller_name = args.last('controller')
+            controller_name = args.last("controller")
             member = await commands.MemberConverter().convert(ctx, controller_name)
             if member is None:
                 return "\u274c New controller not found."
@@ -709,7 +708,7 @@ class InitTracker(commands.Cog):
         @option()
         async def ac(combatant):
             try:
-                new_ac, old_ac = mod_or_set('ac', combatant.ac)
+                new_ac, old_ac = mod_or_set("ac", combatant.ac)
                 combatant.ac = new_ac
                 return f"\u2705 {combatant.name}'s AC set to {combatant.ac} (was {old_ac})."
             except InvalidArgument as e:
@@ -720,7 +719,7 @@ class InitTracker(commands.Cog):
             if combatant is combat.current_combatant:
                 return "\u274c You cannot change a combatant's initiative on their own turn."
             try:
-                new_init, old_init = mod_or_set('p', combatant.init)
+                new_init, old_init = mod_or_set("p", combatant.init)
                 combatant.init = new_init
                 combat.sort_combatants()
                 return f"\u2705 {combatant.name}'s initiative set to {combatant.init} (was {old_init})."
@@ -729,7 +728,7 @@ class InitTracker(commands.Cog):
 
         @option()
         async def group(combatant):
-            group_name = args.last('group')
+            group_name = args.last("group")
             new_group = combatant.set_group(group_name=group_name)
             if new_group is None:
                 return f"\u2705 {combatant.name} removed from all groups."
@@ -738,7 +737,7 @@ class InitTracker(commands.Cog):
         @option(pass_group=True)
         async def name(combatant):
             old_name = combatant.name
-            new_name = args.last('name')
+            new_name = args.last("name")
             if combat.get_combatant(new_name, True) is not None:
                 return f"\u274c There is already another combatant with the name {new_name}."
             elif new_name:
@@ -749,7 +748,7 @@ class InitTracker(commands.Cog):
 
         @option("max")
         async def max_hp(combatant):
-            new_max, old_max = mod_or_set('max', combatant.max_hp)
+            new_max, old_max = mod_or_set("max", combatant.max_hp)
             if new_max < 1:
                 return "\u274c Max HP must be at least 1."
             else:
@@ -758,7 +757,7 @@ class InitTracker(commands.Cog):
 
         @option()
         async def hp(combatant):
-            new_hp, old_hp = mod_or_set('hp', combatant.hp)
+            new_hp, old_hp = mod_or_set("hp", combatant.hp)
             combatant.set_hp(new_hp)
             return f"\u2705 {combatant.name}'s HP set to {new_hp} (was {old_hp})."
 
@@ -795,15 +794,14 @@ class InitTracker(commands.Cog):
         if out:
             for destination, messages in out.items():
                 await destination.send(
-                    '\n'.join(messages),
-                    allowed_mentions=disnake.AllowedMentions(users=list(allowed_mentions))
+                    "\n".join(messages), allowed_mentions=disnake.AllowedMentions(users=list(allowed_mentions))
                 )
             await combat.final()
         else:
             await ctx.send("No valid options found.")
 
     @init.command()
-    async def status(self, ctx, name: str = '', *, args: str = ''):
+    async def status(self, ctx, name: str = "", *, args: str = ""):
         """Gets the status of a combatant or group.
         If no name is specified, it will default to current combatant.
         __Valid Arguments__
@@ -811,7 +809,7 @@ class InitTracker(commands.Cog):
 
         combat = await ctx.get_combat()
 
-        if name == 'private' or name == '':
+        if name == "private" or name == "":
             combatant = combat.current_combatant
         else:
             combatant = await combat.select_combatant(name, select_group=True)
@@ -820,7 +818,7 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant or group not found.")
             return
 
-        private = 'private' in args.lower() or name == 'private'
+        private = "private" in args.lower() or name == "private"
         if not isinstance(combatant, CombatantGroup):
             private = private and str(ctx.author.id) == combatant.controller
             status = combatant.get_status(private=private)
@@ -828,8 +826,10 @@ class InitTracker(commands.Cog):
                 status = f"{status}\n* This creature is a {combatant.monster_name}."
         else:
             status = "\n".join(
-                [co.get_status(private=private and str(ctx.author.id) == co.controller) for co in
-                 combatant.get_combatants()]
+                [
+                    co.get_status(private=private and str(ctx.author.id) == co.controller)
+                    for co in combatant.get_combatants()
+                ]
             )
 
         if private:
@@ -852,11 +852,11 @@ class InitTracker(commands.Cog):
             return
 
         # i hp NAME mod X does not call i hp mod NAME X - handle this
-        if hp.startswith('mod '):
+        if hp.startswith("mod "):
             return await ctx.invoke(self.init_hp_mod, name=name, hp=hp[4:])
-        elif hp.startswith('set '):
+        elif hp.startswith("set "):
             return await ctx.invoke(self.init_hp_set, name=name, hp=hp[4:])
-        elif hp.startswith('max ') or hp == 'max':
+        elif hp.startswith("max ") or hp == "max":
             return await ctx.invoke(self.init_hp_max, name=name, hp=hp[3:].strip())
 
         hp_roll = roll(hp)
@@ -864,14 +864,14 @@ class InitTracker(commands.Cog):
             combatant.set_hp(0)
         combatant.modify_hp(hp_roll.total)
         await combat.final()
-        if 'd' in hp:
+        if "d" in hp:
             delta = hp_roll.result
         else:
             delta = f"{hp_roll.total:+}"
 
         await gameutils.send_hp_result(ctx, combatant, delta)
 
-    @hp.command(name='max')
+    @hp.command(name="max")
     async def init_hp_max(self, ctx, name, *, hp: str = None):
         """Sets a combatant's max HP, or sets HP to max if no max is given."""
         combat = await ctx.get_combat()
@@ -893,12 +893,12 @@ class InitTracker(commands.Cog):
         await combat.final()
         await gameutils.send_hp_result(ctx, combatant, delta)
 
-    @hp.command(name='mod', hidden=True)
+    @hp.command(name="mod", hidden=True)
     async def init_hp_mod(self, ctx, name, *, hp):
         """Modifies a combatant's current HP."""
         await ctx.invoke(self.hp, name=name, hp=hp)
 
-    @hp.command(name='set')
+    @hp.command(name="set")
     async def init_hp_set(self, ctx, name, *, hp):
         """Sets a combatant's HP to a certain value."""
         combat = await ctx.get_combat()
@@ -934,7 +934,7 @@ class InitTracker(commands.Cog):
             combatant.temp_hp += value
 
         delta = ""
-        if 'd' in thp:
+        if "d" in thp:
             delta = f"({thp_roll.result})"
 
         await combat.final()
@@ -977,26 +977,25 @@ class InitTracker(commands.Cog):
 
         targets = []
 
-        for i, t in enumerate([target_name] + args.get('t')):
+        for i, t in enumerate([target_name] + args.get("t")):
             target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=True)
             if isinstance(target, CombatantGroup):
                 targets.extend(target.get_combatants())
             else:
                 targets.append(target)
 
-        duration = args.last('dur', -1, int)
-        conc = args.last('conc', False, bool)
-        end = args.last('end', False, bool)
-        parent = args.last('parent')
-        desc = args.last('desc')
+        duration = args.last("dur", -1, int)
+        conc = args.last("conc", False, bool)
+        end = args.last("end", False, bool)
+        parent = args.last("parent")
+        desc = args.last("desc")
 
         if parent is not None:
-            parent = parent.split('|', 1)
+            parent = parent.split("|", 1)
             if not len(parent) == 2:
                 raise InvalidArgument("`parent` arg must be formatted `COMBATANT|EFFECT_NAME`")
             p_combatant = await combat.select_combatant(
-                parent[0],
-                choice_message="Select the combatant with the parented effect."
+                parent[0], choice_message="Select the combatant with the parented effect."
             )
             parent = await p_combatant.select_effect(parent[1])
 
@@ -1006,21 +1005,27 @@ class InitTracker(commands.Cog):
                 out = "Effect already exists."
             else:
                 effect_obj = Effect.new(
-                    combat, combatant, duration=duration, name=effect_name, effect_args=args,
-                    concentration=conc, tick_on_end=end, desc=desc
+                    combat,
+                    combatant,
+                    duration=duration,
+                    name=effect_name,
+                    effect_args=args,
+                    concentration=conc,
+                    tick_on_end=end,
+                    desc=desc,
                 )
                 result = combatant.add_effect(effect_obj)
                 if parent:
                     effect_obj.set_parent(parent)
                 out = f"Added effect {effect_name} to {combatant.name}."
-                if result['conc_conflict']:
-                    conflicts = [e.name for e in result['conc_conflict']]
+                if result["conc_conflict"]:
+                    conflicts = [e.name for e in result["conc_conflict"]]
                     out += f"\nRemoved {', '.join(conflicts)} due to concentration conflict!"
             embed.add_field(name=combatant.name, value=out)
         await ctx.send(embed=embed)
         await combat.final()
 
-    @init.command(name='re')
+    @init.command(name="re")
     async def remove_effect(self, ctx, name: str, effect: str = None):
         """Removes a status effect from a combatant or group. Removes all if effect is not passed."""
         combat = await ctx.get_combat()
@@ -1045,19 +1050,21 @@ class InitTracker(commands.Cog):
                 if to_remove.children:
                     children_removed = f"Also removed {len(to_remove.children)} child effects.\n"
                 to_remove.remove()
-                out += f'Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}'
+                out += f"Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}"
         await ctx.send(out)
         await combat.final()
 
     @init.group(
-        aliases=['a', 'action'], invoke_without_command=True, help=f"""
+        aliases=["a", "action"],
+        invoke_without_command=True,
+        help=f"""
     Rolls an attack against another combatant.
     __**Valid Arguments**__
     {VALID_AUTOMATION_ARGS}
     -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
-    """
+    """,
     )
-    async def attack(self, ctx, atk_name=None, *, args=''):
+    async def attack(self, ctx, atk_name=None, *, args=""):
         combat = await ctx.get_combat()
         combatant = combat.current_combatant
         if combatant is None:
@@ -1084,14 +1091,14 @@ class InitTracker(commands.Cog):
     -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
     """
     )
-    async def aoo(self, ctx, combatant_name, atk_name=None, *, args=''):
+    async def aoo(self, ctx, combatant_name, atk_name=None, *, args=""):
         combat = await ctx.get_combat()
         try:
             combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
         except SelectionException:
             return await ctx.send("Combatant not found.")
 
-        if atk_name is None or atk_name == 'list':
+        if atk_name is None or atk_name == "list":
             return await self._attack_list(ctx, combatant)
         return await self._attack(ctx, combatant, atk_name, args)
 
@@ -1109,8 +1116,12 @@ class InitTracker(commands.Cog):
 
         if isinstance(combatant, PlayerCombatant):
             await actionutils.send_action_list(
-                ctx, destination=destination, caster=combatant, attacks=combatant.attacks,
-                actions=combatant.character.actions, args=args
+                ctx,
+                destination=destination,
+                caster=combatant,
+                attacks=combatant.attacks,
+                actions=combatant.character.actions,
+                args=args,
             )
         else:
             await actionutils.send_action_list(
@@ -1131,9 +1142,9 @@ class InitTracker(commands.Cog):
         # attack selection/caster handling
         try:
             if isinstance(combatant, CombatantGroup):
-                if 'custom' in args:  # group, custom
+                if "custom" in args:  # group, custom
                     caster = combatant.get_combatants()[0]
-                    attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                    attack = Attack.new(name=atk_name, bonus_calc="0", damage_calc="0")
                 else:  # group, noncustom
                     choices = []  # list of (name, caster, attack)
                     for com in combatant.get_combatants():
@@ -1141,17 +1152,19 @@ class InitTracker(commands.Cog):
                             choices.append((f"{atk.name} ({com.name})", com, atk))
 
                     _, caster, attack = await search_and_select(
-                        ctx, choices, atk_name, lambda choice: choice[0],
-                        message="Select your attack."
+                        ctx, choices, atk_name, lambda choice: choice[0], message="Select your attack."
                     )
             else:
                 caster = combatant
-                if 'custom' in args:  # single, custom
-                    attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                if "custom" in args:  # single, custom
+                    attack = Attack.new(name=atk_name, bonus_calc="0", damage_calc="0")
                 elif is_player:  # single, noncustom, action?
                     attack = await actionutils.select_action(
-                        ctx, atk_name, attacks=combatant.attacks, actions=combatant.character.actions,
-                        message="Select your action."
+                        ctx,
+                        atk_name,
+                        attacks=combatant.attacks,
+                        actions=combatant.character.actions,
+                        message="Select your action.",
                     )
                 else:  # single, noncustom
                     attack = await actionutils.select_action(
@@ -1173,25 +1186,27 @@ class InitTracker(commands.Cog):
             result = await actionutils.run_action(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
-        if (gamelog := self.bot.get_cog('GameLog')) and is_player and result is not None:
+        if (gamelog := self.bot.get_cog("GameLog")) and is_player and result is not None:
             await gamelog.send_automation(ctx, combatant.character, attack.name, result)
 
     @init.command(
-        aliases=['c'], help=f"""
+        aliases=["c"],
+        help=f"""
     Rolls an ability check as the current combatant.
     {VALID_CHECK_ARGS}
-    """
+    """,
     )
-    async def check(self, ctx, check, *, args=''):
+    async def check(self, ctx, check, *, args=""):
         return await self._check(ctx, None, check, args)
 
     @init.command(
-        aliases=['oc'], help=f"""
+        aliases=["oc"],
+        help=f"""
     Rolls an ability check as another combatant.
     {VALID_CHECK_ARGS}
-    """
+    """,
     )
-    async def offturncheck(self, ctx, combatant_name, check, *, args=''):
+    async def offturncheck(self, ctx, combatant_name, check, *, args=""):
         return await self._check(ctx, combatant_name, check, args)
 
     async def _check(self, ctx, combatant_name, check, args):
@@ -1221,25 +1236,27 @@ class InitTracker(commands.Cog):
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
-        if (gamelog := self.bot.get_cog('GameLog')) and isinstance(combatant, PlayerCombatant):
+        if (gamelog := self.bot.get_cog("GameLog")) and isinstance(combatant, PlayerCombatant):
             await gamelog.send_check(ctx, combatant.character, result.skill_name, result.rolls)
 
     @init.command(
-        aliases=['s'], help=f"""
+        aliases=["s"],
+        help=f"""
     Rolls an ability save as the current combatant.
     {VALID_SAVE_ARGS}
-    """
+    """,
     )
-    async def save(self, ctx, save, *, args=''):
+    async def save(self, ctx, save, *, args=""):
         return await self._save(ctx, None, save, args)
 
     @init.command(
-        aliases=['os'], help=f"""
+        aliases=["os"],
+        help=f"""
     Rolls an ability save as another combatant.
     {VALID_CHECK_ARGS}
-    """
+    """,
     )
-    async def offturnsave(self, ctx, combatant_name, save, *, args=''):
+    async def offturnsave(self, ctx, combatant_name, save, *, args=""):
         return await self._save(ctx, combatant_name, save, args)
 
     async def _save(self, ctx, combatant_name, save, args):
@@ -1268,7 +1285,7 @@ class InitTracker(commands.Cog):
         # send
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
-        if (gamelog := self.bot.get_cog('GameLog')) and isinstance(combatant, PlayerCombatant):
+        if (gamelog := self.bot.get_cog("GameLog")) and isinstance(combatant, PlayerCombatant):
             await gamelog.send_save(ctx, combatant.character, result.skill_name, result.rolls)
 
     @init.command(
@@ -1280,19 +1297,20 @@ class InitTracker(commands.Cog):
     {VALID_AUTOMATION_ARGS}
     """
     )
-    async def cast(self, ctx, spell_name, *, args=''):
+    async def cast(self, ctx, spell_name, *, args=""):
         return await self._cast(ctx, None, spell_name, args)
 
     @init.command(
-        aliases=['rc'], help=f"""
+        aliases=["rc"],
+        help=f"""
     Casts a spell against another combatant.
     __**Valid Arguments**__
     {VALID_SPELLCASTING_ARGS}
     
     {VALID_AUTOMATION_ARGS}
-    """
+    """,
     )
-    async def reactcast(self, ctx, combatant_name, spell_name, *, args=''):
+    async def reactcast(self, ctx, combatant_name, spell_name, *, args=""):
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     async def _cast(self, ctx, combatant_name, spell_name, args):
@@ -1318,12 +1336,9 @@ class InitTracker(commands.Cog):
             args = await helpers.parse_snippets(args, ctx, statblock=combatant)
         args = argparse(args)
 
-        if not args.last('i', type_=bool):
+        if not args.last("i", type_=bool):
             try:
-                spell = await select_spell_full(
-                    ctx, spell_name,
-                    list_filter=lambda s: s.name in combatant.spellbook
-                )
+                spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in combatant.spellbook)
             except NoSelectionElements:
                 return await ctx.send(
                     f"No matching spells found in the combatant's spellbook. Cast again "
@@ -1340,10 +1355,10 @@ class InitTracker(commands.Cog):
         embed.colour = combatant.get_color()
         await ctx.send(embed=embed)
         await combat.final()
-        if (gamelog := self.bot.get_cog('GameLog')) and is_character and result.automation_result:
+        if (gamelog := self.bot.get_cog("GameLog")) and is_character and result.automation_result:
             await gamelog.send_automation(ctx, combatant.character, spell.name, result.automation_result)
 
-    @init.command(name='remove')
+    @init.command(name="remove")
     async def remove_combatant(self, ctx, *, name: str):
         """Removes a combatant or group from the combat.
         Usage: `!init remove <NAME>`"""
@@ -1370,21 +1385,18 @@ class InitTracker(commands.Cog):
     async def end(self, ctx, args=None):
         """Ends combat in the channel."""
 
-        to_end = await confirm(ctx, 'Are you sure you want to end combat? (Reply with yes/no)', True)
+        to_end = await confirm(ctx, "Are you sure you want to end combat? (Reply with yes/no)", True)
 
         if to_end is None:
-            return await ctx.send('Timed out waiting for a response or invalid response.', delete_after=10)
+            return await ctx.send("Timed out waiting for a response or invalid response.", delete_after=10)
         elif not to_end:
-            return await ctx.send('OK, cancelling.', delete_after=10)
+            return await ctx.send("OK, cancelling.", delete_after=10)
 
         msg = await ctx.send("OK, ending...")
         combat = await ctx.get_combat()
 
         with suppress(disnake.HTTPException):
-            await ctx.author.send(
-                f"End of combat report: {combat.round_num} rounds "
-                f"{combat.get_summary(True)}"
-            )
+            await ctx.author.send(f"End of combat report: {combat.round_num} rounds " f"{combat.get_summary(True)}")
             summary = combat.get_summary_msg()
             await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
             await summary.unpin()
@@ -1409,26 +1421,26 @@ class InitTracker(commands.Cog):
             embed.add_field(
                 name="To Opt Out",
                 value="To opt out, ask a server administrator to disable `Contribute Message Data to Natural Language "
-                      f"AI Training` in the `{ctx.clean_prefix}servsettings` command.",
-                inline=False
+                f"AI Training` in the `{ctx.clean_prefix}servsettings` command.",
+                inline=False,
             )
             embed.add_field(
                 name="Learn More",
                 value="You can learn more about the Avrae NLP project "
-                      "[here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html).",
-                inline=False
+                "[here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html).",
+                inline=False,
             )
             embed.add_field(
                 name="Subcommands",
                 value="**list** - List all channels in this server currently recording message data.\n"
-                      "**stopall** - Stop all message recording currently active on this server. "
-                      "Requires *Manage Messages* Discord permissions."
+                "**stopall** - Stop all message recording currently active on this server. "
+                "Requires *Manage Messages* Discord permissions.",
             )
             embed.add_field(
                 name="Links",
                 value="[Project Description](https://www.cis.upenn.edu/~ccb/language-to-avrae.html) "
-                      "\u2022 [Privacy Policy](https://www.fandom.com/privacy-policy)",
-                inline=False
+                "\u2022 [Privacy Policy](https://www.fandom.com/privacy-policy)",
+                inline=False,
             )
             await ctx.send(embed=embed)
 
@@ -1456,7 +1468,7 @@ class InitTracker(commands.Cog):
             )
 
         recording_channels = await self.nlp.get_recording_channels(ctx.guild.id)
-        channel_list = '\n'.join(f"<#{channel_id}>" for channel_id in recording_channels)
+        channel_list = "\n".join(f"<#{channel_id}>" for channel_id in recording_channels)
         await ctx.send(
             "The following channels are currently recording messages to contribute to the Natural Language AI "
             f"Training project:\n{channel_list}"

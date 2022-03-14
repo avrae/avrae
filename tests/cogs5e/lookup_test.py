@@ -62,7 +62,7 @@ async def test_classfeat(avrae, dhttp):
 @requires_data()
 async def test_class(avrae, dhttp):
     for klass in compendium.classes:
-        avrae.message(f"!class \"{klass.name}\"")
+        avrae.message(f'!class "{klass.name}"')
         await dhttp.receive_typing()
         if not klass.is_free:
             await dhttp.receive_message(embed=NOT_AVAILABLE_EMBED)

@@ -45,20 +45,20 @@ class Homebrew(commands.Cog):
         if bestiary.desc:
             embed.description = bestiary.desc
         await bestiary.load_monsters(ctx)
-        monnames = '\n'.join(m.name for m in bestiary.monsters)
+        monnames = "\n".join(m.name for m in bestiary.monsters)
         if len(monnames) < 1020:
             embed.add_field(name="Creatures", value=monnames)
         else:
             embed.add_field(name="Creatures", value=f"{len(bestiary.monsters)} creatures.")
         await ctx.send(embed=embed)
 
-    @bestiary.command(name='list')
+    @bestiary.command(name="list")
     async def bestiary_list(self, ctx):
         """Lists your available bestiaries."""
         out = [b.name async for b in Bestiary.user_bestiaries(ctx)]
         await ctx.send(f"Your bestiaries: {', '.join(out)}")
 
-    @bestiary.command(name='delete')
+    @bestiary.command(name="delete")
     async def bestiary_delete(self, ctx, *, name):
         """Deletes a bestiary from Avrae."""
         try:
@@ -68,15 +68,15 @@ class Homebrew(commands.Cog):
         except NoSelectionElements:
             return await ctx.send("Bestiary not found.")
 
-        resp = await confirm(ctx, 'Are you sure you want to delete {}? (Reply with yes/no)'.format(bestiary.name))
+        resp = await confirm(ctx, "Are you sure you want to delete {}? (Reply with yes/no)".format(bestiary.name))
 
         if resp:
             await bestiary.unsubscribe(ctx)
-            return await ctx.send('{} has been deleted.'.format(bestiary.name))
+            return await ctx.send("{} has been deleted.".format(bestiary.name))
         else:
             return await ctx.send("OK, cancelling.")
 
-    @bestiary.command(name='import')
+    @bestiary.command(name="import")
     async def bestiary_import(self, ctx, url):
         """
         Imports a bestiary from [CritterDB](https://critterdb.com/).
@@ -93,10 +93,11 @@ class Homebrew(commands.Cog):
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
         # https://critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
         # https://critterdb.com:443/#/bestiary/view/5acfe382de482a4d0ed57b46
-        if not (match := re.match(
-                r'https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)',
-                url
-        )):
+        if not (
+            match := re.match(
+                r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", url
+            )
+        ):
             return await ctx.send("This is not a CritterDB link.")
 
         loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")
@@ -111,14 +112,14 @@ class Homebrew(commands.Cog):
         await loading.edit(content=f"Imported {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
-        monnames = '\n'.join(m.name for m in bestiary.monsters)
+        monnames = "\n".join(m.name for m in bestiary.monsters)
         if len(monnames) < 2040:
             embed.description = monnames
         else:
             embed.description = f"{len(bestiary.monsters)} creatures."
         await ctx.send(embed=embed)
 
-    @bestiary.command(name='update')
+    @bestiary.command(name="update")
     async def bestiary_update(self, ctx):
         """Updates the active bestiary from CritterDB."""
         try:
@@ -142,14 +143,14 @@ class Homebrew(commands.Cog):
         await loading.edit(content=f"Imported and updated {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
-        monnames = '\n'.join(m.name for m in bestiary.monsters)
+        monnames = "\n".join(m.name for m in bestiary.monsters)
         if len(monnames) < 2040:
             embed.description = monnames
         else:
             embed.description = f"{len(bestiary.monsters)} creatures."
         await ctx.send(embed=embed)
 
-    @bestiary.group(name='server', invoke_without_command=True)
+    @bestiary.group(name="server", invoke_without_command=True)
     @commands.guild_only()
     @checks.can_edit_serverbrew()
     async def bestiary_server(self, ctx):
@@ -162,7 +163,7 @@ class Homebrew(commands.Cog):
         else:
             await ctx.send(f"Ok, {bestiary.name} is no longer active on {ctx.guild.name}.")
 
-    @bestiary_server.command(name='list')
+    @bestiary_server.command(name="list")
     @commands.guild_only()
     async def bestiary_server_list(self, ctx):
         """Shows what bestiaries are currently active on the server."""
@@ -172,7 +173,7 @@ class Homebrew(commands.Cog):
             desc.append(f"{best.name} (<@{sharer}>)")
         await ctx.send(embed=discord.Embed(title="Active Server Bestiaries", description="\n".join(desc)))
 
-    @bestiary_server.command(name='remove', aliases=['delete'])
+    @bestiary_server.command(name="remove", aliases=["delete"])
     @commands.guild_only()
     @checks.can_edit_serverbrew()
     async def bestiary_server_remove(self, ctx, bestiary_name):
@@ -193,9 +194,7 @@ class Homebrew(commands.Cog):
         num_visible = await Pack.num_visible(ctx)
 
         if not num_visible:
-            return await ctx.send(
-                "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!"
-            )
+            return await ctx.send("You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!")
 
         if name is None:
             pack = await Pack.from_ctx(ctx)
@@ -223,13 +222,13 @@ class Homebrew(commands.Cog):
             embed.add_field(name="Items", value=f"{len(pack.items)} items.")
         await ctx.send(embed=embed)
 
-    @pack.command(name='list')
+    @pack.command(name="list")
     async def pack_list(self, ctx):
         """Lists your available packs."""
         available_pack_names = Pack.user_visible(ctx, meta_only=True)
         await ctx.send(f"Your available packs: {', '.join([p['name'] async for p in available_pack_names])}")
 
-    @pack.command(name='editor')
+    @pack.command(name="editor")
     async def pack_editor(self, ctx, user: discord.Member):
         """Allows another user to edit your active pack."""
         pack = await Pack.from_ctx(ctx)
@@ -245,7 +244,7 @@ class Homebrew(commands.Cog):
         else:
             await ctx.send(f"{user} removed from {pack.name}'s editors.")
 
-    @pack.command(name='subscribe', aliases=['sub'])
+    @pack.command(name="subscribe", aliases=["sub"])
     async def pack_sub(self, ctx, url):
         """Subscribes to another user's pack."""
         pack_id_match = re.search(r"homebrew/items/([0-9a-f]{24})/?", url)
@@ -262,11 +261,10 @@ class Homebrew(commands.Cog):
         await pack.subscribe(ctx)
         pack_owner = await user_from_id(ctx, pack.owner)
         await ctx.send(
-            f"Subscribed to {pack.name} by {pack_owner}. "
-            f"Use `{ctx.prefix}pack {pack.name}` to select it."
+            f"Subscribed to {pack.name} by {pack_owner}. " f"Use `{ctx.prefix}pack {pack.name}` to select it."
         )
 
-    @pack.command(name='unsubscribe', aliases=['unsub'])
+    @pack.command(name="unsubscribe", aliases=["unsub"])
     async def pack_unsub(self, ctx, name):
         """Unsubscribes from another user's pack."""
         pack = await Pack.select(ctx, name)
@@ -276,7 +274,7 @@ class Homebrew(commands.Cog):
             return await ctx.send("You aren't subscribed to this pack! Maybe you own it, or are an editor?")
         await ctx.send(f"Unsubscribed from {pack.name}.")
 
-    @pack.group(name='server', invoke_without_command=True)
+    @pack.group(name="server", invoke_without_command=True)
     @commands.guild_only()
     @checks.can_edit_serverbrew()
     async def pack_server(self, ctx):
@@ -289,7 +287,7 @@ class Homebrew(commands.Cog):
         else:
             await ctx.send(f"Ok, {pack.name} is no longer active on {ctx.guild.name}.")
 
-    @pack_server.command(name='list')
+    @pack_server.command(name="list")
     @commands.guild_only()
     async def pack_server_list(self, ctx):
         """Shows what packs are currently active on the server."""
@@ -298,15 +296,15 @@ class Homebrew(commands.Cog):
             desc += f"{pack['name']} (<@{pack['owner']}>)\n"
         await ctx.send(embed=discord.Embed(title="Active Server Packs", description=desc))
 
-    @pack_server.command(name='remove', aliases=['delete'])
+    @pack_server.command(name="remove", aliases=["delete"])
     @commands.guild_only()
     @checks.can_edit_serverbrew()
     async def pack_server_remove(self, ctx, pack_name):
         """Removes a server pack."""
         pack_metas = [p async for p in Pack.server_active(ctx, meta_only=True)]
 
-        pack_meta = await search_and_select(ctx, pack_metas, pack_name, lambda b: b['name'])
-        pack = await Pack.from_id(ctx, pack_meta['_id'])
+        pack_meta = await search_and_select(ctx, pack_metas, pack_name, lambda b: b["name"])
+        pack = await Pack.from_id(ctx, pack_meta["_id"])
 
         await pack.toggle_server_active(ctx)
         await ctx.send(f"Ok, {pack.name} is no longer active on {ctx.guild.name}.")
@@ -349,13 +347,13 @@ class Homebrew(commands.Cog):
             embed.add_field(name="Spells", value=f"{len(tome.spells)} spells.")
         await ctx.send(embed=embed)
 
-    @tome.command(name='list')
+    @tome.command(name="list")
     async def tome_list(self, ctx):
         """Lists your available tomes."""
         available_tome_names = Tome.user_visible(ctx, meta_only=True)
         await ctx.send(f"Your available tomes: {', '.join([p['name'] async for p in available_tome_names])}")
 
-    @tome.command(name='editor')
+    @tome.command(name="editor")
     async def tome_editor(self, ctx, user: discord.Member):
         """Allows another user to edit your active tome."""
         tome = await Tome.from_ctx(ctx)
@@ -371,7 +369,7 @@ class Homebrew(commands.Cog):
         else:
             await ctx.send(f"{user} removed from {tome.name}'s editors.")
 
-    @tome.command(name='subscribe', aliases=['sub'])
+    @tome.command(name="subscribe", aliases=["sub"])
     async def tome_sub(self, ctx, url):
         """Subscribes to another user's tome."""
         tome_id_match = re.search(r"homebrew/spells/([0-9a-f]{24})/?", url)
@@ -388,11 +386,10 @@ class Homebrew(commands.Cog):
         await tome.subscribe(ctx)
         tome_owner = await user_from_id(ctx, tome.owner)
         await ctx.send(
-            f"Subscribed to {tome.name} by {tome_owner}. "
-            f"Use `{ctx.prefix}tome {tome.name}` to select it."
+            f"Subscribed to {tome.name} by {tome_owner}. " f"Use `{ctx.prefix}tome {tome.name}` to select it."
         )
 
-    @tome.command(name='unsubscribe', aliases=['unsub'])
+    @tome.command(name="unsubscribe", aliases=["unsub"])
     async def tome_unsub(self, ctx, name):
         """Unsubscribes from another user's tome."""
         tome = await Tome.select(ctx, name)
@@ -402,7 +399,7 @@ class Homebrew(commands.Cog):
             return await ctx.send("You aren't subscribed to this tome! Maybe you own it, or are an editor?")
         await ctx.send(f"Unsubscribed from {tome.name}.")
 
-    @tome.group(name='server', invoke_without_command=True)
+    @tome.group(name="server", invoke_without_command=True)
     @commands.guild_only()
     @checks.can_edit_serverbrew()
     async def tome_server(self, ctx):
@@ -415,7 +412,7 @@ class Homebrew(commands.Cog):
         else:
             await ctx.send(f"Ok, {tome.name} is no longer active on {ctx.guild.name}.")
 
-    @tome_server.command(name='list')
+    @tome_server.command(name="list")
     @commands.guild_only()
     async def tome_server_list(self, ctx):
         """Shows what tomes are currently active on the server."""
@@ -424,15 +421,15 @@ class Homebrew(commands.Cog):
             desc += f"{tome['name']} (<@{tome['owner']}>)\n"
         await ctx.send(embed=discord.Embed(title="Active Server Tomes", description=desc))
 
-    @tome_server.command(name='remove', aliases=['delete'])
+    @tome_server.command(name="remove", aliases=["delete"])
     @commands.guild_only()
     @checks.can_edit_serverbrew()
     async def tome_server_remove(self, ctx, tome_name):
         """Removes a server tome."""
         tome_metas = [t async for t in Tome.server_active(ctx, meta_only=True)]
 
-        tome_meta = await search_and_select(ctx, tome_metas, tome_name, lambda b: b['name'])
-        tome = await Tome.from_id(ctx, tome_meta['_id'])
+        tome_meta = await search_and_select(ctx, tome_metas, tome_name, lambda b: b["name"])
+        tome = await Tome.from_id(ctx, tome_meta["_id"])
 
         await tome.toggle_server_active(ctx)
         await ctx.send(f"Ok, {tome.name} is no longer active on {ctx.guild.name}.")
@@ -443,8 +440,9 @@ async def can_edit_editor(container, ctx, user):
     Returns whether the author in the context is allowed to toggle the editor status of the given user.
     (i.e. if the author is the owner or they are an editor and trying to remove themself)
     """
-    return (container.is_owned_by(ctx.author)
-            or (await container.is_editor(ctx, ctx.author) and user.id == ctx.author.id))
+    return container.is_owned_by(ctx.author) or (
+        await container.is_editor(ctx, ctx.author) and user.id == ctx.author.id
+    )
 
 
 def setup(bot):

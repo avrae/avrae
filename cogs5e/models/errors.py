@@ -28,11 +28,13 @@ class ExternalImportError(AvraeException):
 
 class InvalidArgument(AvraeException):
     """Raised when an argument is invalid."""
+
     pass
 
 
 class NotAllowed(AvraeException):
     """Raised when a user tries to do something they are not allowed to do by role or dependency."""
+
     pass
 
 
@@ -50,6 +52,7 @@ class InvalidSaveType(AvraeException):
 
 class ConsumableException(AvraeException):
     """A base exception for consumable exceptions to stem from."""
+
     pass
 
 
@@ -76,6 +79,7 @@ class InvalidSpellLevel(ConsumableException):
 
 class SelectionException(AvraeException):
     """A base exception for message awaiting exceptions to stem from."""
+
     pass
 
 

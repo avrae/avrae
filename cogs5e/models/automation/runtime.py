@@ -6,14 +6,24 @@ from cogs5e.models import character as character_api, embeds
 from .errors import AutomationEvaluationException, InvalidIntExpression
 from .utils import maybe_alias_statblock
 
-__all__ = (
-    'AutomationContext', 'AutomationTarget'
-)
+__all__ = ("AutomationContext", "AutomationTarget")
 
 
 class AutomationContext:
-    def __init__(self, ctx, embed, caster, targets, args, combat, spell=None, conc_effect=None, ab_override=None,
-                 dc_override=None, spell_override=None):
+    def __init__(
+        self,
+        ctx,
+        embed,
+        caster,
+        targets,
+        args,
+        combat,
+        spell=None,
+        conc_effect=None,
+        ab_override=None,
+        dc_override=None,
+        spell_override=None,
+    ):
         self.ctx = ctx
         self.embed = embed
         self.caster = caster
@@ -31,7 +41,7 @@ class AutomationContext:
         self.metavars = {
             # caster, targets as default (#1335)
             "caster": aliasing.api.statblock.AliasStatBlock(caster),
-            "targets": [maybe_alias_statblock(t) for t in targets]
+            "targets": [maybe_alias_statblock(t) for t in targets],
         }
         self.target = None
         self.in_crit = False
@@ -87,9 +97,9 @@ class AutomationContext:
         If *merge* is true, adds a line to a field that might already have the same name.
         """
         if merge:
-            existing_field = next((f for f in self._postflight_queue if f['name'] == name), None)
-            if existing_field and value != existing_field['value']:
-                existing_field['value'] = f"{existing_field['value']}\n{value}"
+            existing_field = next((f for f in self._postflight_queue if f["name"] == name), None)
+            if existing_field and value != existing_field["value"]:
+                existing_field["value"] = f"{existing_field['value']}\n{value}"
                 return
         field = {"name": name, "value": value, "inline": False}
         if field not in self._postflight_queue:
@@ -102,21 +112,21 @@ class AutomationContext:
         if to_meta:
             self._meta_queue.extend(self._embed_queue)
         else:
-            chunks = embeds.get_long_field_args('\n'.join(self._embed_queue), title)
+            chunks = embeds.get_long_field_args("\n".join(self._embed_queue), title)
             self._field_queue.extend(chunks)
         self._embed_queue = []
 
     def _insert_meta_field(self):
         if not self._meta_queue:
             return
-        self._field_queue.insert(0, {"name": "Meta", "value": '\n'.join(self._meta_queue), "inline": False})
+        self._field_queue.insert(0, {"name": "Meta", "value": "\n".join(self._meta_queue), "inline": False})
         self._meta_queue = []
 
     def build_embed(self):
         """Consumes all items in queues and creates the final embed."""
 
         # description
-        phrase = self.args.join('phrase', '\n')
+        phrase = self.args.join("phrase", "\n")
         if phrase:
             self.embed.description = f"*{phrase}*"
 
@@ -131,7 +141,7 @@ class AutomationContext:
             self.embed.add_field(name="Effect", value=effect, inline=False)
         for field in self._postflight_queue:
             self.embed.add_field(**field)
-        self.embed.set_footer(text='\n'.join(self._footer_queue))
+        self.embed.set_footer(text="\n".join(self._footer_queue))
 
     def add_pm(self, user, message):
         if user not in self.pm_queue:
@@ -147,7 +157,7 @@ class AutomationContext:
         default = self.spell_level_override or 0
         if self.spell:
             default = default or self.spell.level
-        return self.args.last('l', default, int)
+        return self.args.last("l", default, int)
 
     def parse_annostr(self, annostr, is_full_expression=False):
         """
@@ -161,7 +171,7 @@ class AutomationContext:
 
         original_names = self.evaluator.builtins.copy()
         self.evaluator.builtins.update(self.metavars)
-        expr = annostr.strip('{}')
+        expr = annostr.strip("{}")
         try:
             out = self.evaluator.eval(expr)
         except Exception as ex:
@@ -210,9 +220,9 @@ class AutomationTarget:
 
         # combatant
         if sb and self.combatant:
-            sb += self.combatant.active_effects('sb')
+            sb += self.combatant.active_effects("sb")
         elif self.combatant:
-            sb = self.combatant.active_effects('sb')
+            sb = self.combatant.active_effects("sb")
 
         # character-specific arguments (#1443)
         reroll = None

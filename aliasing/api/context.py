@@ -70,8 +70,10 @@ class AliasContext:
         return self._alias
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} guild={self.guild!r} channel={self.channel!r} author={self.author!r} " \
-               f"prefix={self.prefix!r} alias={self.alias!r}>"
+        return (
+            f"<{self.__class__.__name__} guild={self.guild!r} channel={self.channel!r} author={self.author!r} "
+            f"prefix={self.prefix!r} alias={self.alias!r}>"
+        )
 
 
 class AliasGuild:
@@ -122,8 +124,8 @@ class AliasChannel:
         """
         self._name = str(channel)
         self._id = channel.id
-        self._topic = getattr(channel, 'topic', None)
-        self._category = AliasCategory(channel.category) if getattr(channel, 'category', None) is not None else None
+        self._topic = getattr(channel, "topic", None)
+        self._category = AliasCategory(channel.category) if getattr(channel, "category", None) is not None else None
         self._parent = AliasChannel(channel.parent) if isinstance(channel, discord.Thread) else None
 
     @property

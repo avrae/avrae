@@ -2,9 +2,7 @@
 Constants to help write help docs.
 """
 
-__all__ = (
-    'VALID_CHECK_ARGS', 'VALID_SAVE_ARGS', 'VALID_AUTOMATION_ARGS', 'VALID_SPELLCASTING_ARGS'
-)
+__all__ = ("VALID_CHECK_ARGS", "VALID_SAVE_ARGS", "VALID_AUTOMATION_ARGS", "VALID_SPELLCASTING_ARGS")
 
 # ==== check args ====
 VALID_CHECK_ARGS = """

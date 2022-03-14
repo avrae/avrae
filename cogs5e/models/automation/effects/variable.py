@@ -7,7 +7,7 @@ from ..results import SetVariableResult
 
 class SetVariable(Effect):
     def __init__(self, name: str, value: str, higher: dict = None, onError: str = None, **kwargs):
-        super().__init__('variable', **kwargs)
+        super().__init__("variable", **kwargs)
         self.name = name
         self.value = value
         self.higher = higher
@@ -17,9 +17,9 @@ class SetVariable(Effect):
         out = super().to_dict()
         out.update({"name": self.name, "value": self.value})
         if self.higher is not None:
-            out['higher'] = self.higher
+            out["higher"] = self.higher
         if self.on_error is not None:
-            out['onError'] = self.on_error
+            out["onError"] = self.on_error
         return out
 
     def run(self, autoctx):
@@ -47,8 +47,9 @@ class SetVariable(Effect):
         try:
             final_value = int(value)
         except (TypeError, ValueError):
-            raise AutomationException(f"{value} cannot be interpreted as an integer "
-                                      f"(in `{self.name} = {level_value}`).")
+            raise AutomationException(
+                f"{value} cannot be interpreted as an integer " f"(in `{self.name} = {level_value}`)."
+            )
 
         # bind
         autoctx.metavars[self.name] = final_value

@@ -11,12 +11,12 @@ class UserEntitlements:
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d['acquiredLicenseIDs'], [SharedLicense.from_dict(sl) for sl in d['sharedLicenses']])
+        return cls(d["acquiredLicenseIDs"], [SharedLicense.from_dict(sl) for sl in d["sharedLicenses"]])
 
     def to_dict(self):
         return {
             "acquiredLicenseIDs": self.acquired_license_ids,
-            "sharedLicenses": [sl.to_dict() for sl in self.shared_licenses]
+            "sharedLicenses": [sl.to_dict() for sl in self.shared_licenses],
         }
 
     @property
@@ -41,13 +41,10 @@ class SharedLicense:
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d['campaignID'], d['licenseIDs'])
+        return cls(d["campaignID"], d["licenseIDs"])
 
     def to_dict(self):
-        return {
-            "campaignID": self.campaign_id,
-            "licenseIDs": self.license_ids
-        }
+        return {"campaignID": self.campaign_id, "licenseIDs": self.license_ids}
 
 
 class EntityEntitlements:
@@ -67,12 +64,12 @@ class EntityEntitlements:
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d['entityType'], int(d['entityID']), d['isFree'], d['licenseIDs'])
+        return cls(d["entityType"], int(d["entityID"]), d["isFree"], d["licenseIDs"])
 
     def to_dict(self):
         return {
             "entityType": self.entity_type,
             "entityID": self.entity_id,
             "isFree": self.is_free,
-            "licenseIDs": list(self.license_ids)
+            "licenseIDs": list(self.license_ids),
         }

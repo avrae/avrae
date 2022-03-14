@@ -63,7 +63,7 @@ class BeyondClient(BeyondClientBase):
     async def _initialize(self):
         """Initialize our async resources: aioboto3"""
         boto_session = get_session()
-        self._dynamo = await boto_session.create_client('dynamodb', region_name=DYNAMO_REGION).__aenter__()
+        self._dynamo = await boto_session.create_client("dynamodb", region_name=DYNAMO_REGION).__aenter__()
         log.info("DDB client initialized")
 
     # ==== methods ====
@@ -133,7 +133,7 @@ class BeyondClient(BeyondClientBase):
         await asyncio.gather(
             ctx.bot.rdb.jsetex(user_cache_key, user.to_dict(), ttl),
             Stats.count_ddb_link(ctx, user_id, user),
-            update_user_map(ctx, ddb_id=user.user_id, discord_id=user_id)
+            update_user_map(ctx, ddb_id=user.user_id, discord_id=user_id),
         )
         return user
 
@@ -178,11 +178,7 @@ class BeyondClient(BeyondClientBase):
         user_e10s = await self._fetch_user_entitlements(int(user.user_id))
         # cache entitlements
         USER_ENTITLEMENT_CACHE[user_id] = user_e10s
-        await ctx.bot.rdb.jsetex(
-            user_entitlement_cache_key,
-            user_e10s.to_dict(),
-            USER_ENTITLEMENT_TTL
-        )
+        await ctx.bot.rdb.jsetex(user_entitlement_cache_key, user_e10s.to_dict(), USER_ENTITLEMENT_TTL)
         return user_e10s
 
     async def _get_entity_entitlements(self, ctx, entity_type):
@@ -212,9 +208,7 @@ class BeyondClient(BeyondClientBase):
         # cache entitlements
         ENTITY_ENTITLEMENT_CACHE[entity_type] = entity_e10s
         await ctx.bot.rdb.jsetex(
-            entity_entitlement_cache_key,
-            [e.to_dict() for e in entity_e10s],
-            ENTITY_ENTITLEMENT_TTL
+            entity_entitlement_cache_key, [e.to_dict() for e in entity_e10s], ENTITY_ENTITLEMENT_TTL
         )
         return entity_e10s
 
@@ -240,7 +234,7 @@ class BeyondClient(BeyondClientBase):
                     raise AuthException("Could not deserialize D&D Beyond response.")
         except aiohttp.ServerTimeoutError:
             raise AuthException("Timed out connecting to D&D Beyond. Please try again in a few minutes.")
-        return data['token'], data.get('ttl')
+        return data["token"], data.get("ttl")
 
     async def _fetch_user_entitlements(self, ddb_id: int):
         """
@@ -251,16 +245,13 @@ class BeyondClient(BeyondClientBase):
         """
         user_r = await self._dynamo.get_item(
             TableName=DYNAMO_ENTITLEMENTS_TABLE,
-            Key={
-                "PartitionKey": {"S": f"USER#{ddb_id}"},
-                "SortKey": {"S": str(ddb_id)}
-            }
+            Key={"PartitionKey": {"S": f"USER#{ddb_id}"}, "SortKey": {"S": str(ddb_id)}},
         )
-        if 'Item' not in user_r:
+        if "Item" not in user_r:
             return entitlements.UserEntitlements([], [])
-        result = user_r['Item']
+        result = user_r["Item"]
         log.debug(f"fetched user entitlements for DDB user {ddb_id}: {result}")
-        return entitlements.UserEntitlements.from_dict(json.loads(result['JSON']['S']))
+        return entitlements.UserEntitlements.from_dict(json.loads(result["JSON"]["S"]))
 
     async def _fetch_entities(self, etype: str):
         """
@@ -271,13 +262,14 @@ class BeyondClient(BeyondClientBase):
         :rtype: list[entitlements.EntityEntitlements]
         """
         log.debug(f"fetching entity entitlements for etype {etype}")
-        return [entitlements.EntityEntitlements.from_dict(e)
-                async for e in
-                self.query(
-                    TableName=DYNAMO_ENTITLEMENTS_TABLE,
-                    KeyConditionExpression="PartitionKey = :entityTypeKey",
-                    ExpressionAttributeValues={":entityTypeKey": {"S": f"ENTITY#{etype}"}}
-                )]
+        return [
+            entitlements.EntityEntitlements.from_dict(e)
+            async for e in self.query(
+                TableName=DYNAMO_ENTITLEMENTS_TABLE,
+                KeyConditionExpression="PartitionKey = :entityTypeKey",
+                ExpressionAttributeValues={":entityTypeKey": {"S": f"ENTITY#{etype}"}},
+            )
+        ]
 
     # ---- helpers ----
     async def query(self, **kwargs):
@@ -289,10 +281,10 @@ class BeyondClient(BeyondClientBase):
             else:
                 response = await self._dynamo.query(ExclusiveStartKey=lek, **kwargs)
 
-            lek = response.get('LastEvaluatedKey')
-            for obj in response['Items']:
+            lek = response.get("LastEvaluatedKey")
+            for obj in response["Items"]:
                 try:
-                    yield json.loads(obj['JSON']['S'])
+                    yield json.loads(obj["JSON"]["S"])
                 except json.JSONDecodeError:
                     log.warning(f"Could not decode entitlement object: {obj!r}")
 

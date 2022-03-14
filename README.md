@@ -55,9 +55,9 @@ Check out [README-docker.md](README-docker.md).
 **Services/OS**
 
 - Ubuntu 18.04+ or other UNIX system (Windows is compatible but untested)
-- Redis Server 4+ (https://redis.io/download)
-- MongoDB Community Server 3.6+ (https://www.mongodb.com/try/download/community)
-- Python 3.8+ (https://www.python.org/downloads/)
+- Redis Server 4+ (<https://redis.io/download>)
+- MongoDB Community Server 3.6+ (<https://www.mongodb.com/try/download/community>)
+- Python 3.8+ (<https://www.python.org/downloads/>)
 
 **Support Files**
 
@@ -101,7 +101,7 @@ To install the dependencies, run:
 | `NUM_CLUSTERS`                   | The number of clusters (ECS tasks) Avrae is running across. Defaults to 1.                                                                                                       | Cluster coordination          | N/A                  | Terraform                         | *prod only*     |
 | `NUM_SHARDS`                     | An explicit override for the number of shards to run across all shards. Defaults to dynamic value from Discord.                                                                  | Cluster coordination          | N/A                  | Terraform (nightly/stg)           | no              |
 | `RELOAD_INTERVAL`                | An interval to automatically reload gamedata at, in seconds. Defaults to 0. This should be set to 0.                                                                             | Loading gamedata              | N/A                  | N/A                               | no              |
-| `ECS_CONTAINER_METADATA_URI`     | https://docs.aws.amazon.com/AmazonECS/latest/userguide/task-metadata-endpoint-v3-fargate.html                                                                                    | Cluster coordination          | N/A                  | AWS Fargate                       | *prod only*     |
+| `ECS_CONTAINER_METADATA_URI`     | <https://docs.aws.amazon.com/AmazonECS/latest/userguide/task-metadata-endpoint-v3-fargate.html>                                                                                    | Cluster coordination          | N/A                  | AWS Fargate                       | *prod only*     |
 | `DISCORD_OWNER_USER_ID`          | The Discord user ID of the bot administrator.                                                                                                                                    | Admin command checks          | you                  | Terraform                         | **yes**         |
 | `MONSTER_TOKEN_ENDPOINT`         | The base URL that monster token paths defined in monster gamedata are relative to.                                                                                               | `!token`                      | N/A                  | Terraform                         | *prod only*     |
 | `DRACONIC_SIGNATURE_SECRET`      | The secret used to sign signatures in the Draconic API's `signature()` function. Defaults to `secret`.                                                                           | Aliasing                      | optional             | AWS Secrets Manager via Terraform | *prod only*     |
@@ -202,6 +202,7 @@ The `TESTING` env var, if present, enables/disables the following:
       ]
     }
   ```
+
 </details>
 
 ### Testing
@@ -224,8 +225,8 @@ Tests can either be run using Docker Compose, or manually.
 **Docker**
 
 ```bash
-$ docker-compose -f docker-compose.ci.yml -p avrae up -d --build
-$ docker logs -f avrae_tests_1
+docker-compose -f docker-compose.ci.yml -p avrae up -d --build
+docker logs -f avrae_tests_1
 ```
 
 Once tests complete, it is recommended to clean up the containers with `docker-compose down`.
@@ -243,7 +244,7 @@ In either case, you should set `NO_DICECLOUD=1`.
 Avrae uses Sphinx to generate documentation for the Aliasing API and Automation Engine. The source for this
 documentation can be found in `docs/`.
 
-By default, each push to `master` will trigger a new build of the docs at https://avrae.readthedocs.io/en/latest/.
+By default, each push to `master` will trigger a new build of the docs at <https://avrae.readthedocs.io/en/latest/>.
 
 You can also build the docs manually:
 
@@ -255,4 +256,21 @@ You can also build the docs manually:
 (venv) $ make preview
 # build
 (venv) $ make html
+```
+
+### Committing, Formatting, and Linting
+
+Avrae uses [Black](https://black.readthedocs.io/) to format and lint its Python code.
+Black is automatically run on every commit via pre-commit hook, and takes its configuration options from the `pyproject.toml` file.
+
+The pre-commit hook is installed by by running `pre-commit install` from the repo root.
+The hook's configuration is governed by the `.pre-commit-config.yaml` file.
+
+#### Dependencies
+
+In order to run `pre-commit` or `black`, they must be installed.
+These dependencies are contained within the `test/requirements.txt` file, and can be installed like so:
+
+```bash
+(venv) $ pip install -r test/requirements.txt
 ```

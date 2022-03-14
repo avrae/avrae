@@ -44,9 +44,9 @@ async def available(ctx, entities, entity_type, user_id=None):
 
 
 def can_access(entity, available_ids=None):
-    return entity.is_free \
-           or available_ids is not None and entity.entitlement_entity_id in available_ids \
-           or entity.homebrew
+    return (
+        entity.is_free or available_ids is not None and entity.entitlement_entity_id in available_ids or entity.homebrew
+    )
 
 
 async def handle_required_license(ctx, err):
@@ -58,9 +58,9 @@ async def handle_required_license(ctx, err):
     """
     result = err.entity
 
-    await ctx.bot.mdb.analytics_nsrd_lookup.update_one({"type": result.entity_type, "name": result.name},
-                                                       {"$inc": {"num_lookups": 1}},
-                                                       upsert=True)
+    await ctx.bot.mdb.analytics_nsrd_lookup.update_one(
+        {"type": result.entity_type, "name": result.name}, {"$inc": {"num_lookups": 1}}, upsert=True
+    )
 
     embed = EmbedWithAuthor(ctx)
     if not err.has_connected_ddb:
@@ -76,36 +76,43 @@ async def handle_required_license(ctx, err):
             # replacements:
             # $entity_type$, $entity_name$, $source$, $long_source$
             unavailable_title = await ctx.bot.ldclient.variation(
-                "entitlements-disabled-header", ddb_user.to_ld_dict(), f"{result.name} is not available")
+                "entitlements-disabled-header", ddb_user.to_ld_dict(), f"{result.name} is not available"
+            )
             unavailable_desc = await ctx.bot.ldclient.variation(
-                "entitlements-disabled-message", ddb_user.to_ld_dict(), f"{result.name} is currently unavailable")
+                "entitlements-disabled-message", ddb_user.to_ld_dict(), f"{result.name} is currently unavailable"
+            )
 
-            embed.title = unavailable_title \
-                .replace('$entity_type$', result.entity_type) \
-                .replace('$entity_name$', result.name) \
-                .replace('$source$', result.source) \
-                .replace('$long_source$', long_source_name(result.source))
-            embed.description = unavailable_desc \
-                .replace('$entity_type$', result.entity_type) \
-                .replace('$entity_name$', result.name) \
-                .replace('$source$', result.source) \
-                .replace('$long_source$', long_source_name(result.source))
+            embed.title = (
+                unavailable_title.replace("$entity_type$", result.entity_type)
+                .replace("$entity_name$", result.name)
+                .replace("$source$", result.source)
+                .replace("$long_source$", long_source_name(result.source))
+            )
+            embed.description = (
+                unavailable_desc.replace("$entity_type$", result.entity_type)
+                .replace("$entity_name$", result.name)
+                .replace("$source$", result.source)
+                .replace("$long_source$", long_source_name(result.source))
+            )
         else:
             embed.title = f"Connect your D&D Beyond account to view {result.name}!"
             embed.url = "https://www.dndbeyond.com/account"
-            embed.description = \
-                "It looks like you don't have your Discord account connected to your D&D Beyond account!\n" \
-                "Linking your account means that you'll be able to use everything you own on " \
-                "D&D Beyond in Avrae for free - you can link your accounts " \
+            embed.description = (
+                "It looks like you don't have your Discord account connected to your D&D Beyond account!\n"
+                "Linking your account means that you'll be able to use everything you own on "
+                "D&D Beyond in Avrae for free - you can link your accounts "
                 "[here](https://www.dndbeyond.com/account)."
-            embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
-                                  "link.")
+            )
+            embed.set_footer(
+                text="Already linked your account? It may take up to a minute for Avrae to recognize the " "link."
+            )
     else:
         embed.title = f"Unlock {result.name} on D&D Beyond to view it here!"
-        embed.description = \
-            f"To see and search this {result.entity_type}'s full details, unlock **{result.name}** by " \
-            f"purchasing {long_source_name(result.source)} on D&D Beyond.\n\n" \
+        embed.description = (
+            f"To see and search this {result.entity_type}'s full details, unlock **{result.name}** by "
+            f"purchasing {long_source_name(result.source)} on D&D Beyond.\n\n"
             f"[Go to Marketplace]({result.marketplace_url})"
+        )
         embed.url = result.marketplace_url
 
         embed.set_footer(text="Already unlocked? It may take up to a minute for Avrae to recognize the purchase.")
@@ -154,7 +161,7 @@ def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_o
         text_pieces = text_pieces or ["Noncore content."]
 
     # do the writing
-    text = ' | '.join(text_pieces) or embed.Empty
+    text = " | ".join(text_pieces) or embed.Empty
     if not allow_overwrite:
         if embed.footer.text:
             text = embed.footer.text
@@ -179,8 +186,18 @@ def source_slug(source):
 
 
 # ---- monster stuff ----
-async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                              return_metadata=False, extra_choices=None, selectkey=None):
+async def select_monster_full(
+    ctx,
+    name,
+    cutoff=5,
+    return_key=False,
+    pm=False,
+    message=None,
+    list_filter=None,
+    return_metadata=False,
+    extra_choices=None,
+    selectkey=None,
+):
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
@@ -193,8 +210,19 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     if selectkey is None:
         selectkey = get_homebrew_formatted_name
 
-    return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
-                                   selectkey=selectkey, return_metadata=return_metadata)
+    return await search_and_select(
+        ctx,
+        choices,
+        name,
+        lambda e: e.name,
+        cutoff,
+        return_key,
+        pm,
+        message,
+        list_filter,
+        selectkey=selectkey,
+        return_metadata=return_metadata,
+    )
 
 
 async def get_monster_choices(ctx, filter_by_license=True, homebrew=True):
@@ -206,7 +234,7 @@ async def get_monster_choices(ctx, filter_by_license=True, homebrew=True):
     :param homebrew: Whether to include homebrew entities.
     """
     if filter_by_license:
-        available_monsters = await available(ctx, compendium.monsters, 'monster')
+        available_monsters = await available(ctx, compendium.monsters, "monster")
     else:
         available_monsters = compendium.monsters
 
@@ -246,8 +274,8 @@ async def select_spell_full(ctx, name, *args, extra_choices=None, **kwargs):
     # #881
     if extra_choices:
         choices.extend(extra_choices)
-    if 'selectkey' not in kwargs:
-        kwargs['selectkey'] = get_homebrew_formatted_name
+    if "selectkey" not in kwargs:
+        kwargs["selectkey"] = get_homebrew_formatted_name
 
     return await search_and_select(ctx, choices, name, lambda e: e.name, *args, **kwargs)
 
@@ -261,7 +289,7 @@ async def get_spell_choices(ctx, filter_by_license=True, homebrew=True):
     :param homebrew: Whether to include homebrew entities.
     """
     if filter_by_license:
-        available_spells = await available(ctx, compendium.spells, 'spell')
+        available_spells = await available(ctx, compendium.spells, "spell")
     else:
         available_spells = compendium.spells
 
@@ -296,7 +324,7 @@ async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
     :param homebrew: Whether to include homebrew entities.
     """
     if filter_by_license:
-        available_items = await available(ctx, compendium.items, 'magic-item')
+        available_items = await available(ctx, compendium.items, "magic-item")
     else:
         available_items = compendium.items
 
@@ -330,8 +358,8 @@ async def get_race_choices(ctx, filter_by_license=True):
     :param filter_by_license: Whether to filter out entities the user cannot access.
     """
     if filter_by_license:
-        available_races = await available(ctx, compendium.races, 'race')
-        available_races.extend(await available(ctx, compendium.subraces, 'subrace'))
+        available_races = await available(ctx, compendium.races, "race")
+        available_races.extend(await available(ctx, compendium.subraces, "subrace"))
     else:
         available_races = compendium.races + compendium.subraces
 
@@ -346,8 +374,8 @@ async def get_rfeat_choices(ctx, filter_by_license=True):
     :param filter_by_license: Whether to filter out entities the user cannot access.
     """
     if filter_by_license:
-        available_rfeats = await available(ctx, compendium.rfeats, 'race')
-        available_rfeats.extend(await available(ctx, compendium.subrfeats, 'subrace'))
+        available_rfeats = await available(ctx, compendium.rfeats, "race")
+        available_rfeats.extend(await available(ctx, compendium.subrfeats, "subrace"))
     else:
         available_rfeats = compendium.rfeats + compendium.subrfeats
 

@@ -53,7 +53,7 @@ class SimpleRollResult:
 
         :rtype: str
         """
-        d20.utils.simplify_expr(self._roll.expr, ambig_inherit='left')
+        d20.utils.simplify_expr(self._roll.expr, ambig_inherit="left")
         return RerollableStringifier().stringify(self._roll.expr.roll)
 
 
@@ -99,6 +99,7 @@ def _vroll(dice, multiply=1, add=0, roller=None):
     dice_ast = roller.parse(dice)
 
     if multiply != 1 or add != 0:
+
         def mapper(node):
             if isinstance(node, d20.ast.Dice):
                 node.num = (node.num * multiply) + add
@@ -177,7 +178,7 @@ def randchoice(seq):
 
 # signatures
 SIG_SECRET = config.DRACONIC_SIGNATURE_SECRET
-SIG_STRUCT = struct.Struct('!QQQ12sB')  # u64, u64, u64, byte[12], u8 - https://docs.python.org/3/library/struct.html
+SIG_STRUCT = struct.Struct("!QQQ12sB")  # u64, u64, u64, byte[12], u8 - https://docs.python.org/3/library/struct.html
 SIG_HASH_ALG = hashlib.sha1  # SHA1 is technically compromised but the hash collision attack vector is not feasible here
 
 
@@ -185,7 +186,7 @@ def create_signature(
     ctx: disnake.ext.commands.Context,
     execution_scope: ExecutionScope,
     user_data: int,
-    workshop_collection_id: bson.ObjectId = None
+    workshop_collection_id: bson.ObjectId = None,
 ):
     if not 0 <= user_data <= 31:
         raise ValueError("User data must be an unsigned 5-bit integer ([0..31]).")
@@ -193,7 +194,7 @@ def create_signature(
     # if workshop collection is not available, stick 12 null bytes there :(
     workshop_collection_bytes = bytes(12) if workshop_collection_id is None else workshop_collection_id.binary
     # tail byte: [user data](5)[scope](3)
-    tail_byte = ((user_data << 3) | execution_scope.value) & 0xff
+    tail_byte = ((user_data << 3) | execution_scope.value) & 0xFF
 
     # encode
     packed = SIG_STRUCT.pack(ctx.message.id, ctx.channel.id, ctx.author.id, workshop_collection_bytes, tail_byte)
@@ -209,7 +210,7 @@ def create_signature(
 def verify_signature(ctx: disnake.ext.commands.Context, data: str):
     # decode
     try:
-        encoded_data, encoded_signature = data.split('.', 1)
+        encoded_data, encoded_signature = data.split(".", 1)
         decoded_data = base64.b64decode(encoded_data, validate=True)
         decoded_signature = base64.b64decode(encoded_signature, validate=True)
         message_id, channel_id, author_id, object_id, tail_byte = SIG_STRUCT.unpack(decoded_data)
@@ -225,7 +226,7 @@ def verify_signature(ctx: disnake.ext.commands.Context, data: str):
     # resolve
     timestamp = ((message_id >> 22) + disnake.utils.DISCORD_EPOCH) / 1000
     execution_scope = ExecutionScope(tail_byte & 0x07)
-    user_data = (tail_byte & 0xf8) >> 3
+    user_data = (tail_byte & 0xF8) >> 3
     collection_id = object_id.hex() if any(object_id) else None  # bytes is an iterable of int, check if it's all 0
 
     channel = ctx.bot.get_channel(channel_id)
@@ -242,7 +243,6 @@ def verify_signature(ctx: disnake.ext.commands.Context, data: str):
         "scope": execution_scope.name,
         "user_data": user_data,
         "workshop_collection_id": collection_id,
-
         "guild_id": guild and guild.id,  # may be None
         "guild": guild and AliasGuild(guild),  # may be None
         "channel": channel and AliasChannel(channel),  # may be None
@@ -260,5 +260,11 @@ def parse_coins(args: str) -> dict:
     :rtype: dict
     """
     coin_args = parse_coin_args(args)
-    return {"pp": coin_args.pp, "gp": coin_args.gp, "ep": coin_args.ep, "sp": coin_args.sp, "cp": coin_args.cp,
-            "total": coin_args.total}
+    return {
+        "pp": coin_args.pp,
+        "gp": coin_args.gp,
+        "ep": coin_args.ep,
+        "sp": coin_args.sp,
+        "cp": coin_args.cp,
+        "total": coin_args.total,
+    }

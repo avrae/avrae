@@ -11,18 +11,16 @@ from .callback import GameLogCallbackHandler, callback
 from .utils import feature_flag
 
 # ==== types ====
-SyncHPResult = namedtuple('SyncHPResult', 'changed old_hp old_max old_temp delta message')
-SyncDeathSavesResult = namedtuple('SyncDeathSavesResult', 'changed old_successes old_fails')
+SyncHPResult = namedtuple("SyncHPResult", "changed old_hp old_max old_temp delta message")
+SyncDeathSavesResult = namedtuple("SyncDeathSavesResult", "changed old_successes old_fails")
 
 
 # ==== handler ====
 class CharacterHandler(GameLogCallbackHandler):
-    @callback('character-sheet/character-update/fulfilled')
-    @feature_flag('cog.gamelog.character-update-fulfilled.enabled')
+    @callback("character-sheet/character-update/fulfilled")
+    @feature_flag("cog.gamelog.character-update-fulfilled.enabled")
     async def character_update_fulfilled(
-        self,
-        gctx: GameLogEventContext,
-        data: ddb.character.scds_types.SCDSMessageBrokerData
+        self, gctx: GameLogEventContext, data: ddb.character.scds_types.SCDSMessageBrokerData
     ):
         char = await gctx.get_character()
         if char is None:
@@ -46,10 +44,7 @@ class CharacterHandler(GameLogCallbackHandler):
 
     # ==== sync handlers ====
     @staticmethod
-    def sync_hp(
-        char: Character,
-        hp_info: scds_types.SimplifiedHitPointInfo
-    ) -> SyncHPResult:
+    def sync_hp(char: Character, hp_info: scds_types.SimplifiedHitPointInfo) -> SyncHPResult:
         old_hp = new_hp = char.hp
         old_max = new_max = char.max_hp
         old_temp = char.temp_hp
@@ -71,15 +66,15 @@ class CharacterHandler(GameLogCallbackHandler):
 
         return SyncHPResult(
             changed=any((old_hp != new_hp, old_max != new_max, old_temp != hp_info.temp)),
-            old_hp=old_hp, old_max=old_max, old_temp=old_temp,
-            delta=delta, message=message
+            old_hp=old_hp,
+            old_max=old_max,
+            old_temp=old_temp,
+            delta=delta,
+            message=message,
         )
 
     @staticmethod
-    def sync_death_saves(
-        char: Character,
-        death_save_info: scds_types.SimplifiedDeathSaveInfo
-    ) -> SyncDeathSavesResult:
+    def sync_death_saves(char: Character, death_save_info: scds_types.SimplifiedDeathSaveInfo) -> SyncDeathSavesResult:
         old_successes = char.death_saves.successes
         old_fails = char.death_saves.fails
 
@@ -91,7 +86,8 @@ class CharacterHandler(GameLogCallbackHandler):
 
         return SyncDeathSavesResult(
             changed=old_successes != char.death_saves.successes or old_fails != char.death_saves.fails,
-            old_successes=old_successes, old_fails=old_fails
+            old_successes=old_successes,
+            old_fails=old_fails,
         )
 
     # ==== display helpers ====
@@ -100,7 +96,7 @@ class CharacterHandler(GameLogCallbackHandler):
         gctx: GameLogEventContext,
         char: Character,
         hp_result: SyncHPResult,
-        death_save_result: SyncDeathSavesResult
+        death_save_result: SyncDeathSavesResult,
     ):
         embed = embeds.EmbedWithCharacter(char)
 

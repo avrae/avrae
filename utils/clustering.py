@@ -60,17 +60,17 @@ async def _coordinate_shards(bot):
 
     # poll discord - how many shards, max concurrency?
     try:
-        data = await bot.http.request(discord.http.Route('GET', '/gateway/bot'))
+        data = await bot.http.request(discord.http.Route("GET", "/gateway/bot"))
     except discord.HTTPException as e:
         raise discord.GatewayNotFound() from e
-    recommended_shards = data['shards']
-    session_start_limit = data['session_start_limit']
-    bot.launch_max_concurrency = session_start_limit['max_concurrency']
+    recommended_shards = data["shards"]
+    session_start_limit = data["session_start_limit"]
+    bot.launch_max_concurrency = session_start_limit["max_concurrency"]
 
     # alert if remaining starts < 25% total
-    if session_start_limit['remaining'] < (session_start_limit['total'] * 0.25):
+    if session_start_limit["remaining"] < (session_start_limit["total"] * 0.25):
         log.critical(f"Remaining IDENTIFY quota low! Remaining: {session_start_limit['remaining']}")
-        reset_at = datetime.datetime.now() + datetime.timedelta(milliseconds=session_start_limit['reset_after'])
+        reset_at = datetime.datetime.now() + datetime.timedelta(milliseconds=session_start_limit["reset_after"])
         log.info(f"Resets at: {reset_at}")
 
     # get the total number of shards running on this acct
@@ -103,7 +103,7 @@ async def _get_ecs_metadata():
         async with session.get(f"{config.ECS_METADATA_ENDPT}/task") as resp:
             data = await resp.json()
 
-    return data['TaskARN'], data['Family'], data['Cluster']
+    return data["TaskARN"], data["Family"], data["Cluster"]
 
 
 async def _claim_existing_cluster(bot, my_task_arn, cluster_coordination_key):
@@ -133,13 +133,14 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
     # oh no. my ARN isn't in a claimed list and the number of claimed clusters is how many should be running
     # which means someone died.
     import boto3
-    client = boto3.client('ecs')
-    response = client.list_tasks(cluster=my_ecs_cluster_name, family=my_family, desiredStatus='RUNNING')
-    tasks = set(response['taskArns'])
+
+    client = boto3.client("ecs")
+    response = client.list_tasks(cluster=my_ecs_cluster_name, family=my_family, desiredStatus="RUNNING")
+    tasks = set(response["taskArns"])
 
     # who's supposed to be alive?
     clusters = await bot.rdb.get_whole_dict(cluster_coordination_key)
-    del clusters['num_shards']  # you're not a cluster
+    del clusters["num_shards"]  # you're not a cluster
 
     for task_arn, shard_range in clusters.items():
         if task_arn not in tasks:
@@ -189,6 +190,7 @@ async def wait_bucket_available(shard_id, bucket_id, rdb, *, pre_lock_hook=None)
     to lock the appropriate bucket, with a kwarg ``first=True`` for the first attempt.
     """
     if pre_lock_hook is None:
+
         async def pre_lock_hook(first=False):
             if not first:
                 await asyncio.sleep(0.2)

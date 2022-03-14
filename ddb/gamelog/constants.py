@@ -1,2 +1,2 @@
-GAME_LOG_PUBSUB_CHANNEL = 'game-log'
-AVRAE_EVENT_SOURCE = 'avrae'
+GAME_LOG_PUBSUB_CHANNEL = "game-log"
+AVRAE_EVENT_SOURCE = "avrae"

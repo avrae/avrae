@@ -7,8 +7,13 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from utils.constants import STAT_NAMES
 
 DESERIALIZE_MAP = {
-    "stats": BaseStats, "levels": Levels, "attacks": AttackList, "skills": Skills, "saves": Saves,
-    "resistances": Resistances, "spellbook": Spellbook
+    "stats": BaseStats,
+    "levels": Levels,
+    "attacks": AttackList,
+    "skills": Skills,
+    "saves": Saves,
+    "resistances": Resistances,
+    "spellbook": Spellbook,
 }
 
 
@@ -21,11 +26,22 @@ class StatBlock:
     This replaces the Spellcaster model.
     """
 
-    def __init__(self, name: str, stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
-                 skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
-                 spellbook: Spellbook = None,
-                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
-                 creature_type: str = None):
+    def __init__(
+        self,
+        name: str,
+        stats: BaseStats = None,
+        levels: Levels = None,
+        attacks: AttackList = None,
+        skills: Skills = None,
+        saves: Saves = None,
+        resistances: Resistances = None,
+        spellbook: Spellbook = None,
+        ac: int = None,
+        max_hp: int = None,
+        hp: int = None,
+        temp_hp: int = 0,
+        creature_type: str = None,
+    ):
         if stats is None:
             stats = BaseStats.default()
         if levels is None:
@@ -137,13 +153,13 @@ class StatBlock:
         return self._name
 
     def get_color(self):
-        return random.randint(0, 0xffffff)
+        return random.randint(0, 0xFFFFFF)
 
     # ----- HP -----
     def hp_str(self):
         out = f"{self.hp}/{self.max_hp}"
         if self.temp_hp:
-            out += f' ({self.temp_hp} temp)'
+            out += f" ({self.temp_hp} temp)"
         return out
 
     def modify_hp(self, value, ignore_temp=False, overflow=True):
@@ -181,10 +197,16 @@ class StatBlock:
             spell_mod = self.spellbook.sab - self.stats.prof_bonus
         else:
             spell_mod = None
-        out.update({
-            "name": self.name, "armor": self.ac, "hp": self.max_hp, "level": self.levels.total_level,
-            "proficiencyBonus": self.stats.prof_bonus, "spell": spell_mod
-        })
+        out.update(
+            {
+                "name": self.name,
+                "armor": self.ac,
+                "hp": self.max_hp,
+                "level": self.levels.total_level,
+                "proficiencyBonus": self.stats.prof_bonus,
+                "spell": spell_mod,
+            }
+        )
         for cls, lvl in self.levels:
             out[f"{cls.replace(' ', '')}Level"] = lvl
         for stat in STAT_NAMES:
@@ -201,9 +223,17 @@ class StatBlock:
 
     def to_dict(self):
         return {
-            "name": self._name, "stats": self._stats.to_dict(), "levels": self._levels.to_dict(),
-            "attacks": self._attacks.to_dict(), "skills": self._skills.to_dict(),
-            "resistances": self._resistances.to_dict(), "saves": self._saves.to_dict(), "ac": self._ac,
-            "max_hp": self._max_hp, "hp": self._hp, "temp_hp": self._temp_hp, "spellbook": self._spellbook.to_dict(),
-            "creature_type": self._creature_type
+            "name": self._name,
+            "stats": self._stats.to_dict(),
+            "levels": self._levels.to_dict(),
+            "attacks": self._attacks.to_dict(),
+            "skills": self._skills.to_dict(),
+            "resistances": self._resistances.to_dict(),
+            "saves": self._saves.to_dict(),
+            "ac": self._ac,
+            "max_hp": self._max_hp,
+            "hp": self._hp,
+            "temp_hp": self._temp_hp,
+            "spellbook": self._spellbook.to_dict(),
+            "creature_type": self._creature_type,
         }

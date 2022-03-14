@@ -32,10 +32,10 @@ class EffectReference:
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d['combatant_id'], d['effect_id'])
+        return cls(d["combatant_id"], d["effect_id"])
 
     def to_dict(self):
-        return {'combatant_id': self.combatant_id, 'effect_id': self.effect_id}
+        return {"combatant_id": self.combatant_id, "effect_id": self.effect_id}
 
 
 class Effect:
@@ -52,7 +52,7 @@ class Effect:
         children: list = None,
         parent: EffectReference = None,
         tonend: bool = False,
-        desc: str = None
+        desc: str = None,
     ):
         if children is None:
             children = []
@@ -80,7 +80,7 @@ class Effect:
         concentration: bool = False,
         character=None,
         tick_on_end=False,
-        desc: str = None
+        desc: str = None,
     ):
         if isinstance(effect_args, str):
             if (combatant and combatant.type == CombatantType.PLAYER) or character:
@@ -109,14 +109,22 @@ class Effect:
         id = create_effect_id()
 
         return cls(
-            combat, combatant, id, name, duration, duration, effect_dict, concentration=concentration,
-            tonend=tick_on_end, desc=desc
+            combat,
+            combatant,
+            id,
+            name,
+            duration,
+            duration,
+            effect_dict,
+            concentration=concentration,
+            tonend=tick_on_end,
+            desc=desc,
         )
 
     @classmethod
     def from_dict(cls, raw, combat, combatant):
-        children = [EffectReference.from_dict(r) for r in raw.pop('children')]
-        parent = raw.pop('parent')
+        children = [EffectReference.from_dict(r) for r in raw.pop("children")]
+        parent = raw.pop("parent")
         if parent:
             parent = EffectReference.from_dict(parent)
         return cls(combat, combatant, children=children, parent=parent, **raw)
@@ -125,10 +133,16 @@ class Effect:
         children = [ref.to_dict() for ref in self.children]
         parent = self.parent.to_dict() if self.parent else None
         return {
-            'id': self.id, 'name': self.name,
-            'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect,
-            'concentration': self.concentration, 'children': children, 'parent': parent,
-            'tonend': self.ticks_on_end, 'desc': self.desc
+            "id": self.id,
+            "name": self.name,
+            "duration": self.duration,
+            "remaining": self.remaining,
+            "effect": self.effect,
+            "concentration": self.concentration,
+            "children": children,
+            "parent": parent,
+            "tonend": self.ticks_on_end,
+            "desc": self.desc,
         }
 
     def set_parent(self, parent):
@@ -162,20 +176,20 @@ class Effect:
             out.append("<C>")
         if description and self.desc:
             out.append(f"\n - {self.desc}")
-        return ' '.join(out).strip()
+        return " ".join(out).strip()
 
     def _duration_cmp(self):
         """
         Returns a tuple of (remaining_rounds, has_ticked_this_round, turn_index, end?).
         Find the minimal of all of these in the effect parent hierarchy to find the effect that will end first.
         """
-        remaining = self.remaining if self.remaining >= 0 else float('inf')
+        remaining = self.remaining if self.remaining >= 0 else float("inf")
         if self.combatant is None or self.combat is None:
             return remaining, 0, 0, 1 if self.ticks_on_end else 0
         index = self.combatant.index
-        has_ticked_this_round = (self.combat.index is not None
-                                 and ((self.combat.index == index and not self.ticks_on_end)
-                                      or self.combat.index > index))
+        has_ticked_this_round = self.combat.index is not None and (
+            (self.combat.index == index and not self.ticks_on_end) or self.combat.index > index
+        )
         return remaining, int(has_ticked_this_round), index, 1 if self.ticks_on_end else 0
 
     def _duration_str(self):
@@ -192,7 +206,7 @@ class Effect:
         # unpack and build string
         remaining, _, index, ticks_on_end = min_duration
         if math.isinf(remaining):
-            return ''
+            return ""
         elif 0 <= remaining <= 1:  # effect ends on next tick
             if self.combatant is None or self.combat is None or index == self.combatant.index:  # our turn
                 if ticks_on_end:
@@ -243,7 +257,7 @@ class Effect:
                 out.append(f"{VALID_ARGS.get(k)}: {', '.join(v)}")
             else:
                 out.append(f"{VALID_ARGS.get(k)}: {v}")
-        return '; '.join(out)
+        return "; ".join(out)
 
     # --- hooks ---
     def on_turn(self, num_turns=1):
@@ -265,7 +279,7 @@ class Effect:
             self.remaining -= num_turns
 
     # parenting
-    def get_parent_effect(self) -> Optional['Effect']:
+    def get_parent_effect(self) -> Optional["Effect"]:
         if self.parent:
             return self._effect_from_reference(self.parent)
         return None
@@ -304,10 +318,10 @@ class Effect:
 
 # ---- attack ieffect ----
 def parse_attack_arg(arg, name):
-    data = arg.split('|')
+    data = arg.split("|")
     if not len(data) == 3:
         raise InvalidArgument("`attack` arg must be formatted `HIT|DAMAGE|TEXT`")
-    return {'name': name, 'attackBonus': data[0] or None, 'damage': data[1] or None, 'details': data[2] or None}
+    return {"name": name, "attackBonus": data[0] or None, "damage": data[1] or None, "details": data[2] or None}
 
 
 def parse_attack_str(atk):
@@ -323,40 +337,51 @@ def parse_resist_arg(arg, _):
 
 
 def parse_resist_str(resist_list):
-    return ', '.join([str(Resistance.from_dict(r)) for r in resist_list])
+    return ", ".join([str(Resistance.from_dict(r)) for r in resist_list])
 
 
 # ---- sadv/sdis ieffect ----
 def parse_stat_choice(args, _):
     for i, arg in enumerate(args):
-        if arg == 'True':  # hack: sadv/sdis on their own should be equivalent to -sadv/sdis all
-            args[i] = arg = 'all'
+        if arg == "True":  # hack: sadv/sdis on their own should be equivalent to -sadv/sdis all
+            args[i] = arg = "all"
         else:
             args[i] = arg = arg[:3].lower()  # only check first three arg characters against STAT_ABBREVIATIONS
-        if arg not in STAT_ABBREVIATIONS and arg != 'all':
+        if arg not in STAT_ABBREVIATIONS and arg != "all":
             raise InvalidArgument(f"{arg} is not a valid stat")
     return args
 
 
 def parse_stat_str(stat_list):
-    if 'all' in stat_list:
-        return 'All'
-    return ', '.join(verbose_stat(s) for s in stat_list)
+    if "all" in stat_list:
+        return "All"
+    return ", ".join(verbose_stat(s) for s in stat_list)
 
 
 # ==== effect defs ====
-LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral', 'sadv', 'sdis')
+LIST_ARGS = ("resist", "immune", "vuln", "neutral", "sadv", "sdis")
 SPECIAL_ARGS = {  # 2-tuple of effect, str
-    'attack': (parse_attack_arg, parse_attack_str),
-    'resist': (parse_resist_arg, parse_resist_str),
-    'sadv': (parse_stat_choice, parse_stat_str),
-    'sdis': (parse_stat_choice, parse_stat_str)
+    "attack": (parse_attack_arg, parse_attack_str),
+    "resist": (parse_resist_arg, parse_resist_str),
+    "sadv": (parse_stat_choice, parse_stat_str),
+    "sdis": (parse_stat_choice, parse_stat_str),
 }
 VALID_ARGS = {
-    'd': 'Damage Bonus', 'ac': 'AC', 'attack': 'Attack',
-    'maxhp': 'Max HP', 'cb': 'Check Bonus',
-    'magical': 'Magical Damage', 'silvered': 'Silvered Damage',
-    'b': 'Attack Bonus', 'adv': 'Attack Advantage', 'dis': 'Attack Disadvantage',
-    'sb': 'Save Bonus', 'sadv': 'Save Advantage', 'sdis': 'Save Disadvantage',
-    'resist': 'Resistance', 'immune': 'Immunity', 'vuln': 'Vulnerability', 'neutral': 'Neutral',
+    "d": "Damage Bonus",
+    "ac": "AC",
+    "attack": "Attack",
+    "maxhp": "Max HP",
+    "cb": "Check Bonus",
+    "magical": "Magical Damage",
+    "silvered": "Silvered Damage",
+    "b": "Attack Bonus",
+    "adv": "Attack Advantage",
+    "dis": "Attack Disadvantage",
+    "sb": "Save Bonus",
+    "sadv": "Save Advantage",
+    "sdis": "Save Disadvantage",
+    "resist": "Resistance",
+    "immune": "Immunity",
+    "vuln": "Vulnerability",
+    "neutral": "Neutral",
 }

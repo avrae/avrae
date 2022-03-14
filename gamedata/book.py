@@ -2,7 +2,7 @@ from .shared import Sourced
 
 
 class Book(Sourced):
-    entity_type = 'source'
+    entity_type = "source"
     type_id = 496802664
 
     # bitwise source info flags
@@ -27,5 +27,12 @@ class Book(Sourced):
 
     @classmethod
     def from_data(cls, d):
-        return cls(d['name'], d['slug'], d.get('flags', 0),
-                   source=d['source'], entity_id=d['id'], url=d['url'], is_free=d['isFree'])
+        return cls(
+            d["name"],
+            d["slug"],
+            d.get("flags", 0),
+            source=d["source"],
+            entity_id=d["id"],
+            url=d["url"],
+            is_free=d["isFree"],
+        )

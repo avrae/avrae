@@ -4,10 +4,7 @@ from .dice import DiceHandler
 
 
 def _create_event_handlers(bot):
-    return (
-        DiceHandler(bot),
-        CharacterHandler(bot)
-    )
+    return (DiceHandler(bot), CharacterHandler(bot))
 
 
 def setup(bot):

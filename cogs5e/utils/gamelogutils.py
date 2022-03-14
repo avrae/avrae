@@ -33,7 +33,7 @@ async def action_from_roll_request(gctx, caster, roll_request):
     if attack is not None:
         return attack
 
-    available_spells = await available(gctx, compendium.spells, 'spell', gctx.discord_user_id)
+    available_spells = await available(gctx, compendium.spells, "spell", gctx.discord_user_id)
     # noinspection PyUnresolvedReferences
     # this is a Spell
     spell = next((s for s in available_spells if s.name == action_name), None)
@@ -52,7 +52,7 @@ def default_comment_getter(roll_request):
     :type roll_request: ddb.dice.RollRequest
     :rtype: typing.Callable[[ddb.dice.RollRequestRoll], typing.Optional[str]]
     """
-    if roll_request.action != 'custom':
+    if roll_request.action != "custom":
         if roll_request.context and roll_request.context.name:
             return lambda rr: f"{roll_request.context.name}: {roll_request.action}: {rr.roll_type.value.title()}"
         return lambda rr: f"{roll_request.action}: {rr.roll_type.value.title()}"
@@ -64,7 +64,7 @@ def embed_for_caster(caster):
     if isinstance(caster, Character):
         return EmbedWithCharacter(character=caster, name=False)
     embed = discord.Embed()
-    embed.colour = random.randint(0, 0xffffff)
+    embed.colour = random.randint(0, 0xFFFFFF)
     if isinstance(caster, Monster):
         embed.set_thumbnail(url=caster.get_image_url())
     return embed
@@ -91,9 +91,9 @@ def embed_for_action(gctx, action, caster, to_hit_roll=None, damage_roll=None):
     if isinstance(action, Attack):
         attack_name = a_or_an(action.name) if not action.proper else action.name
         verb = action.verb or "attacks with"
-        embed.title = f'{caster.get_title_name()} {verb} {attack_name}!'
+        embed.title = f"{caster.get_title_name()} {verb} {attack_name}!"
     else:  # spell
-        embed.title = f'{caster.get_title_name()} casts {action.name}!'
+        embed.title = f"{caster.get_title_name()} casts {action.name}!"
 
     # add to hit (and damage, either if it is provided or the action expects damage and it is not provided)
     meta_rolls = []
@@ -112,23 +112,23 @@ def embed_for_action(gctx, action, caster, to_hit_roll=None, damage_roll=None):
     if automation:
         for effect in automation_dfg(automation, enter_filter=action_enter_filter):
             # break if we see a damage and are waiting on a damage roll
-            if effect.type == 'damage' and waiting_for_damage:
+            if effect.type == "damage" and waiting_for_damage:
                 break
 
             # note: while certain fields here are AnnotatedStrings, it should never be annotated directly from the sheet
             # and GameLog events cannot trigger custom attacks, so this should be fine
 
             # save: add the DC
-            if effect.type == 'save':
+            if effect.type == "save":
                 meta_rolls.append(f"**DC**: {effect.dc}\n{effect.stat[:3].upper()} Save")
             # text: add the text as a field
-            elif effect.type == 'text':
+            elif effect.type == "text":
                 text = effect.text
                 if len(text) > 1020:
                     text = f"{text[:1020]}..."
                 embed.add_field(name="Effect", value=text, inline=False)
 
-    embed.insert_field_at(0, name="Meta", value='\n'.join(meta_rolls), inline=False)
+    embed.insert_field_at(0, name="Meta", value="\n".join(meta_rolls), inline=False)
 
     # set footer
     embed.set_footer(text=f"Rolled in {gctx.campaign.campaign_name}", icon_url=constants.DDB_LOGO_ICON)
@@ -150,7 +150,7 @@ def embed_for_basic_attack(gctx, action_name, caster, to_hit_roll=None, damage_r
     embed = embed_for_caster(caster)
 
     # set title
-    embed.title = f'{caster.get_title_name()} attacks with {action_name}!'
+    embed.title = f"{caster.get_title_name()} attacks with {action_name}!"
 
     # add to hit (and damage, either if it is provided or the action expects damage and it is not provided)
     meta_rolls = []
@@ -165,7 +165,7 @@ def embed_for_basic_attack(gctx, action_name, caster, to_hit_roll=None, damage_r
     else:
         meta_rolls.append("**Damage**: Waiting for roll...")
 
-    embed.add_field(name="Meta", value='\n'.join(meta_rolls), inline=False)
+    embed.add_field(name="Meta", value="\n".join(meta_rolls), inline=False)
 
     # set footer
     embed.set_footer(text=f"Rolled in {gctx.campaign.campaign_name}", icon_url=constants.DDB_LOGO_ICON)
@@ -197,14 +197,14 @@ def automation_has_damage(automation):
         return False
 
     for effect in automation_dfg(automation):
-        if effect.type == 'damage':
+        if effect.type == "damage":
             return True
     return False
 
 
 def action_enter_filter(effect):
     """Only enter an effect if it is top level or an attack."""
-    if effect.type == 'attack':
+    if effect.type == "attack":
         return effect.children
     return []
 
@@ -212,6 +212,7 @@ def action_enter_filter(effect):
 # ---- attack state helper ----
 class PendingAttack:
     """A cached attack that is waiting on a damage roll."""
+
     TTL = 60 * 2  # 2m
 
     def __init__(self, key: str, to_hit_event: GameLogEvent, message_id: int):
@@ -222,18 +223,16 @@ class PendingAttack:
     # ser/deser
     @classmethod
     def from_dict(cls, key, d):
-        to_hit_event = GameLogEvent.from_dict(d['to_hit_event'])
-        return cls(key, to_hit_event, d['message_id'])
+        to_hit_event = GameLogEvent.from_dict(d["to_hit_event"])
+        return cls(key, to_hit_event, d["message_id"])
 
     def to_dict(self):
-        return {
-            "to_hit_event": self.to_hit_event.to_dict(),
-            "message_id": self.message_id
-        }
+        return {"to_hit_event": self.to_hit_event.to_dict(), "message_id": self.message_id}
 
     @classmethod
-    async def create(cls, gctx: GameLogEventContext, roll_request: ddb.dice.RollRequest,
-                     to_hit_event: GameLogEvent, message_id: int):
+    async def create(
+        cls, gctx: GameLogEventContext, roll_request: ddb.dice.RollRequest, to_hit_event: GameLogEvent, message_id: int
+    ):
         """Creates and caches a new PendingAttack instance."""
         cache_key = await cls.cache_key_from_ctx(gctx, roll_request)
         inst = cls(cache_key, to_hit_event, message_id)

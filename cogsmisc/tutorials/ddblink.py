@@ -27,7 +27,7 @@ class DDBLink(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('ddb'):
+            if ctx.command is ctx.bot.get_command("ddb"):
                 user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
                 if user is None:
                     embed = TutorialEmbed(self, ctx)
@@ -55,7 +55,7 @@ class DDBLink(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('spell'):
+            if ctx.command is ctx.bot.get_command("spell"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -93,11 +93,16 @@ class DDBLink(Tutorial):
                 character = await ctx.get_character()
             except NoCharacter:
                 return
-            if ctx.command in (ctx.bot.get_command('import'),
-                               ctx.bot.get_command('beyond'),
-                               ctx.bot.get_command('update'),
-                               ctx.bot.get_command('char')) \
-                    and character is not None:
+            if (
+                ctx.command
+                in (
+                    ctx.bot.get_command("import"),
+                    ctx.bot.get_command("beyond"),
+                    ctx.bot.get_command("update"),
+                    ctx.bot.get_command("char"),
+                )
+                and character is not None
+            ):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -132,7 +137,7 @@ class DDBLink(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('check'):
+            if ctx.command is ctx.bot.get_command("check"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):

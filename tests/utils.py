@@ -31,12 +31,16 @@ ROLLED_DICE_PATTERN = r"\((~*(\**\d+\**( -> )?)+~*(, )?)+\)"
 D20_PATTERN = rf"\d?d20(\w+[lh<>]?\d+)? *{ROLLED_DICE_PATTERN}( *[+-] *\d+)?( *= *`\d+`)?"
 
 # dice: any combination of valid dice, rolled or unrolled
-DICE_PATTERN = rf"((\()? *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+" \
-               rf"(\))?( *[\/\*] *\d)?( *= *`\d+`)?"
+DICE_PATTERN = (
+    rf"((\()? *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+"
+    rf"(\))?( *[\/\*] *\d)?( *= *`\d+`)?"
+)
 
 # to hit: a to-hit section of an attack
-TO_HIT_PATTERN = rf"\*\*To Hit:?\*\*:? ((\d?d20\.\.\. = `(\d+|HIT|MISS)`)|({D20_PATTERN}{DICE_PATTERN} = `\d+`)|" \
-                 rf"(Automatic (hit|miss)!))"
+TO_HIT_PATTERN = (
+    rf"\*\*To Hit:?\*\*:? ((\d?d20\.\.\. = `(\d+|HIT|MISS)`)|({D20_PATTERN}{DICE_PATTERN} = `\d+`)|"
+    rf"(Automatic (hit|miss)!))"
+)
 
 # damage: a damage section of an attack
 DAMAGE_PATTERN = rf"((\*\*Damage( \(CRIT!\))?:?\*\*:? {DICE_PATTERN})|(\*\*Miss!\*\*))"
@@ -108,8 +112,8 @@ class ContextBotProxy:
     def __init__(self, bot):
         self.bot = bot
         # to make draconic tests work
-        self.prefix = '!'
-        self.invoked_with = 'foo'
+        self.prefix = "!"
+        self.invoked_with = "foo"
 
     @property
     def channel(self):

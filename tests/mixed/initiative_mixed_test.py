@@ -3,8 +3,15 @@ import pytest
 
 from gamedata.compendium import compendium
 from tests.conftest import end_init, start_init
-from tests.utils import ATTACK_PATTERN, DAGGER_PATTER, DAMAGE_PATTERN, SAVE_PATTERN, active_character, active_combat, \
-    requires_data
+from tests.utils import (
+    ATTACK_PATTERN,
+    DAGGER_PATTER,
+    DAMAGE_PATTERN,
+    SAVE_PATTERN,
+    active_character,
+    active_combat,
+    requires_data,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -58,10 +65,10 @@ class TestCharacterMixedInitiative:
         await dhttp.receive_message()
 
     async def test_attack_II(self, avrae, dhttp):
-        await attack_I(avrae, dhttp, name='KO4')
+        await attack_I(avrae, dhttp, name="KO4")
 
     async def test_cast_II(self, avrae, dhttp):
-        await cast_I(avrae, dhttp, names=['KO5'])
+        await cast_I(avrae, dhttp, names=["KO5"])
 
     async def test_attack_II_self(self, avrae, dhttp):
         char = await active_character(avrae)
@@ -106,7 +113,7 @@ async def cast_X(dhttp):
     await dhttp.receive_message(embed=embed)
 
 
-async def attack_I(avrae, dhttp, name='KO1', attack_command="!attack", delete_first=False):
+async def attack_I(avrae, dhttp, name="KO1", attack_command="!attack", delete_first=False):
     combat = await active_combat(avrae)
     combatant = combat.get_combatant(name, strict=True)
     hp_before = combatant.hp
@@ -128,14 +135,14 @@ async def attack_I(avrae, dhttp, name='KO1', attack_command="!attack", delete_fi
     assert combatant.hp < hp_before
 
 
-async def cast_I(avrae, dhttp, names=('KO2', 'KO3'), cast_command="!cast"):
+async def cast_I(avrae, dhttp, names=("KO2", "KO3"), cast_command="!cast"):
     hp_before = {}
     combat = await active_combat(avrae)
     for k in names:
         kobold = combat.get_combatant(k, strict=True)
         hp_before[k] = kobold.hp
 
-    t_string = ' '.join(f'-t {target}' for target in names)
+    t_string = " ".join(f"-t {target}" for target in names)
     avrae.message(f"{cast_command} fireball {t_string} -i")
 
     await dhttp.receive_delete()
@@ -144,7 +151,7 @@ async def cast_I(avrae, dhttp, names=('KO2', 'KO3'), cast_command="!cast"):
     embed.add_field(name="Meta", value=rf"{DAMAGE_PATTERN}\n\*\*DC\*\*: \d+", inline=False)
     for target in names:
         embed.add_field(name=target, value=SAVE_PATTERN, inline=False)
-    footer = '\n'.join(rf"{name}: <-?\d+/\d+ HP>" for name in names)
+    footer = "\n".join(rf"{name}: <-?\d+/\d+ HP>" for name in names)
     embed.set_footer(text=footer)
     await dhttp.receive_message(embed=embed)
     await dhttp.drain()
@@ -177,7 +184,7 @@ class TestSpellSlotConsumption:
             avrae.message("!sb add fireball")
             await dhttp.drain()
 
-        avrae.message('!cast fireball')
+        avrae.message("!cast fireball")
         await dhttp.drain()
 
         char = await active_character(avrae)

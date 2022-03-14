@@ -25,5 +25,5 @@ async def nlp_feature_flag_enabled(bot):
         "cog.initiative.upenn_nlp.enabled",
         # since NLP recording is keyed on the server ID, we just use a throwaway key
         {"key": "anonymous", "anonymous": True},
-        default=False
+        default=False,
     )

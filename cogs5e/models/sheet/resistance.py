@@ -32,19 +32,21 @@ class Resistances:
 
     @classmethod
     def from_args(cls, args, **kwargs):
-        return cls.from_dict({
-            'resist': args.get('resist', [], **kwargs),
-            'immune': args.get('immune', [], **kwargs),
-            'vuln': args.get('vuln', [], **kwargs),
-            'neutral': args.get('neutral', [], **kwargs)
-        })
+        return cls.from_dict(
+            {
+                "resist": args.get("resist", [], **kwargs),
+                "immune": args.get("immune", [], **kwargs),
+                "vuln": args.get("vuln", [], **kwargs),
+                "neutral": args.get("neutral", [], **kwargs),
+            }
+        )
 
     def to_dict(self):
         return {
             "resist": [t.to_dict() for t in self.resist],
             "immune": [t.to_dict() for t in self.immune],
             "vuln": [t.to_dict() for t in self.vuln],
-            "neutral": [t.to_dict() for t in self.neutral]
+            "neutral": [t.to_dict() for t in self.neutral],
         }
 
     def copy(self):
@@ -71,13 +73,13 @@ class Resistances:
             self[rt].extend(other[rt])
 
     def __getitem__(self, item):
-        if item == 'resist':
+        if item == "resist":
             return self.resist
-        elif item == 'vuln':
+        elif item == "vuln":
             return self.vuln
-        elif item == 'immune':
+        elif item == "immune":
             return self.immune
-        elif item == 'neutral':
+        elif item == "neutral":
             return self.neutral
         else:
             raise ValueError(f"{item} is not a resistance type.")
@@ -92,7 +94,7 @@ class Resistances:
             out.append(f"**Vulnerabilities**: {', '.join([str(r) for r in self.vuln])}")
         if self.neutral:
             out.append(f"**Ignored**: {', '.join([str(r) for r in self.neutral])}")
-        return '\n'.join(out)
+        return "\n".join(out)
 
 
 class Resistance:
@@ -140,7 +142,7 @@ class Resistance:
         unless = []
         only = []
         for t in tokens[:-1]:
-            if t.startswith('non') and len(t) > 3:
+            if t.startswith("non") and len(t) > 3:
                 unless.append(t[3:])
             else:
                 only.append(t)
@@ -149,9 +151,9 @@ class Resistance:
     def to_dict(self):
         out = {"dtype": self.dtype}
         if self.unless:
-            out['unless'] = list(self.unless)
+            out["unless"] = list(self.unless)
         if self.only:
-            out['only'] = list(self.only)
+            out["only"] = list(self.only)
         return out
 
     def copy(self):
@@ -190,7 +192,7 @@ class Resistance:
         out.extend(f"non{u}" for u in self.unless)
         out.extend(self.only)
         out.append(self.dtype)
-        return ' '.join(out)
+        return " ".join(out)
 
     def __repr__(self):
         return f"<Resistance {repr(self.dtype)} unless={repr(self.unless)} only={repr(self.only)}>"
@@ -204,7 +206,7 @@ class Resistance:
 
 def _resist_tokenize(res_str):
     """Extracts a list of tokens from a string (any consecutive chain of letters)."""
-    return [m.group(0) for m in re.finditer(r'\w+', res_str)]
+    return [m.group(0) for m in re.finditer(r"\w+", res_str)]
 
 
 def do_resistances(damage_expr, resistances, always=None, transforms=None):
@@ -227,7 +229,7 @@ def do_resistances(damage_expr, resistances, always=None, transforms=None):
         transforms = {}
 
     # simplify damage types
-    d20.utils.simplify_expr_annotations(damage_expr.roll, ambig_inherit='left')
+    d20.utils.simplify_expr_annotations(damage_expr.roll, ambig_inherit="left")
 
     # depth first visit expression nodes: if it has an annotation, add the appropriate binops and move to the next
     def do_visit(node):
@@ -250,18 +252,18 @@ def do_resistances(damage_expr, resistances, always=None, transforms=None):
                 return node
 
             if any(v.applies_to(ann) for v in resistances.vuln):
-                node = d20.BinOp(d20.Parenthetical(node), '*', d20.Literal(2))
+                node = d20.BinOp(d20.Parenthetical(node), "*", d20.Literal(2))
 
-            if original_annotation.startswith('[^') or original_annotation.endswith('^]'):
+            if original_annotation.startswith("[^") or original_annotation.endswith("^]"):
                 node.annotation = original_annotation
                 # break here - don't handle resist/immune
                 return node
 
             if any(r.applies_to(ann) for r in resistances.resist):
-                node = d20.BinOp(d20.Parenthetical(node), '/', d20.Literal(2))
+                node = d20.BinOp(d20.Parenthetical(node), "/", d20.Literal(2))
 
             if any(im.applies_to(ann) for im in resistances.immune):
-                node = d20.BinOp(d20.Parenthetical(node), '*', d20.Literal(0))
+                node = d20.BinOp(d20.Parenthetical(node), "*", d20.Literal(0))
 
             return node
 
@@ -274,13 +276,15 @@ def do_resistances(damage_expr, resistances, always=None, transforms=None):
     do_visit(damage_expr)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import traceback
 
-    resists = Resistances(resist=[Resistance('resist', ['magical']), Resistance('both')],
-                          immune=[Resistance('immune'), Resistance('this', only=['magical'])],
-                          vuln=[Resistance('vuln'), Resistance('both')],
-                          neutral=[Resistance('neutral')])
+    resists = Resistances(
+        resist=[Resistance("resist", ["magical"]), Resistance("both")],
+        immune=[Resistance("immune"), Resistance("this", only=["magical"])],
+        vuln=[Resistance("vuln"), Resistance("both")],
+        neutral=[Resistance("neutral")],
+    )
 
     while True:
         try:

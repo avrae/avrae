@@ -1,6 +1,7 @@
 import logging
 
 import ddtrace
+import ddtrace.sampler
 from ddtrace.profiling import Profiler
 
 from utils import config
@@ -10,6 +11,13 @@ def do_patches():
     ddtrace.config.env = config.ENVIRONMENT
     ddtrace.config.service = config.DD_SERVICE
     ddtrace.config.version = config.GIT_COMMIT_SHA
+    ddtrace.tracer.configure(
+        sampler=ddtrace.sampler.DatadogSampler(
+            rules=[
+                ddtrace.sampler.SamplingRule(sample_rate=0.01)
+            ]
+        )
+    )
     ddtrace.patch_all(
         logging=True
     )

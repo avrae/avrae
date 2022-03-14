@@ -249,12 +249,14 @@ bot = Avrae(
     chunk_guilds_at_startup=False,
 )
 
-log_formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(log_formatter)
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
+if config.DD_SERVICE is None:
+    # the datadog setup configures the logging its own way, so we don't set it up here so there's no duplicates
+    log_formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(log_formatter)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
 log = logging.getLogger("bot")
 
 

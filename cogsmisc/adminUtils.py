@@ -66,6 +66,7 @@ class AdminUtils(commands.Cog):
             "ping": self._ping,
             "restart_shard": self._restart_shard,
             "kill_cluster": self._kill_cluster,
+            "set_dd_sample_rate": self._set_dd_sample_rate,
         }
         while True:  # if we ever disconnect from pubsub, wait 5s and try reinitializing
             try:  # connect to the pubsub channel
@@ -231,6 +232,15 @@ class AdminUtils(commands.Cog):
             f"{e!r}\n```"
         )
 
+    @admin.command(hidden=True, name="dd-sample-rate")
+    @checks.is_owner()
+    async def admin_dd_sample_rate(self, ctx, sample_rate: float):
+        """Sets the DataDog sample rate."""
+        if not 0.0 <= sample_rate <= 1.0:
+            return await ctx.send("sample rate must be between 0 and 1")
+        resp = await self.pscall("set_dd_sample_rate", kwargs={"sample_rate": sample_rate})
+        await self._send_replies(ctx, resp)
+
     # ---- cluster management ----
     @admin.command(hidden=True, name="restart-shard")
     @checks.is_owner()
@@ -376,6 +386,16 @@ class AdminUtils(commands.Cog):
 
     async def _ping(self):
         return dict(self.bot.latencies)
+
+    async def _set_dd_sample_rate(self, sample_rate: float):
+        if config.DD_SERVICE is None:
+            return "no DD_SERVICE set, this process is not sampling"
+        import ddtrace.sampler
+
+        ddtrace.tracer.configure(
+            sampler=ddtrace.sampler.DatadogSampler(rules=[ddtrace.sampler.SamplingRule(sample_rate=sample_rate)])
+        )
+        return f"sample rate set to {sample_rate}"
 
     async def _restart_shard(self, shard_id: int):
         if (shard := self.bot.get_shard(shard_id)) is None:

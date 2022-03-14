@@ -13,6 +13,7 @@ class Tutorial(abc.ABC):
     Base class for all tutorials. Each tutorial should subclass this class, and use the @state decorator to
     register states.
     """
+
     name = None
     description = None
 
@@ -41,8 +42,9 @@ class Tutorial(abc.ABC):
                 value.tutorial = self
                 if value.first:
                     if self.first_state is not None:
-                        raise ValueError(f"Found 2 first states in tutorial {self.name!r}: "
-                                         f"({self.first_state.key}, {value.key})")
+                        raise ValueError(
+                            f"Found 2 first states in tutorial {self.name!r}: " f"({self.first_state.key}, {value.key})"
+                        )
                     self.first_state = value
         if self.first_state is None:
             self.first_state = list(self.states.values())[0]  # just get the first state
@@ -125,16 +127,15 @@ class TutorialStateMap:
 
     def to_dict(self):
         return {
-            "user_id": self.user_id, "tutorial_key": self.tutorial_key, "state_key": self.state_key, "data": self.data,
-            "persist_data": self.persist_data
+            "user_id": self.user_id,
+            "tutorial_key": self.tutorial_key,
+            "state_key": self.state_key,
+            "data": self.data,
+            "persist_data": self.persist_data,
         }
 
     async def commit(self, ctx):
-        await ctx.bot.mdb.tutorial_map.update_one(
-            {"user_id": self.user_id},
-            {"$set": self.to_dict()},
-            upsert=True
-        )
+        await ctx.bot.mdb.tutorial_map.update_one({"user_id": self.user_id}, {"$set": self.to_dict()}, upsert=True)
 
     @classmethod
     def new(cls, ctx, tutorial_key, tutorial):
@@ -177,7 +178,8 @@ class TutorialEmbed(EmbedWithAuthor):
         super().__init__(ctx, **kwargs)
         if footer:
             self.set_footer(
-                text=f"{tstate.tutorial.name} | {ctx.prefix}tutorial skip to skip | {ctx.prefix}tutorial end to end")
+                text=f"{tstate.tutorial.name} | {ctx.prefix}tutorial skip to skip | {ctx.prefix}tutorial end to end"
+            )
 
         self._description = self.Empty
 
@@ -202,4 +204,4 @@ def checklist(items):
             out.append(f":small_blue_diamond: ~~{item}~~")
         else:
             out.append(f":small_orange_diamond: {item}")
-    return '\n'.join(out)
+    return "\n".join(out)

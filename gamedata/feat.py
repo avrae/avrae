@@ -3,7 +3,7 @@ from .shared import Sourced
 
 
 class Feat(LimitedUseGrantorMixin, DescribableMixin, Sourced):
-    entity_type = 'feat'
+    entity_type = "feat"
     type_id = 1088085227
 
     def __init__(self, name, desc, prerequisite=None, hidden=False, **kwargs):
@@ -23,9 +23,15 @@ class Feat(LimitedUseGrantorMixin, DescribableMixin, Sourced):
     @classmethod
     def from_data(cls, d):
         return cls(
-            d['name'], d['description'],
-            d.get('prerequisite'), d.get('hidden', False),
-            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
+            d["name"],
+            d["description"],
+            d.get("prerequisite"),
+            d.get("hidden", False),
+            source=d["source"],
+            entity_id=d["id"],
+            page=d["page"],
+            url=d["url"],
+            is_free=d["isFree"],
         ).initialize_limited_use(d)
 
     @property
@@ -34,6 +40,6 @@ class Feat(LimitedUseGrantorMixin, DescribableMixin, Sourced):
 
 
 class FeatOption(Sourced):
-    entity_type = 'feat-option'
+    entity_type = "feat-option"
     type_id = 400581042
     # feat options give no limited use features right now, so this is only here for parity

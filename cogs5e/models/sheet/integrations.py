@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 
 class LiveIntegration(abc.ABC):
     """Interface defining how to sync character resources with upstream. Tied to the character object's lifecycle."""
+
     _inflight_tasks = dict()  # map: key -> task to cancel a task if a new one comes along
 
     def __init__(self, character):

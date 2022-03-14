@@ -30,9 +30,9 @@ def get_positivity(string):
     if isinstance(string, bool):  # oi!
         return string
     lowered = string.lower()
-    if lowered in ('yes', 'y', 'true', 't', '1', 'enable', 'on'):
+    if lowered in ("yes", "y", "true", "t", "1", "enable", "on"):
         return True
-    elif lowered in ('no', 'n', 'false', 'f', '0', 'disable', 'off'):
+    elif lowered in ("no", "n", "false", "f", "0", "disable", "off"):
         return False
     else:
         return None
@@ -94,9 +94,21 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
             return results[0], True
 
 
-async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, return_key=False, pm=False, message=None,
-                            list_filter=None, selectkey=None, search_func=search, return_metadata=False,
-                            strip_query_quotes=True):
+async def search_and_select(
+    ctx,
+    list_to_search: list,
+    query,
+    key,
+    cutoff=5,
+    return_key=False,
+    pm=False,
+    message=None,
+    list_filter=None,
+    selectkey=None,
+    search_func=search,
+    return_metadata=False,
+    strip_query_quotes=True,
+):
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
     Guaranteed to return a result - raises if there is no result.
@@ -154,10 +166,7 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
             result = await get_selection(ctx, options, pm=pm, message=message, force_select=True)
     if not return_metadata:
         return result
-    metadata = {
-        "num_options": 1 if strict else len(results),
-        "chosen_index": 0 if strict else results.index(result)
-    }
+    metadata = {"num_options": 1 if strict else len(results), "chosen_index": 0 if strict else results.index(result)}
     return result, metadata
 
 
@@ -192,14 +201,14 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
         names = [o[0] for o in _choices if o]
         embed = discord.Embed()
         embed.title = "Multiple Matches Found"
-        selectStr = "Which one were you looking for? (Type the number or \"c\" to cancel)\n"
+        selectStr = 'Which one were you looking for? (Type the number or "c" to cancel)\n'
         if len(pages) > 1:
             selectStr += "`n` to go to the next page, or `p` for previous\n"
             embed.set_footer(text=f"Page {page + 1}/{len(pages)}")
         for i, r in enumerate(names):
             selectStr += f"**[{i + 1 + page * 10}]** - {r}\n"
         embed.description = selectStr
-        embed.colour = random.randint(0, 0xffffff)
+        embed.colour = random.randint(0, 0xFFFFFF)
         if message:
             embed.add_field(name="Note", value=message, inline=False)
         if selectMsg:
@@ -210,24 +219,27 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
         if not pm:
             selectMsg = await ctx.channel.send(embed=embed)
         else:
-            embed.add_field(name="Instructions",
-                            value="Type your response in the channel you called the command. This message was PMed to "
-                                  "you to hide the monster name.", inline=False)
+            embed.add_field(
+                name="Instructions",
+                value="Type your response in the channel you called the command. This message was PMed to "
+                "you to hide the monster name.",
+                inline=False,
+            )
             selectMsg = await ctx.author.send(embed=embed)
 
         try:
-            m = await ctx.bot.wait_for('message', timeout=30, check=chk)
+            m = await ctx.bot.wait_for("message", timeout=30, check=chk)
         except asyncio.TimeoutError:
             m = None
 
         if m is None:
             break
-        if m.content.lower() == 'n':
+        if m.content.lower() == "n":
             if page + 1 < len(pages):
                 page += 1
             else:
                 await ctx.channel.send("You are already on the last page.")
-        elif m.content.lower() == 'p':
+        elif m.content.lower() == "p":
             if page - 1 >= 0:
                 page -= 1
             else:
@@ -260,7 +272,7 @@ async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity
     """
     msg = await ctx.channel.send(message)
     try:
-        reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
+        reply = await ctx.bot.wait_for("message", timeout=30, check=auth_and_chan(ctx))
     except asyncio.TimeoutError:
         return None
     reply_bool = response_check(reply.content) if reply is not None else None
@@ -275,19 +287,20 @@ async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity
 
 # ==== display helpers ====
 def a_or_an(string, upper=False):
-    if string.startswith('^') or string.endswith('^'):
-        return string.strip('^')
-    if re.match('[AEIOUaeiou].*', string):
-        return 'an {0}'.format(string) if not upper else f'An {string}'
-    return 'a {0}'.format(string) if not upper else f'A {string}'
+    if string.startswith("^") or string.endswith("^"):
+        return string.strip("^")
+    if re.match("[AEIOUaeiou].*", string):
+        return "an {0}".format(string) if not upper else f"An {string}"
+    return "a {0}".format(string) if not upper else f"A {string}"
 
 
 def camel_to_title(string):
-    return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
+    return re.sub(r"((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))", r" \1", string).title()
 
 
-def bubble_format(value: int, max_: int, fill_from_right=False, used_char=constants.EMPTY_BUBBLE,
-                  unused_char=constants.FILLED_BUBBLE):
+def bubble_format(
+    value: int, max_: int, fill_from_right=False, used_char=constants.EMPTY_BUBBLE, unused_char=constants.FILLED_BUBBLE
+):
     """Returns a bubble string to represent a counter's value."""
     if max_ > 100:
         return f"{value}/{max_}"
@@ -319,7 +332,7 @@ def trim_str(text, max_len):
     return f"{text[:max_len - 4]}..."
 
 
-def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ', ', ' '), chunker_i=0):
+def chunk_text(text, max_chunk_size=1024, chunk_on=("\n\n", "\n", ". ", ", ", " "), chunker_i=0):
     """
     Recursively chunks *text* into a list of str, with each element no longer than *max_chunk_size*.
     Prefers splitting on the elements of *chunk_on*, in order.
@@ -329,8 +342,7 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ', ', ' 
         return [text]
     if chunker_i >= len(chunk_on):  # we have no more preferred chunk_on characters
         # optimization: instead of merging a thousand characters, just use list slicing
-        return [text[:max_chunk_size],
-                *chunk_text(text[max_chunk_size:], max_chunk_size, chunk_on, chunker_i + 1)]
+        return [text[:max_chunk_size], *chunk_text(text[max_chunk_size:], max_chunk_size, chunk_on, chunker_i + 1)]
 
     # split on the current character
     chunks = []
@@ -349,7 +361,7 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ', ', ' 
         chunks.pop()
 
     # remove extra split_char from last chunk
-    chunks[-1] = chunks[-1][:-len(split_char)]
+    chunks[-1] = chunks[-1][: -len(split_char)]
     return chunks
 
 
@@ -389,7 +401,7 @@ def maybe_mod(val: str, base=0):
     base = base or 0
 
     try:
-        if val.startswith(('+', '-')):
+        if val.startswith(("+", "-")):
             base += int(val)
         else:
             base = int(val)
@@ -411,7 +423,7 @@ def combine_maybe_mods(vals: list, base=0):
 
     for val in vals:
         try:
-            if val.startswith(('+', '-')):
+            if val.startswith(("+", "-")):
                 sums.append(int(val))
             else:
                 sets.append(int(val))
@@ -433,9 +445,15 @@ async def user_from_id(ctx, the_id):
     async def update_known_user(the_user):
         await ctx.bot.mdb.users.update_one(
             {"id": str(the_user.id)},
-            {"$set": {'username': the_user.name, 'discriminator': the_user.discriminator,
-                      'avatar': the_user.display_avatar.url, 'bot': the_user.bot}},
-            upsert=True
+            {
+                "$set": {
+                    "username": the_user.name,
+                    "discriminator": the_user.discriminator,
+                    "avatar": the_user.display_avatar.url,
+                    "bot": the_user.bot,
+                }
+            },
+            upsert=True,
         )
 
     if ctx.guild:  # try and get member
@@ -503,4 +521,4 @@ def reconcile_adv(adv=False, dis=False, ea=False):
 def maybe_http_url(url: str):
     """Returns a url if one found, otherwise blank string."""
     # Mainly used for embed.set_thumbnail(url=url)
-    return url if 'http' in url else ''
+    return url if "http" in url else ""

@@ -38,7 +38,7 @@ class RecordedEvent(BaseModel):
 
 
 class RecordedMessage(RecordedEvent):
-    event_type = 'message'
+    event_type = "message"
     message_id: int
     author_id: str
     author_name: str
@@ -55,12 +55,12 @@ class RecordedMessage(RecordedEvent):
             author_name=message.author.display_name,
             created_at=message.created_at.timestamp(),
             content=message.content,
-            embeds=[embed.to_dict() for embed in message.embeds]
+            embeds=[embed.to_dict() for embed in message.embeds],
         )
 
 
 class RecordedCommandInvocation(RecordedMessage):
-    event_type = 'command'
+    event_type = "command"
     prefix: str
     command_name: str
     called_by_alias: bool
@@ -91,17 +91,16 @@ class RecordedCommandInvocation(RecordedMessage):
             created_at=message.created_at.timestamp(),
             content=message.content,
             embeds=[embed.to_dict() for embed in message.embeds],
-
             prefix=ctx.prefix,
             command_name=ctx.command.qualified_name,
             called_by_alias=ctx.nlp_is_alias,
             caster=caster,
-            targets=targets
+            targets=targets,
         )
 
 
 class RecordedCombatState(RecordedEvent):
-    event_type = 'combat_state_update'
+    event_type = "combat_state_update"
     data: Any
     human_readable: str
 
@@ -110,7 +109,7 @@ class RecordedCombatState(RecordedEvent):
         return cls(
             combat_id=combat.nlp_record_session_id,
             data=combat.to_dict(),
-            human_readable=combat.get_summary(private=True)
+            human_readable=combat.get_summary(private=True),
         )
 
 
@@ -118,8 +117,7 @@ class RecordedCombatState(RecordedEvent):
 class NLPRecorder:
     # cache: channel id -> (when channels are recorded until, combat id); (0, None) if not recorded
     _recorded_channel_cache: MutableMapping[int, Tuple[int, Optional[str]]] = cachetools.TTLCache(
-        maxsize=100000,
-        ttl=120
+        maxsize=100000, ttl=120
     )
 
     def __init__(self, bot):
@@ -132,8 +130,7 @@ class NLPRecorder:
             return
         boto_session = get_session()
         self._kinesis_firehose = await boto_session.create_client(
-            'firehose',
-            region_name=config.DYNAMO_REGION
+            "firehose", region_name=config.DYNAMO_REGION
         ).__aenter__()
 
     def close(self):
@@ -169,19 +166,21 @@ class NLPRecorder:
             guild_id=combat.ctx.guild.id,
             channel_id=int(combat.channel),
             combat_id=combat.nlp_record_session_id,
-            insert_if_not_exist=True
+            insert_if_not_exist=True,
         )
         # record cached messages less than X minutes old for pre-combat context
         await self._record_events(
             [
                 RecordedMessage.from_message(combat_id=combat.nlp_record_session_id, message=message)
                 for message in self.bot.cached_messages
-                if (message.channel.id == int(combat.channel)
-                    and message.created_at > disnake.utils.utcnow() - datetime.timedelta(minutes=15))
+                if (
+                    message.channel.id == int(combat.channel)
+                    and message.created_at > disnake.utils.utcnow() - datetime.timedelta(minutes=15)
+                )
             ][-25:]
         )
         # record combat start meta event
-        await self._record_event(RecordedEvent(combat_id=combat.nlp_record_session_id, event_type='combat_start'))
+        await self._record_event(RecordedEvent(combat_id=combat.nlp_record_session_id, event_type="combat_start"))
 
     async def on_guild_message(self, message: disnake.Message):
         """
@@ -206,9 +205,7 @@ class NLPRecorder:
         """
         # bump the recording time to equal the combat's expiration time
         await self._update_channel_recording_until(
-            guild_id=combat.ctx.guild.id,
-            channel_id=int(combat.channel),
-            combat_id=combat.nlp_record_session_id
+            guild_id=combat.ctx.guild.id, channel_id=int(combat.channel), combat_id=combat.nlp_record_session_id
         )
         # record a snapshot of the combat's human-readable and machine-readable state
         await self._record_event(RecordedCombatState.from_combat(combat))
@@ -222,10 +219,10 @@ class NLPRecorder:
             guild_id=combat.ctx.guild.id,
             channel_id=int(combat.channel),
             combat_id=combat.nlp_record_session_id,
-            record_duration=120
+            record_duration=120,
         )
         # record a combat end meta marker
-        await self._record_event(RecordedEvent(combat_id=combat.nlp_record_session_id, event_type='combat_end'))
+        await self._record_event(RecordedEvent(combat_id=combat.nlp_record_session_id, event_type="combat_end"))
 
     # ==== management ====
     async def get_recording_channels(self, guild_id: int):
@@ -271,9 +268,7 @@ class NLPRecorder:
             # log.debug(f"found recording info for {channel_id} in memory cache")
         except KeyError:
             # get from redis
-            combat_id = await self.bot.rdb.get(
-                f"cog.initiative.upenn_nlp.{guild_id}.{channel_id}.recorded_combat_id"
-            )
+            combat_id = await self.bot.rdb.get(f"cog.initiative.upenn_nlp.{guild_id}.{channel_id}.recorded_combat_id")
             # and write to memory cache
             if combat_id is None:
                 channel_recording_until = 0
@@ -300,7 +295,7 @@ class NLPRecorder:
         channel_id: int,
         combat_id: str,
         record_duration: int = ONE_MONTH_SECS,
-        insert_if_not_exist: bool = False
+        insert_if_not_exist: bool = False,
     ) -> int:
         """
         Refreshes or sets the time a channel is recording to *record_duration* from when this method is called.
@@ -309,9 +304,9 @@ class NLPRecorder:
         now = time.time()
         recording_until = int(now) + record_duration
         # mark the channel as recorded in cache so we start listening for messages
-        if (insert_if_not_exist
-                or ((cache_entry := self._recorded_channel_cache.get(channel_id)) is not None
-                    and cache_entry[0] >= now)):
+        if insert_if_not_exist or (
+            (cache_entry := self._recorded_channel_cache.get(channel_id)) is not None and cache_entry[0] >= now
+        ):
             self._recorded_channel_cache[channel_id] = (recording_until, combat_id)
             log.debug(
                 f"{channel_id}: recording_until updated in cache to {recording_until!r} "
@@ -322,7 +317,7 @@ class NLPRecorder:
             f"cog.initiative.upenn_nlp.{guild_id}.{channel_id}.recorded_combat_id",
             combat_id,
             ex=record_duration,
-            xx=not insert_if_not_exist
+            xx=not insert_if_not_exist,
         )
         return recording_until
 
@@ -338,10 +333,7 @@ class NLPRecorder:
         log.debug(f"saving 1 event to {event.combat_id=} of type {event.event_type!r}")
         try:
             response = await self._kinesis_firehose.put_record(
-                DeliveryStreamName=config.NLP_KINESIS_DELIVERY_STREAM,
-                Record={
-                    'Data': event.json().encode()
-                }
+                DeliveryStreamName=config.NLP_KINESIS_DELIVERY_STREAM, Record={"Data": event.json().encode()}
             )
         except botocore.exceptions.ClientError:
             log.exception(f"Failed to record NLP event to {event.combat_id=} of type {event.event_type!r}")
@@ -363,10 +355,7 @@ class NLPRecorder:
         try:
             response = await self._kinesis_firehose.put_record_batch(
                 DeliveryStreamName=config.NLP_KINESIS_DELIVERY_STREAM,
-                Records=[
-                    {'Data': event.json().encode()}
-                    for event in events
-                ]
+                Records=[{"Data": event.json().encode()} for event in events],
             )
         except botocore.exceptions.ClientError:
             log.exception(f"Failed to record {len(events)} NLP events")

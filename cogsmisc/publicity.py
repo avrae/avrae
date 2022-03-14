@@ -33,8 +33,9 @@ class Publicity(commands.Cog):
         payload = {"server_count": await Stats.get_guild_count(self.bot)}
         async with aiohttp.ClientSession() as aioclient:
             try:
-                await aioclient.post(f"{DBL_API}{self.bot.user.id}/stats", data=payload,
-                                     headers={"Authorization": config.DBL_TOKEN})
+                await aioclient.post(
+                    f"{DBL_API}{self.bot.user.id}/stats", data=payload, headers={"Authorization": config.DBL_TOKEN}
+                )
             except Exception as e:
                 log.error(f"Error posting server count: {e}")
 
@@ -49,13 +50,19 @@ class Publicity(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, server):
-        log.info('Joined server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
-                                                                    sum(1 for m in server.members if m.bot)))
+        log.info(
+            "Joined server {}: {}, {} members ({} bot)".format(
+                server, server.id, len(server.members), sum(1 for m in server.members if m.bot)
+            )
+        )
 
     @commands.Cog.listener()
     async def on_guild_remove(self, server):
-        log.info('Left server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
-                                                                  sum(1 for m in server.members if m.bot)))
+        log.info(
+            "Left server {}: {}, {} members ({} bot)".format(
+                server, server.id, len(server.members), sum(1 for m in server.members if m.bot)
+            )
+        )
 
 
 def setup(bot):

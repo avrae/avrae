@@ -12,7 +12,7 @@ class MenuBase(disnake.ui.View):
         self.message = None  # type: Optional[disnake.Message]
 
     @classmethod
-    def from_menu(cls, other: 'MenuBase'):
+    def from_menu(cls, other: "MenuBase"):
         inst = cls(owner=other.owner)
         inst.message = other.message
         for attr in cls.__menu_copy_attrs__:
@@ -63,7 +63,7 @@ class MenuBase(disnake.ui.View):
         self.message = message
         return message
 
-    async def defer_to(self, view_type: Type['MenuBase'], interaction: disnake.Interaction, stop=True):
+    async def defer_to(self, view_type: Type["MenuBase"], interaction: disnake.Interaction, stop=True):
         """Defers control to another menu item."""
         view = view_type.from_menu(self)
         if stop:

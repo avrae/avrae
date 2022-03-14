@@ -2,8 +2,7 @@ import discord
 import pytest
 
 from gamedata.compendium import compendium
-from tests.utils import (ATTACK_PATTERN, D20_PATTERN, DAMAGE_PATTERN, TO_HIT_PATTERN, requires_data,
-    server_settings)
+from tests.utils import ATTACK_PATTERN, D20_PATTERN, DAMAGE_PATTERN, TO_HIT_PATTERN, requires_data, server_settings
 from utils.settings.guild import InlineRollingType
 
 pytestmark = pytest.mark.asyncio
@@ -45,7 +44,8 @@ async def test_ma(avrae, dhttp):
     await dhttp.receive_delete()
     await dhttp.receive_message(
         f"An unknown creature attacks with a Dagger!\n"
-        f"{TO_HIT_PATTERN}\n({DAMAGE_PATTERN}\n)?\*Melee Weapon Attack:.+", dm=True
+        f"{TO_HIT_PATTERN}\n({DAMAGE_PATTERN}\n)?\*Melee Weapon Attack:.+",
+        dm=True,
     )
     atk_embed = discord.Embed(title="An unknown creature attacks with a Dagger!")
     atk_embed.add_field(name="Meta", inline=False, value=ATTACK_PATTERN)
@@ -59,19 +59,13 @@ async def test_mc(avrae, dhttp):
     avrae.message("!mc kobold acro")
     await dhttp.receive_delete()
     await dhttp.receive_message(
-        embed=discord.Embed(
-            title="A Kobold makes an Acrobatics check!",
-            description=D20_PATTERN
-        )
+        embed=discord.Embed(title="A Kobold makes an Acrobatics check!", description=D20_PATTERN)
     )
 
     avrae.message("!mc kobold acro -h")
     await dhttp.receive_delete()
     await dhttp.receive_message(
-        embed=discord.Embed(
-            title="An unknown creature makes an Acrobatics check!",
-            description=D20_PATTERN
-        )
+        embed=discord.Embed(title="An unknown creature makes an Acrobatics check!", description=D20_PATTERN)
     )
 
 
@@ -81,20 +75,12 @@ async def test_ms(avrae, dhttp):
 
     avrae.message("!ms kobold dex")
     await dhttp.receive_delete()
-    await dhttp.receive_message(
-        embed=discord.Embed(
-            title="A Kobold makes a Dexterity Save!",
-            description=D20_PATTERN
-        )
-    )
+    await dhttp.receive_message(embed=discord.Embed(title="A Kobold makes a Dexterity Save!", description=D20_PATTERN))
 
     avrae.message("!ms kobold dex -h")
     await dhttp.receive_delete()
     await dhttp.receive_message(
-        embed=discord.Embed(
-            title="An unknown creature makes a Dexterity Save!",
-            description=D20_PATTERN
-        )
+        embed=discord.Embed(title="An unknown creature makes a Dexterity Save!", description=D20_PATTERN)
     )
 
 
@@ -125,53 +111,53 @@ async def test_multiroll(avrae, dhttp):
 async def test_inline_rolling_disabled(avrae, dhttp, mock_ldclient):
     # set correct server settings and feature flags
     async with server_settings(avrae, inline_enabled=InlineRollingType.DISABLED):
-        with mock_ldclient.flags({'cog.dice.inline_rolling.enabled': True}):
+        with mock_ldclient.flags({"cog.dice.inline_rolling.enabled": True}):
             avrae.message("[[1d20]]")
             assert dhttp.queue_empty()
 
 
 async def test_inline_rolling_reaction(avrae, dhttp, mock_ldclient):
     async with server_settings(avrae, inline_enabled=InlineRollingType.REACTION):
-        with mock_ldclient.flags({'cog.dice.inline_rolling.enabled': True}):
+        with mock_ldclient.flags({"cog.dice.inline_rolling.enabled": True}):
             avrae.message("[[1d20]]")
-            await dhttp.receive_reaction('\N{game die}')
+            await dhttp.receive_reaction("\N{game die}")
             # first time interaction
             await dhttp.receive_message(dm=True)
 
-            avrae.add_reaction('\N{game die}')
-            await dhttp.receive_message(rf'\({D20_PATTERN}\)')
+            avrae.add_reaction("\N{game die}")
+            await dhttp.receive_message(rf"\({D20_PATTERN}\)")
 
 
 async def test_inline_rolling_enabled(avrae, dhttp, mock_ldclient):
     async with server_settings(avrae, inline_enabled=InlineRollingType.ENABLED):
-        with mock_ldclient.flags({'cog.dice.inline_rolling.enabled': True}):
+        with mock_ldclient.flags({"cog.dice.inline_rolling.enabled": True}):
             avrae.message("[[1d20]]")
             # first time interaction
             await dhttp.receive_message(dm=True)
-            await dhttp.receive_message(rf'\({D20_PATTERN}\)')
+            await dhttp.receive_message(rf"\({D20_PATTERN}\)")
 
             avrae.message("one two [[1d20]] three four five")
-            await dhttp.receive_message(rf'one two \({D20_PATTERN}\) three four\.\.\.')
+            await dhttp.receive_message(rf"one two \({D20_PATTERN}\) three four\.\.\.")
 
 
 async def test_inline_rolling_character(avrae, dhttp, mock_ldclient, character):
     async with server_settings(avrae, inline_enabled=InlineRollingType.ENABLED):
-        with mock_ldclient.flags({'cog.dice.inline_rolling.enabled': True}):
+        with mock_ldclient.flags({"cog.dice.inline_rolling.enabled": True}):
             avrae.message("[[1d20]]")
             await dhttp.drain()  # clear any 1st time interactions
 
             # checks/saves
             avrae.message("[[c:arcana]]")
-            await dhttp.receive_message(rf'\(Arcana Check: {D20_PATTERN}\)')
+            await dhttp.receive_message(rf"\(Arcana Check: {D20_PATTERN}\)")
 
             avrae.message("[[s:dex]]")
-            await dhttp.receive_message(rf'\(Dexterity Save: {D20_PATTERN}\)')
+            await dhttp.receive_message(rf"\(Dexterity Save: {D20_PATTERN}\)")
 
             # invalid
             avrae.message("[[c:foobar]]")
-            await dhttp.receive_message('(`foobar` is not a valid skill.)', regex=False)
+            await dhttp.receive_message("(`foobar` is not a valid skill.)", regex=False)
             avrae.message("[[s:foobar]]")
-            await dhttp.receive_message('(`foobar` is not a valid save.)', regex=False)
+            await dhttp.receive_message("(`foobar` is not a valid save.)", regex=False)
 
 
 async def test_roll(avrae, dhttp):

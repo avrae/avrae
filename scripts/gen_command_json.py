@@ -36,24 +36,24 @@ import sys
 from discord.ext.commands import Group
 
 # path hack to import from parent folder
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
+sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-o', help="The file to output to.")
+parser.add_argument("-o", help="The file to output to.")
 
 
 def get_command_signature(command):
     parent = command.full_parent_name
     if len(command.aliases) > 0:
-        aliases = '|'.join(command.aliases)
-        fmt = '[%s|%s]' % (command.name, aliases)
+        aliases = "|".join(command.aliases)
+        fmt = "[%s|%s]" % (command.name, aliases)
         if parent:
-            fmt = parent + ' ' + fmt
+            fmt = parent + " " + fmt
         alias = fmt
     else:
-        alias = command.name if not parent else parent + ' ' + command.name
+        alias = command.name if not parent else parent + " " + command.name
 
-    return '!%s %s' % (alias, command.signature)
+    return "!%s %s" % (alias, command.signature)
 
 
 def parse_command_args(command):
@@ -64,26 +64,20 @@ def parse_command_args(command):
         return args
 
     for name, param in params.items():
-        arg_meta = {
-            "name": name,
-            "required": True,
-            "default": None,
-            "multiple": False,
-            "desc": ""
-        }
+        arg_meta = {"name": name, "required": True, "default": None, "multiple": False, "desc": ""}
 
         if param.default is not param.empty:
-            arg_meta['required'] = False
+            arg_meta["required"] = False
             # We don't want None or '' to trigger the [name=value] case and instead it should
             # do [name] since [name=None] or [name=] are not exactly useful for the user.
             should_print = param.default if isinstance(param.default, str) else param.default is not None
             if should_print:
-                arg_meta['default'] = param.default
+                arg_meta["default"] = param.default
         elif param.kind == param.VAR_POSITIONAL:
-            arg_meta['required'] = False
-            arg_meta['multiple'] = True
+            arg_meta["required"] = False
+            arg_meta["multiple"] = True
         elif command._is_typing_optional(param.annotation):
-            arg_meta['required'] = False
+            arg_meta["required"] = False
         args.append(arg_meta)
 
     return args
@@ -107,7 +101,7 @@ def parse_command(command):
         "args": arguments,
         "signature": get_command_signature(command),
         "subcommands": subcommands,
-        "example": ""
+        "example": "",
     }
     return command_meta
 
@@ -120,26 +114,19 @@ def parse_module(module, commands):
         parsed_commands.append(parse_command(command))
 
     if commands[0].cog is not None:
-        module_meta = {
-            "name": module,
-            "desc": commands[0].cog.description,
-            "commands": parsed_commands
-        }
+        module_meta = {"name": module, "desc": commands[0].cog.description, "commands": parsed_commands}
     else:
-        module_meta = {
-            "name": "Uncategorized",
-            "desc": "Commands not in a module.",
-            "commands": parsed_commands
-        }
+        module_meta = {"name": "Uncategorized", "desc": "Commands not in a module.", "commands": parsed_commands}
     return module_meta
 
 
-def main(out='commands.json'):
+def main(out="commands.json"):
     from dbot import bot
+
     modules = []
 
     # helpers
-    no_category = '\u200bUncategorized'
+    no_category = "\u200bUncategorized"
 
     def get_category(command):
         cog = command.cog
@@ -154,12 +141,10 @@ def main(out='commands.json'):
     for module, commands in to_iterate:
         modules.append(parse_module(module, commands))
 
-    with open(out, 'w') as f:
-        json.dump({
-            "modules": modules
-        }, f)
+    with open(out, "w") as f:
+        json.dump({"modules": modules}, f)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args, unknown = parser.parse_known_args()
-    main(args.o or 'commands.json')
+    main(args.o or "commands.json")

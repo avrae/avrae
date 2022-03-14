@@ -12,7 +12,7 @@ class EmbedWithColor(discord.Embed):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.colour = random.randint(0, 0xffffff)
+        self.colour = random.randint(0, 0xFFFFFF)
 
 
 class EmbedWithAuthor(EmbedWithColor):
@@ -41,7 +41,8 @@ class EmbedWithCharacter(discord.Embed):
         """:param name: bool - If True, sets author name to character name.
         :param image: bool - If True, shows character image as thumb if embedimage setting is true."""
         super().__init__(**kwargs)
-        if name: self.set_author(name=character.name)
+        if name:
+            self.set_author(name=character.name)
         if character.options.embed_image and image:
             self.set_thumbnail(url=character.image)
         self.colour = character.get_color()
@@ -52,10 +53,10 @@ class EmbedPaginator:
     EMBED_FIELD_MAX = 1024
     EMBED_DESC_MAX = 4096
     EMBED_TITLE_MAX = 256
-    CONTINUATION_FIELD_TITLE = '** **'
+    CONTINUATION_FIELD_TITLE = "** **"
 
-    def __init__(self, first_embed=None, copy_kwargs=('colour',), **embed_options):
-        self._current_field_name = ''
+    def __init__(self, first_embed=None, copy_kwargs=("colour",), **embed_options):
+        self._current_field_name = ""
         self._current_field_inline = False
         self._current_field = []
         self._field_count = 0
@@ -99,7 +100,7 @@ class EmbedPaginator:
         self._current.description = value
         self._embed_count += len(value)
 
-    def add_field(self, name='', value='', inline=False):
+    def add_field(self, name="", value="", inline=False):
         """Add a new field to the current embed."""
         if len(name) > self.EMBED_TITLE_MAX:
             raise ValueError("This value is too large to store in an embed field.")
@@ -140,7 +141,7 @@ class EmbedPaginator:
         self._current.add_field(name=self._current_field_name, value=value, inline=self._current_field_inline)
         self._embed_count += len(value) + len(self._current_field_name)
 
-        self._current_field_name = ''
+        self._current_field_name = ""
         self._current_field_inline = False
         self._current_field = []
         self._field_count = 0
@@ -156,10 +157,10 @@ class EmbedPaginator:
         kwargs = {}
         if self._footer_url:
             current_count += len(self._footer_url)
-            kwargs['icon_url'] = self._footer_url
+            kwargs["icon_url"] = self._footer_url
         if self._footer_text:
             current_count += len(self._footer_text)
-            kwargs['text'] = self._footer_text
+            kwargs["text"] = self._footer_text
         if current_count > self.EMBED_MAX:
             self.close_embed()
 
@@ -190,8 +191,10 @@ class EmbedPaginator:
             await destination.send(embed=embed, **kwargs)
 
     def __repr__(self):
-        return f'<EmbedPaginator _current_field_name={self._current_field_name} _field_count={self._field_count} ' \
-               f'_embed_count={self._embed_count}>'
+        return (
+            f"<EmbedPaginator _current_field_name={self._current_field_name} _field_count={self._field_count} "
+            f"_embed_count={self._embed_count}>"
+        )
 
 
 def add_fields_from_args(embed, _fields):
@@ -204,9 +207,9 @@ def add_fields_from_args(embed, _fields):
     if type(_fields) == list:
         for f in _fields:
             inline = False
-            title = f.split('|')[0] if '|' in f else '\u200b'
-            value = f.split('|', 1)[1] if '|' in f else f
-            if value.endswith('|inline'):
+            title = f.split("|")[0] if "|" in f else "\u200b"
+            value = f.split("|", 1)[1] if "|" in f else f
+            if value.endswith("|inline"):
                 inline = True
                 value = value[:-7]
             embed.add_field(name=title, value=value, inline=inline)
@@ -231,7 +234,7 @@ def set_maybe_long_desc(embed, desc):
     :param str desc: The description to add. Will overwrite existing description.
     """
     desc = chunk_text(trim_str(desc, 5000))
-    embed.description = ''.join(desc[:2]).strip()
+    embed.description = "".join(desc[:2]).strip()
     for piece in desc[2:]:
         embed.add_field(name="** **", value=piece.strip(), inline=False)
 

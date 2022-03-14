@@ -21,14 +21,12 @@ log = logging.getLogger(__name__)
 
 # presented to the hash first - update this when bestiary or monster schema changes
 # to invalidate the existing cache of data
-BESTIARY_SCHEMA_VERSION = b'1'
+BESTIARY_SCHEMA_VERSION = b"1"
 
 
 class Bestiary(CommonHomebrewMixin):
     def __init__(
-        self, _id, sha256: str, upstream: str, published: bool,
-        name: str, monsters: list = None, desc: str = None,
-        **_
+        self, _id, sha256: str, upstream: str, published: bool, name: str, monsters: list = None, desc: str = None, **_
     ):
         # metadata - should never change
         super().__init__(_id)
@@ -43,10 +41,10 @@ class Bestiary(CommonHomebrewMixin):
 
     @classmethod
     def from_dict(cls, d):
-        if 'monsters' in d:
-            d['monsters'] = [Monster.from_bestiary(m, d['name']) for m in d['monsters']]
-        if 'published' not in d:  # versions prior to v1.5.11 don't have this tag, default to True
-            d['published'] = True
+        if "monsters" in d:
+            d["monsters"] = [Monster.from_bestiary(m, d["name"]) for m in d["monsters"]]
+        if "published" not in d:  # versions prior to v1.5.11 don't have this tag, default to True
+            d["published"] = True
         return cls(**d)
 
     @classmethod
@@ -58,10 +56,7 @@ class Bestiary(CommonHomebrewMixin):
 
     @classmethod
     async def from_id(cls, ctx, oid):
-        bestiary = await ctx.bot.mdb.bestiaries.find_one(
-            {"_id": oid},
-            projection={"monsters": False}
-        )
+        bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": oid}, projection={"monsters": False})
         if bestiary is None:
             raise ValueError("Bestiary does not exist")
         return cls.from_dict(bestiary)
@@ -69,8 +64,11 @@ class Bestiary(CommonHomebrewMixin):
     @classmethod
     async def from_critterdb(cls, ctx, url, published=True):
         log.info(f"Getting bestiary ID {url}...")
-        api_base = "https://critterdb.com:443/api/publishedbestiaries" if published \
+        api_base = (
+            "https://critterdb.com:443/api/publishedbestiaries"
+            if published
             else "https://critterdb.com:443/api/bestiaries"
+        )
         sha256_hash = hashlib.sha256()
         sha256_hash.update(BESTIARY_SCHEMA_VERSION)
         async with aiohttp.ClientSession() as session:
@@ -84,8 +82,8 @@ class Bestiary(CommonHomebrewMixin):
                     raw = await resp.json()
                 except (ValueError, aiohttp.ContentTypeError):
                     raise ExternalImportError("Error importing bestiary metadata. Are you sure the link is right?")
-                name = raw['name']
-                desc = raw['description']
+                name = raw["name"]
+                desc = raw["description"]
                 sha256_hash.update(name.encode() + desc.encode())
 
         # try and find a bestiary by looking up upstream|hash
@@ -106,8 +104,8 @@ class Bestiary(CommonHomebrewMixin):
 
     async def load_monsters(self, ctx):
         if not self._monsters:
-            bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": self.id}, projection=['monsters'])
-            self._monsters = [Monster.from_bestiary(m, self.name) for m in bestiary['monsters']]
+            bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": self.id}, projection=["monsters"])
+            self._monsters = [Monster.from_bestiary(m, self.name) for m in bestiary["monsters"]]
         return self._monsters
 
     @property
@@ -122,8 +120,12 @@ class Bestiary(CommonHomebrewMixin):
         monsters = [m.to_dict() for m in self._monsters]
 
         data = {
-            "sha256": self.sha256, "upstream": self.upstream, "published": self.published,
-            "name": self.name, "desc": self.desc, "monsters": monsters
+            "sha256": self.sha256,
+            "upstream": self.upstream,
+            "published": self.published,
+            "name": self.name,
+            "desc": self.desc,
+            "monsters": monsters,
         }
 
         result = await ctx.bot.mdb.bestiaries.insert_one(data)
@@ -144,8 +146,10 @@ class Bestiary(CommonHomebrewMixin):
         This override is here because bestiaries' server active docs need a provider id.
         """
         sub_doc = {
-            "type": "server_active", "subscriber_id": ctx.guild.id,
-            "object_id": self.id, "provider_id": ctx.author.id
+            "type": "server_active",
+            "subscriber_id": ctx.guild.id,
+            "object_id": self.id,
+            "provider_id": ctx.author.id,
         }
         await self.sub_coll(ctx).insert_one(sub_doc)
 
@@ -182,19 +186,16 @@ class Bestiary(CommonHomebrewMixin):
         subs = ctx.bot.mdb.bestiary_subscriptions.find(
             {"type": "server_active", "object_id": self.id, "provider_id": ctx.author.id}
         )
-        return [s['subscriber_id'] async for s in subs]
+        return [s["subscriber_id"] async for s in subs]
 
     async def add_server_subscriptions(self, ctx, serv_ids):
         """Subscribes a list of servers to this bestiary."""
         existing = await ctx.bot.mdb.bestiary_subscriptions.find(
             {"type": "server_active", "subscriber_id": {"$in": serv_ids}, "object_id": self.id}
         ).to_list(None)
-        existing = {e['subscriber_id'] for e in existing}
+        existing = {e["subscriber_id"] for e in existing}
         sub_docs = [
-            {
-                "type": "server_active", "subscriber_id": serv_id,
-                "object_id": self.id, "provider_id": ctx.author.id
-            }
+            {"type": "server_active", "subscriber_id": serv_id, "object_id": self.id, "provider_id": ctx.author.id}
             for serv_id in serv_ids
             if serv_id not in existing
         ]
@@ -210,9 +211,7 @@ class Bestiary(CommonHomebrewMixin):
 
     async def get_server_sharer(self, ctx):
         """Returns the user ID of the user who shared this bestiary with the server."""
-        sub = await ctx.bot.mdb.bestiary_subscriptions.find_one(
-            {"type": "server_active", "object_id": self.id}
-        )
+        sub = await ctx.bot.mdb.bestiary_subscriptions.find_one({"type": "server_active", "object_id": self.id})
         if sub is None:
             raise ValueError("This bestiary is not active on this server.")
         return sub.get("provider_id")
@@ -224,8 +223,7 @@ async def select_bestiary(ctx, name):
         raise NoActiveBrew()
 
     bestiary = await search_and_select(
-        ctx, user_bestiaries, name, key=lambda b: b.name,
-        selectkey=lambda b: f"{b.name} (`{b.upstream})`"
+        ctx, user_bestiaries, name, key=lambda b: b.name, selectkey=lambda b: f"{b.name} (`{b.upstream})`"
     )
     return bestiary
 
@@ -238,9 +236,7 @@ async def get_published_bestiary_creatures(url, session, api_base, sha256_hash):
         log.info(f"Getting page {index} of {url}...")
         async with session.get(f"{api_base}/{url}/creatures/{index}") as resp:
             if not 199 < resp.status < 300:
-                raise ExternalImportError(
-                    "Error importing bestiary: HTTP error. Are you sure the link is right?"
-                )
+                raise ExternalImportError("Error importing bestiary: HTTP error. Are you sure the link is right?")
             raw_creatures = await parse_critterdb_response(resp, sha256_hash)
             if not raw_creatures:
                 break
@@ -257,9 +253,7 @@ async def get_link_shared_bestiary_creatures(url, session, api_base, sha256_hash
                 "Error importing bestiary: Cannot access bestiary. Please ensure link sharing is enabled!"
             )
         elif not 199 < resp.status < 300:
-            raise ExternalImportError(
-                "Error importing bestiary: HTTP error. Are you sure the link is right?"
-            )
+            raise ExternalImportError("Error importing bestiary: HTTP error. Are you sure the link is right?")
         creatures = await parse_critterdb_response(resp, sha256_hash)
     return creatures
 
@@ -275,20 +269,20 @@ async def parse_critterdb_response(resp, sha256_hash):
 
 # critterdb -> bestiary helpers
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(
-    r'<avrae hidden>(?:(?P<simple>(.*?)\|([+-]?\d*)\|(.*?))|'
-    r'(?P<freeform>.*?))</avrae>', re.IGNORECASE | re.DOTALL
+    r"<avrae hidden>(?:(?P<simple>(.*?)\|([+-]?\d*)\|(.*?))|" r"(?P<freeform>.*?))</avrae>", re.IGNORECASE | re.DOTALL
 )
 ATTACK_RE = re.compile(
-    r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? (?P<attackBonus>[+-]?\d+) to hit, .*?(?:<i>)?'
-    r'Hit:(?:</i>)? [+-]?(?:\d+ \((?P<damageDiceBase>.+?)\)|(?P<damageIntBase>\d+)) '
-    r'(?P<damageTypeBase>[aA-zZ ]+) damage[., ]??(?: in melee[.,]?? or [+-]?(?:\d+ '
-    r'\((?P<damageRangedDice>.+?)\)|(?P<damageRangedInt>\d+)) (?P<damageTypeRanged>[aA-zZ ]+) '
-    r'damage at range[,.]?)?(?:,? or [+-]?(?:\d+ \((?P<damageDiceVers>.+?)\)|(?P<damageIntVers>\d+))'
-    r' (?P<damageTypeVers>[aA-zZ ]+) damage if used with two hands to make a melee attack)?'
-    r'(?:,? (?:plus|and) [+-]?(?:\d+ \((?P<damageBonusDice>.+?)\)|(?P<damageBonusInt>\d+)) '
-    r'(?P<damageTypeBonus>[aA-zZ ]+) damage)?', re.IGNORECASE
+    r"(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? (?P<attackBonus>[+-]?\d+) to hit, .*?(?:<i>)?"
+    r"Hit:(?:</i>)? [+-]?(?:\d+ \((?P<damageDiceBase>.+?)\)|(?P<damageIntBase>\d+)) "
+    r"(?P<damageTypeBase>[aA-zZ ]+) damage[., ]??(?: in melee[.,]?? or [+-]?(?:\d+ "
+    r"\((?P<damageRangedDice>.+?)\)|(?P<damageRangedInt>\d+)) (?P<damageTypeRanged>[aA-zZ ]+) "
+    r"damage at range[,.]?)?(?:,? or [+-]?(?:\d+ \((?P<damageDiceVers>.+?)\)|(?P<damageIntVers>\d+))"
+    r" (?P<damageTypeVers>[aA-zZ ]+) damage if used with two hands to make a melee attack)?"
+    r"(?:,? (?:plus|and) [+-]?(?:\d+ \((?P<damageBonusDice>.+?)\)|(?P<damageBonusInt>\d+)) "
+    r"(?P<damageTypeBonus>[aA-zZ ]+) damage)?",
+    re.IGNORECASE,
 )
-JUST_DAMAGE_RE = re.compile(r'[+-]?\d+ \((.+?)\) (\w+) damage', re.IGNORECASE)
+JUST_DAMAGE_RE = re.compile(r"[+-]?\d+ \((.+?)\) (\w+) damage", re.IGNORECASE)
 
 
 def spaced_to_camel(spaced):
@@ -297,60 +291,59 @@ def spaced_to_camel(spaced):
 
 def _monster_factory(data, bestiary_name):
     ability_scores = BaseStats(
-        data['stats']['proficiencyBonus'] or 0,
-        data['stats']['abilityScores']['strength'] or 10,
-        data['stats']['abilityScores']['dexterity'] or 10,
-        data['stats']['abilityScores']['constitution'] or 10,
-        data['stats']['abilityScores']['intelligence'] or 10,
-        data['stats']['abilityScores']['wisdom'] or 10,
-        data['stats']['abilityScores']['charisma'] or 10
+        data["stats"]["proficiencyBonus"] or 0,
+        data["stats"]["abilityScores"]["strength"] or 10,
+        data["stats"]["abilityScores"]["dexterity"] or 10,
+        data["stats"]["abilityScores"]["constitution"] or 10,
+        data["stats"]["abilityScores"]["intelligence"] or 10,
+        data["stats"]["abilityScores"]["wisdom"] or 10,
+        data["stats"]["abilityScores"]["charisma"] or 10,
     )
-    cr = {0.125: '1/8', 0.25: '1/4', 0.5: '1/2'}.get(
-        data['stats']['challengeRating'],
-        str(data['stats']['challengeRating'])
+    cr = {0.125: "1/8", 0.25: "1/4", 0.5: "1/2"}.get(
+        data["stats"]["challengeRating"], str(data["stats"]["challengeRating"])
     )
-    num_hit_die = data['stats']['numHitDie']
-    hit_die_size = data['stats']['hitDieSize']
-    con_by_level = num_hit_die * ability_scores.get_mod('con')
+    num_hit_die = data["stats"]["numHitDie"]
+    hit_die_size = data["stats"]["hitDieSize"]
+    con_by_level = num_hit_die * ability_scores.get_mod("con")
     hp = floor(((hit_die_size + 1) / 2) * num_hit_die) + con_by_level
     hitdice = f"{num_hit_die}d{hit_die_size} + {con_by_level}"
 
-    proficiency = data['stats']['proficiencyBonus']
+    proficiency = data["stats"]["proficiencyBonus"]
     if proficiency is None:
         raise ExternalImportError(f"Monster's proficiency bonus is nonexistent ({data['name']}).")
 
     skills = Skills.default(ability_scores)
     skill_updates = {}
-    for skill in data['stats']['skills']:
-        name = spaced_to_camel(skill['name'])
-        if skill['proficient']:
+    for skill in data["stats"]["skills"]:
+        name = spaced_to_camel(skill["name"])
+        if skill["proficient"]:
             mod = skills[name].value + proficiency
         else:
-            mod = skill.get('value')
+            mod = skill.get("value")
         if mod is not None:
             skill_updates[name] = mod
     skills.update(skill_updates)
 
     saves = Saves.default(ability_scores)
     save_updates = {}
-    for save in data['stats']['savingThrows']:
-        name = save['ability'].lower() + 'Save'
-        if save['proficient']:
+    for save in data["stats"]["savingThrows"]:
+        name = save["ability"].lower() + "Save"
+        if save["proficient"]:
             mod = saves.get(name).value + proficiency
         else:
-            mod = save.get('value')
+            mod = save.get("value")
         if mod is not None:
             save_updates[name] = mod
     saves.update(save_updates)
 
     attacks = AttackList()
-    traits, atks = parse_critterdb_traits(data, 'additionalAbilities')
+    traits, atks = parse_critterdb_traits(data, "additionalAbilities")
     attacks.extend(atks)
-    actions, atks = parse_critterdb_traits(data, 'actions')
+    actions, atks = parse_critterdb_traits(data, "actions")
     attacks.extend(atks)
-    reactions, atks = parse_critterdb_traits(data, 'reactions')
+    reactions, atks = parse_critterdb_traits(data, "reactions")
     attacks.extend(atks)
-    legactions, atks = parse_critterdb_traits(data, 'legendaryActions')
+    legactions, atks = parse_critterdb_traits(data, "legendaryActions")
     attacks.extend(atks)
 
     name_duplications = {}
@@ -365,65 +358,83 @@ def _monster_factory(data, bestiary_name):
 
     resistances = Resistances.from_dict(
         dict(
-            vuln=data['stats']['damageVulnerabilities'],
-            resist=data['stats']['damageResistances'],
-            immune=data['stats']['damageImmunities']
+            vuln=data["stats"]["damageVulnerabilities"],
+            resist=data["stats"]["damageResistances"],
+            immune=data["stats"]["damageImmunities"],
         )
     )
 
     return Monster(
-        name=data['name'], size=data['stats']['size'], race=data['stats']['race'],
-        alignment=data['stats']['alignment'],
-        ac=data['stats']['armorClass'], armortype=data['stats']['armorType'], hp=hp, hitdice=hitdice,
-        speed=data['stats']['speed'], ability_scores=ability_scores, saves=saves, skills=skills,
-        senses=', '.join(data['stats']['senses']), resistances=resistances, display_resists=resistances,
-        condition_immune=data['stats']['conditionImmunities'], languages=data['stats']['languages'], cr=cr,
-        xp=data['stats']['experiencePoints'], traits=traits, actions=actions, reactions=reactions,
-        legactions=legactions, la_per_round=data['stats']['legendaryActionsPerRound'],
-        attacks=attacks, proper=data['flavor']['nameIsProper'], image_url=data['flavor']['imageUrl'],
-        spellcasting=spellcasting, homebrew=True, source=bestiary_name
+        name=data["name"],
+        size=data["stats"]["size"],
+        race=data["stats"]["race"],
+        alignment=data["stats"]["alignment"],
+        ac=data["stats"]["armorClass"],
+        armortype=data["stats"]["armorType"],
+        hp=hp,
+        hitdice=hitdice,
+        speed=data["stats"]["speed"],
+        ability_scores=ability_scores,
+        saves=saves,
+        skills=skills,
+        senses=", ".join(data["stats"]["senses"]),
+        resistances=resistances,
+        display_resists=resistances,
+        condition_immune=data["stats"]["conditionImmunities"],
+        languages=data["stats"]["languages"],
+        cr=cr,
+        xp=data["stats"]["experiencePoints"],
+        traits=traits,
+        actions=actions,
+        reactions=reactions,
+        legactions=legactions,
+        la_per_round=data["stats"]["legendaryActionsPerRound"],
+        attacks=attacks,
+        proper=data["flavor"]["nameIsProper"],
+        image_url=data["flavor"]["imageUrl"],
+        spellcasting=spellcasting,
+        homebrew=True,
+        source=bestiary_name,
     )
 
 
 def parse_critterdb_traits(data, key):
     traits = []
     attacks = []
-    for trait in data['stats'][key]:
-        name = trait['name']
-        raw = trait['description']
+    for trait in data["stats"][key]:
+        name = trait["name"]
+        raw = trait["description"]
 
         overrides = list(AVRAE_ATTACK_OVERRIDES_RE.finditer(raw))
         raw_atks = list(ATTACK_RE.finditer(raw))
         raw_damage = list(JUST_DAMAGE_RE.finditer(raw))
 
-        filtered = AVRAE_ATTACK_OVERRIDES_RE.sub('', raw)
+        filtered = AVRAE_ATTACK_OVERRIDES_RE.sub("", raw)
         desc = markdownify(filtered).strip()
 
         if overrides:
             for override in overrides:
-                if override.group('simple'):
+                if override.group("simple"):
                     attacks.append(
                         Attack.from_dict(
                             {
-                                'name': override.group(2) or name,
-                                'attackBonus': override.group(3) or None,
-                                'damage': override.group(4) or None,
-                                'details': desc
+                                "name": override.group(2) or name,
+                                "attackBonus": override.group(3) or None,
+                                "damage": override.group(4) or None,
+                                "details": desc,
                             }
                         )
                     )
-                elif freeform_override := override.group('freeform'):
+                elif freeform_override := override.group("freeform"):
                     try:
                         attack_yaml = yaml.safe_load(freeform_override)
                     except yaml.YAMLError:
-                        raise ExternalImportError(
-                            f"Monster had an invalid automation YAML ({data['name']}: {name})"
-                        )
+                        raise ExternalImportError(f"Monster had an invalid automation YAML ({data['name']}: {name})")
                     if not isinstance(attack_yaml, list):
                         attack_yaml = [attack_yaml]
                     for atk in attack_yaml:
                         if isinstance(atk, dict):
-                            atk['name'] = atk_name = atk.get('name') or name
+                            atk["name"] = atk_name = atk.get("name") or name
                             try:
                                 attacks.append(Attack.from_dict(atk))
                             except Exception:
@@ -437,70 +448,47 @@ def parse_critterdb_traits(data, key):
                 # else: empty override, so skip this attack.
         elif raw_atks:
             for atk in raw_atks:
-                attack_bonus = atk.group('attackBonus').lstrip('+')
+                attack_bonus = atk.group("attackBonus").lstrip("+")
 
                 # Bonus damage
                 bonus = ""
-                if (bonus_damage_type := atk.group('damageTypeBonus')) and \
-                        (bonus_damage := atk.group('damageBonusInt') or atk.group('damageBonusDice')):
+                if (bonus_damage_type := atk.group("damageTypeBonus")) and (
+                    bonus_damage := atk.group("damageBonusInt") or atk.group("damageBonusDice")
+                ):
                     bonus = f" + {bonus_damage} [{bonus_damage_type}]"
 
                 # Versatile Attacks
-                if (vers_damage_type := atk.group('damageTypeVers')) and \
-                        (verse_damage := atk.group('damageIntVers') or atk.group('damageDiceVers')):
+                if (vers_damage_type := atk.group("damageTypeVers")) and (
+                    verse_damage := atk.group("damageIntVers") or atk.group("damageDiceVers")
+                ):
                     damage = f"{verse_damage} [{vers_damage_type}]" + bonus
                     attacks.append(
                         Attack.from_dict(
-                            {
-                                'name': f"2 Handed {name}",
-                                'attackBonus': attack_bonus,
-                                'damage': damage,
-                                'details': desc
-                            }
+                            {"name": f"2 Handed {name}", "attackBonus": attack_bonus, "damage": damage, "details": desc}
                         )
                     )
 
                 # Ranged Attacks
-                if (ranged_damage_type := atk.group('damageTypeRanged')) and \
-                        (ranged_damage := atk.group('damageRangedInt') or atk.group('damageRangedDice')):  # ranged
+                if (ranged_damage_type := atk.group("damageTypeRanged")) and (
+                    ranged_damage := atk.group("damageRangedInt") or atk.group("damageRangedDice")
+                ):  # ranged
                     damage = f"{ranged_damage}[{ranged_damage_type}]" + bonus
                     attacks.append(
                         Attack.from_dict(
-                            {
-                                'name': f"Ranged {name}",
-                                'attackBonus': attack_bonus,
-                                'damage': damage,
-                                'details': desc
-                            }
+                            {"name": f"Ranged {name}", "attackBonus": attack_bonus, "damage": damage, "details": desc}
                         )
                     )
 
                 # Base Attack
-                base_damage = atk.group('damageIntBase') or atk.group('damageDiceBase')
+                base_damage = atk.group("damageIntBase") or atk.group("damageDiceBase")
                 damage = f"{base_damage} [{atk.group('damageTypeBase')}]" + bonus
                 attacks.append(
-                    Attack.from_dict(
-                        {
-                            'name': name,
-                            'attackBonus': attack_bonus,
-                            'damage': damage,
-                            'details': desc
-                        }
-                    )
+                    Attack.from_dict({"name": name, "attackBonus": attack_bonus, "damage": damage, "details": desc})
                 )
         else:
             for dmg in raw_damage:
                 damage = f"{dmg.group(1)}[{dmg.group(2)}]"
-                attacks.append(
-                    Attack.from_dict(
-                        {
-                            'name': name,
-                            'attackBonus': None,
-                            'damage': damage,
-                            'details': desc
-                        }
-                    )
-                )
+                attacks.append(Attack.from_dict({"name": name, "attackBonus": None, "damage": damage, "details": desc}))
 
         traits.append(Trait(name, desc))
     return traits, attacks
@@ -517,29 +505,28 @@ def parse_critterdb_spellcasting(traits, base_stats):
     slots = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0}
 
     for trait in traits:
-        if 'Spellcasting' not in trait.name:
+        if "Spellcasting" not in trait.name:
             continue
         desc = trait.desc
 
-        type_match = re.search(r'spellcasting ability is (\w+) \(spell save DC (\d+), [+\-](\d+) to hit', desc)
+        type_match = re.search(r"spellcasting ability is (\w+) \(spell save DC (\d+), [+\-](\d+) to hit", desc)
         type_dc = int(type_match.group(2)) if type_match else None
         type_sab = int(type_match.group(3)) if type_match else None
         type_casting_ability = base_stats.get_mod(type_match.group(1)) if type_match else None
-        type_caster_level_match = re.search(r'(\d+)[stndrh]{2}-level', desc)
-        caster_level = max(
-            caster_level,
-            int(type_caster_level_match.group(1))
-        ) if type_caster_level_match else caster_level
+        type_caster_level_match = re.search(r"(\d+)[stndrh]{2}-level", desc)
+        caster_level = (
+            max(caster_level, int(type_caster_level_match.group(1))) if type_caster_level_match else caster_level
+        )
         type_spells = []
 
         def extract_spells(text):
             extracted = []
-            spell_names = text.split(', ')
+            spell_names = text.split(", ")
             for name in spell_names:
                 # remove any (parenthetical stuff) except (UA)
-                name = re.sub(r'\((?!ua\)).+\)', '', name.lower())
+                name = re.sub(r"\((?!ua\)).+\)", "", name.lower())
 
-                s = name.strip('* _').replace('.', '').replace('$', '')
+                s = name.strip("* _").replace(".", "").replace("$", "")
 
                 try:
                     real_name = next(sp for sp in gd.compendium.spells if sp.name.lower() == s).name
@@ -555,11 +542,12 @@ def parse_critterdb_spellcasting(traits, base_stats):
             return extracted
 
         for type_leveled_spells in re.finditer(
-                r"(?:"
-                r"(?P<level>\d)[stndrh]{2}\slevel \((?P<slots>\d+) slots?\)"
-                r"|Cantrip \(at will\)): "
-                r"(?P<spells>.+)$",
-                desc, re.MULTILINE
+            r"(?:"
+            r"(?P<level>\d)[stndrh]{2}\slevel \((?P<slots>\d+) slots?\)"
+            r"|Cantrip \(at will\)): "
+            r"(?P<spells>.+)$",
+            desc,
+            re.MULTILINE,
         ):
             extract_spells(type_leveled_spells.group("spells"))
             if type_leveled_spells.group("level") and type_leveled_spells.group("slots"):
@@ -584,8 +572,15 @@ def parse_critterdb_spellcasting(traits, base_stats):
             usual_cab = (type_casting_ability, len(type_spells))
 
     spellbook = MonsterSpellbook(
-        slots=slots, max_slots=slots, spells=known_spells, dc=usual_dc[0], sab=usual_sab[0],
-        caster_level=caster_level, spell_mod=usual_cab[0], at_will=will_spells, daily=daily_spells
+        slots=slots,
+        max_slots=slots,
+        spells=known_spells,
+        dc=usual_dc[0],
+        sab=usual_sab[0],
+        caster_level=caster_level,
+        spell_mod=usual_cab[0],
+        at_will=will_spells,
+        daily=daily_spells,
     )
 
     for spell in spellbook.spells:  # remove redundant data

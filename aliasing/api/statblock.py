@@ -286,9 +286,11 @@ class AliasBaseStats:
         return str(self._stats)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} prof_bonus={self.prof_bonus!r} strength={self.strength!r} " \
-               f"dexterity={self.dexterity!r} constitution={self.constitution!r} intelligence={self.intelligence!r} " \
-               f"wisdom={self.wisdom!r} charisma={self.charisma!r}>"
+        return (
+            f"<{self.__class__.__name__} prof_bonus={self.prof_bonus!r} strength={self.strength!r} "
+            f"dexterity={self.dexterity!r} constitution={self.constitution!r} intelligence={self.intelligence!r} "
+            f"wisdom={self.wisdom!r} charisma={self.charisma!r}>"
+        )
 
 
 class AliasLevels:
@@ -482,8 +484,10 @@ class AliasSkill:
         return int(self._skill)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} value={self.value!r} prof={self.prof!r} bonus={self.bonus!r} " \
-               f"adv={self.adv!r}>"
+        return (
+            f"<{self.__class__.__name__} value={self.value!r} prof={self.prof!r} bonus={self.bonus!r} "
+            f"adv={self.adv!r}>"
+        )
 
     def __gt__(self, other):
         return self.value > other
@@ -806,8 +810,10 @@ class AliasSpellbook:
         return str(item) in self._spellbook
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} dc={self.dc!r} sab={self.sab!r} caster_level={self.caster_level!r} " \
-               f"spell_mod={self.spell_mod!r}>"
+        return (
+            f"<{self.__class__.__name__} dc={self.dc!r} sab={self.sab!r} caster_level={self.caster_level!r} "
+            f"spell_mod={self.spell_mod!r}>"
+        )
 
 
 class AliasSpellbookSpell:

@@ -34,13 +34,13 @@ def test_argquote():
 
 def test_argparse():
     args = argparse("""-phrase "hello world" -h argument -t or1 -t or2""")
-    assert args.last('phrase') == 'hello world'
-    assert args.get('t') == ['or1', 'or2']
+    assert args.last("phrase") == "hello world"
+    assert args.get("t") == ["or1", "or2"]
     assert args.adv() == 0
-    assert args.last('t') == 'or2'
-    assert args.last('h', type_=bool) is True
-    assert 'argument' in args
-    assert args.last('notin', default=5) == 5
+    assert args.last("t") == "or2"
+    assert args.last("h", type_=bool) is True
+    assert "argument" in args
+    assert args.last("notin", default=5) == 5
 
     args = argparse("""adv""")
     assert args.adv() == 1
@@ -82,62 +82,58 @@ def test_argparse_adv():
     1 1 1 1  | 0
 
     """
-    args = argparse('')
+    args = argparse("")
     assert args.adv() == 0
     assert args.adv(ea=True) == 0
 
-    args = argparse('ea')
+    args = argparse("ea")
     assert args.adv() == 0
     assert args.adv(ea=True) == 2
 
-    args = argparse('dis')
+    args = argparse("dis")
     assert args.adv() == -1
     assert args.adv(ea=True) == -1
 
-    args = argparse('dis ea')
+    args = argparse("dis ea")
     assert args.adv() == -1
     assert args.adv(ea=True) == 0
 
-    args = argparse('adv')
+    args = argparse("adv")
     assert args.adv() == 1
     assert args.adv(ea=True) == 1
 
-    args = argparse('adv ea')
+    args = argparse("adv ea")
     assert args.adv() == 1
     assert args.adv(ea=True) == 2
 
-    args = argparse('adv dis')
+    args = argparse("adv dis")
     assert args.adv() == 0
     assert args.adv(ea=True) == 0
 
-    args = argparse('adv dis ea')
+    args = argparse("adv dis ea")
     assert args.adv() == 0
     assert args.adv(ea=True) == 0
 
 
 def test_argparse_custom_adv():
-    args = argparse('custom_adv')
+    args = argparse("custom_adv")
     custom_adv = {
-        'adv': 'custom_adv',
+        "adv": "custom_adv",
     }
 
     assert args.adv(custom=custom_adv) == 1
     assert args.adv() == 0
 
-    custom_dis = {
-        'dis': 'custom_dis'
-    }
+    custom_dis = {"dis": "custom_dis"}
     assert args.adv(custom=custom_dis) == 0
 
-    args = argparse('custom_dis')
+    args = argparse("custom_dis")
 
     assert args.adv(custom=custom_dis) == -1
     assert args.adv() == 0
 
-    custom_ea = {
-        'ea': 'custom_ea'
-    }
-    args = argparse('custom_ea')
+    custom_ea = {"ea": "custom_ea"}
+    args = argparse("custom_ea")
 
     assert args.adv(ea=True, custom=custom_ea) == 2
     assert args.adv() == 0
@@ -146,12 +142,12 @@ def test_argparse_custom_adv():
 def test_argparse_ephem():
     args = argparse("""-d5 1d6 adv1 -d 1""")
     for _ in range(4):
-        assert args.join('d', '+', ephem=True) == '1+1d6'
-    assert args.last('d', ephem=True) == '1d6'
+        assert args.join("d", "+", ephem=True) == "1+1d6"
+    assert args.last("d", ephem=True) == "1d6"
 
     # we have consumed all 5 uses of ephem:d
-    assert args.join('d', '+', ephem=True) == '1'
-    assert args.last('d', ephem=True) == '1'
+    assert args.join("d", "+", ephem=True) == "1"
+    assert args.last("d", ephem=True) == "1"
 
     # one ephem:adv
     # yes, this looks weird
@@ -161,24 +157,24 @@ def test_argparse_ephem():
 
     # multiple different durations
     args = argparse("""-d2 1d6 -d1 1d4 -d 1 -d3 1d8""")
-    assert args.last('d', ephem=True) == '1d8'
-    assert args.join('d', '+', ephem=True) == '1+1d6+1d4+1d8'
-    assert args.join('d', '+', ephem=True) == '1+1d6+1d8'
-    assert args.join('d', '+', ephem=True) == '1'
+    assert args.last("d", ephem=True) == "1d8"
+    assert args.join("d", "+", ephem=True) == "1+1d6+1d4+1d8"
+    assert args.join("d", "+", ephem=True) == "1+1d6+1d8"
+    assert args.join("d", "+", ephem=True) == "1"
 
 
 def test_argparse_idempotency():
     args = argparse("")
-    assert 'foo' not in args
-    assert args.get('foo') == []
-    assert args.get('foo') == args.get('foo')
-    assert 'foo' not in args
-    assert args.last('foo') is None
-    assert args.last('foo') == args.last('foo')
-    assert 'foo' not in args
-    assert args.join('foo', ',') is None
-    assert args.join('foo', ',') == args.join('foo', ',')
-    assert 'foo' not in args
+    assert "foo" not in args
+    assert args.get("foo") == []
+    assert args.get("foo") == args.get("foo")
+    assert "foo" not in args
+    assert args.last("foo") is None
+    assert args.last("foo") == args.last("foo")
+    assert "foo" not in args
+    assert args.join("foo", ",") is None
+    assert args.join("foo", ",") == args.join("foo", ",")
+    assert "foo" not in args
 
 
 def test_contextual_argparse():
@@ -186,27 +182,27 @@ def test_contextual_argparse():
     args.add_context("foo", argparse('-d 1 -phrase "I am foo"'))
     args.add_context("bar", argparse('-d 2 -phrase "I am bar"'))
 
-    args.set_context('foo')
-    assert args.last("d") == '1'
-    assert args.get("d") == ['5', '1']
+    args.set_context("foo")
+    assert args.last("d") == "1"
+    assert args.get("d") == ["5", "1"]
     assert args.last("phrase") == "I am foo"
     assert args.get("phrase") == ["I am foo"]
 
-    args.set_context('bar')
-    assert args.last("d") == '2'
-    assert args.get("d") == ['5', '2']
+    args.set_context("bar")
+    assert args.last("d") == "2"
+    assert args.get("d") == ["5", "2"]
     assert args.last("phrase") == "I am bar"
     assert args.get("phrase") == ["I am bar"]
 
-    args.set_context('bletch')
-    assert args.last("d") == '5'
-    assert args.get("d") == ['5']
+    args.set_context("bletch")
+    assert args.last("d") == "5"
+    assert args.get("d") == ["5"]
     assert args.last("phrase") is None
     assert args.get("phrase") == []
 
     args.set_context(None)
-    assert args.last("d") == '5'
-    assert args.get("d") == ['5']
+    assert args.last("d") == "5"
+    assert args.get("d") == ["5"]
     assert args.last("phrase") is None
     assert args.get("phrase") == []
 
@@ -216,16 +212,16 @@ def test_contextual_ephemeral_argparse():
     args.add_context("foo", argparse('-d 3 -d1 1 -phrase "I am foo"'))
     args.add_context("bar", argparse('-d1 2 -phrase "I am bar"'))
 
-    args.set_context('foo')
-    assert args.get("d", ephem=True) == ['3', '5', '1']
-    assert args.get("d", ephem=True) == ['3', '5']
+    args.set_context("foo")
+    assert args.get("d", ephem=True) == ["3", "5", "1"]
+    assert args.get("d", ephem=True) == ["3", "5"]
 
-    args.set_context('bar')
-    assert args.get("d", ephem=True) == ['5', '2']
+    args.set_context("bar")
+    assert args.get("d", ephem=True) == ["5", "2"]
     assert args.get("d", ephem=True) == []
 
     args.set_context(None)
     assert args.get("d", ephem=True) == []
 
-    args.set_context('foo')
-    assert args.get("d", ephem=True) == ['3']
+    args.set_context("foo")
+    assert args.get("d", ephem=True) == ["3"]

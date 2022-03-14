@@ -27,14 +27,14 @@ class Dice(commands.Cog):
         self.inline = InlineRoller(bot)
 
     # ==== commands ====
-    @commands.command(name='2', hidden=True)
-    async def quick_roll(self, ctx, *, mod: str = '0'):
+    @commands.command(name="2", hidden=True)
+    async def quick_roll(self, ctx, *, mod: str = "0"):
         """Quickly rolls a d20."""
-        dice = '1d20+' + mod
+        dice = "1d20+" + mod
         await self.roll_cmd(ctx, dice=dice)
 
-    @commands.command(name='roll', aliases=['r'])
-    async def roll_cmd(self, ctx, *, dice: str = '1d20'):
+    @commands.command(name="roll", aliases=["r"])
+    async def roll_cmd(self, ctx, *, dice: str = "1d20"):
         """Roll is used to roll any combination of dice in the `XdY` format. (`1d6`, `2d8`, etc)
 
         Multiple rolls can be added together as an equation. Standard Math operators and Parentheses can be used: `() + - / *`
@@ -90,34 +90,31 @@ class Dice(commands.Cog):
         **Additional Information can be found at:**
         https://d20.readthedocs.io/en/latest/start.html#dice-syntax"""  # noqa: E501
 
-        if dice == '0/0':  # easter eggs
+        if dice == "0/0":  # easter eggs
             return await ctx.send("What do you expect me to do, destroy the universe?")
 
         dice, adv = string_search_adv(dice)
 
         res = d20.roll(dice, advantage=adv, allow_comments=True, stringifier=VerboseMDStringifier())
-        out = f"{ctx.author.mention}  :game_die:\n" \
-              f"{str(res)}"
+        out = f"{ctx.author.mention}  :game_die:\n" f"{str(res)}"
         if len(out) > 1999:
-            out = f"{ctx.author.mention}  :game_die:\n" \
-                  f"{str(res)[:100]}...\n" \
-                  f"**Total**: {res.total}"
+            out = f"{ctx.author.mention}  :game_die:\n" f"{str(res)[:100]}...\n" f"**Total**: {res.total}"
 
         await try_delete(ctx.message)
         await ctx.send(out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
-        if gamelog := self.bot.get_cog('GameLog'):
+        if gamelog := self.bot.get_cog("GameLog"):
             await gamelog.send_roll(ctx, res)
 
-    @commands.command(name='multiroll', aliases=['rr'])
+    @commands.command(name="multiroll", aliases=["rr"])
     async def rr(self, ctx, iterations: int, *, dice):
         """Rolls dice in xdy format a given number of times.
         Usage: !rr <iterations> <dice>"""
         dice, adv = string_search_adv(dice)
         await self._roll_many(ctx, iterations, dice, adv=adv)
 
-    @commands.command(name='iterroll', aliases=['rrr'])
-    async def rrr(self, ctx, iterations: int, dice, dc: int = None, *, args=''):
+    @commands.command(name="iterroll", aliases=["rrr"])
+    async def rrr(self, ctx, iterations: int, dice, dc: int = None, *, args=""):
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
         _, adv = string_search_adv(args)
@@ -150,7 +147,7 @@ class Dice(commands.Cog):
         if ast.comment:
             header = f"{ast.comment}: {header}"
 
-        result_strs = '\n'.join(str(o) for o in results)
+        result_strs = "\n".join(str(o) for o in results)
 
         out = f"{header}\n{result_strs}\n{footer}"
 
@@ -163,14 +160,17 @@ class Dice(commands.Cog):
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.group(
-        name='monattack', aliases=['ma', 'monster_attack'], invoke_without_command=True, help=f"""
+        name="monattack",
+        aliases=["ma", "monster_attack"],
+        invoke_without_command=True,
+        help=f"""
         Rolls a monster's attack.
         __**Valid Arguments**__
         {VALID_AUTOMATION_ARGS}
-        """
+        """,
     )
-    async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
-        if atk_name is None or atk_name == 'list':
+    async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=""):
+        if atk_name is None or atk_name == "list":
             return await self.monster_atk_list(ctx, monster_name)
 
         await try_delete(ctx.message)
@@ -199,10 +199,12 @@ class Dice(commands.Cog):
         await actionutils.send_action_list(ctx, caster=monster, attacks=monster.attacks)
 
     @commands.command(
-        name='moncheck', aliases=['mc', 'monster_check'], help=f"""
+        name="moncheck",
+        aliases=["mc", "monster_check"],
+        help=f"""
         Rolls a check for a monster.
         {VALID_CHECK_ARGS}
-        """
+        """,
     )
     async def monster_check(self, ctx, monster_name, check, *args):
         await try_delete(ctx.message)
@@ -220,10 +222,12 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(
-        name='monsave', aliases=['ms', 'monster_save'], help=f"""
+        name="monsave",
+        aliases=["ms", "monster_save"],
+        help=f"""
         Rolls a save for a monster.
         {VALID_SAVE_ARGS}
-        """
+        """,
     )
     async def monster_save(self, ctx, monster_name, save_stat, *args):
         await try_delete(ctx.message)
@@ -232,8 +236,8 @@ class Dice(commands.Cog):
         args = argparse(args)
 
         embed = discord.Embed()
-        embed.colour = random.randint(0, 0xffffff)
-        if not args.last('h', type_=bool):
+        embed.colour = random.randint(0, 0xFFFFFF)
+        if not args.last("h", type_=bool):
             embed.set_thumbnail(url=monster.get_image_url())
 
         checkutils.run_save(save_stat, monster, args, embed)
@@ -243,13 +247,15 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(
-        name='moncast', aliases=['mcast', 'monster_cast'], help=f"""
+        name="moncast",
+        aliases=["mcast", "monster_cast"],
+        help=f"""
         Casts a spell as a monster.
         __**Valid Arguments**__
         {VALID_SPELLCASTING_ARGS}
         
         {VALID_AUTOMATION_ARGS}
-        """
+        """,
     )
     async def monster_cast(self, ctx, monster_name, spell_name, *args):
         await try_delete(ctx.message)
@@ -257,7 +263,7 @@ class Dice(commands.Cog):
         args = await helpers.parse_snippets(args, ctx, statblock=monster)
         args = argparse(args)
 
-        if not args.last('i', type_=bool):
+        if not args.last("i", type_=bool):
             try:
                 spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
             except NoSelectionElements:
@@ -273,8 +279,8 @@ class Dice(commands.Cog):
 
         # embed display
         embed = result.embed
-        embed.colour = random.randint(0, 0xffffff)
-        if not args.last('h', type_=bool) and 'thumb' not in args:
+        embed.colour = random.randint(0, 0xFFFFFF)
+        if not args.last("h", type_=bool) and "thumb" not in args:
             embed.set_thumbnail(url=monster.get_image_url())
 
         handle_source_footer(embed, monster, add_source_str=False)
@@ -300,7 +306,7 @@ class Dice(commands.Cog):
 
 def embed_for_monster(monster, args):
     embed = discord.Embed()
-    embed.colour = random.randint(0, 0xffffff)
-    if not args.last('h', type_=bool):
+    embed.colour = random.randint(0, 0xFFFFFF)
+    if not args.last("h", type_=bool):
         embed.set_thumbnail(url=monster.get_image_url())
     return embed

@@ -29,13 +29,26 @@ from utils.functions import a_or_an, confirm, get_selection, search_and_select, 
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
-STAT_MOD_NAMES = ('strengthMod', 'dexterityMod', 'constitutionMod', 'intelligenceMod', 'wisdomMod', 'charismaMod')
+STAT_MOD_NAMES = ("strengthMod", "dexterityMod", "constitutionMod", "intelligenceMod", "wisdomMod", "charismaMod")
 
-STAT_VAR_NAMES = STAT_NAMES + SAVE_NAMES + STAT_MOD_NAMES + (
-    "armor", "color", "description", "hp", "image",
-    "level", "name", "proficiencyBonus", "spell",)
+STAT_VAR_NAMES = (
+    STAT_NAMES
+    + SAVE_NAMES
+    + STAT_MOD_NAMES
+    + (
+        "armor",
+        "color",
+        "description",
+        "hp",
+        "image",
+        "level",
+        "name",
+        "proficiencyBonus",
+        "spell",
+    )
+)
 
-SPECIAL_ARGS = {'crit', 'nocrit', 'hit', 'miss', 'ea', 'adv', 'dis', 'pass', 'fail', 'noconc', 'max', 'magical'}
+SPECIAL_ARGS = {"crit", "nocrit", "hit", "miss", "ea", "adv", "dis", "pass", "fail", "noconc", "max", "magical"}
 
 # Don't use any iterables with a string as only element. It will add all the chars instead of the string
 SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES, SAVE_NAMES)
@@ -43,9 +56,16 @@ SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, S
 
 class CollectableManagementGroup(commands.Group):
     def __init__(
-        self, func=None, *, personal_cls, workshop_cls, workshop_sub_meth, is_alias, is_server,
+        self,
+        func=None,
+        *,
+        personal_cls,
+        workshop_cls,
+        workshop_sub_meth,
+        is_alias,
+        is_server,
         before_edit_check=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :type func: Coroutine
@@ -65,16 +85,16 @@ class CollectableManagementGroup(commands.Group):
         self.before_edit_check = before_edit_check
 
         # helpers
-        self.binding_key = 'alias_bindings' if self.is_alias else 'snippet_bindings'
-        self.obj_name = 'alias' if self.is_alias else 'snippet'
+        self.binding_key = "alias_bindings" if self.is_alias else "snippet_bindings"
+        self.obj_name = "alias" if self.is_alias else "snippet"
         self.obj_copy_command = self.obj_name  # when an item is viewed, we show the non-server version of the command
-        self.obj_name_pl = 'aliases' if self.is_alias else 'snippets'
+        self.obj_name_pl = "aliases" if self.is_alias else "snippets"
         self.command_group_name = self.obj_name
 
         if self.is_server:
-            self.obj_name = f'server {self.obj_name}'
-            self.obj_name_pl = f'server {self.obj_name_pl}'
-            self.command_group_name = f'serv{self.command_group_name}'
+            self.obj_name = f"server {self.obj_name}"
+            self.obj_name_pl = f"server {self.obj_name_pl}"
+            self.command_group_name = f"serv{self.command_group_name}"
             self.owner_from_ctx = lambda ctx: str(ctx.guild.id)
         else:
             self.owner_from_ctx = lambda ctx: str(ctx.author.id)
@@ -83,35 +103,30 @@ class CollectableManagementGroup(commands.Group):
         self._register_commands()
 
     def _register_commands(self):
-        self.list = self.command(
-            name='list',
-            help=f'Lists all {self.obj_name_pl}.'
-        )(self.list)
-        self.delete = self.command(
-            name='delete', aliases=['remove'],
-            help=f'Deletes a {self.obj_name}.'
-        )(self.delete)
+        self.list = self.command(name="list", help=f"Lists all {self.obj_name_pl}.")(self.list)
+        self.delete = self.command(name="delete", aliases=["remove"], help=f"Deletes a {self.obj_name}.")(self.delete)
         self.subscribe = self.command(
-            name='subscribe', aliases=['sub'],
-            help='Subscribes to all aliases and snippets in a workshop collection.'
+            name="subscribe", aliases=["sub"], help="Subscribes to all aliases and snippets in a workshop collection."
         )(self.subscribe)
         self.unsubscribe = self.command(
-            name='unsubscribe', aliases=['unsub'],
-            help='Unsubscribes from all aliases and snippets in a given workshop collection.'
+            name="unsubscribe",
+            aliases=["unsub"],
+            help="Unsubscribes from all aliases and snippets in a given workshop collection.",
         )(self.unsubscribe)
         self.autofix = self.command(
-            name='autofix', hidden=True,
-            help='Ensures that all server and subscribed workshop aliases have unique names.'
+            name="autofix",
+            hidden=True,
+            help="Ensures that all server and subscribed workshop aliases have unique names.",
         )(self.autofix)
         self.rename = self.command(
-            name='rename',
-            help=f'Renames {a_or_an(self.obj_name)} or subscribed workshop {self.obj_name} to a new name.'
+            name="rename",
+            help=f"Renames {a_or_an(self.obj_name)} or subscribed workshop {self.obj_name} to a new name.",
         )(self.rename)
         if not self.is_server:
             self.serve = self.command(
-                name='serve',
-                help=f'Sets {a_or_an(self.obj_name)} as a server {self.obj_name} or subscribes the server to the '
-                     f'workshop collection it is found in.'
+                name="serve",
+                help=f"Sets {a_or_an(self.obj_name)} as a server {self.obj_name} or subscribes the server to the "
+                f"workshop collection it is found in.",
             )(self.serve)
 
     # we override the Group copy command since we register commands in __init__
@@ -120,7 +135,7 @@ class CollectableManagementGroup(commands.Group):
         return commands.Command.copy(self)
 
     def command(self, *args, **kwargs):
-        kwargs.setdefault('checks', self.checks)  # inherit all checks of parent command
+        kwargs.setdefault("checks", self.checks)  # inherit all checks of parent command
         return super().command(*args, **kwargs)
 
     # noinspection PyUnusedLocal
@@ -138,28 +153,36 @@ class CollectableManagementGroup(commands.Group):
         obj = self.personal_cls.new(name, code, self.owner_from_ctx(ctx))
         await obj.commit(ctx.bot.mdb)
 
-        out = f'{self.obj_name.capitalize()} `{name}` added.' \
-              f'```py\n{ctx.prefix}{self.obj_copy_command} {name} {code}\n```'
+        out = (
+            f"{self.obj_name.capitalize()} `{name}` added."
+            f"```py\n{ctx.prefix}{self.obj_copy_command} {name} {code}\n```"
+        )
 
         if len(out) > 2000:
-            out = f'{self.obj_name.capitalize()} `{name}` added.\n' \
-                  f'Command output too long to display.'
+            out = f"{self.obj_name.capitalize()} `{name}` added.\n" f"Command output too long to display."
 
         await ctx.send(out)
 
     async def _view(self, ctx, name):
         collectable = await helpers.get_collectable_named(
-            ctx, name, self.personal_cls, self.workshop_cls, self.workshop_sub_meth,
-            self.is_alias, self.obj_name, self.obj_name_pl, self.name
+            ctx,
+            name,
+            self.personal_cls,
+            self.workshop_cls,
+            self.workshop_sub_meth,
+            self.is_alias,
+            self.obj_name,
+            self.obj_name_pl,
+            self.name,
         )
         if collectable is None:
             return await ctx.send(f"No {self.obj_name} named {name} found.")
         elif isinstance(collectable, self.personal_cls):  # personal
             await send_long_code_text(
                 ctx,
-                outside_codeblock=f'**{name}**:',
+                outside_codeblock=f"**{name}**:",
                 inside_codeblock=f"{ctx.prefix}{self.obj_copy_command} {collectable.name} {collectable.code}",
-                codeblock_language='py'
+                codeblock_language="py",
             )
             return
         else:  # collection
@@ -167,8 +190,7 @@ class CollectableManagementGroup(commands.Group):
             the_collection = await collectable.load_collection(ctx)
             owner = await user_from_id(ctx, the_collection.owner)
             embed.title = f"{ctx.prefix}{name}" if self.is_alias else name
-            embed.description = f"From {the_collection.name} by {owner}.\n" \
-                                f"[View on Workshop]({the_collection.url})"
+            embed.description = f"From {the_collection.name} by {owner}.\n" f"[View on Workshop]({the_collection.url})"
             embeds.add_fields_from_long_text(embed, "Help", collectable.docs or "No documentation.")
 
             if isinstance(collectable, workshop.WorkshopAlias):
@@ -188,22 +210,22 @@ class CollectableManagementGroup(commands.Group):
         user_objs = await self.personal_cls.get_ctx_map(ctx)
         user_obj_names = list(user_objs.keys())
         if user_obj_names:
-            collections.append((f"Your {self.obj_name_pl.title()}", ', '.join(sorted(user_obj_names))))
+            collections.append((f"Your {self.obj_name_pl.title()}", ", ".join(sorted(user_obj_names))))
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
             try:
-                the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+                the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc["object_id"])
             except workshop.CollectionNotFound:
                 continue
             if bindings := subscription_doc[self.binding_key]:
-                collections.append((the_collection.name, ', '.join(sorted(ab['name'] for ab in bindings))))
+                collections.append((the_collection.name, ", ".join(sorted(ab["name"] for ab in bindings))))
 
         # build the resulting embed
         if collections:
             total = len(collections)
             maxpage = total // 25 + 1
             page = max(1, min(page, maxpage))
-            pages = [collections[i:i + 25] for i in range(0, total, 25)]
+            pages = [collections[i : i + 25] for i in range(0, total, 25)]
             for name, bindings_str in pages[page - 1]:
                 ep.add_field(name, bindings_str)
             if total > 25:
@@ -224,12 +246,12 @@ class CollectableManagementGroup(commands.Group):
         obj = await self.personal_cls.get_named(name, ctx)
         if obj is None:
             return await ctx.send(
-                f'{self.obj_name.capitalize()} not found. If this is a workshop {self.obj_name}, you '
-                f'can unsubscribe on the Avrae Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions> '
-                f'or by using `{ctx.prefix}{self.name} unsubscribe <collection name>`.'
+                f"{self.obj_name.capitalize()} not found. If this is a workshop {self.obj_name}, you "
+                f"can unsubscribe on the Avrae Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions> "
+                f"or by using `{ctx.prefix}{self.name} unsubscribe <collection name>`."
             )
         await obj.delete(ctx.bot.mdb)
-        await ctx.send(f'{self.obj_name.capitalize()} {name} removed.')
+        await ctx.send(f"{self.obj_name.capitalize()} {name} removed.")
 
     async def subscribe(self, ctx, url):
         coll_match = re.match(WORKSHOP_ADDRESS_RE, url)
@@ -254,12 +276,12 @@ class CollectableManagementGroup(commands.Group):
         if the_collection.aliases:
             embed.add_field(
                 name="Server Aliases" if self.is_server else "Aliases",
-                value=", ".join(sorted(a.name for a in the_collection.aliases))
+                value=", ".join(sorted(a.name for a in the_collection.aliases)),
             )
         if the_collection.snippets:
             embed.add_field(
                 name="Server Snippets" if self.is_server else "Snippets",
-                value=", ".join(sorted(a.name for a in the_collection.snippets))
+                value=", ".join(sorted(a.name for a in the_collection.snippets)),
             )
         await ctx.send(embed=embed)
 
@@ -274,7 +296,7 @@ class CollectableManagementGroup(commands.Group):
             subscribed_collections = []
             async for subscription_doc in self.workshop_sub_meth(ctx):
                 try:
-                    coll = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+                    coll = await workshop.WorkshopCollection.from_id(ctx, subscription_doc["object_id"])
                     subscribed_collections.append(coll)
                 except workshop.CollectionNotFound:
                     continue
@@ -309,63 +331,59 @@ class CollectableManagementGroup(commands.Group):
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
             doc_changed = False
-            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc["object_id"])
 
             for binding in subscription_doc[self.binding_key]:
-                old_name = binding['name']
+                old_name = binding["name"]
                 if new_index := name_indices[old_name]:
                     new_name = f"{binding['name']}-{new_index}"
                     # do rename
-                    binding['name'] = new_name
+                    binding["name"] = new_name
                     rename_tris.append((old_name, new_name, the_collection.name))
                     doc_changed = True
                 name_indices[old_name] += 1
 
             if doc_changed:  # queue writing the new subscription object to the db
-                update_meth = the_collection.update_alias_bindings if self.is_alias \
-                    else the_collection.update_snippet_bindings
+                update_meth = (
+                    the_collection.update_alias_bindings if self.is_alias else the_collection.update_snippet_bindings
+                )
                 # this creates a Coroutine object that is not executed until it is awaited by asyncio.gather below
                 # the magic of coroutines!
                 to_do.append(update_meth(ctx, subscription_doc))
 
         # confirm mass change
-        changes = '\n'.join([f"`{old}` ({collection}) -> `{new}`" for old, new, collection in rename_tris])
+        changes = "\n".join([f"`{old}` ({collection}) -> `{new}`" for old, new, collection in rename_tris])
         response = await confirm(
-            ctx, f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
-                 f"Do you want to continue? (Reply with yes/no)\n"
-                 f"{changes}"
+            ctx,
+            f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
+            f"Do you want to continue? (Reply with yes/no)\n"
+            f"{changes}",
         )
         if not response:
             return await ctx.send("Ok, aborting.")
 
         # execute the pending changes
         await asyncio.gather(*to_do)
-        the_renamed = '\n'.join([f"`{old}` ({collection}) is now `{new}`" for old, new, collection in rename_tris])
+        the_renamed = "\n".join([f"`{old}` ({collection}) is now `{new}`" for old, new, collection in rename_tris])
         await ctx.send(f"Renamed {len(rename_tris)} {self.obj_name_pl}!\n{the_renamed}")
 
     async def rename(self, ctx, old_name, new_name):
         if self.before_edit_check:
             await self.before_edit_check(ctx, new_name)
 
-        self.personal_cls.precreate_checks(new_name, '')
+        self.personal_cls.precreate_checks(new_name, "")
 
         # list of (name, (alias or sub doc, collection or None))
         choices = []
         if personal_obj := await self.personal_cls.get_named(old_name, ctx):
-            choices.append(
-                (f"{old_name} ({self.obj_name})",
-                 (personal_obj, None))
-            )
+            choices.append((f"{old_name} ({self.obj_name})", (personal_obj, None)))
 
         # get list of (subscription object ids, subscription doc)
         async for subscription_doc in self.workshop_sub_meth(ctx):
-            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc["object_id"])
             for binding in subscription_doc[self.binding_key]:
-                if binding['name'] == old_name:
-                    choices.append(
-                        (f"{old_name} ({the_collection.name})",
-                         (subscription_doc, the_collection))
-                    )
+                if binding["name"] == old_name:
+                    choices.append((f"{old_name} ({the_collection.name})", (subscription_doc, the_collection)))
 
         old_obj, collection = await get_selection(ctx, choices)
 
@@ -377,8 +395,8 @@ class CollectableManagementGroup(commands.Group):
         else:  # old_obj is actually a subscription doc
             sub_doc = old_obj
             for binding in sub_doc[self.binding_key]:
-                if binding['name'] == old_name:
-                    binding['name'] = new_name
+                if binding["name"] == old_name:
+                    binding["name"] = new_name
 
             update_meth = collection.update_alias_bindings if self.is_alias else collection.update_snippet_bindings
             await update_meth(ctx, sub_doc)
@@ -404,9 +422,10 @@ class CollectableManagementGroup(commands.Group):
             await personal_obj.load_collection(ctx)
             collection = personal_obj.collection
             response = await confirm(
-                ctx, f"This action will subscribe the server to the `{collection.name}` workshop collection, found at "
-                     f"<{collection.url}>. This will add {collection.alias_count} aliases and "
-                     f"{collection.snippet_count} snippets to the server. Do you want to continue? (Reply with yes/no)"
+                ctx,
+                f"This action will subscribe the server to the `{collection.name}` workshop collection, found at "
+                f"<{collection.url}>. This will add {collection.alias_count} aliases and "
+                f"{collection.snippet_count} snippets to the server. Do you want to continue? (Reply with yes/no)",
             )
             if not response:
                 return await ctx.send("Ok, aborting.")
@@ -432,19 +451,20 @@ class CollectableManagementGroup(commands.Group):
 
         # check if it overwrites anything
         if existing_server_obj is not None and not await confirm(
-                ctx,
-                f"There is already an existing server {self.obj_name} named `{name}`. Do you want to overwrite it? "
-                f"(Reply with yes/no)"
+            ctx,
+            f"There is already an existing server {self.obj_name} named `{name}`. Do you want to overwrite it? "
+            f"(Reply with yes/no)",
         ):
             return await ctx.send("Ok, aborting.")
 
         await server_obj.commit(ctx.bot.mdb)
-        out = f'Server {self.obj_name} `{server_obj.name}` added.' \
-              f'```py\n{ctx.prefix}{self.obj_copy_command} {server_obj.name} {server_obj.code}\n```'
+        out = (
+            f"Server {self.obj_name} `{server_obj.name}` added."
+            f"```py\n{ctx.prefix}{self.obj_copy_command} {server_obj.name} {server_obj.code}\n```"
+        )
 
         if len(out) > 2000:
-            out = f'Server {self.obj_name} `{server_obj.name}` added.' \
-                  f'Command output too long to display.'
+            out = f"Server {self.obj_name} `{server_obj.name}` added." f"Command output too long to display."
 
         await ctx.send(out)
 
@@ -454,9 +474,11 @@ def _can_edit_servaliases(ctx):
     """
     Returns whether a user can edit server aliases in the current context.
     """
-    return (ctx.author.guild_permissions.administrator or
-            any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles) or
-            checks.author_is_owner(ctx))
+    return (
+        ctx.author.guild_permissions.administrator
+        or any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles)
+        or checks.author_is_owner(ctx)
+    )
 
 
 # noinspection PyUnusedLocal
@@ -470,7 +492,7 @@ async def _servalias_before_edit(ctx, name=None, delete=False):
     if not _can_edit_servaliases(ctx):
         raise NotAllowed(
             "You do not have permission to edit server aliases. Either __Administrator__ "
-            "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
+            'Discord permissions or a role named "Server Aliaser" or "Dragonspeaker" '
             "is required."
         )
     await _alias_before_edit(ctx, name)
@@ -480,7 +502,7 @@ async def _servsnippet_before_edit(ctx, name=None, delete=False):
     if not _can_edit_servaliases(ctx):
         raise NotAllowed(
             "You do not have permission to edit server snippets. Either __Administrator__ "
-            "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
+            'Discord permissions or a role named "Server Aliaser" or "Dragonspeaker" '
             "is required."
         )
     await _snippet_before_edit(ctx, name, delete)
@@ -494,7 +516,7 @@ async def _snippet_before_edit(ctx, name=None, delete=False):
     if not name:
         return
     name = name.lower()
-    if name in SPECIAL_ARGS or name.startswith('-'):
+    if name in SPECIAL_ARGS or name.startswith("-"):
         confirmation = f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to create this snippet? (Reply with yes/no)"
     # roll string checking
     try:
@@ -506,7 +528,7 @@ async def _snippet_before_edit(ctx, name=None, delete=False):
 
     if confirmation is not None:
         if not await confirm(ctx, confirmation):
-            raise InvalidArgument('Ok, cancelling.')
+            raise InvalidArgument("Ok, cancelling.")
 
 
 def guild_only_check(ctx):
@@ -525,7 +547,7 @@ class Customization(commands.Cog):
     async def on_ready(self):
         if self.bot.is_cluster_0:
             cmds = list(self.bot.all_commands.keys())
-            await self.bot.rdb.jset('default_commands', cmds)
+            await self.bot.rdb.jset("default_commands", cmds)
 
     @commands.command()
     @commands.guild_only()
@@ -545,20 +567,22 @@ class Customization(commands.Cog):
                 f"`{current_prefix}roll 1d20` or by mentioning me!"
             )
 
-        if not checks._role_or_permissions(ctx, lambda r: r.name.lower() == 'bot admin', manage_guild=True):
+        if not checks._role_or_permissions(ctx, lambda r: r.name.lower() == "bot admin", manage_guild=True):
             return await ctx.send("You do not have permissions to change the guild prefix.")
 
         # Check for Discord Slash-command conflict
-        if prefix.startswith('/'):
+        if prefix.startswith("/"):
             if not await confirm(
-                    ctx, "Setting a prefix that begins with / may cause issues. "
-                         "Are you sure you want to continue? (Reply with yes/no)"
+                ctx,
+                "Setting a prefix that begins with / may cause issues. "
+                "Are you sure you want to continue? (Reply with yes/no)",
             ):
                 return await ctx.send("Ok, cancelling.")
         else:
             if not await confirm(
-                    ctx, f"Are you sure you want to set my prefix to `{prefix}`? This will affect "
-                         f"everyone on this server! (Reply with yes/no)"
+                ctx,
+                f"Are you sure you want to set my prefix to `{prefix}`? This will affect "
+                f"everyone on this server! (Reply with yes/no)",
             ):
                 return await ctx.send("Ok, cancelling.")
 
@@ -566,11 +590,7 @@ class Customization(commands.Cog):
         self.bot.prefixes[guild_id] = prefix
 
         # update db
-        await self.bot.mdb.prefixes.update_one(
-            {"guild_id": guild_id},
-            {"$set": {"prefix": prefix}},
-            upsert=True
-        )
+        await self.bot.mdb.prefixes.update_one({"guild_id": guild_id}, {"$set": {"prefix": prefix}}, upsert=True)
 
         await ctx.send(f"Prefix set to `{prefix}` for this server. Use commands like `{prefix}roll` now!")
 
@@ -587,7 +607,7 @@ class Customization(commands.Cog):
         !monster Rat"
         """
         # Remove the first prefix to simplify loop. Split only on actual new commands
-        cmds = cmds.replace(ctx.prefix, '', 1).split(f"\n{ctx.prefix}")
+        cmds = cmds.replace(ctx.prefix, "", 1).split(f"\n{ctx.prefix}")
         for c in cmds[:20]:
             ctx.message.content = ctx.prefix + c
             await self.bot.process_commands(ctx.message)
@@ -601,7 +621,7 @@ class Customization(commands.Cog):
         is_alias=True,
         is_server=False,
         before_edit_check=_alias_before_edit,
-        name='alias',
+        name="alias",
         invoke_without_command=True,
         help="""
         Creates a custom user command.
@@ -611,18 +631,18 @@ class Customization(commands.Cog):
         Note that aliases cannot call other aliases.
         
         Check out the [Aliasing Basics](https://avrae.readthedocs.io/en/latest/aliasing/aliasing.html) and [Aliasing Documentation](https://avrae.readthedocs.io/en/latest/aliasing/api.html) for more information.
-        """
+        """,
     )
 
-    @alias.command(name='deleteall', aliases=['removeall'])
+    @alias.command(name="deleteall", aliases=["removeall"])
     async def alias_deleteall(self, ctx):
         """Deletes ALL user aliases."""
         if not await confirm(
-                ctx,
-                f"This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
-                f"Are you *absolutely sure* you want to continue?\n"
-                f"Type `Yes, I am sure` to confirm.",
-                response_check=lambda r: r == "Yes, I am sure"
+            ctx,
+            f"This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
+            f"Are you *absolutely sure* you want to continue?\n"
+            f"Type `Yes, I am sure` to confirm.",
+            response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
 
@@ -637,14 +657,15 @@ class Customization(commands.Cog):
         is_alias=True,
         is_server=True,
         before_edit_check=_servalias_before_edit,
-        name='servalias',
+        name="servalias",
         invoke_without_command=True,
         help="""
         Adds an alias that the entire server can use.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser" or "Dragonspeaker".
         If a user and a server have aliases with the same name, the user alias will take priority.
         """,
-        checks=[guild_only_check], aliases=['serveralias']
+        checks=[guild_only_check],
+        aliases=["serveralias"],
     )
 
     snippet = CollectableManagementGroup(
@@ -654,7 +675,7 @@ class Customization(commands.Cog):
         is_alias=False,
         is_server=False,
         before_edit_check=_snippet_before_edit,
-        name='snippet',
+        name="snippet",
         invoke_without_command=True,
         help="""
         Creates a snippet to use in certain commands.
@@ -663,18 +684,18 @@ class Customization(commands.Cog):
         If a user and a server have snippets with the same name, the user snippet will take priority.
 
         Check out the [Aliasing Basics](https://avrae.readthedocs.io/en/latest/aliasing/aliasing.html) and [Aliasing Documentation](https://avrae.readthedocs.io/en/latest/aliasing/api.html) for more information.
-        """
+        """,
     )
 
-    @snippet.command(name='deleteall', aliases=['removeall'])
+    @snippet.command(name="deleteall", aliases=["removeall"])
     async def snippet_deleteall(self, ctx):
         """Deletes ALL user snippets."""
         if not await confirm(
-                ctx,
-                f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
-                f"Are you *absolutely sure* you want to continue?\n"
-                "Type `Yes, I am sure` to confirm.",
-                response_check=lambda r: r == "Yes, I am sure"
+            ctx,
+            f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
+            f"Are you *absolutely sure* you want to continue?\n"
+            "Type `Yes, I am sure` to confirm.",
+            response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
 
@@ -688,14 +709,15 @@ class Customization(commands.Cog):
         is_alias=False,
         is_server=True,
         before_edit_check=_servsnippet_before_edit,
-        name='servsnippet',
+        name="servsnippet",
         invoke_without_command=True,
         help="""
         Creates a snippet that the entire server can use.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser" or "Dragonspeaker".
         If a user and a server have snippets with the same name, the user snippet will take priority.
         """,
-        checks=[guild_only_check], aliases=['serversnippet']
+        checks=[guild_only_check],
+        aliases=["serversnippet"],
     )
 
     @commands.command()
@@ -708,10 +730,7 @@ class Customization(commands.Cog):
 
         try:
             parsed = await helpers.parse_draconic(
-                ctx,
-                teststr,
-                character=char,
-                execution_scope=aliasing.utils.ExecutionScope.COMMAND_TEST
+                ctx, teststr, character=char, execution_scope=aliasing.utils.ExecutionScope.COMMAND_TEST
             )
         except EvaluationError as err:
             return await helpers.handle_alias_exception(ctx, err)
@@ -736,15 +755,12 @@ class Customization(commands.Cog):
 
         try:
             parsed = await helpers.parse_draconic(
-                ctx,
-                teststr,
-                character=char,
-                execution_scope=aliasing.utils.ExecutionScope.COMMAND_TEST
+                ctx, teststr, character=char, execution_scope=aliasing.utils.ExecutionScope.COMMAND_TEST
             )
         except EvaluationError as err:
             return await helpers.handle_alias_exception(ctx, err)
 
-        embed_command = self.bot.get_command('embed')
+        embed_command = self.bot.get_command("embed")
         if embed_command is None:
             return await ctx.send("Error: pbpUtils cog not loaded.")
         else:
@@ -763,35 +779,35 @@ class Customization(commands.Cog):
             cvar = character.get_scope_locals().get(name)
             if cvar is None:
                 return await ctx.send("This cvar is not defined.")
-            return await send_long_code_text(ctx, outside_codeblock=f'**{name}**:', inside_codeblock=cvar)
+            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=cvar)
 
         helpers.set_cvar(character, name, value)
 
         await character.commit(ctx)
-        await ctx.send('Character variable `{}` set to: `{}`'.format(name, value))
+        await ctx.send("Character variable `{}` set to: `{}`".format(name, value))
 
-    @cvar.command(name='remove', aliases=['delete'])
+    @cvar.command(name="remove", aliases=["delete"])
     async def remove_cvar(self, ctx, name):
         """Deletes a cvar from the currently active character."""
         char: Character = await ctx.get_character()
         if name not in char.cvars:
-            return await ctx.send('Character variable not found.')
+            return await ctx.send("Character variable not found.")
 
         del char.cvars[name]
 
         await char.commit(ctx)
-        await ctx.send('Character variable {} removed.'.format(name))
+        await ctx.send("Character variable {} removed.".format(name))
 
-    @cvar.command(name='deleteall', aliases=['removeall'])
+    @cvar.command(name="deleteall", aliases=["removeall"])
     async def cvar_deleteall(self, ctx):
         """Deletes ALL character variables for the active character."""
         char: Character = await ctx.get_character()
         if not await confirm(
-                ctx,
-                f"This will delete **ALL** of your character variables for {char.name}. "
-                "Are you *absolutely sure* you want to continue?\n"
-                "Type `Yes, I am sure` to confirm.",
-                response_check=lambda r: r == "Yes, I am sure"
+            ctx,
+            f"This will delete **ALL** of your character variables for {char.name}. "
+            "Are you *absolutely sure* you want to continue?\n"
+            "Type `Yes, I am sure` to confirm.",
+            response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
 
@@ -800,18 +816,15 @@ class Customization(commands.Cog):
         await char.commit(ctx)
         return await ctx.send(f"OK. I have deleted all of {char.name}'s cvars.")
 
-    @cvar.command(name='list')
+    @cvar.command(name="list")
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""
         character: Character = await ctx.get_character()
         await ctx.send(
-            '{}\'s character variables:\n{}'.format(
-                character.name,
-                ', '.join(sorted(character.cvars.keys()))
-            )
+            "{}'s character variables:\n{}".format(character.name, ", ".join(sorted(character.cvars.keys())))
         )
 
-    @commands.group(invoke_without_command=True, aliases=['uvar'])
+    @commands.group(invoke_without_command=True, aliases=["uvar"])
     async def uservar(self, ctx, name=None, *, value=None):
         """
         Commands to manage user variables for use in snippets and aliases.
@@ -827,44 +840,44 @@ class Customization(commands.Cog):
             uvar = user_vars.get(name)
             if uvar is None:
                 return await ctx.send("This uvar is not defined.")
-            return await send_long_code_text(ctx, outside_codeblock=f'**{name}**:', inside_codeblock=uvar)
+            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=uvar)
 
         if name in STAT_VAR_NAMES or not name.isidentifier():
             return await ctx.send("Could not create uvar: already builtin, or contains invalid character!")
 
         await helpers.set_uvar(ctx, name, value)
-        await ctx.send('User variable `{}` set to: `{}`'.format(name, value))
+        await ctx.send("User variable `{}` set to: `{}`".format(name, value))
 
-    @uservar.command(name='remove', aliases=['delete'])
+    @uservar.command(name="remove", aliases=["delete"])
     async def uvar_remove(self, ctx, name):
         """Deletes a uvar from the user."""
         result = await self.bot.mdb.uvars.delete_one({"owner": str(ctx.author.id), "name": name})
         if not result.deleted_count:
             return await ctx.send("Uvar does not exist.")
-        await ctx.send('User variable {} removed.'.format(name))
+        await ctx.send("User variable {} removed.".format(name))
 
-    @uservar.command(name='list')
+    @uservar.command(name="list")
     async def uvar_list(self, ctx):
         """Lists all uvars for the user."""
         user_vars = await helpers.get_uvars(ctx)
-        await ctx.send('Your user variables:\n{}'.format(', '.join(sorted([name for name in user_vars.keys()]))))
+        await ctx.send("Your user variables:\n{}".format(", ".join(sorted([name for name in user_vars.keys()]))))
 
-    @uservar.command(name='deleteall', aliases=['removeall'])
+    @uservar.command(name="deleteall", aliases=["removeall"])
     async def uvar_deleteall(self, ctx):
         """Deletes ALL user variables."""
         if not await confirm(
-                ctx,
-                f"This will delete **ALL** of your user variables (uvars). "
-                "Are you *absolutely sure* you want to continue?\n"
-                "Type `Yes, I am sure` to confirm.",
-                response_check=lambda r: r == "Yes, I am sure"
+            ctx,
+            f"This will delete **ALL** of your user variables (uvars). "
+            "Are you *absolutely sure* you want to continue?\n"
+            "Type `Yes, I am sure` to confirm.",
+            response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
 
         await self.bot.mdb.uvars.delete_many({"owner": str(ctx.author.id)})
         return await ctx.send("OK. I have deleted all your uvars.")
 
-    @commands.group(invoke_without_command=True, aliases=['svar'])
+    @commands.group(invoke_without_command=True, aliases=["svar"])
     @commands.guild_only()
     async def servervar(self, ctx, name=None, *, value=None):
         """
@@ -884,12 +897,12 @@ class Customization(commands.Cog):
             svar = await helpers.get_svar(ctx, name)
             if svar is None:
                 return await ctx.send("This svar is not defined.")
-            return await send_long_code_text(ctx, outside_codeblock=f'**{name}**:', inside_codeblock=svar)
+            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=svar)
 
         if not _can_edit_servaliases(ctx):
             return await ctx.send(
                 "You do not have permissions to edit server variables. Either __Administrator__ "
-                "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
+                'Discord permissions or a role named "Server Aliaser" or "Dragonspeaker" '
                 "is required."
             )
 
@@ -897,33 +910,33 @@ class Customization(commands.Cog):
             return await ctx.send("Could not create svar: already builtin, or contains invalid character!")
 
         await helpers.set_svar(ctx, name, value)
-        await ctx.send(f'Server variable `{name}` set to: `{value}`')
+        await ctx.send(f"Server variable `{name}` set to: `{value}`")
 
-    @servervar.command(name='remove', aliases=['delete'])
+    @servervar.command(name="remove", aliases=["delete"])
     @commands.guild_only()
     async def svar_remove(self, ctx, name):
         """Deletes a svar from the server."""
         if not _can_edit_servaliases(ctx):
             return await ctx.send(
                 "You do not have permissions to edit server variables. Either __Administrator__ "
-                "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
+                'Discord permissions or a role named "Server Aliaser" or "Dragonspeaker" '
                 "is required."
             )
 
         result = await self.bot.mdb.svars.delete_one({"owner": ctx.guild.id, "name": name})
         if not result.deleted_count:
             return await ctx.send("Svar does not exist.")
-        await ctx.send(f'Server variable {name} removed.')
+        await ctx.send(f"Server variable {name} removed.")
 
-    @servervar.command(name='list')
+    @servervar.command(name="list")
     @commands.guild_only()
     async def svar_list(self, ctx):
         """Lists all svars for the server."""
         server_vars = await helpers.get_svars(ctx)
-        sorted_vars = ', '.join(sorted(name for name in server_vars.keys()))
-        await ctx.send(f'This server\'s server variables:\n{sorted_vars}')
+        sorted_vars = ", ".join(sorted(name for name in server_vars.keys()))
+        await ctx.send(f"This server's server variables:\n{sorted_vars}")
 
-    @commands.group(invoke_without_command=True, aliases=['gvar'])
+    @commands.group(invoke_without_command=True, aliases=["gvar"])
     async def globalvar(self, ctx, name=None):
         """Commands to manage global, community variables for use in snippets and aliases.
         If run without a subcommand, shows the value of a global variable.
@@ -939,26 +952,26 @@ class Customization(commands.Cog):
         await send_long_code_text(
             ctx,
             outside_codeblock=f"**{name}**:\n*Owner: {gvar['owner_name']}*",
-            inside_codeblock=gvar['value'],
+            inside_codeblock=gvar["value"],
             too_long_message=f"This gvar is too long to display in a single message. I've "
-                             f"attached it here, but you can also view it at "
-                             f"<https://avrae.io/dashboard/gvars?lookup={name}>."
+            f"attached it here, but you can also view it at "
+            f"<https://avrae.io/dashboard/gvars?lookup={name}>.",
         )
 
-    @globalvar.command(name='create')
+    @globalvar.command(name="create")
     async def gvar_create(self, ctx, *, value):
         """Creates a global variable.
         A name will be randomly assigned upon creation."""
         name = await helpers.create_gvar(ctx, value)
         await ctx.send(f"Created global variable `{name}`.")
 
-    @globalvar.command(name='edit')
+    @globalvar.command(name="edit")
     async def gvar_edit(self, ctx, name, *, value):
         """Edits a global variable."""
         await helpers.update_gvar(ctx, name, value)
-        await ctx.send(f'Global variable `{name}` edited.')
+        await ctx.send(f"Global variable `{name}` edited.")
 
-    @globalvar.command(name='editor')
+    @globalvar.command(name="editor")
     async def gvar_editor(self, ctx, name, user: discord.Member = None):
         """Toggles the editor status of a user."""
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
@@ -966,10 +979,10 @@ class Customization(commands.Cog):
             return await ctx.send("Global variable not found.")
 
         if user is not None:
-            if gvar['owner'] != str(ctx.author.id):
+            if gvar["owner"] != str(ctx.author.id):
                 return await ctx.send("You are not the owner of this variable.")
             else:
-                e = gvar.get('editors', [])
+                e = gvar.get("editors", [])
                 if str(user.id) in e:
                     e.remove(str(user.id))
                     msg = f"Removed {user} from the editor list."
@@ -977,23 +990,23 @@ class Customization(commands.Cog):
                     e.append(str(user.id))
                     msg = f"Added {user} to the editor list."
                 await self.bot.mdb.gvars.update_one({"key": name}, {"$set": {"editors": e}})
-            await ctx.send(f'Global variable `{name}` edited: {msg}')
+            await ctx.send(f"Global variable `{name}` edited: {msg}")
         else:
             embed = EmbedWithAuthor(ctx)
             embed.title = "Editors"
             editor_mentions = []
-            for editor in gvar.get('editors', []):
+            for editor in gvar.get("editors", []):
                 editor_mentions.append(f"<@{editor}>")
-            embed.description = ', '.join(editor_mentions) or "No editors."
+            embed.description = ", ".join(editor_mentions) or "No editors."
             await ctx.send(embed=embed)
 
-    @globalvar.command(name='remove', aliases=['delete'])
+    @globalvar.command(name="remove", aliases=["delete"])
     async def gvar_remove(self, ctx, name):
         """Deletes a global variable."""
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
             return await ctx.send("Global variable not found.")
-        elif gvar['owner'] != str(ctx.author.id):
+        elif gvar["owner"] != str(ctx.author.id):
             return await ctx.send("You are not the owner of this variable.")
         else:
             if await confirm(ctx, f"Are you sure you want to delete `{name}`? (Reply with yes/no)"):
@@ -1001,26 +1014,26 @@ class Customization(commands.Cog):
             else:
                 return await ctx.send("Ok, cancelling.")
 
-        await ctx.send('Global variable {} removed.'.format(name))
+        await ctx.send("Global variable {} removed.".format(name))
 
-    @globalvar.command(name='list')
+    @globalvar.command(name="list")
     async def gvar_list(self, ctx):
         """Lists all global variables for the user."""
         user_vars = []
         async for gvar in self.bot.mdb.gvars.find({"owner": str(ctx.author.id)}):
-            user_vars.append((gvar['key'], gvar['value']))
+            user_vars.append((gvar["key"], gvar["value"]))
         gvar_list = [f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in sorted(user_vars, key=lambda i: i[0])]
-        say_list = ['']
+        say_list = [""]
         for g in gvar_list:
             if len(g) + len(say_list[-1]) < 1900:
-                say_list[-1] += f'\n{g}'
+                say_list[-1] += f"\n{g}"
             else:
                 say_list.append(g)
-        await ctx.send('Your global variables:{}'.format(say_list[0]))
+        await ctx.send("Your global variables:{}".format(say_list[0]))
         for m in say_list[1:]:
             await ctx.send(m)
 
-    @commands.command(aliases=['servsettings'])
+    @commands.command(aliases=["servsettings"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def server_settings(self, ctx):
@@ -1066,8 +1079,7 @@ class Customization(commands.Cog):
 
 
 async def send_long_code_text(
-    destination, outside_codeblock, inside_codeblock, codeblock_language='',
-    too_long_message=None
+    destination, outside_codeblock, inside_codeblock, codeblock_language="", too_long_message=None
 ):
     """Sends *text* to the destination, or if it's too long, embeds it as a txt file and uploads it with a message."""
     if too_long_message is None:
@@ -1079,7 +1091,7 @@ async def send_long_code_text(
         await destination.send(text)
     elif len(inside_codeblock) < 5 * 10e6:
         out = io.StringIO(inside_codeblock)
-        await destination.send(f"{outside_codeblock}\n{too_long_message}", file=discord.File(out, 'output.txt'))
+        await destination.send(f"{outside_codeblock}\n{too_long_message}", file=discord.File(out, "output.txt"))
     else:
         await destination.send("This output is too large.")
 

@@ -8,8 +8,7 @@ from utils.subscription_mixins import CommonHomebrewMixin, EditorMixin
 
 
 class HomebrewContainer(CommonHomebrewMixin, EditorMixin, abc.ABC):
-    def __init__(self, _id: ObjectId, name: str, owner: int, public: bool,
-                 image: str, desc: str, **_):
+    def __init__(self, _id: ObjectId, name: str, owner: int, public: bool, image: str, desc: str, **_):
         # metadata
         super().__init__(_id)
         self.name = name
@@ -43,7 +42,7 @@ class HomebrewContainer(CommonHomebrewMixin, EditorMixin, abc.ABC):
             _id = ObjectId(_id)
 
         if meta_only:
-            obj = await cls.data_coll(ctx).find_one({"_id": _id}, ['_id', 'name', 'owner', 'public'])
+            obj = await cls.data_coll(ctx).find_one({"_id": _id}, ["_id", "name", "owner", "public"])
         else:
             obj = await cls.data_coll(ctx).find_one({"_id": _id})
         if obj is None:
@@ -57,8 +56,8 @@ class HomebrewContainer(CommonHomebrewMixin, EditorMixin, abc.ABC):
     @classmethod
     async def user_owned_ids(cls, ctx):
         """Returns an async iterator of ObjectIds of objects the contextual user owns."""
-        async for obj in cls.data_coll(ctx).find({"owner": ctx.author.id}, ['_id']):
-            yield obj['_id']
+        async for obj in cls.data_coll(ctx).find({"owner": ctx.author.id}, ["_id"]):
+            yield obj["_id"]
 
     def is_owned_by(self, user):
         """Returns whether the member owns the object.
@@ -105,5 +104,5 @@ class HomebrewContainer(CommonHomebrewMixin, EditorMixin, abc.ABC):
         if not available_names:
             raise NoActiveBrew()
 
-        result = await search_and_select(ctx, available_names, name, lambda p: p['name'])
-        return await cls.from_id(ctx, result['_id'])
+        result = await search_and_select(ctx, available_names, name, lambda p: p["name"])
+        return await cls.from_id(ctx, result["_id"])

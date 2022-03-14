@@ -25,7 +25,7 @@ class DDBSheetSync(LiveIntegration):
             ddb_user=ddb_user,
             removed_hit_points=clamp(0, self.character.max_hp - self.character.hp, self.character.max_hp),
             temporary_hit_points=max(self.character.temp_hp, 0),
-            character_id=int(self.character.upstream_id)
+            character_id=int(self.character.upstream_id),
         )
 
     async def _do_sync_coins(self):
@@ -33,12 +33,12 @@ class DDBSheetSync(LiveIntegration):
             return
         await self._ctx.bot.ddb.character.set_currency(
             ddb_user=ddb_user,
-            pp = self.character.coinpurse.pp,
-            gp = self.character.coinpurse.gp,
-            ep = self.character.coinpurse.ep,
-            sp = self.character.coinpurse.sp,
-            cp = self.character.coinpurse.cp,
-            character_id=int(self.character.upstream_id)
+            pp=self.character.coinpurse.pp,
+            gp=self.character.coinpurse.gp,
+            ep=self.character.coinpurse.ep,
+            sp=self.character.coinpurse.sp,
+            cp=self.character.coinpurse.cp,
+            character_id=int(self.character.upstream_id),
         )
 
     async def _do_sync_slots(self):
@@ -53,17 +53,13 @@ class DDBSheetSync(LiveIntegration):
                     slots_of_level_used -= sb.max_pact_slots - sb.num_pact_slots  # remove # of used pact slots
                 real_slots.append(slots_of_level_used)
             await self._ctx.bot.ddb.character.set_spell_slots(
-                ddb_user,
-                *real_slots,
-                character_id=int(self.character.upstream_id)
+                ddb_user, *real_slots, character_id=int(self.character.upstream_id)
             )
         if sb.max_pact_slots is not None:
             pact_slots = [0] * 5
             pact_slots[sb.pact_slot_level - 1] = sb.max_pact_slots - sb.num_pact_slots
             await self._ctx.bot.ddb.character.set_pact_magic(
-                ddb_user,
-                *pact_slots,
-                character_id=int(self.character.upstream_id)
+                ddb_user, *pact_slots, character_id=int(self.character.upstream_id)
             )
 
     async def _do_sync_consumable(self, consumable):
@@ -74,7 +70,7 @@ class DDBSheetSync(LiveIntegration):
         if consumable.max is None:
             return
         try:
-            limited_use_id, type_id = consumable.live_id.split('-')
+            limited_use_id, type_id = consumable.live_id.split("-")
         except (ValueError, TypeError):
             return
         await self._ctx.bot.ddb.character.set_limited_use(
@@ -82,7 +78,7 @@ class DDBSheetSync(LiveIntegration):
             id=int(limited_use_id),
             entity_type_id=int(type_id),
             uses=clamp(0, consumable.get_max() - consumable.value, consumable.get_max()),
-            character_id=int(self.character.upstream_id)
+            character_id=int(self.character.upstream_id),
         )
 
     async def _do_sync_death_saves(self):
@@ -93,7 +89,7 @@ class DDBSheetSync(LiveIntegration):
             ddb_user=ddb_user,
             success_count=clamp(0, death_saves.successes, 3),
             fail_count=clamp(0, death_saves.fails, 3),
-            character_id=int(self.character.upstream_id)
+            character_id=int(self.character.upstream_id),
         )
 
     async def commit(self, ctx):
@@ -102,9 +98,7 @@ class DDBSheetSync(LiveIntegration):
         if ddb_user is None:
             return
         flag = await ctx.bot.ldclient.variation(
-            'cog.sheetmanager.sync.send.enabled',
-            ddb_user.to_ld_dict(),
-            default=False
+            "cog.sheetmanager.sync.send.enabled", ddb_user.to_ld_dict(), default=False
         )
         if not flag:
             return

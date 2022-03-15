@@ -1,13 +1,3 @@
-from utils import config
-
-# datadog - if DD_SERVICE not set, don't do any tracing/patching
-# patches all happen before any imports
-if config.DD_SERVICE is not None:
-    from utils import datadog
-
-    datadog.do_patches()
-    datadog.start_profiler()
-
 import asyncio
 import faulthandler
 import logging
@@ -249,14 +239,12 @@ bot = Avrae(
     chunk_guilds_at_startup=False,
 )
 
-if config.DD_SERVICE is None:
-    # the datadog setup configures the logging its own way, so we don't set it up here so there's no duplicates
-    log_formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(log_formatter)
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
+log_formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(log_formatter)
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
 log = logging.getLogger("bot")
 
 

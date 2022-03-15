@@ -499,9 +499,9 @@ class GoogleSheet(SheetLoaderABC):
 
         for c_type in COIN_TYPES:
             if self.version >= (2, 1):
-                coin_value = self.inventory.value(COIN_TYPES[c_type]["gSheet"]["v2"]) or 0
+                coin_value = self.inventory.unformatted_value(COIN_TYPES[c_type]["gSheet"]["v2"]) or 0
             else:
-                coin_value = self.character_data.value(COIN_TYPES[c_type]["gSheet"]["v14"]) or 0
+                coin_value = self.character_data.unformatted_value(COIN_TYPES[c_type]["gSheet"]["v14"]) or 0
             try:
                 coins[c_type] = int(coin_value)
             except ValueError as e:

@@ -1179,6 +1179,18 @@ AliasCoinpurse
 
         :type: int
 
+    .. attribute:: str(AliasCoinpurse)
+
+        Returns a string representation of the entire coinpurse. If the character setting for Compact Coins is enabled, this will only return your float gold, otherwise will return all 5 coin types.
+
+        :type: str
+
+    .. attribute:: AliasCoinpurse[cointype]
+
+        Gets the value of the given coin type.
+
+        :type: int
+
 StatBlock Models
 ----------------
 

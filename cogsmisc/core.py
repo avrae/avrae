@@ -177,7 +177,7 @@ class Core(commands.Cog):
             )
             return await ctx.send(embed=embed)
 
-        embed.title = f"Hello, {ddb_user.username}!"
+        embed.title = f"Hello, {ddb_user.display_name}!"
         embed.url = "https://www.dndbeyond.com/account"
         default_desc = (
             f"Thanks for linking your account! We'll reach out to you when the purchases you've made "
@@ -206,6 +206,7 @@ class Core(commands.Cog):
 
         await ctx.send(
             f"```\nD&D Beyond Username: {ddb_user.username}\n"
+            f"Display Name: {ddb_user.display_name}\n"
             f"User ID: {ddb_user.user_id}\n"
             f"Roles: {ddb_user.roles}\n"
             f"Subscriber: {ddb_user.subscriber}\n"

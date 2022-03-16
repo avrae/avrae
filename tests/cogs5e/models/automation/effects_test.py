@@ -146,6 +146,7 @@ class TestText:
         avrae.message(
             '!a import {"name":"Text Test","automation":[{"type": "text", "text": {"id": 75, "typeId": 12168134}}],"_v":2}'
         )
+        await dhttp.drain()
         avrae.message('!a "Text Test"')
         await dhttp.drain()
 
@@ -153,6 +154,7 @@ class TestText:
         avrae.message(
             '!a import {"name":"Text Test2","automation":[{"type": "text", "text": {"id": -75, "typeId": 12168134}}],"_v":2}'
         )
+        await dhttp.drain()
         avrae.message('!a "Text Test2"')
         await dhttp.drain()
 
@@ -160,6 +162,7 @@ class TestText:
         avrae.message(
             '!a import {"name":"Text Test3","automation":[{"type": "text", "text": {"id": -9999999, "typeId": 12168134}}],"_v":2}'
         )
+        await dhttp.drain()
         avrae.message('!a "Text Test3"')
         await dhttp.drain()
 

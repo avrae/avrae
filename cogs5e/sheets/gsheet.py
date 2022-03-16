@@ -499,7 +499,10 @@ class GoogleSheet(SheetLoaderABC):
 
         for c_type in COIN_TYPES:
             if self.version >= (2, 1):
-                coin_value = self.inventory.unformatted_value(COIN_TYPES[c_type]["gSheet"]["v2"]) or 0
+                if not self.inventory:  # If they renamed the sheet or deleted it
+                    coin_value = 0
+                else:
+                    coin_value = self.inventory.unformatted_value(COIN_TYPES[c_type]["gSheet"]["v2"]) or 0
             else:
                 coin_value = self.character_data.unformatted_value(COIN_TYPES[c_type]["gSheet"]["v14"]) or 0
             try:
@@ -507,7 +510,7 @@ class GoogleSheet(SheetLoaderABC):
             except ValueError as e:
                 if self.version >= (2, 1):
                     cell = COIN_TYPES[c_type]["gSheet"]["v2"]
-                    sheet = self.inventory.worksheet.title
+                    sheet = "Inventory"
                 else:
                     cell = COIN_TYPES[c_type]["gSheet"]["v14"]
                     sheet = self.character_data.worksheet.title

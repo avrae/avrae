@@ -213,7 +213,7 @@ class GameTrack(commands.Cog):
 
     @game.group(name="hp", invoke_without_command=True)
     async def game_hp(self, ctx, *, hp: str = None):
-        """Modifies the HP of a the current active character."""
+        """Modifies the HP of the current active character."""
         character: Character = await ctx.get_character()
         caster = await targetutils.maybe_combat_caster(ctx, character)
 
@@ -259,7 +259,7 @@ class GameTrack(commands.Cog):
 
     @game.command(name="thp")
     async def game_thp(self, ctx, *, thp: str = None):
-        """Modifies the temp HP of a the current active character.
+        """Modifies the temp HP of the current active character.
         If positive, assumes set; if negative, assumes mod."""
         character: Character = await ctx.get_character()
         caster = await targetutils.maybe_combat_caster(ctx, character)

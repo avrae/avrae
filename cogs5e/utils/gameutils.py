@@ -83,9 +83,13 @@ def _parse_coin_args_float(coins: float) -> CoinsArgs:
     # so we do all our math in the positives
     sign = 1 if coins >= 0 else -1
 
-    return CoinsArgs(
-        gp=sign * (total_copper // 100), sp=sign * ((total_copper % 100) // 10), cp=sign * (total_copper % 10)
-    )
+    if sign == -1:
+        # If it's a negative value, remove all the lowest coins first
+        return CoinsArgs(cp=sign * total_copper)
+    else:
+        return CoinsArgs(
+            gp=sign * (total_copper // 100), sp=sign * ((total_copper % 100) // 10), cp=sign * (total_copper % 10)
+        )
 
 
 def _parse_coin_args_re(args: str) -> CoinsArgs:

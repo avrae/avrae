@@ -63,6 +63,9 @@ def parse_coin_args(args: str) -> CoinsArgs:
     Otherwise, allows the user to specify currencies in the form ``/(([+-]?\d+)\s*([pgesc]p)?)+/``
     (e.g. +1gp -2sp 3cp).
     """
+
+    # Remove commas, in the case of `+3,104gp` or `-2,000.05`
+    args = args.replace(",", "")
     try:
         return _parse_coin_args_float(float(args))
     except ValueError:

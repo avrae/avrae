@@ -204,7 +204,7 @@ class GameTrack(commands.Cog):
 
     @game_coinpurse.command(name="convert", aliases=["consolidate"])
     async def game_coinpurse_convert(self, ctx):
-        """Converts all of your coins into the lowest amount of coins possible.
+        """Converts all of your coins into the highest value coins possible.
         100cp turns into 1gp, 5sp turns into 1ep, etc."""
         character: Character = await ctx.get_character()
         deltas = character.coinpurse.consolidate_coins()

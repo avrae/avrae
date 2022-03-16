@@ -11,7 +11,7 @@ pytestmark = pytest.mark.asyncio
 async def test_parse_coin_args():
     assert parse_coin_args("+10") == CoinsArgs(gp=10, explicit=False)
     assert parse_coin_args("+10cp +10gp -8ep") == CoinsArgs(gp=10, ep=-8, cp=10, explicit=True)
-    assert parse_coin_args("-10.47") == CoinsArgs(gp=-10, sp=-4, cp=-7, explicit=False)
+    assert parse_coin_args("-10.47") == CoinsArgs(cp=-1047, explicit=False)
     assert parse_coin_args("+10.388888") == CoinsArgs(gp=10, sp=3, cp=8, explicit=False)
 
 
@@ -37,6 +37,9 @@ async def test_coin_autoconvert_down():
     assert Coinpurse(pp=10, gp=3, cp=1).auto_convert_down(CoinsArgs(cp=-2)) == CoinsArgs(gp=-1, ep=1, sp=4, cp=8)
     with pytest.raises(InvalidArgument):
         Coinpurse(gp=1).auto_convert_down(CoinsArgs(pp=-1, explicit=False))
+    assert Coinpurse(pp=10, gp=10).auto_convert_down(CoinsArgs(pp=-11)) == CoinsArgs(pp=-10, gp=-10)
+    with pytest.raises(InvalidArgument):
+        Coinpurse(pp=10, gp=9).auto_convert_down(CoinsArgs(pp=-11, explicit=False))
 
 
 async def test_coin_autoconvert_up():

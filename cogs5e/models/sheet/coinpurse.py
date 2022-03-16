@@ -83,7 +83,7 @@ class Coinpurse(HasIntegrationMixin):
             coins.pp += pp_borrowed
         if self.pp + coins.pp < 0:
             # Still not enough? Convert the total transaction to copper, run again
-            if (self.total + coins.total) > 0:
+            if (self.total + coins.total) >= 0:
                 return self.auto_convert_down(CoinsArgs(cp=int(coins.total * 100)))
             else:
                 raise InvalidArgument("You do not have enough coins to cover this transaction.")

@@ -18,7 +18,7 @@ from d20 import RollSyntaxError
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
 from gspread import SpreadsheetNotFound
-from gspread.exceptions import APIError
+from gspread.exceptions import APIError, WorksheetNotFound
 from gspread.utils import a1_to_rowcol, fill_gaps
 from cogs5e.models.sheet.coinpurse import Coinpurse
 
@@ -342,7 +342,10 @@ class GoogleSheet(SheetLoaderABC):
             self.additional = TempCharacter(doc.worksheet("Additional"))
             self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
             if self.version >= (2, 1):
-                self.inventory = TempCharacter(doc.worksheet("Inventory"))
+                try:
+                    self.inventory = TempCharacter(doc.worksheet("Inventory"))
+                except WorksheetNotFound:
+                    self.inventory = None
 
     # main loading methods
     async def load_character(self, ctx, args):

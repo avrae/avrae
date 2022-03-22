@@ -287,7 +287,6 @@ class Lookup(commands.Cog):
             req_dm_monster = False
             visible = True
 
-<<<<<<< HEAD
         # #1741 -h arg for monster lookup
         image_args = argparse(name)
         hide_name = image_args.get("h", False, bool)
@@ -295,12 +294,6 @@ class Lookup(commands.Cog):
 
         if visible:
             visible = visible and not hide_name
-=======
-        # #817 -h arg for monster lookup
-        if name.endswith(" -h"):
-            name = name[:-3]
-            visible = False
->>>>>>> 3da2e3571abc96c02219889072ef28bcb64cb531
 
         choices = await get_monster_choices(ctx, filter_by_license=False)
         monster = await self._lookup_search3(ctx, {"monster": choices}, name)

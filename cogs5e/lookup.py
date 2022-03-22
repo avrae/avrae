@@ -289,10 +289,13 @@ class Lookup(commands.Cog):
             req_dm_monster = False
             visible = True
 
-        # #817 -h arg for monster lookup
-        if name.endswith(' -h'):
-            name = name[:-3]
-            visible = False
+        # #1735 -h arg for monster lookup
+        image_args = argparse(name)
+        hide_name = image_args.get("h", False, bool)
+        name = name.replace(" -h", "").rstrip()
+
+        if visible:
+            visible = visible and not hide_name
 
         choices = await get_monster_choices(ctx, filter_by_license=False)
         monster = await self._lookup_search3(ctx, {'monster': choices}, name)
@@ -300,7 +303,7 @@ class Lookup(commands.Cog):
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
 
-        embed_queue[-1].title = monster.name
+        embed_queue[-1].title = monster.name if not hide_name else ''
         embed_queue[-1].url = monster.url
 
         def safe_append(title, desc):
@@ -419,15 +422,20 @@ class Lookup(commands.Cog):
                 await ctx.send(embed=embed)
 
     @commands.command()
-    async def monimage(self, ctx, *, name):
+    async def monimage(self, ctx, *, name: str):
         """Shows a monster's image."""
+        # #1735 -h arg for monster lookup
+        image_args = argparse(name)
+        hide_name = image_args.get("h", False, bool)
+        name = name.replace(" -h", "").rstrip()
+
         choices = await get_monster_choices(ctx, filter_by_license=False)
         monster = await self._lookup_search3(ctx, {'monster': choices}, name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
         url = monster.get_image_url()
         embed = EmbedWithAuthor(ctx)
-        embed.title = monster.name
+        embed.title = monster.name if not hide_name else ""
         embed.description = f"{monster.size} monster."
 
         if not url:
@@ -558,7 +566,7 @@ class Lookup(commands.Cog):
 
         if item.attunement:
             if item.attunement is True:  # can be truthy, but not true
-                embed.add_field(name="Attunement", value=f"Requires Attunement")
+                embed.add_field(name="Attunement", value="Requires Attunement")
             else:
                 embed.add_field(name="Attunement", value=f"Requires Attunement {item.attunement}", inline=False)
 

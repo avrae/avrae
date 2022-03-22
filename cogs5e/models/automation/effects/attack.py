@@ -50,6 +50,7 @@ class Attack(Effect):
         criton = args.last("criton", 20, int)
         ac = args.last("ac", None, int)
         force_roll = args.last("attackroll", None, int, ephem=True)
+        min_attack_roll = args.last("ma", 0, int)
 
         # ==== caster options ====
         # character-specific arguments
@@ -118,6 +119,9 @@ class Attack(Effect):
             reroll_str = ""
             if reroll:
                 reroll_str = f"ro{reroll}"
+            # minimum attack roll (#1742)
+            if min_attack_roll:
+                reroll_str = f"{reroll_str}mi{min_attack_roll}"
 
             if force_roll:
                 formatted_d20 = f"{force_roll}"

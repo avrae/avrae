@@ -289,7 +289,7 @@ class Lookup(commands.Cog):
             req_dm_monster = False
             visible = True
 
-        # #1735 -h arg for monster lookup
+        # #1741 -h arg for monster lookup
         image_args = argparse(name)
         hide_name = image_args.get("h", False, bool)
         name = name.replace(" -h", "").rstrip()
@@ -423,8 +423,10 @@ class Lookup(commands.Cog):
 
     @commands.command()
     async def monimage(self, ctx, *, name: str):
-        """Shows a monster's image."""
-        # #1735 -h arg for monster lookup
+        """Shows a monster's image.
+        __Valid Arguments__
+        -h - Hides the monster statblock name."""
+        # #1741 -h arg for monster lookup
         image_args = argparse(name)
         hide_name = image_args.get("h", False, bool)
         name = name.replace(" -h", "").rstrip()

@@ -2,8 +2,14 @@ from aliasing.errors import EvaluationError
 from cogs5e.models.errors import AvraeException
 
 __all__ = (
-    'AutomationException', 'StopExecution', 'TargetException', 'AutomationEvaluationException', 'InvalidIntExpression',
-    'NoSpellDC', 'NoAttackBonus', 'NoCounterFound'
+    "AutomationException",
+    "StopExecution",
+    "TargetException",
+    "AutomationEvaluationException",
+    "InvalidIntExpression",
+    "NoSpellDC",
+    "NoAttackBonus",
+    "NoCounterFound",
 )
 
 
@@ -16,6 +22,7 @@ class StopExecution(AutomationException):
     Some check failed that should cause automation to stop, whatever stage of execution it's at.
     This does not revert any side effects made before this point.
     """
+
     pass
 
 

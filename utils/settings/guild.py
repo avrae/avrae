@@ -45,18 +45,14 @@ class ServerSettings(SettingsBaseModel):
         """Returns a new ServerSettings instance with all default options, updated by legacy lookupsettings options."""
         return cls(
             guild_id=guild_id,
-            lookup_dm_required=d.get('req_dm_monster', True),
-            lookup_pm_dm=d.get('pm_dm', False),
-            lookup_pm_result=d.get('pm_result', False)
+            lookup_dm_required=d.get("req_dm_monster", True),
+            lookup_pm_dm=d.get("pm_dm", False),
+            lookup_pm_result=d.get("pm_result", False),
         )
 
     async def commit(self, mdb):
         """Commits the settings to the database."""
-        await mdb.guild_settings.update_one(
-            {"guild_id": self.guild_id},
-            {"$set": self.dict()},
-            upsert=True
-        )
+        await mdb.guild_settings.update_one({"guild_id": self.guild_id}, {"$set": self.dict()}, upsert=True)
 
     # ==== helpers ====
     def is_dm(self, member: disnake.Member):

@@ -17,10 +17,13 @@ async def maybe_combat_caster(ctx, caster, combat=None):
 
     if combat is not None and isinstance(caster, Character):
         combatant = next(
-            (c for c in combat.get_combatants()
-             if getattr(c, 'character_id', None) == caster.upstream
-             and getattr(c, 'character_owner', None) == caster.owner),
-            None
+            (
+                c
+                for c in combat.get_combatants()
+                if getattr(c, "character_id", None) == caster.upstream
+                and getattr(c, "character_owner", None) == caster.owner
+            ),
+            None,
         )
         if combatant is not None:
             await combatant.update_character_ref(ctx, inst=caster)
@@ -36,15 +39,15 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
     If channel in combat but caster not: returns caster, list of combatants, combat.
     If channel in combat and caster in combat: returns caster as combatant, list of combatants, combat.
     """
-    target_args = args.get('t')
+    target_args = args.get("t")
     targets = []
 
     try:
         combat = await ctx.get_combat()
     except CombatNotFound:
         for i, target in enumerate(target_args):
-            if '|' in target:
-                target, contextargs = target.split('|', 1)
+            if "|" in target:
+                target, contextargs = target.split("|", 1)
                 args.add_context(target, argparse(contextargs))
             targets.append(target)
         return caster, targets, None
@@ -58,13 +61,13 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
 
 
 async def definitely_combat(combat, args, allow_groups=True):
-    target_args = args.get('t')
+    target_args = args.get("t")
     targets = []
 
     for i, t in enumerate(target_args):
         contextargs = None
-        if '|' in t:
-            t, contextargs = t.split('|', 1)
+        if "|" in t:
+            t, contextargs = t.split("|", 1)
             contextargs = argparse(contextargs)
 
         try:

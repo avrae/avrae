@@ -3,8 +3,19 @@ import logging
 from ..errors import AutomationException, StopExecution
 
 __all__ = (
-    'Effect', 'Target', 'Attack', 'Save', 'Damage', 'TempHP', 'IEffect', 'Roll', 'Text', 'SetVariable', 'Condition',
-    'UseCounter', 'CastSpell',
+    "Effect",
+    "Target",
+    "Attack",
+    "Save",
+    "Damage",
+    "TempHP",
+    "IEffect",
+    "Roll",
+    "Text",
+    "SetVariable",
+    "Condition",
+    "UseCounter",
+    "CastSpell",
 )
 
 log = logging.getLogger(__name__)
@@ -21,7 +32,7 @@ class Effect:
 
     @staticmethod
     def deserialize(data):
-        return [EFFECT_MAP[e['type']].from_data(e) for e in data]
+        return [EFFECT_MAP[e["type"]].from_data(e) for e in data]
 
     @staticmethod
     def serialize(obj_list):
@@ -44,7 +55,7 @@ class Effect:
     # required methods
     @classmethod
     def from_data(cls, data):  # catch-all
-        data.pop('type')
+        data.pop("type")
         return cls(**data)
 
     def to_dict(self):
@@ -76,7 +87,7 @@ class Effect:
             effect_str = effect.build_str(caster, evaluator)
             if effect_str:
                 out.append(effect_str)
-        return ', '.join(out)
+        return ", ".join(out)
 
     @property
     def children(self):

@@ -1,12 +1,18 @@
 from cogs5e.models.errors import AvraeException
 
 __all__ = (
-    'CombatException', 'CombatNotFound', 'RequiresContext', 'ChannelInCombat', 'CombatChannelNotFound', 'NoCombatants'
+    "CombatException",
+    "CombatNotFound",
+    "RequiresContext",
+    "ChannelInCombat",
+    "CombatChannelNotFound",
+    "NoCombatants",
 )
 
 
 class CombatException(AvraeException):
     """A base exception for combat-related exceptions to stem from."""
+
     pass
 
 

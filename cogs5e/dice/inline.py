@@ -13,8 +13,8 @@ from utils.dice import PersistentRollContext
 from utils.functions import camel_to_title, verbose_stat
 from .utils import string_search_adv
 
-INLINE_ROLLING_EMOJI = '\U0001f3b2'  # :game_die:
-INLINE_ROLLING_RE = re.compile(r'\[\[(.+?]?)]]')
+INLINE_ROLLING_EMOJI = "\U0001f3b2"  # :game_die:
+INLINE_ROLLING_RE = re.compile(r"\[\[(.+?]?)]]")
 _sentinel = object()
 
 
@@ -30,9 +30,7 @@ class InlineRoller:
 
         # inline rolling feature flag
         if not await self.bot.ldclient.variation(
-                "cog.dice.inline_rolling.enabled",
-                user=discord_user_to_dict(message.author),
-                default=False
+            "cog.dice.inline_rolling.enabled", user=discord_user_to_dict(message.author), default=False
         ):
             return
 
@@ -75,9 +73,7 @@ class InlineRoller:
 
         # inline rolling feature flag
         if not await self.bot.ldclient.variation(
-                "cog.dice.inline_rolling.enabled",
-                user=discord_user_to_dict(message.author),
-                default=False
+            "cog.dice.inline_rolling.enabled", user=discord_user_to_dict(message.author), default=False
         ):
             return
 
@@ -92,9 +88,7 @@ class InlineRoller:
 
         # otherwise save that this message has been processed, remove reactions, and do the rolls
         await self.bot.rdb.setex(
-            f"cog.dice.inline_rolling.messages.{message.id}.processed",
-            str(time.time()),
-            60 * 60 * 24
+            f"cog.dice.inline_rolling.messages.{message.id}.processed", str(time.time()), 60 * 60 * 24
         )
         await self.do_inline_rolls(message)
         try:
@@ -110,8 +104,8 @@ class InlineRoller:
         roller = d20.Roller(context=PersistentRollContext())
         char_replacer = CharacterReplacer(self.bot, message)
         for expr, context_before, context_after in roll_exprs:
-            context_before = context_before.replace('\n', ' ')
-            context_after = context_after.replace('\n', ' ')
+            context_before = context_before.replace("\n", " ")
+            context_after = context_after.replace("\n", " ")
 
             try:
                 expr, char_comment = await char_replacer.replace(expr)
@@ -131,7 +125,7 @@ class InlineRoller:
         if not out:
             return
 
-        await message.reply('\n'.join(out))
+        await message.reply("\n".join(out))
 
     # ==== onboarding ====
     async def inline_rolling_message_onboarding(self, user):
@@ -144,17 +138,17 @@ class InlineRoller:
         embed.add_field(
             name="What is Inline Rolling?",
             value="Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll reply "
-                  "to it with a roll for each one. You can send messages with multiple, too, like this: ```\n"
-                  "I attack the goblin with my shortsword [[1d20 + 6]] for a total of [[1d6 + 3]] piercing damage.\n"
-                  "```",
-            inline=False
+            "to it with a roll for each one. You can send messages with multiple, too, like this: ```\n"
+            "I attack the goblin with my shortsword [[1d20 + 6]] for a total of [[1d6 + 3]] piercing damage.\n"
+            "```",
+            inline=False,
         )
         # noinspection DuplicatedCode
         embed.add_field(
             name="Learn More",
             value="You can learn more about Inline Rolling in [the Avrae cheatsheets]"
-                  "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
-            inline=False
+            "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
+            inline=False,
         )
         embed.set_footer(text="You won't see this message again.")
 
@@ -174,16 +168,16 @@ class InlineRoller:
         embed.add_field(
             name="What is Inline Rolling?",
             value="Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll react "
-                  f"with the {INLINE_ROLLING_EMOJI} emoji. You can click it to have me roll all of the dice in your "
-                  "message, and I'll reply with my own message!",
-            inline=False
+            f"with the {INLINE_ROLLING_EMOJI} emoji. You can click it to have me roll all of the dice in your "
+            "message, and I'll reply with my own message!",
+            inline=False,
         )
         # noinspection DuplicatedCode
         embed.add_field(
             name="Learn More",
             value="You can learn more about Inline Rolling in [the Avrae cheatsheets]"
-                  "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
-            inline=False
+            "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
+            inline=False,
         )
         embed.set_footer(text="You won't see this message again.")
 
@@ -224,18 +218,14 @@ class CharacterReplacer:
 
         character = await self._get_character()
         check_search = skill_match.group(2).lower()
-        if skill_match.group(1) == 'c':
-            skill_key = next(
-                (c for c in constants.SKILL_NAMES if c.lower().startswith(check_search)),
-                None
-            )
+        if skill_match.group(1) == "c":
+            skill_key = next((c for c in constants.SKILL_NAMES if c.lower().startswith(check_search)), None)
             if skill_key is None:
                 raise InvalidArgument(f"`{check_search}` is not a valid skill.")
             skill = character.skills[skill_key]
             skill_name = f"{camel_to_title(skill_key)} Check"
             check_dice = skill.d20(
-                reroll=character.options.reroll,
-                min_val=10 * bool(character.options.talent and skill.prof >= 1)
+                reroll=character.options.reroll, min_val=10 * bool(character.options.talent and skill.prof >= 1)
             )
         else:
             try:
@@ -245,7 +235,7 @@ class CharacterReplacer:
                 raise InvalidArgument(f"`{check_search}` is not a valid save.")
             check_dice = skill.d20(reroll=character.options.reroll)
 
-        rest_of_expr = expr[skill_match.end():]
+        rest_of_expr = expr[skill_match.end() :]
         return f"{check_dice}{rest_of_expr}", skill_name
 
 

@@ -43,11 +43,11 @@ class AdminUtils(commands.Cog):
 
     # ==== setup tasks ====
     async def load_admin(self):
-        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
-        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
-        self.whitelisted_serv_ids = set(await self.bot.rdb.jget('server-whitelist', []))
+        self.bot.muted = set(await self.bot.rdb.jget("muted", []))
+        self.blacklisted_serv_ids = set(await self.bot.rdb.jget("blacklist", []))
+        self.whitelisted_serv_ids = set(await self.bot.rdb.jget("server-whitelist", []))
 
-        loglevels = await self.bot.rdb.jget('loglevels', {})
+        loglevels = await self.bot.rdb.jget("loglevels", {})
         for logger, level in loglevels.items():
             try:
                 logging.getLogger(logger).setLevel(level)
@@ -65,7 +65,8 @@ class AdminUtils(commands.Cog):
             "whois": self._whois,
             "ping": self._ping,
             "restart_shard": self._restart_shard,
-            "kill_cluster": self._kill_cluster
+            "kill_cluster": self._kill_cluster,
+            "set_dd_sample_rate": self._set_dd_sample_rate,
         }
         while True:  # if we ever disconnect from pubsub, wait 5s and try reinitializing
             try:  # connect to the pubsub channel
@@ -113,7 +114,7 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def blacklist(self, ctx, _id: int):
         self.blacklisted_serv_ids.add(_id)
-        await self.bot.rdb.jset('blacklist', list(self.blacklisted_serv_ids))
+        await self.bot.rdb.jset("blacklist", list(self.blacklisted_serv_ids))
         resp = await self.pscall("reload_lists")
         await self._send_replies(ctx, resp)
 
@@ -121,7 +122,7 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def whitelist(self, ctx, _id: int):
         self.whitelisted_serv_ids.add(_id)
-        await self.bot.rdb.jset('server-whitelist', list(self.whitelisted_serv_ids))
+        await self.bot.rdb.jset("server-whitelist", list(self.whitelisted_serv_ids))
         resp = await self.pscall("reload_lists")
         await self._send_replies(ctx, resp)
 
@@ -145,7 +146,7 @@ class AdminUtils(commands.Cog):
         resp = await self.pscall("whois", kwargs={"user_id": user_id})
         await self._send_replies(ctx, resp, base=f"{user_id} is {user}:")
 
-    @admin.command(hidden=True, name='leave')
+    @admin.command(hidden=True, name="leave")
     @checks.is_owner()
     async def leave_server(self, ctx, guild_id: int):
         resp = await self.pscall("leave", kwargs={"guild_id": guild_id}, expected_replies=1)
@@ -165,7 +166,7 @@ class AdminUtils(commands.Cog):
         else:
             self.bot.muted.add(target)
             await ctx.send("{} ({}) muted.".format(target, target_user))
-        await self.bot.rdb.jset('muted', list(self.bot.muted))
+        await self.bot.rdb.jset("muted", list(self.bot.muted))
         resp = await self.pscall("reload_lists")
         await self._send_replies(ctx, resp)
 
@@ -173,9 +174,9 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def loglevel(self, ctx, level: int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
-        loglevels = await self.bot.rdb.jget('loglevels', {})
+        loglevels = await self.bot.rdb.jget("loglevels", {})
         loglevels[logger] = level
-        await self.bot.rdb.jset('loglevels', loglevels)
+        await self.bot.rdb.jset("loglevels", loglevels)
         resp = await self.pscall("loglevel", args=[level], kwargs={"logger": logger})
         await self._send_replies(ctx, resp)
 
@@ -185,7 +186,7 @@ class AdminUtils(commands.Cog):
         resp = await self.pscall("reload_static")
         await self._send_replies(ctx, resp)
 
-    @admin.command(hidden=True, name='su')
+    @admin.command(hidden=True, name="su")
     @checks.is_owner()
     async def admin_su(self, ctx, member: discord.Member, *, content):
         msg = copy.copy(ctx.message)
@@ -197,6 +198,7 @@ class AdminUtils(commands.Cog):
             await self.bot.invoke(new_ctx)
         elif new_ctx.invoked_with:
             from aliasing.helpers import handle_aliases
+
             await handle_aliases(ctx)
 
     @admin.command(hidden=True)
@@ -204,15 +206,13 @@ class AdminUtils(commands.Cog):
     async def set_user_permissions(self, ctx, member: discord.Member, permission: str, value: bool):
         """Sets a user's global permission."""
         await self.bot.mdb.user_permissions.update_one(
-            {"id": str(member.id)},
-            {"$set": {permission: value}},
-            upsert=True
+            {"id": str(member.id)}, {"$set": {permission: value}}, upsert=True
         )
         permissions = await self.bot.mdb.user_permissions.find_one({"id": str(member.id)})
-        del permissions['_id']
+        del permissions["_id"]
         await ctx.send(f"Updated user permissions: ```json\n{json.dumps(permissions, indent=2)}\n```")
 
-    @admin.command(hidden=True, name='debug_entity')
+    @admin.command(hidden=True, name="debug_entity")
     @checks.is_owner()
     async def admin_debug_entity(self, ctx, tid, eid: int = None):
         if eid is not None:
@@ -220,14 +220,26 @@ class AdminUtils(commands.Cog):
         else:
             # noinspection PyProtectedMember
             options = list(compendium._entity_lookup.values())
-            e = await search_and_select(ctx, options, tid, lambda en: en.name,
-                                        selectkey=lambda en: f"{en.name} ({en.entity_type})")
+            e = await search_and_select(
+                ctx, options, tid, lambda en: en.name, selectkey=lambda en: f"{en.name} ({en.entity_type})"
+            )
         entitlement_entity = compendium.lookup_entity(e.entitlement_entity_type, e.entitlement_entity_id)
-        entitlement_entity_name = entitlement_entity.name if entitlement_entity is not None else 'unknown entity!'
-        await ctx.send(f"```py\n"
-                       f"# {e.entity_id=}, {e.type_id=}\n"
-                       f"# {e.entitlement_entity_id=}, {e.entitlement_entity_type=} ({entitlement_entity_name})\n"
-                       f"{e!r}\n```")
+        entitlement_entity_name = entitlement_entity.name if entitlement_entity is not None else "unknown entity!"
+        await ctx.send(
+            f"```py\n"
+            f"# {e.entity_id=}, {e.type_id=}\n"
+            f"# {e.entitlement_entity_id=}, {e.entitlement_entity_type=} ({entitlement_entity_name})\n"
+            f"{e!r}\n```"
+        )
+
+    @admin.command(hidden=True, name="dd-sample-rate")
+    @checks.is_owner()
+    async def admin_dd_sample_rate(self, ctx, sample_rate: float):
+        """Sets the DataDog sample rate."""
+        if not 0.0 <= sample_rate <= 1.0:
+            return await ctx.send("sample rate must be between 0 and 1")
+        resp = await self.pscall("set_dd_sample_rate", kwargs={"sample_rate": sample_rate})
+        await self._send_replies(ctx, resp)
 
     # ---- cluster management ----
     @admin.command(hidden=True, name="restart-shard")
@@ -244,32 +256,34 @@ class AdminUtils(commands.Cog):
     async def admin_kill_cluster(self, ctx, cluster_id: int):
         """Forces a cluster to restart by killing it."""
         num_shards = len(self.bot.shard_ids) if self.bot.shard_ids is not None else 1
-        if not await confirm(ctx,
-                             f"Are you absolutely sure you want to kill cluster {cluster_id}? (Reply with yes/no)\n"
-                             f"**This will terminate approximately {num_shards} shards, which "
-                             f"will take at least {num_shards * 5} seconds to restart, and "
-                             f"impact about {len(self.bot.guilds)} servers.**"):
+        if not await confirm(
+            ctx,
+            f"Are you absolutely sure you want to kill cluster {cluster_id}? (Reply with yes/no)\n"
+            f"**This will terminate approximately {num_shards} shards, which "
+            f"will take at least {num_shards * 5} seconds to restart, and "
+            f"impact about {len(self.bot.guilds)} servers.**",
+        ):
             return await ctx.send("ok, not killing")
         resp = await self.pscall("kill_cluster", kwargs={"cluster_id": cluster_id}, expected_replies=1)
         await self._send_replies(ctx, resp)
 
     # ---- workshop ----
-    @admin.group(name='workshop', invoke_without_command=True)
+    @admin.group(name="workshop", invoke_without_command=True)
     @checks.is_owner()
     async def admin_workshop(self, ctx):
         await ctx.send("subcommands: `tags`, `tags add <slug> <name> <category>`, `tags remove <slug>`")
 
-    @admin_workshop.group(name='tags', invoke_without_command=True)
+    @admin_workshop.group(name="tags", invoke_without_command=True)
     @checks.is_owner()
     async def admin_workshop_tags(self, ctx):
         """Lists all tags in the workshop."""
         embed = discord.Embed()
         tags = await self.bot.mdb.workshop_tags.find().to_list(None)
-        for category, c_tags in itertools.groupby(tags, lambda t: t['category']):
+        for category, c_tags in itertools.groupby(tags, lambda t: t["category"]):
             out = []
             for tag in c_tags:
                 out.append(f"`{tag['slug']}`: {tag['name']}")
-            out = '\n'.join(out)
+            out = "\n".join(out)
             embed.add_field(name=category, value=out)
 
         if not tags:
@@ -277,7 +291,7 @@ class AdminUtils(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @admin_workshop_tags.command(name='add')
+    @admin_workshop_tags.command(name="add")
     @checks.is_owner()
     async def admin_workshop_tags_add(self, ctx, slug, name, category):
         """
@@ -285,13 +299,13 @@ class AdminUtils(commands.Cog):
 
         Slug must be only alphanum + `-` characters, and not start with `-`.
         """
-        if not re.match(r'\w[\w\d\-]*', slug):
+        if not re.match(r"\w[\w\d\-]*", slug):
             return await ctx.send("Tag must be alnum and not start with -")
         tag = {"slug": slug, "name": name, "category": category}
         await self.bot.mdb.workshop_tags.insert_one(tag)
         await ctx.send(f"Added tag `{slug}`")
 
-    @admin_workshop_tags.command(name='remove')
+    @admin_workshop_tags.command(name="remove")
     @checks.is_owner()
     async def admin_workshop_tags_remove(self, ctx, slug):
         """
@@ -312,7 +326,7 @@ class AdminUtils(commands.Cog):
     @staticmethod
     async def _send_replies(ctx, resp, base=None):
         sorted_replies = sorted(resp.items(), key=lambda i: i[0])
-        out = '\n'.join(f"{cid}: {rep}" for cid, rep in sorted_replies)
+        out = "\n".join(f"{cid}: {rep}" for cid, rep in sorted_replies)
         if base:
             out = f"{base}\n{out}"
         await ctx.send(out)
@@ -331,7 +345,7 @@ class AdminUtils(commands.Cog):
         return f"Set level of {logger} to {level}."
 
     async def _changepresence(self, status=None, msg=None):
-        statuslevel = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd}
+        statuslevel = {"online": discord.Status.online, "idle": discord.Status.idle, "dnd": discord.Status.dnd}
         status = statuslevel.get(status)
         await self.bot.change_presence(status=status, activity=discord.Game(msg or "D&D 5e | !help"))
         return "Changed presence."
@@ -341,9 +355,9 @@ class AdminUtils(commands.Cog):
         return "OK"
 
     async def _reload_lists(self):
-        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
-        self.whitelisted_serv_ids = set(await self.bot.rdb.jget('server-whitelist', []))
-        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
+        self.blacklisted_serv_ids = set(await self.bot.rdb.jget("blacklist", []))
+        self.whitelisted_serv_ids = set(await self.bot.rdb.jget("server-whitelist", []))
+        self.bot.muted = set(await self.bot.rdb.jget("muted", []))
         return "OK"
 
     async def _serv_info(self, guild_id):
@@ -356,8 +370,7 @@ class AdminUtils(commands.Cog):
                 guild = channel.guild
 
         try:
-            invite = (
-                await next(c for c in guild.channels if isinstance(c, discord.TextChannel)).create_invite()).url
+            invite = (await next(c for c in guild.channels if isinstance(c, discord.TextChannel)).create_invite()).url
         except:
             invite = None
 
@@ -374,6 +387,16 @@ class AdminUtils(commands.Cog):
     async def _ping(self):
         return dict(self.bot.latencies)
 
+    async def _set_dd_sample_rate(self, sample_rate: float):
+        if config.DD_SERVICE is None:
+            return "no DD_SERVICE set, this process is not sampling"
+        import ddtrace.sampler
+
+        ddtrace.tracer.configure(
+            sampler=ddtrace.sampler.DatadogSampler(rules=[ddtrace.sampler.SamplingRule(sample_rate=sample_rate)])
+        )
+        return f"sample rate set to {sample_rate}"
+
     async def _restart_shard(self, shard_id: int):
         if (shard := self.bot.get_shard(shard_id)) is None:
             return False
@@ -385,6 +408,7 @@ class AdminUtils(commands.Cog):
             return False
         import os
         import signal
+
         os.kill(os.getpid(), signal.SIGTERM)  # please shut down gracefully
         return "Shutting down..."
 
@@ -406,9 +430,9 @@ class AdminUtils(commands.Cog):
     async def _ps_recv(self, message):
         redis.pslogger.debug(message)
         msg = redis.deserialize_ps_msg(message)
-        if msg.type == 'reply':
+        if msg.type == "reply":
             await self._ps_reply(msg)
-        elif msg.type == 'cmd':
+        elif msg.type == "cmd":
             await self._ps_cmd(msg)
 
     async def _ps_reply(self, message: redis.PubSubReply):

@@ -29,25 +29,31 @@ class RunningTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            mc = ctx.bot.get_command('mc')
-            ms = ctx.bot.get_command('ms')
+            mc = ctx.bot.get_command("mc")
+            ms = ctx.bot.get_command("ms")
             if ctx.command in (mc, ms):
                 if ctx.command is mc:
-                    state_map.data['has_check'] = True
+                    state_map.data["has_check"] = True
                 elif ctx.command is ms:
-                    state_map.data['has_save'] = True
+                    state_map.data["has_save"] = True
                 await state_map.commit(ctx)
                 embed = TutorialEmbed(self, ctx)
                 embed.title = "Objectives"
-                embed.description = checklist([
-                    (f"Make a skill check for a monster with `{ctx.prefix}moncheck <name of monster> <skill>`.",
-                     state_map.data.get('has_check')),
-                    (f"Make an ability save for a monster with `{ctx.prefix}monsave <name of monster> <ability>`.",
-                     state_map.data.get('has_save')),
-                ])
+                embed.description = checklist(
+                    [
+                        (
+                            f"Make a skill check for a monster with `{ctx.prefix}moncheck <name of monster> <skill>`.",
+                            state_map.data.get("has_check"),
+                        ),
+                        (
+                            f"Make an ability save for a monster with `{ctx.prefix}monsave <name of monster> <ability>`.",
+                            state_map.data.get("has_save"),
+                        ),
+                    ]
+                )
                 await ctx.send(embed=embed)
 
-            if state_map.data.get('has_check') and state_map.data.get('has_save'):
+            if state_map.data.get("has_check") and state_map.data.get("has_save"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -80,10 +86,7 @@ class RunningTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command in (
-                    ctx.bot.get_command('ma'),
-                    ctx.bot.get_command('ma list')
-            ):
+            if ctx.command in (ctx.bot.get_command("ma"), ctx.bot.get_command("ma list")):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -114,7 +117,7 @@ class RunningTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('ma'):
+            if ctx.command is ctx.bot.get_command("ma"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -149,7 +152,7 @@ class RunningTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if ctx.command is ctx.bot.get_command('mcast'):
+            if ctx.command is ctx.bot.get_command("mcast"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):

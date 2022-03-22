@@ -11,7 +11,7 @@ class DetailedErrorHandler(logging.StreamHandler):
 
     def emit(self, record):
         super().emit(record)
-        if record.levelname != 'ERROR':
+        if record.levelname != "ERROR":
             return
         print(record.pathname, record.lineno)
         traceback.print_stack()

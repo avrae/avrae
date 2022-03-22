@@ -10,7 +10,7 @@ from utils.functions import natural_join
 from utils.settings.guild import InlineRollingType, ServerSettings
 from .menu import MenuBase
 
-_AvraeT = TypeVar('_AvraeT', bound=disnake.Client)
+_AvraeT = TypeVar("_AvraeT", bound=disnake.Client)
 if TYPE_CHECKING:
     from dbot import Avrae
 
@@ -20,7 +20,7 @@ TOO_MANY_ROLES_SENTINEL = "__special:too_many_roles"
 
 
 class ServerSettingsMenuBase(MenuBase, abc.ABC):
-    __menu_copy_attrs__ = ('bot', 'settings', 'guild')
+    __menu_copy_attrs__ = ("bot", "settings", "guild")
     bot: _AvraeT
     settings: ServerSettings
     guild: disnake.Guild
@@ -31,9 +31,7 @@ class ServerSettingsMenuBase(MenuBase, abc.ABC):
 
     async def get_inline_rolling_desc(self) -> str:
         flag_enabled = await self.bot.ldclient.variation(
-            "cog.dice.inline_rolling.enabled",
-            user=discord_user_to_dict(self.owner),
-            default=False
+            "cog.dice.inline_rolling.enabled", user=discord_user_to_dict(self.owner), default=False
         )
         if not flag_enabled:
             return "Inline rolling is currently **globally disabled** for all users. Check back soon!"
@@ -41,8 +39,10 @@ class ServerSettingsMenuBase(MenuBase, abc.ABC):
         if self.settings.inline_enabled == InlineRollingType.DISABLED:
             return "Inline rolling is currently **disabled**."
         elif self.settings.inline_enabled == InlineRollingType.REACTION:
-            return ("Inline rolling is currently set to **react**. I'll look for messages containing `[[dice]]` "
-                    "and react with :game_die: - click the reaction to roll!")
+            return (
+                "Inline rolling is currently set to **react**. I'll look for messages containing `[[dice]]` "
+                "and react with :game_die: - click the reaction to roll!"
+            )
         return "Inline rolling is currently **enabled**. I'll roll any `[[dice]]` I find in messages!"
 
 
@@ -55,58 +55,48 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         inst.guild = guild
         return inst
 
-    @disnake.ui.button(label='Lookup Settings', style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="Lookup Settings", style=disnake.ButtonStyle.primary)
     async def lookup_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(_LookupSettingsUI, interaction)
 
-    @disnake.ui.button(label='Inline Rolling Settings', style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="Inline Rolling Settings", style=disnake.ButtonStyle.primary)
     async def inline_rolling_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(_InlineRollingSettingsUI, interaction)
 
-    @disnake.ui.button(label='Miscellaneous Settings', style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="Miscellaneous Settings", style=disnake.ButtonStyle.primary)
     async def miscellaneous_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(_MiscellaneousSettingsUI, interaction)
 
-    @disnake.ui.button(label='Exit', style=disnake.ButtonStyle.danger)
+    @disnake.ui.button(label="Exit", style=disnake.ButtonStyle.danger)
     async def exit(self, *_):
         await self.on_timeout()
 
     async def get_content(self):
-        embed = disnake.Embed(
-            title=f"Server Settings for {self.guild.name}",
-            colour=disnake.Colour.blurple()
-        )
+        embed = disnake.Embed(title=f"Server Settings for {self.guild.name}", colour=disnake.Colour.blurple())
         if self.settings.dm_roles:
-            dm_roles = natural_join([f'<@&{role_id}>' for role_id in self.settings.dm_roles], 'or')
+            dm_roles = natural_join([f"<@&{role_id}>" for role_id in self.settings.dm_roles], "or")
         else:
             dm_roles = "Dungeon Master, DM, Game Master, or GM"
         embed.add_field(
             name="Lookup Settings",
             value=f"**DM Roles**: {dm_roles}\n"
-                  f"**Monsters Require DM**: {self.settings.lookup_dm_required}\n"
-                  f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
-                  f"**Direct Message Results**: {self.settings.lookup_pm_result}",
-            inline=False
+            f"**Monsters Require DM**: {self.settings.lookup_dm_required}\n"
+            f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
+            f"**Direct Message Results**: {self.settings.lookup_pm_result}",
+            inline=False,
         )
-        embed.add_field(
-            name="Inline Rolling Settings",
-            value=await self.get_inline_rolling_desc(),
-            inline=False
-        )
+        embed.add_field(name="Inline Rolling Settings", value=await self.get_inline_rolling_desc(), inline=False)
 
         nlp_enabled_description = ""
         nlp_feature_flag = await self.bot.ldclient.variation(
-            "cog.initiative.upenn_nlp.enabled",
-            user=discord_user_to_dict(self.owner),
-            default=False
+            "cog.initiative.upenn_nlp.enabled", user=discord_user_to_dict(self.owner), default=False
         )
         if nlp_feature_flag:
             nlp_enabled_description = f"\n**Contribute Message Data to NLP Training**: {self.settings.upenn_nlp_opt_in}"
         embed.add_field(
             name="Miscellaneous Settings",
-            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}"
-                  f"{nlp_enabled_description}",
-            inline=False
+            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}" f"{nlp_enabled_description}",
+            inline=False,
         )
 
         return {"embed": embed}
@@ -116,7 +106,7 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
     select_dm_roles: disnake.ui.Select  # make the type checker happy
 
     # ==== ui ====
-    @disnake.ui.select(placeholder='Select DM Roles', min_values=0)
+    @disnake.ui.select(placeholder="Select DM Roles", min_values=0)
     async def select_dm_roles(self, select: disnake.ui.Select, interaction: disnake.Interaction):
         if len(select.values) == 1 and select.values[0] == TOO_MANY_ROLES_SENTINEL:
             role_ids = await self._text_select_dm_roles(interaction)
@@ -127,25 +117,25 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Toggle Monsters Require DM', style=disnake.ButtonStyle.primary, row=1)
+    @disnake.ui.button(label="Toggle Monsters Require DM", style=disnake.ButtonStyle.primary, row=1)
     async def toggle_dm_required(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.lookup_dm_required = not self.settings.lookup_dm_required
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Toggle Direct Message DMs', style=disnake.ButtonStyle.primary, row=1)
+    @disnake.ui.button(label="Toggle Direct Message DMs", style=disnake.ButtonStyle.primary, row=1)
     async def toggle_pm_dm(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.lookup_pm_dm = not self.settings.lookup_pm_dm
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Toggle Direct Message Results', style=disnake.ButtonStyle.primary, row=1)
+    @disnake.ui.button(label="Toggle Direct Message Results", style=disnake.ButtonStyle.primary, row=1)
     async def toggle_pm_result(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.lookup_pm_result = not self.settings.lookup_pm_result
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=4)
+    @disnake.ui.button(label="Back", style=disnake.ButtonStyle.grey, row=4)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
 
@@ -156,23 +146,24 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         await interaction.send(
             "Choose the DM roles by sending a message to this channel. You can mention the roles, or use a "
             "comma-separated list of role names or IDs. Type `reset` to reset the role list to the default.",
-            ephemeral=True
+            ephemeral=True,
         )
 
         try:
             input_msg: disnake.Message = await self.bot.wait_for(
-                'message', timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id
+                "message",
+                timeout=60,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
             )
             with suppress(disnake.HTTPException):
                 await input_msg.delete()
 
-            if input_msg.content == 'reset':
+            if input_msg.content == "reset":
                 await interaction.send("The DM roles have been updated.", ephemeral=True)
                 return None
 
             role_ids = {r.id for r in input_msg.role_mentions}
-            for stmt in input_msg.content.split(','):
+            for stmt in input_msg.content.split(","):
                 clean_stmt = stmt.strip()
                 try:  # get role by id
                     role_id = int(clean_stmt)
@@ -199,8 +190,7 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         self.select_dm_roles.options.clear()
         if len(self.guild.roles) > 25:
             self.select_dm_roles.add_option(
-                label="Whoa, this server has a lot of roles! Click here to select them.",
-                value=TOO_MANY_ROLES_SENTINEL
+                label="Whoa, this server has a lot of roles! Click here to select them.", value=TOO_MANY_ROLES_SENTINEL
             )
             return
 
@@ -216,53 +206,53 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Lookup Settings",
             colour=disnake.Colour.blurple(),
-            description="These settings affect how lookup results are displayed on this server."
+            description="These settings affect how lookup results are displayed on this server.",
         )
         if not self.settings.dm_roles:
             embed.add_field(
                 name="DM Roles",
                 value=f"**Dungeon Master, DM, Game Master, or GM**\n"
-                      f"*Any user with a role named one of these will be considered a DM. This lets them look up a "
-                      f"monster's full stat block if `Monsters Require DM` is enabled, skip other players' turns in "
-                      f"initiative, and more.*",
-                inline=False
+                f"*Any user with a role named one of these will be considered a DM. This lets them look up a "
+                f"monster's full stat block if `Monsters Require DM` is enabled, skip other players' turns in "
+                f"initiative, and more.*",
+                inline=False,
             )
         else:
-            dm_roles = natural_join([f'<@&{role_id}>' for role_id in self.settings.dm_roles], 'or')
+            dm_roles = natural_join([f"<@&{role_id}>" for role_id in self.settings.dm_roles], "or")
             embed.add_field(
                 name="DM Roles",
                 value=f"**{dm_roles}**\n"
-                      f"*Any user with at least one of these roles will be considered a DM. This lets them look up a "
-                      f"monster's full stat block if `Monsters Require DM` is enabled, skip turns in initiative, and "
-                      f"more.*",
-                inline=False
+                f"*Any user with at least one of these roles will be considered a DM. This lets them look up a "
+                f"monster's full stat block if `Monsters Require DM` is enabled, skip turns in initiative, and "
+                f"more.*",
+                inline=False,
             )
         embed.add_field(
             name="Monsters Require DM",
             value=f"**{self.settings.lookup_dm_required}**\n"
-                  f"*If this is enabled, monster lookups will display hidden stats for any user without "
-                  f"a role named DM, GM, Dungeon Master, Game Master, or the DM role configured above.*",
-            inline=False
+            f"*If this is enabled, monster lookups will display hidden stats for any user without "
+            f"a role named DM, GM, Dungeon Master, Game Master, or the DM role configured above.*",
+            inline=False,
         )
         embed.add_field(
             name="Direct Message DMs",
             value=f"**{self.settings.lookup_pm_dm}**\n"
-                  f"*If this is enabled, the result of monster lookups will be direct messaged to the user who looked "
-                  f"it up, rather than being printed to the channel, if the user is a DM.*",
-            inline=False
+            f"*If this is enabled, the result of monster lookups will be direct messaged to the user who looked "
+            f"it up, rather than being printed to the channel, if the user is a DM.*",
+            inline=False,
         )
         embed.add_field(
             name="Direct Message Results",
             value=f"**{self.settings.lookup_pm_result}**\n"
-                  f"*If this is enabled, the result of all lookups will be direct messaged to the user who looked "
-                  f"it up, rather than being printed to the channel.*",
-            inline=False
+            f"*If this is enabled, the result of all lookups will be direct messaged to the user who looked "
+            f"it up, rather than being printed to the channel.*",
+            inline=False,
         )
         return {"embed": embed}
 
 
 class _InlineRollingSettingsUI(ServerSettingsMenuBase):
-    @disnake.ui.button(label='Disable', style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="Disable", style=disnake.ButtonStyle.primary)
     async def disable(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.inline_enabled = InlineRollingType.DISABLED
         button.disabled = True
@@ -271,7 +261,7 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='React', style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="React", style=disnake.ButtonStyle.primary)
     async def react(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.inline_enabled = InlineRollingType.REACTION
         button.disabled = True
@@ -280,7 +270,7 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Enable', style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="Enable", style=disnake.ButtonStyle.primary)
     async def enable(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.inline_enabled = InlineRollingType.ENABLED
         button.disabled = True
@@ -289,7 +279,7 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=1)
+    @disnake.ui.button(label="Back", style=disnake.ButtonStyle.grey, row=1)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
 
@@ -305,26 +295,26 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Inline Rolling Settings",
             colour=disnake.Colour.blurple(),
-            description=await self.get_inline_rolling_desc()
+            description=await self.get_inline_rolling_desc(),
         )
         return {"embed": embed}
 
 
 class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
     # ==== ui ====
-    @disnake.ui.button(label='Toggle DDB Campaign Message', style=disnake.ButtonStyle.primary, row=1)
+    @disnake.ui.button(label="Toggle DDB Campaign Message", style=disnake.ButtonStyle.primary, row=1)
     async def toggle_campaign_cta(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.show_campaign_cta = not self.settings.show_campaign_cta
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Toggle NLP Opt In', style=disnake.ButtonStyle.primary, row=1)
+    @disnake.ui.button(label="Toggle NLP Opt In", style=disnake.ButtonStyle.primary, row=1)
     async def toggle_upenn_nlp_opt_in(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.upenn_nlp_opt_in = not self.settings.upenn_nlp_opt_in
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label='Back', style=disnake.ButtonStyle.grey, row=4)
+    @disnake.ui.button(label="Back", style=disnake.ButtonStyle.grey, row=4)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
 
@@ -335,9 +325,7 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
 
         # nlp feature flag
         flag_enabled = await self.bot.ldclient.variation(
-            "cog.initiative.upenn_nlp.enabled",
-            user=discord_user_to_dict(self.owner),
-            default=False
+            "cog.initiative.upenn_nlp.enabled", user=discord_user_to_dict(self.owner), default=False
         )
         if not flag_enabled:
             self.remove_item(self.toggle_upenn_nlp_opt_in)
@@ -350,27 +338,25 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Show DDB Campaign Message",
             value=f"**{self.settings.show_campaign_cta}**\n"
-                  f"*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when "
-                  f"you import a character in an unlinked campaign.*",
-            inline=False
+            f"*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when "
+            f"you import a character in an unlinked campaign.*",
+            inline=False,
         )
 
         nlp_feature_flag = await self.bot.ldclient.variation(
-            "cog.initiative.upenn_nlp.enabled",
-            user=discord_user_to_dict(self.owner),
-            default=False
+            "cog.initiative.upenn_nlp.enabled", user=discord_user_to_dict(self.owner), default=False
         )
         if nlp_feature_flag:
             embed.add_field(
                 name="Contribute Message Data to Natural Language AI Training",
                 value=f"**{self.settings.upenn_nlp_opt_in}**\n"
-                      f"*If this is enabled, the contents of messages, usernames, character names, and snapshots "
-                      f"of a character's resources will be recorded in channels **with an active combat.***\n"
-                      f"*This data will be used in a project to make advances in interactive fiction and text "
-                      f"generation using artificial intelligence at the University of Pennsylvania.*\n"
-                      f"*Read more about the project [here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html), "
-                      f"and our data handling and Privacy Policy [here](https://www.fandom.com/privacy-policy).*",
-                inline=False
+                f"*If this is enabled, the contents of messages, usernames, character names, and snapshots "
+                f"of a character's resources will be recorded in channels **with an active combat.***\n"
+                f"*This data will be used in a project to make advances in interactive fiction and text "
+                f"generation using artificial intelligence at the University of Pennsylvania.*\n"
+                f"*Read more about the project [here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html), "
+                f"and our data handling and Privacy Policy [here](https://www.fandom.com/privacy-policy).*",
+                inline=False,
             )
 
         return {"embed": embed}

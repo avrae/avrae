@@ -2,7 +2,7 @@ from .shared import Sourced, Trait
 
 
 class Background(Sourced):
-    entity_type = 'background'
+    entity_type = "background"
     type_id = 1669830167
 
     def __init__(self, name, traits, **kwargs):
@@ -16,6 +16,12 @@ class Background(Sourced):
 
     @classmethod
     def from_data(cls, d):
-        return cls(d['name'],
-                   [Trait.from_dict(t) for t in d['traits']],
-                   source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
+        return cls(
+            d["name"],
+            [Trait.from_dict(t) for t in d["traits"]],
+            source=d["source"],
+            entity_id=d["id"],
+            page=d["page"],
+            url=d["url"],
+            is_free=d["isFree"],
+        )

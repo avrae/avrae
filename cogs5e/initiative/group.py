@@ -25,8 +25,9 @@ class CombatantGroup(Combatant):
         # this import is here because Combat imports CombatantGroup - it's a 1-time cost on first call but
         # practically free afterwards (<1us)
         from .combat import deserialize_combatant
+
         combatants = []
-        for c in raw.pop('combatants'):
+        for c in raw.pop("combatants"):
             combatant = await deserialize_combatant(c, ctx, combat)
             combatants.append(combatant)
 
@@ -35,8 +36,9 @@ class CombatantGroup(Combatant):
     @classmethod
     def from_dict_sync(cls, raw, ctx, combat):
         from .combat import deserialize_combatant_sync
+
         combatants = []
-        for c in raw.pop('combatants'):
+        for c in raw.pop("combatants"):
             combatant = deserialize_combatant_sync(c, ctx, combat)
             combatants.append(combatant)
 
@@ -44,8 +46,12 @@ class CombatantGroup(Combatant):
 
     def to_dict(self):
         return {
-            'name': self._name, 'init': self._init, 'combatants': [c.to_dict() for c in self.get_combatants()],
-            'index': self._index, 'type': 'group', 'id': self.id
+            "name": self._name,
+            "init": self._init,
+            "combatants": [c.to_dict() for c in self.get_combatants()],
+            "index": self._index,
+            "type": "group",
+            "id": self.id,
         }
 
     # members
@@ -71,8 +77,10 @@ class CombatantGroup(Combatant):
     @property
     def init_skill(self):
         # groups: if all combatants are the same type, return the first one's skill, otherwise +0
-        if (all(c.type == CombatantType.MONSTER for c in self._combatants)
-                and len(set(c.monster_name for c in self._combatants)) == 1):
+        if (
+            all(c.type == CombatantType.MONSTER for c in self._combatants)
+            and len(set(c.monster_name for c in self._combatants)) == 1
+        ):
             return self._combatants[0].init_skill
         return Skill(0)
 
@@ -133,7 +141,7 @@ class CombatantGroup(Combatant):
         :param private: Whether to return the full revealed stats or not.
         :return: A string describing the combatant.
         """
-        return '\n'.join(c.get_status(private) for c in self.get_combatants())
+        return "\n".join(c.get_status(private) for c in self.get_combatants())
 
     def on_turn(self, num_turns=1):
         for c in self.get_combatants():

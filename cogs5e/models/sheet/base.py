@@ -3,8 +3,16 @@ from utils.functions import camel_to_title, verbose_stat
 
 
 class BaseStats:
-    def __init__(self, prof_bonus: int, strength: int, dexterity: int, constitution: int, intelligence: int,
-                 wisdom: int, charisma: int):
+    def __init__(
+        self,
+        prof_bonus: int,
+        strength: int,
+        dexterity: int,
+        constitution: int,
+        intelligence: int,
+        wisdom: int,
+        charisma: int,
+    ):
         self.prof_bonus = prof_bonus
         self.strength = strength
         self.dexterity = dexterity
@@ -19,9 +27,13 @@ class BaseStats:
 
     def to_dict(self):
         return {
-            "prof_bonus": self.prof_bonus, "strength": self.strength, "dexterity": self.dexterity,
-            "constitution": self.constitution, "intelligence": self.intelligence, "wisdom": self.wisdom,
-            "charisma": self.charisma
+            "prof_bonus": self.prof_bonus,
+            "strength": self.strength,
+            "dexterity": self.dexterity,
+            "constitution": self.constitution,
+            "intelligence": self.intelligence,
+            "wisdom": self.wisdom,
+            "charisma": self.charisma,
         }
 
     # ---------- main funcs ----------
@@ -34,18 +46,23 @@ class BaseStats:
         if abbr_stat not in STAT_ABBREVIATIONS:
             raise ValueError(f"{stat} is not a valid stat.")
         return {
-            'str': self.strength // 2 - 5, 'dex': self.dexterity // 2 - 5,
-            'con': self.constitution // 2 - 5, 'int': self.intelligence // 2 - 5,
-            'wis': self.wisdom // 2 - 5, 'cha': self.charisma // 2 - 5
+            "str": self.strength // 2 - 5,
+            "dex": self.dexterity // 2 - 5,
+            "con": self.constitution // 2 - 5,
+            "int": self.intelligence // 2 - 5,
+            "wis": self.wisdom // 2 - 5,
+            "cha": self.charisma // 2 - 5,
         }[abbr_stat]
 
     def __str__(self):
-        return f"**STR**: {self.strength} ({(self.strength - 10) // 2:+}) " \
-               f"**DEX**: {self.dexterity} ({(self.dexterity - 10) // 2:+}) " \
-               f"**CON**: {self.constitution} ({(self.constitution - 10) // 2:+})\n" \
-               f"**INT**: {self.intelligence} ({(self.intelligence - 10) // 2:+}) " \
-               f"**WIS**: {self.wisdom} ({(self.wisdom - 10) // 2:+}) " \
-               f"**CHA**: {self.charisma} ({(self.charisma - 10) // 2:+})"
+        return (
+            f"**STR**: {self.strength} ({(self.strength - 10) // 2:+}) "
+            f"**DEX**: {self.dexterity} ({(self.dexterity - 10) // 2:+}) "
+            f"**CON**: {self.constitution} ({(self.constitution - 10) // 2:+})\n"
+            f"**INT**: {self.intelligence} ({(self.intelligence - 10) // 2:+}) "
+            f"**WIS**: {self.wisdom} ({(self.wisdom - 10) // 2:+}) "
+            f"**CHA**: {self.charisma} ({(self.charisma - 10) // 2:+})"
+        )
 
     def __getitem__(self, item):  # little bit hacky, but works
         if item not in STAT_NAMES:
@@ -80,7 +97,7 @@ class Levels:
         return self.classes.get(cls_name, default)
 
     def __str__(self):
-        return '/'.join(f"{cls} {lvl}" for cls, lvl in self)
+        return "/".join(f"{cls} {lvl}" for cls, lvl in self)
 
 
 class Skill:
@@ -101,11 +118,11 @@ class Skill:
     def to_dict(self):
         out = {"value": self.value}
         if self.prof != 0:
-            out['prof'] = self.prof
+            out["prof"] = self.prof
         if self.bonus != 0:
-            out['bonus'] = self.bonus
+            out["bonus"] = self.bonus
         if self.adv is not None:
-            out['adv'] = self.adv
+            out["adv"] = self.adv
         return out
 
     # ---------- main funcs ----------
@@ -120,7 +137,7 @@ class Skill:
             adv = None
 
         # reroll string (#1199)
-        reroll_str = ''
+        reroll_str = ""
         if reroll:
             reroll_str = f"ro{reroll}"
 
@@ -154,8 +171,9 @@ class Skills:
     @classmethod
     def from_dict(cls, d):
         if set(d.keys()) != set(SKILL_NAMES):
-            raise ValueError(f"Some skills are missing. "
-                             f"Difference: {set(d.keys()).symmetric_difference(set(SKILL_NAMES))}")
+            raise ValueError(
+                f"Some skills are missing. " f"Difference: {set(d.keys()).symmetric_difference(set(SKILL_NAMES))}"
+            )
         skills = {k: Skill.from_dict(v) for k, v in d.items()}
         return cls(skills)
 
@@ -231,8 +249,9 @@ class Saves:
     @classmethod
     def from_dict(cls, d):
         if set(d.keys()) != set(SAVE_NAMES):
-            raise ValueError(f"Some saves are missing. "
-                             f"Difference: {set(d.keys()).symmetric_difference(set(SAVE_NAMES))}")
+            raise ValueError(
+                f"Some saves are missing. " f"Difference: {set(d.keys()).symmetric_difference(set(SAVE_NAMES))}"
+            )
         saves = {k: Skill.from_dict(v) for k, v in d.items()}
         return cls(saves)
 

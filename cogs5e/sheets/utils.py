@@ -72,9 +72,14 @@ def get_actions_for_names(names):
             if g_action.name in seen_action_names:
                 continue
             seen_action_names.add(g_action.name)
-            actions.append(Action(
-                name=g_action.name, uid=g_action.uid, id=g_action.id, type_id=g_action.type_id,
-                activation_type=g_action.activation_type
-            ))
+            actions.append(
+                Action(
+                    name=g_action.name,
+                    uid=g_action.uid,
+                    id=g_action.id,
+                    type_id=g_action.type_id,
+                    activation_type=g_action.activation_type,
+                )
+            )
 
     return actions

@@ -17,30 +17,23 @@ class LegacyRawCharacter:
             "owner": self.character.owner,
             "upstream": self.character.upstream,
             "type": self.character.sheet_type,
-
             "armor": self.character.ac,
             "hp": self.character.max_hp,
-
             "immune": [str(r) for r in self.character.resistances.immune],
             "resist": [str(r) for r in self.character.resistances.resist],
             "vuln": [str(r) for r in self.character.resistances.vuln],
-
             "background": self.character.background,
             "race": self.character.race,
-
             "attacks": self.legacy_attacks(),
             "levels": self.legacy_levels(),
             "consumables": self.legacy_consumables(),
-
             "skill_effects": skill_effects,
             "skills": skills,
             "stats": self.legacy_stats(),
             "saves": self.legacy_saves(),
             "cvars": self.character.cvars,
-
             "spellbook": self.legacy_spellbook(),
-
-            "settings": self.character.options.dict()
+            "settings": self.character.options.dict(),
         }
         self.result = out
         return out
@@ -49,9 +42,7 @@ class LegacyRawCharacter:
         return self.character.attacks.to_dict()
 
     def legacy_levels(self):
-        out = {
-            "level": self.character.levels.total_level
-        }
+        out = {"level": self.character.levels.total_level}
         for cls, lvl in self.character.levels:
             out[f"{cls}Level"] = lvl
         return out
@@ -60,8 +51,11 @@ class LegacyRawCharacter:
         out = {}
         for counter in self.character.consumables:
             out[counter.name] = {
-                'value': counter.value, 'max': counter.max, 'min': counter.min, 'reset': counter.reset_on,
-                'type': counter.display_type
+                "value": counter.value,
+                "max": counter.max,
+                "min": counter.min,
+                "reset": counter.reset_on,
+                "type": counter.display_type,
             }
         return {"custom": out}
 
@@ -71,16 +65,16 @@ class LegacyRawCharacter:
         for name, skill in self.character.skills.skills.items():
             skills[name] = skill.value
             if skill.adv is True:
-                effects[name] = 'adv'
+                effects[name] = "adv"
             elif skill.adv is False:
-                effects[name] = 'dis'
+                effects[name] = "dis"
         return skills, effects
 
     def legacy_stats(self):
         stats = {
             "proficiencyBonus": self.character.stats.prof_bonus,
-            'name': self.character.name,
-            'image': self.character.image
+            "name": self.character.name,
+            "image": self.character.image,
         }
 
         for stat in STAT_NAMES:
@@ -103,6 +97,6 @@ class LegacyRawCharacter:
             "spellslots": self.character.spellbook.max_slots,
             "spells": spells,
             "dc": self.character.spellbook.dc,
-            "attackBonus": self.character.spellbook.sab
+            "attackBonus": self.character.spellbook.sab,
         }
         return out

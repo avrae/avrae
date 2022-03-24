@@ -104,6 +104,7 @@ class Attack(Effect):
         autoctx.metavars["lastAttackDidCrit"] = False
         autoctx.metavars["lastAttackRollTotal"] = 0  # 1362
         autoctx.metavars["lastAttackNaturalRoll"] = 0  # 1495
+        autoctx.metavars["lastAttackHadAdvantage"] = 0
         did_hit = True
         did_crit = False
         to_hit_roll = None
@@ -163,6 +164,7 @@ class Attack(Effect):
 
             autoctx.metavars["lastAttackRollTotal"] = to_hit_roll.total  # 1362
             autoctx.metavars["lastAttackNaturalRoll"] = d20_value  # 1495
+            autoctx.metavars["lastAttackHadAdvantage"] = adv
 
             # output
             if not hide:  # not hidden

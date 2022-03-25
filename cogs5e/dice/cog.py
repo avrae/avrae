@@ -275,7 +275,7 @@ class Dice(commands.Cog):
             spell = await select_spell_full(ctx, spell_name)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args)
-        result = await spell.cast(ctx, caster, targets, args, combat=combat)
+        result = await actionutils.cast_spell(spell, ctx, caster, targets, args, combat=combat)
 
         # embed display
         embed = result.embed
@@ -284,10 +284,6 @@ class Dice(commands.Cog):
             embed.set_thumbnail(url=monster.get_image_url())
 
         handle_source_footer(embed, monster, add_source_str=False)
-
-        # save changes: combat state
-        if combat:
-            await combat.final()
         await ctx.send(embed=embed)
 
     # ==== inline rolling ====

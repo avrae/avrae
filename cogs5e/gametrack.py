@@ -17,7 +17,7 @@ from cogs5e.models import embeds
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelectionElements
-from cogs5e.utils import checkutils, gameutils, targetutils
+from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.gameutils import resolve_strict_coins
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
@@ -743,17 +743,13 @@ class GameTrack(commands.Cog):
             spell = await select_spell_full(ctx, spell_name)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
-        result = await spell.cast(ctx, caster, targets, args, combat=combat)
+        result = await actionutils.cast_spell(spell, ctx, caster, targets, args, combat=combat)
 
         embed = result.embed
         embed.colour = char.get_color()
         if "thumb" not in args and char.options.embed_image:
             embed.set_thumbnail(url=char.image)
 
-        # save changes: combat state, spell slot usage
-        await char.commit(ctx)
-        if combat:
-            await combat.final()
         await ctx.send(embed=embed)
         if (gamelog := self.bot.get_cog("GameLog")) and result.automation_result:
             await gamelog.send_automation(ctx, char, spell.name, result.automation_result)

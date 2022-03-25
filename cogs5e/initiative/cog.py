@@ -1348,13 +1348,11 @@ class InitTracker(commands.Cog):
             spell = await select_spell_full(ctx, spell_name)
 
         targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
-
-        result = await spell.cast(ctx, combatant, targets, args, combat=combat)
+        result = await actionutils.cast_spell(spell, ctx, combatant, targets, args, combat=combat)
 
         embed = result.embed
         embed.colour = combatant.get_color()
         await ctx.send(embed=embed)
-        await combat.final()
         if (gamelog := self.bot.get_cog("GameLog")) and is_character and result.automation_result:
             await gamelog.send_automation(ctx, combatant.character, spell.name, result.automation_result)
 

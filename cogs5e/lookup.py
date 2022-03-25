@@ -657,10 +657,10 @@ class Lookup(commands.Cog):
         def selectkey(e):
             the_entity, the_etype = e
             if the_entity.homebrew:
-                return f"{the_entity.name} ({HOMEBREW_EMOJI})"
+                return f"{the_entity.name} ({HOMEBREW_EMOJI} {the_entity.source})"
             elif can_access(the_entity, available_ids[the_etype]):
-                return the_entity.name
-            return f"{the_entity.name}\\*"
+                return f"{the_entity.name} ({the_entity.source})"
+            return f"{the_entity.name} ({the_entity.source})\\*"
 
         # get the object
         choices = []

@@ -11,11 +11,10 @@ from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
+from utils.constants import HOMEBREW_EMOJI, HOMEBREW_ICON
 from utils.functions import search_and_select
 from .compendium import compendium
 
-HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
-HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
 
 log = logging.getLogger(__name__)
 
@@ -122,8 +121,8 @@ async def handle_required_license(ctx, err):
 # ---- helpers ----
 def get_homebrew_formatted_name(named):
     if named.homebrew:
-        return f"{named.name} ({HOMEBREW_EMOJI})"
-    return named.name
+        return f"{named.name} ({HOMEBREW_EMOJI} {named.source})"
+    return f"{named.name} ({named.source})"
 
 
 def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_overwrite=False):
@@ -146,7 +145,7 @@ def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_o
 
     # set icon url and default text
     if book is None:
-        icon_url = "https://avrae.io/assets/img/homebrew.png"
+        icon_url = HOMEBREW_ICON
         text_pieces = text_pieces or ["Homebrew content."]
     elif book.is_ua:
         icon_url = "https://media-waterdeep.cursecdn.com/avatars/110/171/636516074887091041.png"

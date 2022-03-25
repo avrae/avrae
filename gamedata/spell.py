@@ -7,7 +7,7 @@ import discord
 import gamedata.lookuputils
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException, InvalidArgument
-from cogs5e.initiative.effect_old import Effect
+from cogs5e.initiative.effects import InitiativeEffect
 from cogs5e.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import confirm, maybe_http_url, smart_trim, verbose_stat
@@ -296,7 +296,9 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         conc_effect = None
         if all((self.concentration, isinstance(caster, BaseCombatant), combat, not noconc)):
             duration = args.last("dur", self.get_combat_duration(), int)
-            conc_effect = Effect.new(combat, caster, self.name, duration, "", True)
+            conc_effect = InitiativeEffect.new(
+                combat=combat, combatant=caster, name=self.name, duration=duration, effect_args="", concentration=True
+            )
             # noinspection PyUnresolvedReferences
             effect_result = caster.add_effect(conc_effect)
             conc_conflict = effect_result["conc_conflict"]

@@ -29,7 +29,7 @@ class AutomatibleMixin:
 
     def __init__(self, automation=None, *args, **kwargs):
         """
-        :type automation: Automation or None
+        :type automation: cogs5e.models.automation.Automation or None
         """
         super().__init__(*args, **kwargs)
         self.automation = automation

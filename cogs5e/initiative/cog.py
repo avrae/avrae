@@ -23,7 +23,7 @@ from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
 from utils.argparser import argparse
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
-from . import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant, utils
+from . import Combat, Combatant, CombatantGroup, InitiativeEffect, MonsterCombatant, PlayerCombatant, utils
 from .upenn_nlp import NLPRecorder
 
 log = logging.getLogger(__name__)
@@ -956,14 +956,14 @@ class InitTracker(commands.Cog):
         `adv`/`dis` - Give advantage or disadvantage to all attack rolls.
         `-b <bonus>` - Adds a bonus to hit.
         `-d <damage>` - Adds additional damage.
+        `magical` - Makes all damage from the combatant magical.
+        `silvered` - Makes all damage from the combatant silvered.
         `-attack <"[hit]|[damage]|[description]">` - Adds an attack to the combatant. The effect name will be the name of the attack. No [hit] will autohit (e.g., `-attack "|1d6[fire]|You just got burned!"`)
         __Resists__
         `-resist <damage type>` - Gives the combatant resistance to the given damage type.
         `-immune <damage type>` - Gives the combatant immunity to the given damage type.
         `-vuln <damage type>` - Gives the combatant vulnerability to the given damage type.
         `-neutral <damage type>` - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
-        `magical` - Makes all damage from the combatant magical.
-        `silvered` - Makes all damage from the combatant silvered.
         __General__
         `-ac <ac>` - modifies ac temporarily; adds if starts with +/- or sets otherwise.
         `-sb <save bonus>` - Adds a bonus to all saving throws.
@@ -1004,14 +1004,14 @@ class InitTracker(commands.Cog):
             if effect_name.lower() in (e.name.lower() for e in combatant.get_effects()):
                 out = "Effect already exists."
             else:
-                effect_obj = Effect.new(
+                effect_obj = InitiativeEffect.new(
                     combat,
                     combatant,
-                    duration=duration,
                     name=effect_name,
                     effect_args=args,
+                    duration=duration,
+                    end_on_turn_end=end,
                     concentration=conc,
-                    tick_on_end=end,
                     desc=desc,
                 )
                 result = combatant.add_effect(effect_obj)

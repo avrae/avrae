@@ -1,7 +1,6 @@
 import discord
 
 import cogs5e.models.character
-from cogs5e.models.errors import NoCharacter
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistance, Resistances
@@ -10,8 +9,8 @@ from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
 from utils.functions import combine_maybe_mods, get_guild_member, search_and_select
-from .effect_old import Effect
-from .errors import CombatException, RequiresContext
+from .effects import InitiativeEffect
+from .errors import RequiresContext
 from .types import BaseCombatant, CombatantType
 from .utils import create_combatant_id
 
@@ -121,7 +120,7 @@ class Combatant(BaseCombatant, StatBlock):
         del raw["type"]
         effects = raw.pop("effects")
         inst = cls(ctx, combat, **raw)
-        inst._effects = [Effect.from_dict(e, combat, inst) for e in effects]
+        inst._effects = [InitiativeEffect.from_dict(e, combat, inst) for e in effects]
         return inst
 
     def to_dict(self):

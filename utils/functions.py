@@ -410,6 +410,7 @@ def maybe_mod(val: str, base=0):
     return base
 
 
+# todo remove me
 def combine_maybe_mods(vals: list, base=0):
     """
     Takes a list of arguments, which are strings that may start with + or -, and combines them to calculate a value.

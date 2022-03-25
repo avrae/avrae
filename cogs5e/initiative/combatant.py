@@ -10,7 +10,7 @@ from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
 from utils.functions import combine_maybe_mods, get_guild_member, search_and_select
-from .effect import Effect
+from .effect_old import Effect
 from .errors import CombatException, RequiresContext
 from .types import BaseCombatant, CombatantType
 from .utils import create_combatant_id

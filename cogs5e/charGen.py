@@ -20,7 +20,6 @@ log = logging.getLogger(__name__)
 
 async def roll_stats(ctx):
     guild_settings = await ctx.get_server_settings()
-    print(guild_settings)
 
     dice = "4d6kh3"
     sets = 1
@@ -40,7 +39,7 @@ async def roll_stats(ctx):
         under = guild_settings.randchar_under or {}
 
     embed = EmbedWithColor()
-    embed.title = "Generating Random Stats:"
+    embed.title = f"Generating Random Stats:"
 
     # Generate our rule text
     rules = []
@@ -126,12 +125,12 @@ class CharGenerator(commands.Cog):
         if level is None:
 
             stats = await roll_stats(ctx)
-            await ctx.send(embed=stats)
+            await ctx.send(f"{ctx.author.mention} rolled stats...", embed=stats)
             return
 
         try:
             level = int(level)
-        except:
+        except ValueError:
             await ctx.send("Invalid level.")
             return
 

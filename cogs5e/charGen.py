@@ -67,7 +67,10 @@ async def roll_stats(ctx):
             if len(stat_rolls) == sets:
                 break
     else:
-        embed.description = "Unable to roll stat rolls that meet the current rule set.\n\nPlease examine your current randchar settings to ensure that they are achievable."
+        embed.description = (
+            "Unable to roll stat rolls that meet the current rule set.\n\n"
+            "Please examine your current randchar settings to ensure that they are achievable."
+        )
         return embed
 
     if rules:

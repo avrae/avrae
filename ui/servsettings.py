@@ -4,6 +4,7 @@ from contextlib import suppress
 from typing import List, Optional, TYPE_CHECKING, TypeVar
 
 import disnake
+import pydantic
 
 from utils.aldclient import discord_user_to_dict
 from utils.functions import natural_join
@@ -63,6 +64,10 @@ class ServerSettingsUI(ServerSettingsMenuBase):
     async def inline_rolling_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(_InlineRollingSettingsUI, interaction)
 
+    @disnake.ui.button(label="Randchar Settings", style=disnake.ButtonStyle.primary)
+    async def randchar_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        await self.defer_to(_RandcharSettingsUI, interaction)
+
     @disnake.ui.button(label="Miscellaneous Settings", style=disnake.ButtonStyle.primary)
     async def miscellaneous_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(_MiscellaneousSettingsUI, interaction)
@@ -86,6 +91,18 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             inline=False,
         )
         embed.add_field(name="Inline Rolling Settings", value=await self.get_inline_rolling_desc(), inline=False)
+
+        embed.add_field(
+            name="Randchar Settings",
+            value=f"**Dice**: {self.settings.randchar_dice}\n"
+            f"**Number of Sets**: {self.settings.randchar_sets}\n"
+            f"**Assign Stats**: {self.settings.randchar_straight}\n"
+            f"**Minimum Total**: {self.settings.randchar_min}\n"
+            f"**Maximum Total**: {self.settings.randchar_max}\n"
+            f"**Number over value**: {self.settings.randchar_over}\n"
+            f"**Number under value**: {self.settings.randchar_under}\n",
+            inline=False,
+        )
 
         nlp_enabled_description = ""
         nlp_feature_flag = await self.bot.ldclient.variation(
@@ -358,5 +375,172 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
                 f"and our data handling and Privacy Policy [here](https://www.fandom.com/privacy-policy).*",
                 inline=False,
             )
+
+        return {"embed": embed}
+
+
+class _RandcharSettingsUI(ServerSettingsMenuBase):
+    # ==== ui ====
+    @disnake.ui.button(label="Select Dice", style=disnake.ButtonStyle.primary)
+    async def select_dice(self, button: disnake.ui.Button, interaction: disnake.Interaction):
+        button.disabled = True
+        await self.refresh_content(interaction)
+        await interaction.send(
+            "Choose a new dice string to roll by sending a message in this channel.",
+            ephemeral=True,
+        )
+        try:
+            input_msg: disnake.Message = await self.bot.wait_for(
+                "message",
+                timeout=60,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+            )
+            self.settings.randchar_dice = input_msg.content
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
+        except (ValueError, asyncio.TimeoutError):
+            await interaction.send("No valid dice found. Press `Select Dice` to try again.", ephemeral=True)
+        else:
+            await self.commit_settings()
+            await interaction.send("Your dice have been updated.", ephemeral=True)
+        finally:
+            button.disabled = False
+            await self.refresh_content(interaction)
+
+    @disnake.ui.button(label="Select Number of Sets", style=disnake.ButtonStyle.primary)
+    async def select_sets(self, button: disnake.ui.Button, interaction: disnake.Interaction):
+        button.disabled = True
+        await self.refresh_content(interaction)
+        await interaction.send(
+            "Choose a new number of sets to roll by sending a message in this channel.",
+            ephemeral=True,
+        )
+        try:
+            input_msg: disnake.Message = await self.bot.wait_for(
+                "message",
+                timeout=60,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+            )
+            self.settings.randchar_sets = int(input_msg.content)
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
+        except (ValueError, asyncio.TimeoutError):
+            await interaction.send(
+                "No valid number of sets found. Press `Select Number of Sets` to try again.", ephemeral=True
+            )
+        else:
+            await self.commit_settings()
+            await interaction.send("Your number of sets have been updated.", ephemeral=True)
+        finally:
+            button.disabled = False
+            await self.refresh_content(interaction)
+
+    @disnake.ui.button(label="Toggle Assign Stats", style=disnake.ButtonStyle.primary)
+    async def toggle_straight(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        self.settings.randchar_straight = not self.settings.randchar_straight
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.button(label="Select Minimum Score", style=disnake.ButtonStyle.primary)
+    async def select_minimum(self, button: disnake.ui.Button, interaction: disnake.Interaction):
+        button.disabled = True
+        await self.refresh_content(interaction)
+        await interaction.send(
+            "Choose a new minimum roll total by sending a message in this channel.",
+            ephemeral=True,
+        )
+        try:
+            input_msg: disnake.Message = await self.bot.wait_for(
+                "message",
+                timeout=60,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+            )
+            self.settings.randchar_min = int(input_msg.content)
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
+        except (ValueError, asyncio.TimeoutError):
+            await interaction.send("No valid minimum found. Press `Select Minimum Score` to try again.", ephemeral=True)
+        else:
+            await self.commit_settings()
+            await interaction.send("Your minimum score has been updated.", ephemeral=True)
+        finally:
+            button.disabled = False
+            await self.refresh_content(interaction)
+
+    @disnake.ui.button(label="Select Maximum Score", style=disnake.ButtonStyle.primary)
+    async def select_maximum(self, button: disnake.ui.Button, interaction: disnake.Interaction):
+        button.disabled = True
+        await self.refresh_content(interaction)
+        await interaction.send(
+            "Choose a new maximum roll total by sending a message in this channel.",
+            ephemeral=True,
+        )
+        try:
+            input_msg: disnake.Message = await self.bot.wait_for(
+                "message",
+                timeout=60,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+            )
+            self.settings.randchar_max = int(input_msg.content)
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
+        except (ValueError, asyncio.TimeoutError):
+            await interaction.send("No valid maximum found. Press `Select Maximum Score` to try again.", ephemeral=True)
+        else:
+            await self.commit_settings()
+            await interaction.send("Your maximum score has been updated.", ephemeral=True)
+        finally:
+            button.disabled = False
+            await self.refresh_content(interaction)
+
+    @disnake.ui.button(label="Back", style=disnake.ButtonStyle.grey, row=4)
+    async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        await self.defer_to(ServerSettingsUI, interaction)
+
+    async def get_content(self):
+        embed = disnake.Embed(
+            title=f"Server Settings ({self.guild.name}) / Randchar Settings",
+            colour=disnake.Colour.blurple(),
+        )
+        embed.add_field(
+            name="Dice Rolled",
+            value=f"**{self.settings.randchar_dice}**\n" f"*This is the dice string that will be rolled.*",
+            inline=False,
+        )
+        embed.add_field(
+            name="Number of Sets",
+            value=f"**{self.settings.randchar_sets}**\n" f"*This is how many sets it will return.*",
+            inline=False,
+        )
+        embed.add_field(
+            name="Assign Stats Directly",
+            value=f"**{self.settings.randchar_straight}**\n"
+            f"*If this is enabled, stats will automatically be assigned to stats in the order they are rolled, starting with Strength and ending with Charisma*",
+            inline=False,
+        )
+        embed.add_field(
+            name="Minimum Total Score Required",
+            value=f"**{self.settings.randchar_min}**\n"
+            f"*This is the minimum combined score required. Standard array is 72 total.*",
+            inline=False,
+        )
+        embed.add_field(
+            name="Maximum Total Score Required",
+            value=f"**{self.settings.randchar_max}**\n"
+            f"*This is the maxnimum combined score required. Standard array is 72 total.*",
+            inline=False,
+        )
+        embed.add_field(
+            name="Required Stats Over Certain Value",
+            value=f"**{self.settings.randchar_over}**\n"
+            f"*This is a list of how many of the stats you require to be over a certain value, such as having at least 1 stat over 17.*",
+            inline=False,
+        )
+        embed.add_field(
+            name="Required Stats Under Certain Value",
+            value=f"**{self.settings.randchar_under}**\n"
+            f"*This is a list of how many of the stats you require to be under a certain value, such as having at least 1 stat under 10.*",
+            inline=False,
+        )
 
         return {"embed": embed}

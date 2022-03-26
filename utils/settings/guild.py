@@ -1,5 +1,5 @@
 import enum
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import disnake
 
@@ -23,6 +23,14 @@ class ServerSettings(SettingsBaseModel):
     inline_enabled: InlineRollingType = InlineRollingType.DISABLED
     show_campaign_cta: bool = True
     upenn_nlp_opt_in: bool = False
+
+    randchar_dice: str = "4d6kh3"
+    randchar_sets: int = 1
+    randchar_straight: bool = False
+    randchar_min: int = None
+    randchar_max: int = None
+    randchar_over: Dict[int, int] = None
+    randchar_under: Dict[int, int] = None
 
     # ==== lifecycle ====
     @classmethod

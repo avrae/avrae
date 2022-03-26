@@ -12,9 +12,82 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument
 from gamedata.compendium import compendium
 from gamedata.lookuputils import available, get_race_choices
+from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import get_selection, search_and_select
 
 log = logging.getLogger(__name__)
+
+
+async def roll_stats(ctx):
+    guild_settings = await ctx.get_server_settings()
+
+    dice = "4d6kh3"
+    sets = 1
+    num = 6
+    straight = False
+    min_total = None
+    max_total = None
+    over = None
+    under = None
+
+    if guild_settings:
+        dice = guild_settings.randchar_dice
+        sets = guild_settings.randchar_sets
+        straight = guild_settings.randchar_straight
+        min_total = guild_settings.randchar_min
+        max_total = guild_settings.randchar_max
+        over = guild_settings.randchar_over
+        under = guild_settings.randchar_under
+
+    embed = EmbedWithAuthor(ctx)
+    embed.title = "Generating Random Stats:"
+
+    # Generate our rule text
+    rules = []
+    if sets > 1:
+        rules.append(f"""Rolling {sets} sets""")
+    if min_total:
+        rules.append(f"""Minimum of {min_total}""")
+    if max_total:
+        rules.append(f"""Maximum of {max_total}""")
+    # for m, t in over.items():
+    #     rules.append(f"""At least {t} over {m}""")
+    # for m, t in under.items():
+    #     rules.append(f"""At least {t} under {m}""")
+
+    stat_rolls = []
+    # Only attempt 1000 times to achieve the desired stat sets
+    for _ in range(1000):
+        current_set = [roll(dice) for _ in range(6)]
+        current_total = sum(r.total for r in current_set)
+        meets_min = (current_total >= min_total) if min_total else True
+        meets_max = (current_total <= max_total) if max_total else True
+        if meets_max and meets_min:
+            stat_rolls.append({"rolls": current_set, "total": current_total})
+            if len(stat_rolls) == sets:
+                break
+    else:
+        embed.description = "Unable to roll stat rolls that meet the current rule set.\n\nPlease examine your current randchar settings to ensure that they are achievable."
+        return embed
+
+    if rules:
+        embed.description = f"Ruling: {', '.join(rules)}"
+
+    for i, rolls in enumerate(stat_rolls, 1):
+        embed.add_field(
+            name=f"""Stats {f"#{i}" if len(stat_rolls)>1 else ""}""",
+            value="\n".join(
+                [
+                    (f"**{STAT_ABBREVIATIONS[x].upper()}:** " if straight else f"**Stat {x+1}:** ")
+                    + str(rolls["rolls"][x])
+                    for x in range(6)
+                ]
+            )
+            + f"\n-----\nTotal = `{rolls['total']}`",
+            inline=True,
+        )
+
+    return embed
 
 
 class CharGenerator(commands.Cog):
@@ -28,13 +101,9 @@ class CharGenerator(commands.Cog):
     async def randchar(self, ctx, level=None):
         """Rolls up a random 5e character."""
         if level is None:
-            rolls = [roll("4d6kh3") for _ in range(6)]
-            stats = "\n".join(str(r) for r in rolls)
-            total = sum([r.total for r in rolls])
-            await ctx.send(
-                f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`",
-                allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
-            )
+
+            stats = await roll_stats(ctx)
+            await ctx.send(embed=stats)
             return
 
         try:
@@ -139,8 +208,7 @@ class CharGenerator(commands.Cog):
         # Stat Gen
         #    4d6d1
         #        reroll if too low/high
-        stats = [roll("4d6kh3").total for _ in range(6)]
-        await ctx.author.send("**Stats for {0}:** `{1}`".format(name, stats))
+        await ctx.author.send(embed=roll_stats(ctx))
         # Race Gen
         #    Racial Features
         race = race or random.choice(await get_race_choices(ctx))
@@ -254,7 +322,7 @@ class CharGenerator(commands.Cog):
             f"{ctx.author.mention}\n"
             f"{name}, {race.name} {subclass.name if subclass else ''} {_class.name} {final_level}. "
             f"{background.name} Background.\n"
-            f"Stat Array: `{stats}`\nI have PM'd you full character details."
+            f"I have PM'd you full character details."
         )
 
         await loadingMessage.edit(content=out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))

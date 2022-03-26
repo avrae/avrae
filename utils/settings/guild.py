@@ -29,8 +29,8 @@ class ServerSettings(SettingsBaseModel):
     randchar_straight: bool = False
     randchar_min: int = None
     randchar_max: int = None
-    randchar_over: Dict[int, int] = None
-    randchar_under: Dict[int, int] = None
+    randchar_over: Dict[str, int] = None
+    randchar_under: Dict[str, int] = None
 
     # ==== lifecycle ====
     @classmethod

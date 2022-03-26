@@ -493,9 +493,114 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
             button.disabled = False
             await self.refresh_content(interaction)
 
+    @disnake.ui.button(label="Add Required Over Stat", style=disnake.ButtonStyle.primary, row=1)
+    async def add_over(self, button: disnake.ui.Button, interaction: disnake.Interaction):
+        button.disabled = True
+        await self.refresh_content(interaction)
+        await interaction.send(
+            "Choose a new minimum roll total by sending a message in this channel.",
+            ephemeral=True,
+        )
+        try:
+            input_msg: disnake.Message = await self.bot.wait_for(
+                "message",
+                timeout=60,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+            )
+            value, amount = input_msg.content.split("|")
+            if self.settings.randchar_over is None:
+                self.settings.randchar_over = {}
+            self.settings.randchar_over[value] = int(amount)
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
+        except (ValueError, asyncio.TimeoutError):
+            await interaction.send("No valid minimum found. Press `Select Minimum Score` to try again.", ephemeral=True)
+        else:
+            await self.commit_settings()
+            await interaction.send("Your minimum score has been updated.", ephemeral=True)
+        finally:
+            button.disabled = False
+            await self.refresh_content(interaction)
+
+    @disnake.ui.button(label="Add Required Under Stat", style=disnake.ButtonStyle.primary, row=1)
+    async def add_under(self, button: disnake.ui.Button, interaction: disnake.Interaction):
+        button.disabled = True
+        await self.refresh_content(interaction)
+        await interaction.send(
+            "Choose a new maximum roll total by sending a message in this channel.",
+            ephemeral=True,
+        )
+        try:
+            input_msg: disnake.Message = await self.bot.wait_for(
+                "message",
+                timeout=60,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+            )
+            value, amount = input_msg.content.split("|")
+            if self.settings.randchar_under is None:
+                self.settings.randchar_under = {}
+            self.settings.randchar_under[value] = int(amount)
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
+        except (ValueError, asyncio.TimeoutError):
+            await interaction.send("No valid maximum found. Press `Select Maximum Score` to try again.", ephemeral=True)
+        else:
+            await self.commit_settings()
+            await interaction.send("Your maximum score has been updated.", ephemeral=True)
+        finally:
+            button.disabled = False
+            await self.refresh_content(interaction)
+
+    @disnake.ui.select(placeholder="Remove Over", min_values=0, row=2)
+    async def remove_over(self, select: disnake.ui.Select, interaction: disnake.Interaction):
+        removed_over = select.values
+        for remove in removed_over:
+            del self.settings.randchar_over[remove]
+        self._refresh_remove_over_select()
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.select(placeholder="Remove Under", min_values=0, row=3)
+    async def remove_under(self, select: disnake.ui.Select, interaction: disnake.Interaction):
+        removed_under = select.values
+        for remove in removed_under:
+            del self.settings.randchar_under[remove]
+        self._refresh_remove_under_select()
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
     @disnake.ui.button(label="Back", style=disnake.ButtonStyle.grey, row=4)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
+
+    # ==== content ====
+    def _refresh_remove_over_select(self):
+        """Update the options in the Remove Over select to reflect the currently selected values."""
+        self.remove_over.options.clear()
+        if not self.settings.randchar_over:
+            self.remove_over.add_option(label="Empty", value="Test")
+            self.remove_over.disabled = True
+            return
+        self.remove_over.disabled = False
+        for over in self.settings.randchar_over:
+            self.remove_over.add_option(label=over, value=str(over))
+        self.remove_over.max_values = len(self.remove_over.options)
+
+    def _refresh_remove_under_select(self):
+        """Update the options in the Remove Over select to reflect the currently selected values."""
+        self.remove_under.options.clear()
+        if not self.settings.randchar_under:
+            self.remove_under.add_option(label="Empty", value="Test")
+            self.remove_under.disabled = True
+            return
+        self.remove_under.disabled = False
+        for under in self.settings.randchar_under:
+            self.remove_under.add_option(label=under, value=str(under))
+        self.remove_under.max_values = len(self.remove_under.options)
+
+    async def _before_send(self):
+        self._refresh_remove_over_select()
+        self._refresh_remove_under_select()
 
     async def get_content(self):
         embed = disnake.Embed(
@@ -515,7 +620,8 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Assign Stats Directly",
             value=f"**{self.settings.randchar_straight}**\n"
-            f"*If this is enabled, stats will automatically be assigned to stats in the order they are rolled, starting with Strength and ending with Charisma*",
+            f"*If this is enabled, stats will automatically be assigned to stats in the order "
+            f"they are rolled, starting with Strength and ending with Charisma*",
             inline=False,
         )
         embed.add_field(
@@ -527,19 +633,21 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Maximum Total Score Required",
             value=f"**{self.settings.randchar_max}**\n"
-            f"*This is the maxnimum combined score required. Standard array is 72 total.*",
+            f"*This is the maximum combined score required. Standard array is 72 total.*",
             inline=False,
         )
         embed.add_field(
             name="Required Stats Over Certain Value",
             value=f"**{self.settings.randchar_over}**\n"
-            f"*This is a list of how many of the stats you require to be over a certain value, such as having at least 1 stat over 17.*",
+            f"*This is a list of how many of the stats you require to be over a certain value, "
+            f"such as having at least 1 stat over 17.*",
             inline=False,
         )
         embed.add_field(
             name="Required Stats Under Certain Value",
             value=f"**{self.settings.randchar_under}**\n"
-            f"*This is a list of how many of the stats you require to be under a certain value, such as having at least 1 stat under 10.*",
+            f"*This is a list of how many of the stats you require to be under a certain value, "
+            f"such as having at least 1 stat under 10.*",
             inline=False,
         )
 

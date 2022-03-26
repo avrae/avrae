@@ -8,7 +8,7 @@ from d20 import roll
 from discord.ext import commands
 
 from cogs5e.models import embeds
-from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithColor
 from cogs5e.models.errors import InvalidArgument
 from gamedata.compendium import compendium
 from gamedata.lookuputils import available, get_race_choices
@@ -20,15 +20,15 @@ log = logging.getLogger(__name__)
 
 async def roll_stats(ctx):
     guild_settings = await ctx.get_server_settings()
+    print(guild_settings)
 
     dice = "4d6kh3"
     sets = 1
-    num = 6
     straight = False
     min_total = None
     max_total = None
-    over = None
-    under = None
+    over = {}
+    under = {}
 
     if guild_settings:
         dice = guild_settings.randchar_dice
@@ -36,10 +36,10 @@ async def roll_stats(ctx):
         straight = guild_settings.randchar_straight
         min_total = guild_settings.randchar_min
         max_total = guild_settings.randchar_max
-        over = guild_settings.randchar_over
-        under = guild_settings.randchar_under
+        over = guild_settings.randchar_over or {}
+        under = guild_settings.randchar_under or {}
 
-    embed = EmbedWithAuthor(ctx)
+    embed = EmbedWithColor()
     embed.title = "Generating Random Stats:"
 
     # Generate our rule text
@@ -50,20 +50,40 @@ async def roll_stats(ctx):
         rules.append(f"""Minimum of {min_total}""")
     if max_total:
         rules.append(f"""Maximum of {max_total}""")
-    # for m, t in over.items():
-    #     rules.append(f"""At least {t} over {m}""")
-    # for m, t in under.items():
-    #     rules.append(f"""At least {t} under {m}""")
+    for m, t in over.items():
+        rules.append(f"""At least {t} over {m}""")
+    for m, t in under.items():
+        rules.append(f"""At least {t} under {m}""")
 
     stat_rolls = []
     # Only attempt 1000 times to achieve the desired stat sets
     for _ in range(1000):
-        current_set = [roll(dice) for _ in range(6)]
-        current_total = sum(r.total for r in current_set)
-        meets_min = (current_total >= min_total) if min_total else True
-        meets_max = (current_total <= max_total) if max_total else True
-        if meets_max and meets_min:
-            stat_rolls.append({"rolls": current_set, "total": current_total})
+        # We need an individual copy per set
+        current_set = []
+        current_over = over.copy()
+        current_under = under.copy()
+        current_sum = 0
+        for i in range(6):
+            current_roll = roll(dice)
+            current_sum += current_roll.total
+            current_set.append(current_roll)
+
+            if current_over and any(current_over.values()):
+                for m, t in current_over.items():
+                    if t and current_roll.total > int(m):
+                        current_over[m] -= 1
+
+            if current_under and any(current_under.values()):
+                for m, t in current_under.items():
+                    if t and current_roll.total < int(m):
+                        current_under[m] -= 1
+
+        meets_over = not current_over or not any(current_over.values())
+        meets_under = not current_under or not any(current_under.values())
+        meets_min = (current_sum >= min_total) if min_total else True
+        meets_max = (current_sum <= max_total) if max_total else True
+        if meets_over and meets_under and meets_max and meets_min:
+            stat_rolls.append({"rolls": current_set, "total": current_sum})
             if len(stat_rolls) == sets:
                 break
     else:

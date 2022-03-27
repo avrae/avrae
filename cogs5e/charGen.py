@@ -23,20 +23,24 @@ async def roll_stats(ctx):
 
     dice = "4d6kh3"
     sets = 1
+    stats = 6
     straight = False
     min_total = None
     max_total = None
     over = {}
     under = {}
+    stat_names = [stat.upper() for stat in STAT_ABBREVIATIONS]
 
     if guild_settings:
         dice = guild_settings.randchar_dice
         sets = guild_settings.randchar_sets
+        stats = guild_settings.randchar_num
         straight = guild_settings.randchar_straight
         min_total = guild_settings.randchar_min
         max_total = guild_settings.randchar_max
         over = guild_settings.randchar_over or {}
         under = guild_settings.randchar_under or {}
+        stat_names = guild_settings.randchar_stat_names or stat_names
 
     embed = EmbedWithColor()
     embed.title = "Generating Random Stats"
@@ -47,6 +51,8 @@ async def roll_stats(ctx):
         rules.append(f"Rolling {sets} sets")
     if straight:
         rules.append("Assigning stats directly")
+    if stats != 6:
+        rules.append(f"Rolling {stats} per set")
     if min_total:
         rules.append(f"Minimum of {min_total}")
     if max_total:
@@ -64,7 +70,7 @@ async def roll_stats(ctx):
         current_over = over.copy()
         current_under = under.copy()
         current_sum = 0
-        for i in range(6):
+        for i in range(stats):
             current_roll = roll(dice)
             current_sum += current_roll.total
             current_set.append(current_roll)
@@ -102,9 +108,8 @@ async def roll_stats(ctx):
             name=f"""Stats {f"#{i}" if len(stat_rolls)>1 else ""}""",
             value="\n".join(
                 [
-                    (f"**{STAT_ABBREVIATIONS[x].upper()}:** " if straight else f"**Stat {x+1}:** ")
-                    + str(rolls["rolls"][x])
-                    for x in range(6)
+                    (f"**{stat_names[x]}:** " if straight else f"**Stat {x+1}:** ") + str(rolls["rolls"][x])
+                    for x in range(stats)
                 ]
             )
             + f"\n-----\nTotal = `{rolls['total']}`",

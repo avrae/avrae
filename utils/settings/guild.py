@@ -27,6 +27,8 @@ class ServerSettings(SettingsBaseModel):
     randchar_dice: str = "4d6kh3"
     randchar_sets: int = 1
     randchar_straight: bool = False
+    randchar_stat_names: Optional[List[str]] = None
+    randchar_num: int = 6
     randchar_min: int = None
     randchar_max: int = None
     randchar_over: Dict[str, int] = None

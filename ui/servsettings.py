@@ -6,6 +6,7 @@ from typing import List, Optional, TYPE_CHECKING, TypeVar
 import disnake
 
 from utils.aldclient import discord_user_to_dict
+from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import natural_join
 from utils.settings.guild import InlineRollingType, ServerSettings
 from .menu import MenuBase
@@ -105,6 +106,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             value=f"**Dice**: {self.settings.randchar_dice}\n"
             f"**Number of Sets**: {self.settings.randchar_sets}\n"
             f"**Assign Stats**: {self.settings.randchar_straight}\n"
+            f"**Stat Names:** {', '.join(self.settings.randchar_stat_names or [stat.upper() for stat in STAT_ABBREVIATIONS])}\n"
             f"**Minimum Total**: {self.settings.randchar_min}\n"
             f"**Maximum Total**: {self.settings.randchar_max}\n"
             f"**Number over value**: {self.get_over_under_desc('over')}\n"
@@ -445,13 +447,81 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
             button.disabled = False
             await self.refresh_content(interaction)
 
+    @disnake.ui.button(label="Set Number of Stats", style=disnake.ButtonStyle.primary)
+    async def select_stats(self, button: disnake.ui.Button, interaction: disnake.Interaction):
+        button.disabled = True
+        await self.refresh_content(interaction)
+        await interaction.send(
+            "Choose a new number of stats to roll by sending a message in this channel.",
+            ephemeral=True,
+        )
+        try:
+            input_msg: disnake.Message = await self.bot.wait_for(
+                "message",
+                timeout=60,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+            )
+            if not 1 <= int(input_msg.content) <= 10:
+                raise ValueError
+            self.settings.randchar_num = int(input_msg.content)
+            if self.settings.randchar_num != len(self.settings.randchar_stat_names):
+                self.settings.randchar_straight = False
+            with suppress(disnake.HTTPException):
+                await input_msg.delete()
+        except (ValueError, asyncio.TimeoutError):
+            await interaction.send(
+                "No valid number of stats found. Press `Set Number of Stats` to try again.", ephemeral=True
+            )
+        else:
+            await self.commit_settings()
+            await interaction.send("Your number of stats have been updated.", ephemeral=True)
+        finally:
+            button.disabled = False
+            await self.refresh_content(interaction)
+
     @disnake.ui.button(label="Toggle Assign Stats", style=disnake.ButtonStyle.primary)
-    async def toggle_straight(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+    async def toggle_straight(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.randchar_straight = not self.settings.randchar_straight
+        if self.settings.randchar_straight:
+            button.disabled = True
+            await self.refresh_content(interaction)
+            await interaction.send(
+                "Choose the stat names to automatically assign the rolled stats to, separated by commas.\n"
+                "If you wish to use the default stats, respond with 'default'. This will only work if your number "
+                "of stats is 6.",
+                ephemeral=True,
+            )
+            try:
+                input_msg: disnake.Message = await self.bot.wait_for(
+                    "message",
+                    timeout=60,
+                    check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+                )
+                message = input_msg.content
+                if message.lower() == "default":
+                    stats = [stat.upper() for stat in STAT_ABBREVIATIONS]
+                else:
+                    stats = message.replace(", ", ",").split(",")
+                if len(stats) != self.settings.randchar_num:
+                    print(stats, len(stats), self.settings.randchar_num)
+                    raise ValueError
+                self.settings.randchar_stat_names = stats
+                with suppress(disnake.HTTPException):
+                    await input_msg.delete()
+            except (ValueError, asyncio.TimeoutError):
+                self.settings.randchar_straight = not self.settings.randchar_straight
+                await interaction.send(
+                    "Invalid stat names over found. Press `Toggle Assign Stats` to try again.", ephemeral=True
+                )
+            else:
+                await self.commit_settings()
+                await interaction.send("Your stat names have been updated.", ephemeral=True)
+            finally:
+                button.disabled = False
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label="Set Minimum", style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="Set Minimum", style=disnake.ButtonStyle.primary, row=1)
     async def select_minimum(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         button.disabled = True
         await self.refresh_content(interaction)
@@ -477,7 +547,7 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
             button.disabled = False
             await self.refresh_content(interaction)
 
-    @disnake.ui.button(label="Set Maximum", style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="Set Maximum", style=disnake.ButtonStyle.primary, row=1)
     async def select_maximum(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         button.disabled = True
         await self.refresh_content(interaction)
@@ -536,7 +606,7 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
             button.disabled = False
             await self.refresh_content(interaction)
 
-    @disnake.ui.button(label="Add Required Under Stat", style=disnake.ButtonStyle.primary, row=1)
+    @disnake.ui.button(label="Add Required Under", style=disnake.ButtonStyle.primary, row=1)
     async def add_under(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         button.disabled = True
         await self.refresh_content(interaction)
@@ -638,10 +708,18 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
             inline=False,
         )
         embed.add_field(
+            name="Number of Stats",
+            value=f"**{self.settings.randchar_num}**\n"
+            f"*This is how many stat rolls it will return per set, "
+            f"allowing your players to choose between them.*",
+            inline=False,
+        )
+        embed.add_field(
             name="Assign Stats Directly",
             value=f"**{self.settings.randchar_straight}**\n"
+            f"**Stat Names:** {', '.join(self.settings.randchar_stat_names or [stat.upper() for stat in STAT_ABBREVIATIONS])}\n"
             f"*If this is enabled, stats will automatically be assigned to stats in the order "
-            f"they are rolled, starting with Strength and ending with Charisma*",
+            f"they are rolled.*",
             inline=False,
         )
         embed.add_field(

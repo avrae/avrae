@@ -21,7 +21,8 @@ async def test_charref(avrae, dhttp):
     avrae.message("acolyte")
 
     await dhttp.receive_message("Generating character, please wait...", regex=False)
-    await dhttp.receive_message(r"\*\*Stats for \w+:\*\* `\[(\d{1,2}, ){5}\d{1,2}\]`", dm=True)
+    await dhttp.receive_message(embed=discord.Embed(title="Generating Random Stats"))
+    # await dhttp.receive_message(r"\*\*Stats for \w+:\*\* `\[(\d{1,2}, ){5}\d{1,2}\]`", dm=True)
     await dhttp.drain()
 
 
@@ -30,11 +31,13 @@ async def test_randchar(avrae, dhttp):
     dhttp.clear()
 
     avrae.message("!randchar")
-    await dhttp.receive_message(r"<@!?\d+>\nGenerated random stats:\n(.*= `\d+`\n){6}Total = `\d+`")
+    # await dhttp.receive_message(r"<@!?\d+>\nGenerated random stats:\n(.*= `\d+`\n){6}Total = `\d+`")
+    await dhttp.receive_message(embed=discord.Embed(title="Generating Random Stats"))
 
     avrae.message("!randchar 1")
     await dhttp.receive_message("Generating character, please wait...", regex=False)
-    await dhttp.receive_message(r"\*\*Stats for \w+:\*\* `\[(\d{1,2}, ){5}\d{1,2}\]`", dm=True)
+    await dhttp.receive_message(embed=discord.Embed(title="Generating Random Stats"))
+    # await dhttp.receive_message(r"\*\*Stats for \w+:\*\* `\[(\d{1,2}, ){5}\d{1,2}\]`", dm=True)
     await dhttp.drain()
 
 

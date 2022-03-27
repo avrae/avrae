@@ -237,7 +237,8 @@ class CharGenerator(commands.Cog):
         # Stat Gen
         #    4d6d1
         #        reroll if too low/high
-        await ctx.author.send(embed=roll_stats(ctx))
+        stats = await roll_stats(ctx)
+        await ctx.author.send(embed=stats)
         # Race Gen
         #    Racial Features
         race = race or random.choice(await get_race_choices(ctx))

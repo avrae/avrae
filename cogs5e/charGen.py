@@ -128,7 +128,9 @@ class CharGenerator(commands.Cog):
     @commands.command(name="randchar")
     @commands.max_concurrency(1, per=commands.BucketType.user)
     async def randchar(self, ctx, level=None):
-        """Rolls up a random 5e character."""
+        """Rolls up a random 5e character.
+
+        If a level is not specified, it will only roll stats. Servers can customize their stat rolling requirements via `!servsettings`."""
         if level is None:
 
             stats = await roll_stats(ctx)

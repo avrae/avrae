@@ -39,20 +39,22 @@ async def roll_stats(ctx):
         under = guild_settings.randchar_under or {}
 
     embed = EmbedWithColor()
-    embed.title = f"Generating Random Stats:"
+    embed.title = "Generating Random Stats"
 
     # Generate our rule text
     rules = []
     if sets > 1:
-        rules.append(f"""Rolling {sets} sets""")
+        rules.append(f"Rolling {sets} sets")
+    if straight:
+        rules.append("Assigning stats directly")
     if min_total:
-        rules.append(f"""Minimum of {min_total}""")
+        rules.append(f"Minimum of {min_total}")
     if max_total:
-        rules.append(f"""Maximum of {max_total}""")
+        rules.append(f"Maximum of {max_total}")
     for m, t in over.items():
-        rules.append(f"""At least {t} over {m}""")
+        rules.append(f"At least {t} over {m}")
     for m, t in under.items():
-        rules.append(f"""At least {t} under {m}""")
+        rules.append(f"At least {t} under {m}")
 
     stat_rolls = []
     # Only attempt 1000 times to achieve the desired stat sets
@@ -93,7 +95,7 @@ async def roll_stats(ctx):
         return embed
 
     if rules:
-        embed.description = f"Ruling: {', '.join(rules)}"
+        embed.description = "**Server Settings:**\n" + "\n".join([f"● {rule}" for rule in rules])
 
     for i, rolls in enumerate(stat_rolls, 1):
         embed.add_field(

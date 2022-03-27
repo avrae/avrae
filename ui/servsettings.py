@@ -625,12 +625,16 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
         )
         embed.add_field(
             name="Dice Rolled",
-            value=f"**{self.settings.randchar_dice}**\n" f"*This is the dice string that will be rolled.*",
+            value=f"**{self.settings.randchar_dice}**\n"
+            f"*This is the dice string that will be rolled six times for "
+            f"each stat set.*",
             inline=False,
         )
         embed.add_field(
             name="Number of Sets",
-            value=f"**{self.settings.randchar_sets}**\n" f"*This is how many sets it will return.*",
+            value=f"**{self.settings.randchar_sets}**\n"
+            f"*This is how many sets of stat rolls it will return, "
+            f"allowing your players to choose between them.*",
             inline=False,
         )
         embed.add_field(

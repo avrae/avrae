@@ -526,7 +526,7 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
         button.disabled = True
         await self.refresh_content(interaction)
         await interaction.send(
-            "Choose a new minimum roll total by sending a message in this channel.",
+            "Choose a new minimum roll total by sending a message in this channel. To reset it, respond with 'default'.",
             ephemeral=True,
         )
         try:
@@ -535,7 +535,10 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
                 timeout=60,
                 check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
             )
-            self.settings.randchar_min = int(input_msg.content)
+            if input_msg.content.lower() == "default":
+                self.settings.randchar_min = None
+            else:
+                self.settings.randchar_min = int(input_msg.content)
             with suppress(disnake.HTTPException):
                 await input_msg.delete()
         except (ValueError, asyncio.TimeoutError):
@@ -552,7 +555,7 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
         button.disabled = True
         await self.refresh_content(interaction)
         await interaction.send(
-            "Choose a new maximum roll total by sending a message in this channel.",
+            "Choose a new maximum roll total by sending a message in this channel. To reset it, respond with 'default'.",
             ephemeral=True,
         )
         try:
@@ -561,7 +564,10 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
                 timeout=60,
                 check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
             )
-            self.settings.randchar_max = int(input_msg.content)
+            if input_msg.content.lower() == "default":
+                self.settings.randchar_max = None
+            else:
+                self.settings.randchar_max = int(input_msg.content)
             with suppress(disnake.HTTPException):
                 await input_msg.delete()
         except (ValueError, asyncio.TimeoutError):

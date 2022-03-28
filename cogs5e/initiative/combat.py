@@ -461,7 +461,7 @@ class Combat:
             raise NoCombatants
 
         if self.current_combatant:
-            self.current_combatant.on_turn_end()
+            self.current_combatant.on_turn_end(num_turns=-1)
 
         if self.index is None:  # start of combat
             self._current_index = len(self._combatants) - 1
@@ -478,7 +478,7 @@ class Combat:
             raise NoCombatants
 
         if self.current_combatant:
-            self.current_combatant.on_turn_end()
+            self.current_combatant.on_turn_end(num_turns=0)
 
         if is_combatant:
             if init_num.group:

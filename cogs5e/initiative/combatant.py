@@ -462,12 +462,12 @@ class Combatant(BaseCombatant, StatBlock):
         :return: None
         """
         for e in self.get_effects().copy():
-            e.on_turn()
+            e.on_turn(num_turns)
 
     def on_turn_end(self, num_turns=1):
         """A method called at the end of each of the combatant's turns."""
         for e in self.get_effects().copy():
-            e.on_turn_end()
+            e.on_turn_end(num_turns)
 
     def on_remove(self):
         """

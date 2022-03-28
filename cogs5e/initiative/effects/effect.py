@@ -103,6 +103,8 @@ class InitiativeEffect:
 
         if combat is not None and duration is not None:
             end_round = combat.round_num + duration
+            if end_on_turn_end:
+                end_round -= 1
         else:
             end_round = None
 
@@ -231,7 +233,7 @@ class InitiativeEffect:
             ticks_remaining = self.end_round - self.combat.round_num
         else:
             has_ticked_this_round = self.combat.index > tick_index if ticks_on_end else self.combat.index >= tick_index
-            ticks_remaining = self.end_round - (self.combat.round_num + 1 if has_ticked_this_round else 0)
+            ticks_remaining = self.end_round - (self.combat.round_num - (0 if has_ticked_this_round else 1))
 
         if ticks_remaining <= 1:  # effect ends on next tick
             if self.combat is not None and self.combatant is not None and tick_index != self.combatant.index:
@@ -281,28 +283,28 @@ class InitiativeEffect:
         return ""
 
     # --- hooks ---
-    def on_turn(self):
+    def on_turn(self, num_turns=1):
         """
         Called on the start of the parent combatant's turn in combat.
         Removes itself if the effect is no longer applicable.
         """
-        if self.combat is None:
+        if self.combat is None or self.end_round is None:
             return
 
-        # if we end on the start of turn and it's the round to end, remove ourselves
-        if (not self.end_on_turn_end) and self.combat.round_num == self.end_round:
+        # if we end on the start of turn and it's the round to end and we're going forwards, remove ourselves
+        if (not self.end_on_turn_end) and self.combat.round_num >= self.end_round and num_turns > 0:
             self.remove()
 
-    def on_turn_end(self):
+    def on_turn_end(self, num_turns=1):
         """
         Called on the end of the parent combatant's turn in combat.
         Removes itself if the effect is no longer applicable.
         """
-        if self.combat is None:
+        if self.combat is None or self.end_round is None:
             return
 
-        # if we end on the end of turn and it's the round to end, remove ourselves
-        if self.end_on_turn_end and self.combat.round_num == self.end_round:
+        # if we end on the end of turn and it's the round to end and we're going forwards, remove ourselves
+        if self.end_on_turn_end and self.combat.round_num >= self.end_round and num_turns > 0:
             self.remove()
 
     # parenting

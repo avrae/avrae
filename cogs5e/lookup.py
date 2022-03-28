@@ -440,7 +440,8 @@ class Lookup(commands.Cog):
 
         url = monster.get_image_url()
         embed = EmbedWithAuthor(ctx)
-        embed.title = monster.name if not hide_name else ""
+        if not hide_name:
+            embed.title = monster.name
         embed.description = f"{monster.size} monster."
 
         if not url:

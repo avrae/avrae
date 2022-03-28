@@ -35,19 +35,19 @@ class _PassiveEffect:
         self.default = default
 
     def __set_name__(self, owner: Type[_OwnerT], name: str):
-        if not hasattr(owner, "__effect_attrs"):
-            owner.__effect_attrs = set()
-        if not hasattr(owner, "__effect_deserializers"):
-            owner.__effect_deserializers = {}
-        if not hasattr(owner, "__effect_serializers"):
-            owner.__effect_serializers = {}
-        if not hasattr(owner, "__effect_stringifiers"):
-            owner.__effect_stringifiers = {}
+        if not hasattr(owner, "__effect_attrs__"):
+            owner.__effect_attrs__ = set()
+        if not hasattr(owner, "__effect_deserializers__"):
+            owner.__effect_deserializers__ = {}
+        if not hasattr(owner, "__effect_serializers__"):
+            owner.__effect_serializers__ = {}
+        if not hasattr(owner, "__effect_stringifiers__"):
+            owner.__effect_stringifiers__ = {}
 
-        owner.__effect_attrs.add(name)
-        owner.__effect_deserializers[name] = self.deserializer
-        owner.__effect_serializers[name] = self.serializer
-        owner.__effect_stringifiers[name] = self.stringifier
+        owner.__effect_attrs__.add(name)
+        owner.__effect_deserializers__[name] = self.deserializer
+        owner.__effect_serializers__[name] = self.serializer
+        owner.__effect_stringifiers__[name] = self.stringifier
         self.private_name = "_" + name
 
     def __get__(self, obj: _OwnerT, objtype: Type[_OwnerT] = None) -> Union[_DT, _DefaultT]:
@@ -57,8 +57,8 @@ class _PassiveEffect:
     def __set__(self, obj: _OwnerT, value: _DT):
         if value is None:
             value = self.default
-        if not isinstance(value, self.datatype):
-            raise ValueError(f"{self.private_name} must be {self.datatype.__name__} but got {type(value).__name__}")
+        # if not isinstance(value, self.datatype):
+        #     raise ValueError(f"{self.private_name} must be {self.datatype.__name__} but got {type(value).__name__}")
         setattr(obj, self.private_name, value)
 
 
@@ -113,10 +113,10 @@ class InitPassiveEffect:
     If adding new passive effects, add a new classvar below.
     """
 
-    __effect_attrs = set()
-    __effect_stringifiers = {}
-    __effect_deserializers = {}
-    __effect_serializers = {}
+    __effect_attrs__ = set()
+    __effect_stringifiers__ = {}
+    __effect_deserializers__ = {}
+    __effect_serializers__ = {}
 
     attack_advantage = _PassiveEffect(
         AdvantageType,
@@ -179,27 +179,27 @@ class InitPassiveEffect:
 
     def __init__(self, **kwargs):
         for attr in kwargs:
-            if attr not in self.__effect_attrs:
+            if attr not in self.__effect_attrs__:
                 raise ValueError(f"{attr!r} is not a valid effect attribute.")
             setattr(self, attr, kwargs[attr])
 
     @classmethod
     def from_dict(cls, d):
         for attr in d:
-            if attr not in cls.__effect_attrs:
+            if attr not in cls.__effect_attrs__:
                 raise ValueError(f"{attr!r} is not a valid effect attribute.")
-        return cls(**{k: cls.__effect_deserializers[k](v) for k, v in d.items()})
+        return cls(**{k: cls.__effect_deserializers__[k](v) for k, v in d.items()})
 
     def to_dict(self):
         out = {}
-        for attr in self.__effect_attrs:
+        for attr in self.__effect_attrs__:
             if value := getattr(self, attr):
-                out[attr] = self.__effect_serializers[attr](value)
+                out[attr] = self.__effect_serializers__[attr](value)
         return out
 
     def __str__(self):
         values = []
-        for attr in self.__effect_attrs:
+        for attr in self.__effect_attrs__:
             value = self._str_attr(attr)
             if value:
                 values.append(value)
@@ -207,7 +207,7 @@ class InitPassiveEffect:
 
     def __bool__(self):
         """True if there are any passive effects."""
-        return any(getattr(self, attr) for attr in self.__effect_attrs)
+        return any(getattr(self, attr) for attr in self.__effect_attrs__)
 
     # ==== construction ====
     @classmethod
@@ -245,7 +245,7 @@ class InitPassiveEffect:
         if not value:
             return
 
-        value_handler = self.__effect_stringifiers[attr]
+        value_handler = self.__effect_stringifiers__[attr]
         return value_handler(value)
 
 

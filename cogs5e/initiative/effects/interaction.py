@@ -58,7 +58,7 @@ class AttackInteraction(InitEffectInteraction):
     def __str__(self):
         if self.effect.combatant is None:
             return f"Attack: {self.attack.name}"
-        return f"Attack: {self.attack.automation.build_str(self.effect.combatant)}"
+        return f"Automation: {self.attack.automation.build_str(self.effect.combatant)}"
 
 
 class ButtonInteraction(InitEffectInteraction):
@@ -87,7 +87,7 @@ class ButtonInteraction(InitEffectInteraction):
 # ==== parsing ====
 def init_interactions_from_args(args: ParsedArguments, effect_name: str) -> List[InitEffectInteraction]:
     out = []
-    for attack_arg in args.get("-attack"):
+    for attack_arg in args.get("attack"):
         out.append(action_interaction_from_arg(attack_arg, effect_name=effect_name))
     return out
 

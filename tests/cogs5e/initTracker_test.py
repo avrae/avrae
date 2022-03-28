@@ -209,6 +209,23 @@ class TestYourStandardInitiative:
             avrae.message(f'!i re "{combatant}"')
             await dhttp.drain()
 
+    async def test_effect_granted_attacks(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1"):
+            avrae.message(f'!i effect "{combatant}" granted_attack -attack "+5|10|this is a effect granted attack"')
+            await dhttp.drain()
+
+            attacks = (await active_combat(avrae)).get_combatant(combatant).attacks
+            assert "granted_attack" in [a.name for a in attacks]
+
+            avrae.message(f'!i aoo "{combatant}" granted_attack')
+            await dhttp.drain()
+
+            hp_before = (await active_combat(avrae)).get_combatant(combatant).hp
+            avrae.message(f'!i aoo "{combatant}" granted_attack -t "{combatant}" hit')
+            await dhttp.drain()
+            assert (await active_combat(avrae)).get_combatant(combatant).hp < hp_before
+
     async def test_standard_init_teardown(self, avrae, dhttp):
         await end_init(avrae, dhttp)
 

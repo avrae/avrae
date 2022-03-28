@@ -103,7 +103,14 @@ class InitiativeEffect:
 
         if combat is not None and duration is not None:
             end_round = combat.round_num + duration
-            if end_on_turn_end:
+            # if we are going to tick this effect once this round, subtract 1 from the end round
+            has_ticked_this_round = (
+                combat is not None
+                and combatant is not None
+                and combat.index is not None
+                and (combat.index > combatant.index if end_on_turn_end else combat.index >= combatant.index)
+            )
+            if not has_ticked_this_round:
                 end_round -= 1
         else:
             end_round = None

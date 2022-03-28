@@ -186,7 +186,7 @@ class DicecloudParser(SheetLoaderABC):
 
         for i in self.character_data.get("items"):
             if re.fullmatch(
-                r"^((plat(inum)?|gold|electrum|silver|copper)( coins?|pieces?)?|(pp|gp|ep|sp|cp))",
+                r"^((plat(inum)?|gold|electrum|silver|copper)( coins?| pieces?)?|(pp|gp|ep|sp|cp))",
                 i["name"],
                 re.IGNORECASE,
             ):

@@ -18,7 +18,7 @@ from d20 import RollSyntaxError
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
 from gspread import SpreadsheetNotFound
-from gspread.exceptions import APIError
+from gspread.exceptions import APIError, WorksheetNotFound
 from gspread.utils import a1_to_rowcol, fill_gaps
 from cogs5e.models.sheet.coinpurse import Coinpurse
 
@@ -342,7 +342,10 @@ class GoogleSheet(SheetLoaderABC):
             self.additional = TempCharacter(doc.worksheet("Additional"))
             self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
             if self.version >= (2, 1):
-                self.inventory = TempCharacter(doc.worksheet("Inventory"))
+                try:
+                    self.inventory = TempCharacter(doc.worksheet("Inventory"))
+                except WorksheetNotFound:
+                    self.inventory = None
 
     # main loading methods
     async def load_character(self, ctx, args):
@@ -499,7 +502,10 @@ class GoogleSheet(SheetLoaderABC):
 
         for c_type in COIN_TYPES:
             if self.version >= (2, 1):
-                coin_value = self.inventory.unformatted_value(COIN_TYPES[c_type]["gSheet"]["v2"]) or 0
+                if not self.inventory:  # If they renamed the sheet or deleted it
+                    coin_value = 0
+                else:
+                    coin_value = self.inventory.unformatted_value(COIN_TYPES[c_type]["gSheet"]["v2"]) or 0
             else:
                 coin_value = self.character_data.unformatted_value(COIN_TYPES[c_type]["gSheet"]["v14"]) or 0
             try:
@@ -507,7 +513,7 @@ class GoogleSheet(SheetLoaderABC):
             except ValueError as e:
                 if self.version >= (2, 1):
                     cell = COIN_TYPES[c_type]["gSheet"]["v2"]
-                    sheet = self.inventory.worksheet.title
+                    sheet = "Inventory"
                 else:
                     cell = COIN_TYPES[c_type]["gSheet"]["v14"]
                     sheet = self.character_data.worksheet.title

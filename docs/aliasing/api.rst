@@ -1169,6 +1169,12 @@ AliasCoinpurse
 .. autoclass:: aliasing.api.character.AliasCoinpurse()
     :members:
 
+    .. attribute:: str(AliasCoinpurse)
+
+        Returns a string representation of the entire coinpurse. If the character setting for Compact Coins is enabled, this will only return your float gold, otherwise will return all 5 coin types.
+
+        :type: str
+
     .. attribute:: pp
         gp
         ep
@@ -1176,6 +1182,12 @@ AliasCoinpurse
         cp
 
         The value of the given coin type.
+
+        :type: int
+
+    .. attribute:: AliasCoinpurse[cointype]
+
+        Gets the value of the given coin type.
 
         :type: int
 

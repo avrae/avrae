@@ -764,7 +764,7 @@ class AliasCoinpurse:
 
     def autoconvert(self):
         """
-        Converts all of your coins into the lowest amount of coins possible.
+        Converts all of your coins into the highest value coins possible.
         100cp turns into 1gp, 5sp turns into 1ep, etc.
         """
         self._coinpurse.consolidate_coins()

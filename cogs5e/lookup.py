@@ -301,7 +301,8 @@ class Lookup(commands.Cog):
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
 
-        embed_queue[-1].title = monster.name if not hide_name else ''
+        if not hide_name:
+            embed_queue[-1].title = monster.name
         embed_queue[-1].url = monster.url
 
         def safe_append(title, desc):

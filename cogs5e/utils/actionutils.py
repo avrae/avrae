@@ -307,14 +307,17 @@ async def run_automation(ctx, embed, args, caster, automation, targets, combat, 
     :type automation: cogs5e.models.automation.Automation
     :type targets: list of str or list of cogs5e.models.sheet.statblock.StatBlock
     :type combat: None or cogs5e.models.initiative.Combat
+    :type always_commit_caster: bool
     :rtype: cogs5e.models.automation.AutomationResult
     """
     result = await automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
     if combat:
         await combat.final()
     # commit character only if we have not already committed it via combat final
-    if always_commit_caster or (
-        result.caster_needs_commit and hasattr(caster, "commit") and not (combat and caster in combat.get_combatants())
+    if (
+        (result.caster_needs_commit or always_commit_caster)
+        and hasattr(caster, "commit")
+        and not (combat and caster in combat.get_combatants())
     ):
         await caster.commit(ctx)
 

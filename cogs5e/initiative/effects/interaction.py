@@ -1,7 +1,6 @@
 import abc
 from typing import List
 
-from cogs5e.models.automation import Automation
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.attack import Attack, old_to_automation
 from utils.argparser import ParsedArguments
@@ -67,13 +66,15 @@ class ButtonInteraction(InitEffectInteraction):
 
     type = "button"
 
-    def __init__(self, automation: Automation, label: str, **kwargs):
+    def __init__(self, automation, label: str, **kwargs):
         super().__init__(**kwargs)
         self.automation = automation
         self.label = label
 
     @classmethod
     def from_dict(cls, data):
+        from cogs5e.models.automation import Automation
+
         return cls(label=data["label"], automation=Automation.from_data(data["automation"]))
 
     def to_dict(self):

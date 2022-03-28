@@ -64,7 +64,7 @@ class Attack(Effect):
         if autoctx.combatant:
             # bonus (#224)
             effect_b = autoctx.combatant.active_effects(
-                mapper=lambda effect: effect.effects.attack_bonus, reducer="+".join
+                mapper=lambda effect: effect.effects.to_hit_bonus, reducer="+".join
             )
             if effect_b and b:
                 b = f"{b}+{effect_b}"

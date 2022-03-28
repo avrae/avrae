@@ -93,10 +93,13 @@ class InitiativeEffect:
         interactions = init_interactions_from_args(effect_args, effect_name=name)
 
         # duration handling
-        try:
-            duration = int(duration)
-        except (ValueError, TypeError):
-            raise InvalidArgument("Effect duration must be an integer.")
+        if duration is not None:
+            try:
+                duration = int(duration)
+                if duration < 0:
+                    duration = None
+            except (ValueError, TypeError):
+                raise InvalidArgument("Effect duration must be an integer or None.")
 
         if combat is not None and duration is not None:
             end_round = combat.round_num + duration
@@ -224,7 +227,7 @@ class InitiativeEffect:
 
         if self.combat is None:
             ticks_remaining = self.duration
-        elif self.combatant is None:
+        elif self.combatant is None or self.combat.index is None:
             ticks_remaining = self.end_round - self.combat.round_num
         else:
             has_ticked_this_round = self.combat.index > tick_index if ticks_on_end else self.combat.index >= tick_index

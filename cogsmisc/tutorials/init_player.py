@@ -1,6 +1,6 @@
 import asyncio
 
-from cogs5e.initiative import CombatNotFound, Effect, MonsterCombatant, PlayerCombatant
+from cogs5e.initiative import CombatNotFound, InitiativeEffect, MonsterCombatant, PlayerCombatant
 from cogs5e.utils import targetutils
 from gamedata import Monster
 from gamedata.compendium import compendium
@@ -349,7 +349,7 @@ class PlayerInitiative(Tutorial):
         async def setup(self, ctx, state_map):
             combat = await ctx.get_combat()
             pc = await get_pc(ctx)
-            effect_obj = Effect.new(
+            effect_obj = InitiativeEffect.new(
                 combat,
                 pc,
                 name="Future Lunch",

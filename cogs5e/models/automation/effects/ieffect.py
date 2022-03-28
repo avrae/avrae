@@ -72,14 +72,14 @@ class IEffect(Effect):
 
         duration = autoctx.args.last("dur", duration, int)
         conc_conflict = []
-        if isinstance(autoctx.target.target, init.Combatant):
-            effect = init.Effect.new(
-                autoctx.target.target.combat,
-                autoctx.target.target,
-                self.name,
-                duration,
-                autoctx.parse_annostr(self.effects),
-                tick_on_end=self.tick_on_end,
+        if autoctx.target.combatant is not None:
+            effect = init.InitiativeEffect.new(
+                combat=autoctx.target.target.combat,
+                combatant=autoctx.target.target,
+                name=self.name,
+                duration=duration,
+                effect_args=autoctx.parse_annostr(self.effects),
+                end_on_turn_end=self.tick_on_end,
                 concentration=self.concentration,
                 desc=desc,
             )
@@ -128,13 +128,13 @@ class IEffect(Effect):
             if self.save_as is not None:
                 autoctx.metavars[self.save_as] = IEffectMetaVar(effect)
         else:
-            effect = init.Effect.new(
-                None,
-                None,
-                self.name,
-                duration,
-                autoctx.parse_annostr(self.effects),
-                tick_on_end=self.tick_on_end,
+            effect = init.InitiativeEffect.new(
+                combat=None,
+                combatant=None,
+                name=self.name,
+                duration=duration,
+                effect_args=autoctx.parse_annostr(self.effects),
+                end_on_turn_end=self.tick_on_end,
                 concentration=self.concentration,
                 desc=desc,
             )
@@ -153,7 +153,7 @@ class IEffectMetaVar:
     later in the execution.
     """
 
-    def __init__(self, effect: init.Effect):
+    def __init__(self, effect: init.InitiativeEffect):
         self._effect = effect
 
     def __str__(self):

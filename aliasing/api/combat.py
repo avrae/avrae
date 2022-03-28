@@ -425,19 +425,19 @@ class SimpleCombatant(AliasStatBlock):
         existing = self._combatant.get_effect(name, True)
         if existing:
             existing.remove()
-        effectObj = init.Effect.new(
-            self._combatant.combat,
-            self._combatant,
+        effect_obj = init.InitiativeEffect.new(
+            combat=self._combatant.combat,
+            combatant=self._combatant,
             duration=duration,
             name=name,
             effect_args=args,
             concentration=concentration,
-            tick_on_end=end,
+            end_on_turn_end=end,
             desc=desc,
         )
         if parent:
-            effectObj.set_parent(parent._effect)
-        self._combatant.add_effect(effectObj)
+            effect_obj.set_parent(parent._effect)
+        self._combatant.add_effect(effect_obj)
         self._update_effects()
 
     def remove_effect(self, name: str):

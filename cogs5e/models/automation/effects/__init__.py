@@ -1,5 +1,6 @@
 import logging
 
+from ..runtime import AutomationContext
 from ..errors import AutomationException, StopExecution
 
 __all__ = (
@@ -62,12 +63,12 @@ class Effect:
         meta = Effect.serialize(self.meta or [])
         return {"type": self.type, "meta": meta}
 
-    async def preflight(self, autoctx):
+    async def preflight(self, autoctx: AutomationContext):
         """Runs exactly once (in a DFS manner) before any effects are executed. Do any async stuff here."""
         for child in self.children:
             await child.preflight(autoctx)
 
-    def run(self, autoctx):
+    def run(self, autoctx: AutomationContext):
         log.debug(f"Running {self.type}")
         if self.meta:
             for metaeffect in self.meta:

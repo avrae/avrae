@@ -3,6 +3,7 @@ import gamedata.lookuputils
 from cogs5e.models.errors import RequiresLicense
 from utils.functions import smart_trim
 from . import Effect
+from ..runtime import AutomationContext, SpellContext
 from ..results import CastSpellResult
 
 
@@ -56,30 +57,27 @@ class CastSpell(Effect):
             return CastSpellResult(success=False, spell=spell)
 
         if spell.automation and spell.automation.effects:
-            # save old autoctx values
-            old_ab_override = autoctx.ab_override
-            old_dc_override = autoctx.dc_override
-            old_spell_override = autoctx.evaluator.builtins.get("spell")
-            old_level_override = autoctx.spell_level_override
+            # create a new autoctx for child evaluation
+            new_autoctx = SpellContext(
+                ctx=autoctx.ctx,
+                embed=autoctx.embed,
+                caster=autoctx.caster,
+                targets=autoctx.targets,
+                args=autoctx.args,
+                combat=autoctx.combat,
+                spell=spell,
+            )
 
             # run the spell using the given values
             if self.attack_bonus is not None:
-                autoctx.ab_override = autoctx.parse_intexpression(self.attack_bonus)
+                new_autoctx.ab_override = autoctx.parse_intexpression(self.attack_bonus)
             if self.dc is not None:
-                autoctx.dc_override = autoctx.parse_intexpression(self.dc)
+                new_autoctx.dc_override = autoctx.parse_intexpression(self.dc)
             if self.casting_mod is not None:
-                autoctx.evaluator.builtins["spell"] = autoctx.parse_intexpression(self.casting_mod)
+                new_autoctx.evaluator.builtins["spell"] = autoctx.parse_intexpression(self.casting_mod)
             if self.level is not None:
-                autoctx.spell_level_override = self.level
-            autoctx.spell = spell
-            results = self.run_children(spell.automation.effects, autoctx)
-
-            # and restore them
-            autoctx.ab_override = old_ab_override
-            autoctx.dc_override = old_dc_override
-            autoctx.evaluator.builtins["spell"] = old_spell_override
-            autoctx.spell_level_override = old_level_override
-            autoctx.spell = None
+                new_autoctx.spell_level_override = self.level
+            results = self.run_children(spell.automation.effects, new_autoctx)
 
             # display higher level info
             if cast_level != spell.level and spell.higherlevels:

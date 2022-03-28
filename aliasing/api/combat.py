@@ -294,7 +294,7 @@ class SimpleCombatant(AliasStatBlock):
 
         class _SimpleAutomationContext(AutomationContext):
             def __init__(self, caster, target, args, combat, crit=False):
-                super(_SimpleAutomationContext, self).__init__(None, None, caster, [target], args, combat)
+                super().__init__(None, None, caster, [target], args, combat)
                 self.in_crit = crit
                 self.target = AutomationTarget(target)
 

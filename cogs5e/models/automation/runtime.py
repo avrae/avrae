@@ -6,7 +6,7 @@ from cogs5e.models import character as character_api, embeds
 from .errors import AutomationEvaluationException, InvalidIntExpression
 from .utils import maybe_alias_statblock
 
-__all__ = ("AutomationContext", "AutomationTarget")
+__all__ = ("AutomationContext", "SpellContext", "AutomationTarget")
 
 
 class AutomationContext:
@@ -18,11 +18,6 @@ class AutomationContext:
         targets,
         args,
         combat,
-        spell=None,
-        conc_effect=None,
-        ab_override=None,
-        dc_override=None,
-        spell_override=None,
     ):
         self.ctx = ctx
         self.embed = embed
@@ -30,13 +25,6 @@ class AutomationContext:
         self.targets = targets
         self.args = args
         self.combat = combat
-
-        # spellcasting utils
-        self.spell = spell
-        self.ab_override = ab_override
-        self.dc_override = dc_override
-        self.spell_level_override = None  # used in Cast Spell effect
-        self.conc_effect = conc_effect
 
         self.metavars = {
             # caster, targets as default (#1335)
@@ -46,6 +34,7 @@ class AutomationContext:
         self.target = None
         self.in_crit = False
         self.in_save = False
+        self.spell_level_override = None  # used in Cast Spell effect
 
         self.caster_needs_commit = False
 
@@ -66,7 +55,7 @@ class AutomationContext:
         elif isinstance(caster, character_api.Character):
             self.character = caster
 
-        self.evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster, spell_override=spell_override)
+        self.evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster)
 
         self.combatant = None
         if isinstance(caster, init.Combatant):
@@ -151,12 +140,10 @@ class AutomationContext:
     # ===== utils =====
     @property
     def is_spell(self):
-        return self.spell is not None
+        return False
 
     def get_cast_level(self):
         default = self.spell_level_override or 0
-        if self.spell:
-            default = default or self.spell.level
         return self.args.last("l", default, int)
 
     def parse_annostr(self, annostr, is_full_expression=False):
@@ -197,6 +184,38 @@ class AutomationContext:
             return int(eval_result)
         except (TypeError, ValueError):
             raise InvalidIntExpression(f"{intexpression!r} cannot be interpreted as an IntExpression.")
+
+
+class SpellContext(AutomationContext):
+    def __init__(
+        self,
+        ctx,
+        embed,
+        caster,
+        targets,
+        args,
+        combat,
+        spell,
+        conc_effect=None,
+        ab_override=None,
+        dc_override=None,
+        spell_override=None,
+    ):
+        super().__init__(ctx, embed, caster, targets, args, combat)
+        self.spell = spell
+        self.ab_override = ab_override
+        self.dc_override = dc_override
+        self.conc_effect = conc_effect
+        if spell_override is not None:
+            self.evaluator.builtins["spell"] = spell_override
+
+    @property
+    def is_spell(self):
+        return True
+
+    def get_cast_level(self):
+        default = self.spell_level_override or self.spell.level
+        return self.args.last("l", default, int)
 
 
 class AutomationTarget:

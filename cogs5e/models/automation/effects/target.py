@@ -36,6 +36,9 @@ class Target(Effect):
         else:
             targets = autoctx.targets
 
+        if not targets:
+            targets = [None]  # in case we have no targets, we should still run everything once against no target
+
         if self.target in ("all", "each"):
             result_pairs = []
             for idx, target in enumerate(targets):

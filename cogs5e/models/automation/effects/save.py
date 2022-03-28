@@ -5,6 +5,7 @@ from utils.functions import maybe_mod, reconcile_adv, verbose_stat
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
 from ..results import SaveResult
+from ..runtime import SpellContext
 from ..utils import stringify_intexpr
 
 
@@ -46,15 +47,18 @@ class Save(Effect):
         hide = autoctx.args.last("h", type_=bool)
 
         # ==== dc ====
-        dc_override = None
+        # dc hierarchy: arg > self.dc > spell cast override > spellbook dc
+        dc = autoctx.caster.spellbook.dc
+
+        if isinstance(autoctx, SpellContext) and autoctx.dc_override is not None:
+            dc = autoctx.dc_override
+
         if self.dc:
             try:
-                dc_override = autoctx.parse_intexpression(self.dc)
+                dc = autoctx.parse_intexpression(self.dc)
             except Exception:
                 raise AutomationException(f"{self.dc!r} cannot be interpreted as a DC.")
 
-        # dc hierarchy: arg > self.dc > spell cast override > spellbook dc
-        dc = dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
         if "dc" in autoctx.args:
             dc = maybe_mod(autoctx.args.last("dc"), dc)
 

@@ -177,7 +177,7 @@ class Combatant(BaseCombatant, StatBlock):
 
     @property
     def max_hp(self):
-        base_hp = self._max_hp
+        base_hp = self._max_hp or 0
         base_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_value, reducer=max, default=0)
         bonus_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_bonus, reducer=sum, default=0)
         return max(base_hp, base_effect_hp) + bonus_effect_hp
@@ -225,7 +225,7 @@ class Combatant(BaseCombatant, StatBlock):
 
     @property
     def ac(self):
-        base_ac = self._ac
+        base_ac = self._ac or 0
         base_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_value, reducer=max, default=0)
         bonus_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_bonus, reducer=sum, default=0)
         return max(base_effect_ac, base_ac) + bonus_effect_ac
@@ -249,22 +249,22 @@ class Combatant(BaseCombatant, StatBlock):
             Resistances(
                 resist=self.active_effects(
                     mapper=lambda effect: effect.effects.resistances,
-                    reducer=lambda resists: list(itertools.chain(resists)),
+                    reducer=lambda resists: list(itertools.chain(*resists)),
                     default=[],
                 ),
                 immune=self.active_effects(
                     mapper=lambda effect: effect.effects.immunities,
-                    reducer=lambda resists: list(itertools.chain(resists)),
+                    reducer=lambda resists: list(itertools.chain(*resists)),
                     default=[],
                 ),
                 vuln=self.active_effects(
                     mapper=lambda effect: effect.effects.vulnerabilities,
-                    reducer=lambda resists: list(itertools.chain(resists)),
+                    reducer=lambda resists: list(itertools.chain(*resists)),
                     default=[],
                 ),
                 neutral=self.active_effects(
                     mapper=lambda effect: effect.effects.ignored_resistances,
-                    reducer=lambda resists: list(itertools.chain(resists)),
+                    reducer=lambda resists: list(itertools.chain(*resists)),
                     default=[],
                 ),
             ),
@@ -293,7 +293,7 @@ class Combatant(BaseCombatant, StatBlock):
             # attacks granted by effects are cached so that the same object is referenced in initTracker (#950)
             effect_attacks = self.active_effects(
                 mapper=lambda effect: [i.attack for i in effect.interactions if isinstance(i, AttackInteraction)],
-                reducer=lambda attacks: AttackList(list(itertools.chain(attacks))),
+                reducer=lambda attacks: AttackList(list(itertools.chain(*attacks))),
             )
             if effect_attacks is not None:
                 self._cache["attacks"] = self._attacks + effect_attacks

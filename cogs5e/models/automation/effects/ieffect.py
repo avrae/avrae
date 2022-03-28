@@ -3,6 +3,7 @@ from cogs5e.models.errors import InvalidArgument
 from . import Effect
 from ..errors import AutomationException, TargetException
 from ..results import IEffectResult
+from ..runtime import SpellContext
 
 
 class IEffect(Effect):
@@ -87,7 +88,7 @@ class IEffect(Effect):
             stack_parent = None
 
             # concentration spells
-            if autoctx.conc_effect:
+            if isinstance(autoctx, SpellContext) and autoctx.conc_effect:
                 if autoctx.conc_effect.combatant is autoctx.target.target and self.concentration:
                     raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
                 conc_parent = autoctx.conc_effect

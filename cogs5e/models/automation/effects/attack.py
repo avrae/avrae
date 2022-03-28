@@ -3,6 +3,7 @@ import d20
 from utils.enums import AdvantageType
 from utils.functions import reconcile_adv
 from . import Effect
+from ..runtime import AutomationContext, SpellContext
 from ..errors import AutomationException, NoAttackBonus, TargetException
 from ..results import AttackResult
 from ..utils import stringify_intexpr
@@ -30,7 +31,7 @@ class Attack(Effect):
             out["attackBonus"] = self.bonus
         return out
 
-    def run(self, autoctx):
+    def run(self, autoctx: AutomationContext):
         super().run(autoctx)
         if autoctx.target is None:
             raise TargetException(
@@ -88,7 +89,11 @@ class Attack(Effect):
             nocrit = nocrit or autoctx.target.character.options.ignore_crit
 
         # ==== execution ====
-        attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
+        attack_bonus = autoctx.caster.spellbook.sab
+
+        # spellcasting override
+        if isinstance(autoctx, SpellContext):
+            attack_bonus = autoctx.ab_override
 
         # explicit bonus
         if self.bonus:

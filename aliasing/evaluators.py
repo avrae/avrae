@@ -808,11 +808,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
 class AutomationEvaluator(MathEvaluator):
     @classmethod
-    def with_caster(cls, caster, spell_override=None):
+    def with_caster(cls, caster):
         names = caster.get_scope_locals()
-        if spell_override is not None:
-            names["spell"] = spell_override
-
         builtins = {**names, **DEFAULT_BUILTINS}
         return cls(builtins=builtins)
 

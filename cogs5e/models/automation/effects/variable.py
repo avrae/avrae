@@ -3,6 +3,7 @@ import draconic
 from . import Effect
 from ..errors import AutomationEvaluationException, AutomationException, StopExecution
 from ..results import SetVariableResult
+from ..runtime import SpellContext
 
 
 class SetVariable(Effect):
@@ -26,7 +27,7 @@ class SetVariable(Effect):
         super().run(autoctx)
         level_value = self.value
         # handle upcast
-        if autoctx.is_spell and self.higher and autoctx.get_cast_level() != autoctx.spell.level:
+        if isinstance(autoctx, SpellContext) and self.higher and autoctx.get_cast_level() != autoctx.spell.level:
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
                 level_value = higher

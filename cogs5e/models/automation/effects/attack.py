@@ -255,14 +255,13 @@ class Attack(Effect):
             attack_bonus = stringify_intexpr(evaluator, self.bonus)
 
         out = f"Attack: {attack_bonus:+} to hit"
-        if self.adv:
-            match self.adv:
-                case 1:
-                    out += ", with advantage"
-                case 2:
-                    out += ", with Elven Accuracy"
-                case -1:
-                    out += ", with disdvantage"
+        match self.adv:
+            case 1:
+                out += ", with advantage"
+            case 2:
+                out += ", with Elven Accuracy"
+            case -1:
+                out += ", with disdvantage"
         if self.hit:
             hit_out = self.build_child_str(self.hit, caster, evaluator)
             if hit_out:

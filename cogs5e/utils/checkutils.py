@@ -58,7 +58,7 @@ def run_check(skill_key, caster, args, embed):
 
     # ieffect -cb
     if isinstance(caster, init.Combatant):
-        args["b"] = args.get("b") + caster.active_effects("cb")
+        args["b"] = args.get("b") + caster.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
 
     result = _run_common(skill, args, embed, mod_override=mod)
     return CheckResult(rolls=result.rolls, skill=skill, skill_name=skill_name, skill_roll_result=result)
@@ -101,13 +101,17 @@ def run_save(save_key, caster, args, embed):
     # ieffect handling
     if isinstance(caster, init.Combatant):
         # -sb
-        args["b"] = args.get("b") + caster.active_effects("sb")
+        args["b"] = args.get("b") + caster.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
         # -sadv/sdis
-        sadv_effects = caster.active_effects("sadv")
-        sdis_effects = caster.active_effects("sdis")
-        if "all" in sadv_effects or stat in sadv_effects:
+        sadv_effects = caster.active_effects(
+            mapper=lambda effect: effect.effects.save_adv, reducer=lambda saves: set().union(*saves), default=set()
+        )
+        sdis_effects = caster.active_effects(
+            mapper=lambda effect: effect.effects.save_dis, reducer=lambda saves: set().union(*saves), default=set()
+        )
+        if stat in sadv_effects:
             args["adv"] = True  # Because adv() only checks last() just forcibly add them
-        if "all" in sdis_effects or stat in sdis_effects:
+        if stat in sdis_effects:
             args["dis"] = True
 
     result = _run_common(save, args, embed, rr_format="Save {}")

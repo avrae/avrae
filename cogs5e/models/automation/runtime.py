@@ -220,9 +220,9 @@ class AutomationTarget:
 
         # combatant
         if sb and self.combatant:
-            sb += self.combatant.active_effects("sb")
+            sb += self.combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
         elif self.combatant:
-            sb = self.combatant.active_effects("sb")
+            sb = self.combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
 
         # character-specific arguments (#1443)
         reroll = None

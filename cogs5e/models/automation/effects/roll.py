@@ -37,7 +37,9 @@ class Roll(Effect):
 
         # add on combatant damage effects (#224)
         if autoctx.combatant:
-            effect_d = "+".join(autoctx.combatant.active_effects("d"))
+            effect_d = autoctx.combatant.active_effects(
+                mapper=lambda effect: effect.effects.damage_bonus, reducer="+".join
+            )
             if effect_d:
                 if d:
                     d = f"{d}+{effect_d}"

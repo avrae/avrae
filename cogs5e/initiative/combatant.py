@@ -1,3 +1,6 @@
+import itertools
+from typing import Callable, List, TypeVar
+
 import discord
 
 import cogs5e.models.character
@@ -8,11 +11,15 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
-from utils.functions import combine_maybe_mods, get_guild_member, search_and_select
+from utils.functions import get_guild_member, search_and_select
 from .effects import InitiativeEffect
+from .effects.interaction import AttackInteraction
 from .errors import RequiresContext
 from .types import BaseCombatant, CombatantType
 from .utils import create_combatant_id
+
+_IntermediateT = TypeVar("_IntermediateT")
+T = TypeVar("T")
 
 
 class Combatant(BaseCombatant, StatBlock):
@@ -170,9 +177,10 @@ class Combatant(BaseCombatant, StatBlock):
 
     @property
     def max_hp(self):
-        _maxhp = self._max_hp
-        _maxhp = combine_maybe_mods(self.active_effects("maxhp"), base=_maxhp)
-        return _maxhp
+        base_hp = self._max_hp
+        base_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_value, reducer=max, default=0)
+        bonus_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_bonus, reducer=sum, default=0)
+        return max(base_hp, base_effect_hp) + bonus_effect_hp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):
@@ -217,9 +225,10 @@ class Combatant(BaseCombatant, StatBlock):
 
     @property
     def ac(self):
-        _ac = self._ac
-        _ac = combine_maybe_mods(self.active_effects("ac"), base=_ac)
-        return _ac
+        base_ac = self._ac
+        base_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_value, reducer=max, default=0)
+        bonus_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_bonus, reducer=sum, default=0)
+        return max(base_effect_ac, base_ac) + bonus_effect_ac
 
     @ac.setter
     def ac(self, new_ac):
@@ -236,7 +245,31 @@ class Combatant(BaseCombatant, StatBlock):
     @property
     def resistances(self):
         out = self._resistances.copy()
-        out.update(Resistances.from_dict({k: self.active_effects(k) for k in RESIST_TYPES}), overwrite=False)
+        out.update(
+            Resistances(
+                resist=self.active_effects(
+                    mapper=lambda effect: effect.effects.resistances,
+                    reducer=lambda resists: list(itertools.chain(resists)),
+                    default=[],
+                ),
+                immune=self.active_effects(
+                    mapper=lambda effect: effect.effects.immunities,
+                    reducer=lambda resists: list(itertools.chain(resists)),
+                    default=[],
+                ),
+                vuln=self.active_effects(
+                    mapper=lambda effect: effect.effects.vulnerabilities,
+                    reducer=lambda resists: list(itertools.chain(resists)),
+                    default=[],
+                ),
+                neutral=self.active_effects(
+                    mapper=lambda effect: effect.effects.ignored_resistances,
+                    reducer=lambda resists: list(itertools.chain(resists)),
+                    default=[],
+                ),
+            ),
+            overwrite=False,
+        )
         return out
 
     def set_resist(self, damage_type: str, resist_type: str):
@@ -258,7 +291,14 @@ class Combatant(BaseCombatant, StatBlock):
     def attacks(self):
         if "attacks" not in self._cache:
             # attacks granted by effects are cached so that the same object is referenced in initTracker (#950)
-            self._cache["attacks"] = self._attacks + AttackList.from_dict(self.active_effects("attack"))
+            effect_attacks = self.active_effects(
+                mapper=lambda effect: [i.attack for i in effect.interactions if isinstance(i, AttackInteraction)],
+                reducer=lambda attacks: AttackList(list(itertools.chain(attacks))),
+            )
+            if effect_attacks is not None:
+                self._cache["attacks"] = self._attacks + effect_attacks
+            else:
+                self._cache["attacks"] = self._attacks
         return self._cache["attacks"]
 
     @property
@@ -373,25 +413,23 @@ class Combatant(BaseCombatant, StatBlock):
             e.remove()
         return to_remove
 
-    def active_effects(self, key=None):
-        if "parsed_effects" not in self._cache:
-            parsed_effects = {}
-            for effect in self.get_effects():
-                for k, v in effect.effect.items():
-                    if k not in parsed_effects:
-                        parsed_effects[k] = []
-                    if not isinstance(v, list):
-                        parsed_effects[k].append(v)
-                    else:
-                        parsed_effects[k].extend(v)
-            self._cache["parsed_effects"] = parsed_effects
-        if key:
-            return self._cache["parsed_effects"].get(key, [])
-        return self._cache["parsed_effects"]
+    def active_effects(
+        self,
+        mapper: Callable[[InitiativeEffect], _IntermediateT],
+        reducer: Callable[[List[_IntermediateT]], T] = lambda mapped: mapped,
+        default: T = None,
+    ) -> T:
+        """
+        Map/Reduce operation over each effect on the combatant to reduce everything down to a single value.
+        If the mapper returns a falsy value, the value will not be passed to the reducer.
+        If there are no elements to reduce, returns *default*.
+        """
+        values = [value for effect in self.get_effects() if (value := mapper(effect))]
+        if values:
+            return reducer(values)
+        return default
 
     def _invalidate_effect_cache(self):
-        if "parsed_effects" in self._cache:
-            del self._cache["parsed_effects"]
         if "attacks" in self._cache:
             del self._cache["attacks"]
 
@@ -776,9 +814,10 @@ class PlayerCombatant(Combatant):
 
     @property
     def ac(self):
-        _ac = self._ac or self.character.ac
-        _ac = combine_maybe_mods(self.active_effects("ac"), base=_ac)
-        return _ac
+        base_ac = self._ac or self.character.ac
+        base_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_value, reducer=max, default=0)
+        bonus_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_bonus, reducer=sum, default=0)
+        return max(base_effect_ac, base_ac) + bonus_effect_ac
 
     @ac.setter
     def ac(self, new_ac):
@@ -793,9 +832,10 @@ class PlayerCombatant(Combatant):
 
     @property
     def max_hp(self):
-        _maxhp = self._max_hp or self.character.max_hp
-        _maxhp = combine_maybe_mods(self.active_effects("maxhp"), base=_maxhp)
-        return _maxhp
+        base_hp = self._max_hp or self.character.max_hp
+        base_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_value, reducer=max, default=0)
+        bonus_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_bonus, reducer=sum, default=0)
+        return max(base_hp, base_effect_hp) + bonus_effect_hp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):

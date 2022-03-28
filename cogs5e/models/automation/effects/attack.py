@@ -1,5 +1,6 @@
 import d20
 
+from utils.enums import AdvantageType
 from utils.functions import reconcile_adv
 from . import Effect
 from ..errors import AutomationException, NoAttackBonus, TargetException
@@ -62,16 +63,21 @@ class Attack(Effect):
         # check for combatant IEffects
         if autoctx.combatant:
             # bonus (#224)
-            effect_b = "+".join(autoctx.combatant.active_effects("b"))
+            effect_b = autoctx.combatant.active_effects(
+                mapper=lambda effect: effect.effects.attack_bonus, reducer="+".join
+            )
             if effect_b and b:
                 b = f"{b}+{effect_b}"
             elif effect_b:
                 b = effect_b
             # Combine args/ieffect advantages - adv/dis (#1552)
+            effect_advs = autoctx.combatant.active_effects(
+                mapper=lambda effect: effect.effects.attack_advantage, default=[]
+            )
             adv = reconcile_adv(
-                adv=args.last("adv", type_=bool, ephem=True) or autoctx.combatant.active_effects("adv"),
-                dis=args.last("dis", type_=bool, ephem=True) or autoctx.combatant.active_effects("dis"),
-                ea=args.last("ea", type_=bool, ephem=True) or autoctx.combatant.active_effects("ea"),
+                adv=args.last("adv", type_=bool, ephem=True) or any(eadv == AdvantageType.ADV for eadv in effect_advs),
+                dis=args.last("dis", type_=bool, ephem=True) or any(eadv == AdvantageType.DIS for eadv in effect_advs),
+                ea=args.last("ea", type_=bool, ephem=True) or any(eadv == AdvantageType.ELVEN for eadv in effect_advs),
             )
         else:
             adv = args.adv(ea=True, ephem=True)

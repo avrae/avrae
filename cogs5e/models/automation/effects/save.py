@@ -80,10 +80,14 @@ class Save(Effect):
         # ==== ieffects ====
         if autoctx.target.combatant:
             # Combine args/ieffect advantages - adv/dis (#1552)
-            sadv_effects = autoctx.target.combatant.active_effects("sadv")
-            sdis_effects = autoctx.target.combatant.active_effects("sdis")
-            sadv = "all" in sadv_effects or stat in sadv_effects
-            sdis = "all" in sdis_effects or stat in sdis_effects
+            sadv_effects = autoctx.target.combatant.active_effects(
+                mapper=lambda effect: effect.effects.save_adv, reducer=lambda saves: set().union(*saves), default=set()
+            )
+            sdis_effects = autoctx.target.combatant.active_effects(
+                mapper=lambda effect: effect.effects.save_dis, reducer=lambda saves: set().union(*saves), default=set()
+            )
+            sadv = stat in sadv_effects
+            sdis = stat in sdis_effects
             adv = reconcile_adv(
                 adv=autoctx.args.last("sadv", type_=bool, ephem=True) or sadv,
                 dis=autoctx.args.last("sdis", type_=bool, ephem=True) or sdis,

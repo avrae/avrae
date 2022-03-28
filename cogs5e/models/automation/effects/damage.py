@@ -66,7 +66,9 @@ class Damage(Effect):
 
         # add on combatant damage effects (#224)
         if autoctx.combatant:
-            d_args.extend(autoctx.combatant.active_effects("d"))
+            d_args.extend(
+                autoctx.combatant.active_effects(mapper=lambda effect: effect.effects.damage_bonus, default=[])
+            )
 
         # check if we actually need to care about the -d tag
         if self.contains_roll_meta(autoctx):
@@ -111,10 +113,14 @@ class Damage(Effect):
         # magic arg (#853), magical effect (#1063)
         # silvered arg (#1544)
         always = set()
-        magical_effect = autoctx.combatant and autoctx.combatant.active_effects("magical")
+        magical_effect = autoctx.combatant and autoctx.combatant.active_effects(
+            mapper=lambda effect: effect.effects.magical_damage, reducer=any
+        )
         if magical_effect or autoctx.is_spell or magic_arg:
             always.add("magical")
-        silvered_effect = autoctx.combatant and autoctx.combatant.active_effects("silvered")
+        silvered_effect = autoctx.combatant and autoctx.combatant.active_effects(
+            mapper=lambda effect: effect.effects.silvered_damage, reducer=any
+        )
         if silvered_effect or silvered_arg:
             always.add("silvered")
         # dtype transforms/overrides (#876)

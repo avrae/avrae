@@ -110,8 +110,7 @@ def _str_save_dis(value: Set[str]):
 class InitPassiveEffect:
     """
     Represents all the passive effects granted by an Initiative effect.
-    If adding new passive effects, you need to make 3 updates: in the classvars, from_args, and _str_attr
-    (and possibly to/from dict depending on your serialization logic).
+    If adding new passive effects, add a new classvar below.
     """
 
     __effect_attrs = set()

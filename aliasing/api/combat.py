@@ -262,7 +262,7 @@ class SimpleCombatant(AliasStatBlock):
         except ValueError:
             raise InvalidSaveType
 
-        sb = self._combatant.active_effects("sb")
+        sb = self._combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
         saveroll = save.d20(base_adv=adv)
         if sb:
             saveroll = f'{saveroll}+{"+".join(sb)}'

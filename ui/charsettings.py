@@ -104,7 +104,8 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
             name="Cosmetic Settings",
             value=f"**Embed Color**: {color_setting_desc(self.settings.color)}\n"
             f"**Show Character Image**: {self.settings.embed_image}\n"
-            f"**Use Compact Coin Display:** {self.settings.compact_coins}",
+            f"**Use Compact Coin Display:** {self.settings.compact_coins}\n"
+            f"**Coin Conversion Mode**: {autoconvert_coins_desc(self.settings.autoconvert_coins)}",
             inline=False,
         )
         embed.add_field(
@@ -127,6 +128,13 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
                 sync_desc_lines.append(f"**Inbound Sync**: {self.settings.sync_inbound}")
             embed.add_field(name="Character Sync Settings", value="\n".join(sync_desc_lines), inline=False)
         return {"embed": embed}
+
+
+_AUTOCONVERT_SELECT_OPTIONS = [
+    disnake.SelectOption(label="Always Ask", value="0"),
+    disnake.SelectOption(label="Always Convert", value="1"),
+    disnake.SelectOption(label="Never Convert", value="-1"),
+]
 
 
 class _CosmeticSettingsUI(CharacterSettingsMenuBase):
@@ -177,7 +185,14 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.button(label="Back", style=disnake.ButtonStyle.grey, row=3)
+    @disnake.ui.select(placeholder="Coin Conversion Mode", options=_AUTOCONVERT_SELECT_OPTIONS, row=3)
+    async def autoconvert_select(self, select: disnake.ui.Select, interaction: disnake.Interaction):
+        value = select.values[0]
+        self.settings.autoconvert_coins = int(value)
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.button(label="Back", style=disnake.ButtonStyle.grey, row=4)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(CharacterSettingsUI, interaction)
 
@@ -203,6 +218,13 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
             name="Compact Coin Display",
             value=f"**{self.settings.compact_coins}**\n"
             f"*If this is enabled, your coins will be displayed in decimal gold format.*",
+            inline=False,
+        )
+        embed.add_field(
+            name="Coin Conversion Mode",
+            value=f"**{autoconvert_coins_desc(self.settings.autoconvert_coins)}**\n"
+            f"*Whether or not it should ask you if you would like to auto-convert your coins if you try so spend "
+            f"more than you currently have.*",
             inline=False,
         )
         return {"embed": embed}
@@ -379,3 +401,7 @@ def color_setting_desc(color):
 
 def crit_range_desc(crit_on):
     return "20" if crit_on == 20 else f"{crit_on}-20"
+
+
+def autoconvert_coins_desc(mode):
+    return "Always Ask" if mode == 0 else "Always Convert" if mode == 1 else "Never Convert"

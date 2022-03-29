@@ -6,6 +6,7 @@ from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.coinpurse import CoinsArgs
 from utils.constants import COIN_TYPES
+from utils.enums import CoinsAutoConvert
 from utils.functions import confirm
 
 
@@ -118,6 +119,8 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
 
 
 async def resolve_strict_coins(coinpurse, coins: CoinsArgs, ctx):
+    character = await ctx.get_character()
+    convert_mode = character.options.autoconvert_coins
     if (coinpurse.total + coins.total) < 0:
         raise InvalidArgument("You cannot put a currency into negative numbers.")
     if not all(
@@ -129,10 +132,14 @@ async def resolve_strict_coins(coinpurse, coins: CoinsArgs, ctx):
             coinpurse.cp + coins.cp >= 0,
         )
     ):
-        if coins.explicit and not await confirm(
-            ctx,
-            "You don't have enough of the chosen coins to complete this transaction"
-            ". Auto convert from other coins? (Reply with yes/no)",
+        if convert_mode == CoinsAutoConvert.NEVER or (
+            convert_mode == CoinsAutoConvert.ASK
+            and coins.explicit
+            and not await confirm(
+                ctx,
+                "You don't have enough of the chosen coins to complete this transaction"
+                ". Auto convert from other coins? (Reply with yes/no)",
+            )
         ):
             raise InvalidArgument("You cannot put a currency into negative numbers.")
         coins = coinpurse.auto_convert_down(coins)

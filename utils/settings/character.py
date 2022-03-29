@@ -181,7 +181,7 @@ CHARACTER_SETTINGS = {
     "autoconvertcoins": CSetting(
         "autoconvert_coins",
         "number",
-        description="auto convert coins mode, 0 for ask everytime, 1 for always convert, -1 for never convert",
+        description="auto convert coins mode, 0 for ask everytime, 1 for always convert, 2 for never convert",
         default="ask everytime",
         display_func=lambda val: "ask everytime" if val == 0 else "always convert" if val == 1 else "never convert",
     ),

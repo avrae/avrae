@@ -3,14 +3,14 @@ import d20
 from utils.enums import AdvantageType
 from utils.functions import reconcile_adv
 from . import Effect
-from ..runtime import AutomationContext, SpellContext
 from ..errors import AutomationException, NoAttackBonus, TargetException
 from ..results import AttackResult
+from ..runtime import AutomationContext, SpellContext
 from ..utils import stringify_intexpr
 
 
 class Attack(Effect):
-    def __init__(self, hit: list, miss: list, attackBonus: str = None, adv: int = None, **kwargs):
+    def __init__(self, hit: list, miss: list, attackBonus: str = None, adv: str = None, **kwargs):
         super().__init__("attack", **kwargs)
         self.hit = hit
         self.miss = miss
@@ -66,9 +66,10 @@ class Attack(Effect):
                 criton = autoctx.character.options.crit_on
 
         # explicit advantage
+        explicit_adv = None
         if self.adv:
             try:
-                self.adv = autoctx.parse_intexpression(self.adv)
+                explicit_adv = autoctx.parse_intexpression(self.adv)
             except Exception:
                 raise AutomationException(f"{self.adv!r} cannot be interpreted as an advantage type.")
 
@@ -89,19 +90,19 @@ class Attack(Effect):
             adv = reconcile_adv(
                 adv=args.last("adv", type_=bool, ephem=True)
                 or any(eadv == AdvantageType.ADV for eadv in effect_advs)
-                or self.adv == 1,
+                or explicit_adv == AdvantageType.ADV,
                 dis=args.last("dis", type_=bool, ephem=True)
                 or any(eadv == AdvantageType.DIS for eadv in effect_advs)
-                or self.adv == -1,
+                or explicit_adv == AdvantageType.DIS,
                 ea=args.last("ea", type_=bool, ephem=True)
                 or any(eadv == AdvantageType.ELVEN for eadv in effect_advs)
-                or self.adv == 2,
+                or explicit_adv == AdvantageType.ELVEN,
             )
         else:
             adv = reconcile_adv(
-                adv=args.last("adv", type_=bool, ephem=True) or self.adv == 1,
-                dis=args.last("dis", type_=bool, ephem=True) or self.adv == -1,
-                ea=args.last("ea", type_=bool, ephem=True) or self.adv == 2,
+                adv=args.last("adv", type_=bool, ephem=True) or explicit_adv == AdvantageType.ADV,
+                dis=args.last("dis", type_=bool, ephem=True) or explicit_adv == AdvantageType.DIS,
+                ea=args.last("ea", type_=bool, ephem=True) or explicit_adv == AdvantageType.ELVEN,
             )
 
         # ==== target options ====
@@ -272,13 +273,16 @@ class Attack(Effect):
             attack_bonus = stringify_intexpr(evaluator, self.bonus)
 
         out = f"Attack: {attack_bonus:+} to hit"
-        match self.adv:
-            case 1:
-                out += ", with advantage"
-            case 2:
-                out += ", with Elven Accuracy"
-            case -1:
-                out += ", with disdvantage"
+
+        if self.adv:
+            match stringify_intexpr(evaluator, self.bonus):
+                case AdvantageType.ADV:
+                    out += ", with advantage"
+                case AdvantageType.ELVEN:
+                    out += ", with Elven Accuracy"
+                case AdvantageType.DIS:
+                    out += ", with disdvantage"
+
         if self.hit:
             hit_out = self.build_child_str(self.hit, caster, evaluator)
             if hit_out:

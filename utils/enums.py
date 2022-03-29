@@ -15,4 +15,4 @@ class ActivationType(enum.IntEnum):
 class CoinsAutoConvert(enum.IntEnum):
     ASK = 0
     ALWAYS = 1
-    NEVER = -1
+    NEVER = 2

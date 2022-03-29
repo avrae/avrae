@@ -133,7 +133,7 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
 _AUTOCONVERT_SELECT_OPTIONS = [
     disnake.SelectOption(label="Always Ask", value="0"),
     disnake.SelectOption(label="Always Convert", value="1"),
-    disnake.SelectOption(label="Never Convert", value="-1"),
+    disnake.SelectOption(label="Never Convert", value="2"),
 ]
 
 

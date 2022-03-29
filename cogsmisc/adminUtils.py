@@ -32,7 +32,6 @@ class AdminUtils(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        bot.loop.create_task(self.load_admin())
         bot.loop.create_task(self.admin_pubsub())
         self.blacklisted_serv_ids = set()
         self.whitelisted_serv_ids = set()
@@ -42,7 +41,7 @@ class AdminUtils(commands.Cog):
         self._ps_requests_pending = {}
 
     # ==== setup tasks ====
-    async def load_admin(self):
+    async def cog_load(self):
         self.bot.muted = set(await self.bot.rdb.jget("muted", []))
         self.blacklisted_serv_ids = set(await self.bot.rdb.jget("blacklist", []))
         self.whitelisted_serv_ids = set(await self.bot.rdb.jget("server-whitelist", []))

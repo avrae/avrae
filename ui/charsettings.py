@@ -9,6 +9,7 @@ import pydantic.color
 
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
+from utils.enums import CoinsAutoConvert
 from utils.settings import CharacterSettings
 from .menu import MenuBase
 
@@ -131,9 +132,9 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
 
 
 _AUTOCONVERT_SELECT_OPTIONS = [
-    disnake.SelectOption(label="Always Ask", value="0"),
-    disnake.SelectOption(label="Always Convert", value="1"),
-    disnake.SelectOption(label="Never Convert", value="2"),
+    disnake.SelectOption(label="Always Ask", value=str(CoinsAutoConvert.ASK.value)),
+    disnake.SelectOption(label="Always Convert", value=str(CoinsAutoConvert.ALWAYS.value)),
+    disnake.SelectOption(label="Never Convert", value=str(CoinsAutoConvert.NEVER.value)),
 ]
 
 
@@ -404,4 +405,10 @@ def crit_range_desc(crit_on):
 
 
 def autoconvert_coins_desc(mode):
-    return "Always Ask" if mode == 0 else "Always Convert" if mode == 1 else "Never Convert"
+    return (
+        "Always Ask"
+        if mode == CoinsAutoConvert.ASK
+        else "Always Convert"
+        if mode == CoinsAutoConvert.ALWAYS
+        else "Never Convert"
+    )

@@ -1,4 +1,5 @@
 import enum
+
 UNSET = object()  # special sentinel value
 
 

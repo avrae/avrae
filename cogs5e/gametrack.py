@@ -646,9 +646,9 @@ class GameTrack(commands.Cog):
         except InvalidArgument as e:
             return await ctx.send(f"Failed to create counter: {e}")
         else:
-            await ctx.send(f"Custom counter created.\n\n**{name}**\n{new_counter.full_str()}")
+            await ctx.send(f"Custom counter created.\n**{name}**\n{new_counter.full_str()}")
 
-    @customcounter.command(name='edit')
+    @customcounter.command(name="edit")
     async def customcounter_edit(self, ctx, name, *args):
         """
         Edits an existing custom counter replacing passed arguments.
@@ -657,54 +657,61 @@ class GameTrack(commands.Cog):
         Will clamp counter value to new limits if needed.
 
         __Valid Arguments__
-        `-title <title>` - Sets the title for the output when modifying the counter.
-                           `[name]` will be replaced with the player's name.
+        `-name <name>` - Rename the counter.
+        `-title <title>` - Sets the title for the output when modifying the counter. `[name]` will be replaced with the player's name.
         `-desc <desc>` - Sets the description when setting or viewing the counter.
-        `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none".
-                                     Default - will reset on a call of `!cc reset`.
+        `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.
         `-min <min value>` - The minimum value of the counter.
-        `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers.
-                                   Default - numbers.
+        `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers.
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
-        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset.
-                             Supports dice.
-        """
+        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
+        """  # noqa: E501
         character: Character = await ctx.get_character()
         counter = await character.select_consumable(ctx, name)
         # pull in the new values, or existing ones
         args = argparse(args)
-        e_reset = args.last('reset', counter.reset_on)
-        e_max = args.last('max', counter.max)
-        e_min = args.last('min', counter.min)
-        e_type = args.last('type', counter.display_type)
-        e_reset_to = args.last('resetto', counter.reset_to)
-        e_reset_by = args.last('resetby', counter.reset_by)
-        e_title = args.last('title', counter.title)
-        e_desc = args.last('desc', counter.desc)
+        e_name = args.last("name", counter.name)
+        e_reset = args.last("reset", counter.reset_on)
+        e_max = args.last("max", counter.max)
+        e_min = args.last("min", counter.min)
+        e_type = args.last("type", counter.display_type)
+        e_reset_to = args.last("resetto", counter.reset_to)
+        e_reset_by = args.last("resetby", counter.reset_by)
+        e_title = args.last("title", counter.title)
+        e_desc = args.last("desc", counter.desc)
         # Clamp the values to None if we want to remove them instead
-        _reset = e_reset if e_reset and e_reset.lower() != 'none' else None
-        _max = e_max if e_max and e_max.lower() != 'none' else None
-        _min = e_min if e_min and e_min.lower() != 'none' else None
-        _type = e_type if e_type and e_type.lower() != 'none' else None
-        reset_to = e_reset_to if e_reset_to and e_reset_to.lower() != 'none' else None
-        reset_by = e_reset_by if e_reset_by and e_reset_by.lower() != 'none' else None
-        title = e_title if e_title and e_title.lower() != 'none' else None
-        desc = e_desc if e_desc and e_desc.lower() != 'none' else None
+        _reset = e_reset if e_reset and e_reset.lower() != "none" else None
+        _max = e_max if e_max and e_max.lower() != "none" else None
+        _min = e_min if e_min and e_min.lower() != "none" else None
+        _type = e_type if e_type and e_type.lower() != "none" else None
+        reset_to = e_reset_to if e_reset_to and e_reset_to.lower() != "none" else None
+        reset_by = e_reset_by if e_reset_by and e_reset_by.lower() != "none" else None
+        title = e_title if e_title and e_title.lower() != "none" else None
+        desc = e_desc if e_desc and e_desc.lower() != "none" else None
 
         try:
-            new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
-                                            reset_to=reset_to, reset_by=reset_by, title=title, desc=desc)
+            new_counter = CustomCounter.new(
+                character,
+                name=e_name,
+                maxv=_max,
+                minv=_min,
+                reset=_reset,
+                display_type=_type,
+                reset_to=reset_to,
+                reset_by=reset_by,
+                title=title,
+                desc=desc,
+            )
         except InvalidArgument as e:
             return await ctx.send(f"Failed to edit counter: {e}")
-        else:
-            new_value = new_counter.set(counter.value)
-            character.consumables.insert(character.consumables.index(counter), new_counter)
-            character.consumables.remove(counter)
-            await character.commit(ctx)
+        new_value = new_counter.set(counter.value)
+        character.consumables.insert(character.consumables.index(counter), new_counter)
+        character.consumables.remove(counter)
+        await character.commit(ctx)
 
-            clamp = f"\nClamped: {new_value} ({new_value - counter.value} overflow)." if not counter.value == new_value else ""
-            await ctx.send(f"Custom counter edited.{clamp}\n\n**{name}**\n{new_counter.full_str()}")
+        overflow = f" ({abs(new_value - counter.value)} overflow)" if counter.value != new_value else ""
+        await ctx.send(f"Custom counter edited{overflow}.\n**{new_counter.name}**\n{new_counter.full_str()}")
 
     @customcounter.command(name="delete", aliases=["remove"])
     async def customcounter_delete(self, ctx, name):

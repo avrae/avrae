@@ -330,10 +330,10 @@ class SheetManager(commands.Cog):
         char: Character = await ctx.get_character()
         char.overrides.image = None
         await char.commit(ctx)
-        await ctx.send(f"Portrait override removed!")
+        await ctx.send("Portrait override removed!")
 
     @commands.command(hidden=True)  # hidden, as just called by token command
-    async def playertoken(self, ctx, *args):
+    async def playertoken(self, ctx, args):
         """
         Generates and sends a token for use on VTTs.
         __Valid Arguments__

@@ -28,7 +28,7 @@ from gamedata.lookuputils import (
 from gamedata.race import RaceFeature
 from utils import checks, img
 from utils.argparser import argparse
-from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str
+from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str, try_delete
 
 LARGE_THRESHOLD = 200
 
@@ -288,12 +288,13 @@ class Lookup(commands.Cog):
             visible = True
 
         # #1741 -h arg for monster lookup
-        image_args = argparse(name)
-        hide_name = image_args.get("h", False, bool)
+        mon_args = argparse(name)
+        hide_name = mon_args.get("h", False, bool)
         name = name.replace(" -h", "").rstrip()
 
-        if visible:
-            visible = visible and not hide_name
+        if hide_name:
+            visible = False
+            await try_delete(ctx.message)
 
         choices = await get_monster_choices(ctx, filter_by_license=False)
         monster = await self._lookup_search3(ctx, {"monster": choices}, name)
@@ -442,6 +443,8 @@ class Lookup(commands.Cog):
         embed = EmbedWithAuthor(ctx)
         if not hide_name:
             embed.title = monster.name
+        else:
+            await try_delete(ctx.message)
         embed.description = f"{monster.size} monster."
 
         if not url:
@@ -451,21 +454,24 @@ class Lookup(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def token(self, ctx, name=None, *args):
+    async def token(self, ctx, *, name=""):
         """
         Shows a monster or your character's token.
         __Valid Arguments__
         -border <plain|none (player token only)> - Overrides the token border.
         """
-        if name is None or name.startswith("-"):
+        if not name or name.startswith("-"):
             token_cmd = self.bot.get_command("playertoken")
             if token_cmd is None:
                 return await ctx.send("Error: SheetManager cog not loaded.")
-            if name:
-                args = (name, *args)
-            return await ctx.invoke(token_cmd, *args)
+            return await ctx.invoke(token_cmd, name)
 
         # select monster
+        token_args = argparse(name)
+        hide_name = token_args.get("h", False, bool)
+        if not name.find("-") == -1:  # remove the args from the name
+            name = name[: name.find("-")].rstrip()
+
         choices = await get_monster_choices(ctx, filter_by_license=False)
         monster = await self._lookup_search3(ctx, {"monster": choices}, name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
@@ -473,7 +479,6 @@ class Lookup(commands.Cog):
         # select border
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         is_subscriber = ddb_user and ddb_user.is_subscriber
-        token_args = argparse(args)
 
         if monster.homebrew:
             # homebrew: generate token
@@ -495,7 +500,10 @@ class Lookup(commands.Cog):
             image = await img.fetch_monster_image(token_url)
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = monster.name
+        if not hide_name:
+            embed.title = monster.name
+        else:
+            await try_delete(ctx.message)
         embed.description = f"{monster.size} monster."
 
         file = discord.File(image, filename="image.png")

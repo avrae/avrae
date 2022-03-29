@@ -6,6 +6,7 @@ from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.coinpurse import CoinsArgs
 from utils.constants import COIN_TYPES
+from utils.enums import CoinsAutoConvert
 from utils.functions import confirm
 
 
@@ -63,6 +64,9 @@ def parse_coin_args(args: str) -> CoinsArgs:
     Otherwise, allows the user to specify currencies in the form ``/(([+-]?\d+)\s*([pgesc]p)?)+/``
     (e.g. +1gp -2sp 3cp).
     """
+
+    # Remove commas, in the case of `+3,104gp` or `-2,000.05`
+    args = args.replace(",", "")
     try:
         return _parse_coin_args_float(float(args))
     except ValueError:
@@ -74,15 +78,13 @@ def _parse_coin_args_float(coins: float) -> CoinsArgs:
     Parses a float into currencies. The input is assumed to be in gp, and any sub-cp values will be truncated.
     """
     # if any sub-copper passed (i.e. 1-thousandth), truncate it
-    total_copper = int(abs(coins * 100))
+    total_copper = int(coins * 100)
 
-    # this floor/mod math gets wonky when dealing with negative numbers (e.g. -2.62 becomes -3gp +3sp +8cp)
-    # so we do all our math in the positives
-    sign = 1 if coins >= 0 else -1
-
-    return CoinsArgs(
-        gp=sign * (total_copper // 100), sp=sign * ((total_copper % 100) // 10), cp=sign * (total_copper % 10)
-    )
+    if coins < 0:
+        # If it's a negative value, remove all the lowest coins first
+        return CoinsArgs(cp=total_copper)
+    else:
+        return CoinsArgs(gp=total_copper // 100, sp=(total_copper % 100) // 10, cp=total_copper % 10)
 
 
 def _parse_coin_args_re(args: str) -> CoinsArgs:
@@ -116,7 +118,8 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
     return out
 
 
-async def resolve_strict_coins(coinpurse, coins: CoinsArgs, ctx):
+async def resolve_strict_coins(coinpurse, coins: CoinsArgs, ctx, mode: CoinsAutoConvert = 0):
+
     if (coinpurse.total + coins.total) < 0:
         raise InvalidArgument("You cannot put a currency into negative numbers.")
     if not all(
@@ -128,10 +131,14 @@ async def resolve_strict_coins(coinpurse, coins: CoinsArgs, ctx):
             coinpurse.cp + coins.cp >= 0,
         )
     ):
-        if coins.explicit and not await confirm(
-            ctx,
-            "You don't have enough of the chosen coins to complete this transaction"
-            ". Auto convert from larger coins? (Reply with yes/no)",
+        if mode == CoinsAutoConvert.NEVER or (
+            mode == CoinsAutoConvert.ASK
+            and coins.explicit
+            and not await confirm(
+                ctx,
+                "You don't have enough of the chosen coins to complete this transaction"
+                ". Auto convert from other coins? (Reply with yes/no)",
+            )
         ):
             raise InvalidArgument("You cannot put a currency into negative numbers.")
         coins = coinpurse.auto_convert_down(coins)

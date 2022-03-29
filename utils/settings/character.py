@@ -6,6 +6,7 @@ from pydantic.color import Color
 
 from utils.functions import get_positivity
 from . import SettingsBaseModel
+from utils.enums import CoinsAutoConvert
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class CharacterSettings(SettingsBaseModel):
     reroll: Optional[conint(ge=1, le=20)] = None
     talent: bool = False
     srslots: bool = False
+    autoconvert_coins: CoinsAutoConvert = CoinsAutoConvert.ASK
 
     # character sync
     sync_outbound: bool = True  # avrae to upstream
@@ -175,5 +177,14 @@ CHARACTER_SETTINGS = {
         description="compact coin display",
         default="disabled",
         display_func=lambda val: "enabled" if val else "disabled",
+    ),
+    "autoconvertcoins": CSetting(
+        "autoconvert_coins",
+        "number",
+        description=f"auto convert coins mode, {CoinsAutoConvert.ASK.value} for ask everytime, "
+        f"{CoinsAutoConvert.ALWAYS.value} for always convert, "
+        f"{CoinsAutoConvert.NEVER.value} for never convert",
+        default="ask everytime",
+        display_func=lambda val: "ask everytime" if val == 0 else "always convert" if val == 1 else "never convert",
     ),
 }

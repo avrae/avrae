@@ -24,3 +24,9 @@ class AdvantageType(enum.IntEnum):
     ADV = 1
     DIS = -1
     ELVEN = 2
+
+
+class CoinsAutoConvert(enum.IntEnum):
+    ASK = 0
+    ALWAYS = 1
+    NEVER = 2

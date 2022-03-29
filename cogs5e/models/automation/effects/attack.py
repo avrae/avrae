@@ -10,11 +10,12 @@ from ..utils import stringify_intexpr
 
 
 class Attack(Effect):
-    def __init__(self, hit: list, miss: list, attackBonus: str = None, **kwargs):
+    def __init__(self, hit: list, miss: list, attackBonus: str = None, adv: int = None, **kwargs):
         super().__init__("attack", **kwargs)
         self.hit = hit
         self.miss = miss
         self.bonus = attackBonus
+        self.adv = adv
 
     @classmethod
     def from_data(cls, data):
@@ -29,6 +30,8 @@ class Attack(Effect):
         out.update({"hit": hit, "miss": miss})
         if self.bonus is not None:
             out["attackBonus"] = self.bonus
+        if self.adv is not None:
+            out["adv"] = self.adv
         return out
 
     def run(self, autoctx: AutomationContext):
@@ -52,6 +55,7 @@ class Attack(Effect):
         criton = args.last("criton", 20, int)
         ac = args.last("ac", None, int)
         force_roll = args.last("attackroll", None, int, ephem=True)
+        min_attack_roll = args.last("attackmin", 0, int)
 
         # ==== caster options ====
         # character-specific arguments
@@ -60,6 +64,13 @@ class Attack(Effect):
                 reroll = autoctx.character.options.reroll
             if "criton" not in args:
                 criton = autoctx.character.options.crit_on
+
+        # explicit advantage
+        if self.adv:
+            try:
+                self.adv = autoctx.parse_intexpression(self.adv)
+            except Exception:
+                raise AutomationException(f"{self.adv!r} cannot be interpreted as an advantage type.")
 
         # check for combatant IEffects
         if autoctx.combatant:
@@ -76,12 +87,20 @@ class Attack(Effect):
                 mapper=lambda effect: effect.effects.attack_advantage, default=[]
             )
             adv = reconcile_adv(
-                adv=args.last("adv", type_=bool, ephem=True) or any(eadv == AdvantageType.ADV for eadv in effect_advs),
-                dis=args.last("dis", type_=bool, ephem=True) or any(eadv == AdvantageType.DIS for eadv in effect_advs),
-                ea=args.last("ea", type_=bool, ephem=True) or any(eadv == AdvantageType.ELVEN for eadv in effect_advs),
+                adv=args.last("adv", type_=bool, ephem=True)
+                or any(eadv == AdvantageType.ADV for eadv in effect_advs)
+                or self.adv == 1,
+                dis=args.last("dis", type_=bool, ephem=True)
+                or any(eadv == AdvantageType.DIS for eadv in effect_advs)
+                or self.adv == -1,
+                ea=args.last("ea", type_=bool, ephem=True) or any(eadv == AdvantageType.ELVEN for eadv in effect_advs) or self.adv == 2,
             )
         else:
-            adv = args.adv(ea=True, ephem=True)
+            adv = reconcile_adv(
+                adv=args.last("adv", type_=bool, ephem=True) or self.adv == 1,
+                dis=args.last("dis", type_=bool, ephem=True) or self.adv == -1,
+                ea=args.last("ea", type_=bool, ephem=True) or self.adv == 2,
+            )
 
         # ==== target options ====
         if autoctx.target.character:
@@ -115,6 +134,7 @@ class Attack(Effect):
         autoctx.metavars["lastAttackDidCrit"] = False
         autoctx.metavars["lastAttackRollTotal"] = 0  # 1362
         autoctx.metavars["lastAttackNaturalRoll"] = 0  # 1495
+        autoctx.metavars["lastAttackHadAdvantage"] = 0
         did_hit = True
         did_crit = False
         to_hit_roll = None
@@ -129,6 +149,9 @@ class Attack(Effect):
             reroll_str = ""
             if reroll:
                 reroll_str = f"ro{reroll}"
+            # minimum attack roll (#1742)
+            if min_attack_roll:
+                reroll_str = f"{reroll_str}mi{min_attack_roll}"
 
             if force_roll:
                 formatted_d20 = f"{force_roll}"
@@ -164,7 +187,7 @@ class Attack(Effect):
             # assign hit values
             if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # natural crit
                 did_crit = True if not nocrit else False
-            elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
+            elif d20_value == 1 or to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
                 did_hit = False
             elif ac and to_hit_roll.total < ac:  # miss
                 did_hit = False
@@ -174,6 +197,7 @@ class Attack(Effect):
 
             autoctx.metavars["lastAttackRollTotal"] = to_hit_roll.total  # 1362
             autoctx.metavars["lastAttackNaturalRoll"] = d20_value  # 1495
+            autoctx.metavars["lastAttackHadAdvantage"] = adv
 
             # output
             if not hide:  # not hidden
@@ -246,6 +270,13 @@ class Attack(Effect):
             attack_bonus = stringify_intexpr(evaluator, self.bonus)
 
         out = f"Attack: {attack_bonus:+} to hit"
+        match self.adv:
+            case 1:
+                out += ", with advantage"
+            case 2:
+                out += ", with Elven Accuracy"
+            case -1:
+                out += ", with disdvantage"
         if self.hit:
             hit_out = self.build_child_str(self.hit, caster, evaluator)
             if hit_out:

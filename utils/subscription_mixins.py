@@ -25,18 +25,18 @@ class SubscriberMixin(MixinBase, abc.ABC):
 
     async def is_subscribed(self, ctx):
         """Returns whether the contextual author is subscribed to this object."""
-        return (await self.sub_coll(ctx).find_one(
-            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
-        )) is not None
+        return (
+            await self.sub_coll(ctx).find_one(
+                {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
+            )
+        ) is not None
 
     async def subscribe(self, ctx):
         """Adds the contextual author as a subscriber."""
         if await self.is_subscribed(ctx):
             raise NotAllowed("You are already subscribed to this.")
 
-        await self.sub_coll(ctx).insert_one(
-            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
-        )
+        await self.sub_coll(ctx).insert_one({"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id})
 
     async def unsubscribe(self, ctx):
         """Removes the contextual author from subscribers."""
@@ -62,7 +62,7 @@ class SubscriberMixin(MixinBase, abc.ABC):
     async def my_sub_ids(cls, ctx):
         """Returns an async iterator of ObjectIds representing objects the contextual author is subscribed to."""
         async for sub in cls.my_subs(ctx):
-            yield sub['object_id']
+            yield sub["object_id"]
 
 
 class ActiveMixin(MixinBase, abc.ABC):
@@ -70,19 +70,15 @@ class ActiveMixin(MixinBase, abc.ABC):
 
     async def set_active(self, ctx):
         """Sets the object as active for the contextual author, and removes active status from any other documents."""
-        await self.sub_coll(ctx).delete_many(
-            {"type": "active", "subscriber_id": ctx.author.id}
-        )
-        await self.sub_coll(ctx).insert_one(
-            {"type": "active", "subscriber_id": ctx.author.id, "object_id": self.id}
-        )
+        await self.sub_coll(ctx).delete_many({"type": "active", "subscriber_id": ctx.author.id})
+        await self.sub_coll(ctx).insert_one({"type": "active", "subscriber_id": ctx.author.id, "object_id": self.id})
 
     @classmethod
     async def active_id(cls, ctx):
         """Returns the ObjectId of the object the user has set as active, or None if the user does not have any."""
         obj = await cls.sub_coll(ctx).find_one({"type": "active", "subscriber_id": ctx.author.id})
         if obj is not None:
-            return obj['object_id']
+            return obj["object_id"]
         return None
 
 
@@ -91,9 +87,11 @@ class GuildActiveMixin(MixinBase, abc.ABC):
 
     async def is_server_active(self, ctx):
         """Returns whether the object is active on this server."""
-        return (await self.sub_coll(ctx).find_one(
-            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id}
-        )) is not None
+        return (
+            await self.sub_coll(ctx).find_one(
+                {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id}
+            )
+        ) is not None
 
     async def toggle_server_active(self, ctx):
         """Toggles whether the object is active in the contextual guild.
@@ -131,7 +129,7 @@ class GuildActiveMixin(MixinBase, abc.ABC):
     async def guild_active_ids(cls, ctx):
         """Returns a async iterator of ObjectIds representing the objects active in the contextual server."""
         async for sub in cls.guild_active_subs(ctx):
-            yield sub['object_id']
+            yield sub["object_id"]
 
 
 class EditorMixin(MixinBase, abc.ABC):
@@ -139,9 +137,9 @@ class EditorMixin(MixinBase, abc.ABC):
 
     async def is_editor(self, ctx, user):
         """Returns whether the given user can edit this object."""
-        return (await self.sub_coll(ctx).find_one(
-            {"type": "editor", "subscriber_id": user.id, "object_id": self.id}
-        )) is not None
+        return (
+            await self.sub_coll(ctx).find_one({"type": "editor", "subscriber_id": user.id, "object_id": self.id})
+        ) is not None
 
     async def toggle_editor(self, ctx, user):
         """Toggles whether a user is allowed to edit the given object.
@@ -166,12 +164,13 @@ class EditorMixin(MixinBase, abc.ABC):
     async def my_editable_ids(cls, ctx):
         """Returns an async iterator of ObjectIds representing objects the contextual author can edit."""
         async for sub in cls.sub_coll(ctx).find({"type": "editor", "subscriber_id": ctx.author.id}):
-            yield sub['object_id']
+            yield sub["object_id"]
 
 
 # ==== utilities ====
 class CommonHomebrewMixin(SubscriberMixin, ActiveMixin, GuildActiveMixin, abc.ABC):
     pass
+
 
 # ==== notes ====
 # base schema

@@ -14,7 +14,7 @@ class BaseCombatant:
 
 
 class CombatantType(enum.Enum):
-    GENERIC = 'common'
-    PLAYER = 'player'
-    MONSTER = 'monster'
-    GROUP = 'group'
+    GENERIC = "common"
+    PLAYER = "player"
+    MONSTER = "monster"
+    GROUP = "group"

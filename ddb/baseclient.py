@@ -18,10 +18,7 @@ class BaseClient(abc.ABC):
         """Performs a request on behalf of a DDB user."""
         try:
             async with self.http.request(
-                    method,
-                    f"{self.SERVICE_BASE}{route}",
-                    headers={"Authorization": f"Bearer {ddb_user.token}"},
-                    **kwargs
+                method, f"{self.SERVICE_BASE}{route}", headers={"Authorization": f"Bearer {ddb_user.token}"}, **kwargs
             ) as resp:
                 self.logger.debug(f"{method} {self.SERVICE_BASE}{route} returned {resp.status}")
                 if not 199 < resp.status < 300:
@@ -45,13 +42,13 @@ class BaseClient(abc.ABC):
         return data
 
     async def get(self, ddb_user: BeyondUser, route: str, **kwargs):
-        return await self.request(ddb_user, 'GET', route, **kwargs)
+        return await self.request(ddb_user, "GET", route, **kwargs)
 
     async def post(self, ddb_user: BeyondUser, route: str, **kwargs):
-        return await self.request(ddb_user, 'POST', route, **kwargs)
+        return await self.request(ddb_user, "POST", route, **kwargs)
 
     async def put(self, ddb_user: BeyondUser, route: str, **kwargs):
-        return await self.request(ddb_user, 'PUT', route, **kwargs)
+        return await self.request(ddb_user, "PUT", route, **kwargs)
 
     async def delete(self, ddb_user: BeyondUser, route: str, **kwargs):
-        return await self.request(ddb_user, 'DELETE', route, **kwargs)
+        return await self.request(ddb_user, "DELETE", route, **kwargs)

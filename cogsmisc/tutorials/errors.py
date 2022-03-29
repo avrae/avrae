@@ -3,6 +3,7 @@ from cogs5e.models.errors import AvraeException
 
 class TutorialException(AvraeException):
     """Something happened in a tutorial"""
+
     pass
 
 

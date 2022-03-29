@@ -24,10 +24,14 @@ class RedisIO:
         encoded_data = await self._db.get(key)
         return encoded_data.decode() if encoded_data is not None else default
 
-    async def set(self, key, value, *, ex=0, nx=False):
+    async def set(self, key, value, *, ex=0, nx=False, xx=False):
         exist = None
+        if nx and xx:
+            raise ValueError("'nx' and 'xx' args are mutually exclusive")
         if nx:
             exist = self._db.SET_IF_NOT_EXIST
+        elif xx:
+            exist = self._db.SET_IF_EXIST
         return await self._db.set(key, value, expire=ex, exist=exist)
 
     async def incr(self, key):
@@ -45,6 +49,13 @@ class RedisIO:
     async def setnx(self, key, value):
         return await self._db.setnx(key, value)
 
+    async def ttl(self, key):
+        return await self._db.ttl(key)
+
+    async def iscan(self, match=None, count=None):
+        async for key_bin in self._db.iscan(match=match, count=count):
+            yield key_bin.decode()
+
     # ==== hashmaps ====
     async def set_dict(self, key, dictionary):
         return await self._db.hmset_dict(key, **dictionary)
@@ -55,13 +66,13 @@ class RedisIO:
     async def get_whole_dict(self, key, default=None):
         if default is None:
             default = {}
-        out = await self._db.hgetall(key, encoding='utf-8')
+        out = await self._db.hgetall(key, encoding="utf-8")
         if out is None:
             return default
         return out
 
     async def hget(self, key, field, default=None):
-        out = await self._db.hget(key, field, encoding='utf-8')
+        out = await self._db.hget(key, field, encoding="utf-8")
         return out if out is not None else default
 
     async def hset(self, key, field, value):
@@ -149,7 +160,7 @@ class _PubSubMessageBase(abc.ABC):
 
 class PubSubCommand(_PubSubMessageBase):
     def __init__(self, id, sender, command, args, kwargs):
-        super().__init__('cmd', id, sender)
+        super().__init__("cmd", id, sender)
         self.command = command
         self.args = args
         self.kwargs = kwargs
@@ -171,7 +182,7 @@ class PubSubCommand(_PubSubMessageBase):
 
 class PubSubReply(_PubSubMessageBase):
     def __init__(self, id, sender, reply_to, data):
-        super().__init__('reply', id, sender)
+        super().__init__("reply", id, sender)
         self.reply_to = reply_to
         self.data = data
 
@@ -186,15 +197,12 @@ class PubSubReply(_PubSubMessageBase):
         return inst
 
 
-PS_DESER_MAP = {
-    "cmd": PubSubCommand,
-    "reply": PubSubReply
-}
+PS_DESER_MAP = {"cmd": PubSubCommand, "reply": PubSubReply}
 
 
 def deserialize_ps_msg(message: str):
     data = json.loads(message)
-    t = data.pop('type')
+    t = data.pop("type")
     if t not in PS_DESER_MAP:
         raise TypeError(f"{t} is not a valid pubsub message type.")
     return PS_DESER_MAP[t].from_dict(data)

@@ -39,6 +39,7 @@ def test_alias_skill_comparison():
     assert 1 >= s1
     assert 1 <= s1
 
+
 # TODO: AliasSaves tests
 # TODO: AliasResistances Tests
 # TODO: AliasSpellbook Tests

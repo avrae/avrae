@@ -4,8 +4,8 @@ from ..results import ConditionResult
 
 
 class Condition(Effect):
-    def __init__(self, condition: str, onTrue: list, onFalse: list, errorBehaviour: str = 'false', **kwargs):
-        super().__init__('condition', **kwargs)
+    def __init__(self, condition: str, onTrue: list, onFalse: list, errorBehaviour: str = "false", **kwargs):
+        super().__init__("condition", **kwargs)
         self.condition = condition
         self.on_true = onTrue
         self.on_false = onFalse
@@ -13,16 +13,22 @@ class Condition(Effect):
 
     @classmethod
     def from_data(cls, data):
-        data['onTrue'] = Effect.deserialize(data['onTrue'])
-        data['onFalse'] = Effect.deserialize(data['onFalse'])
+        data["onTrue"] = Effect.deserialize(data["onTrue"])
+        data["onFalse"] = Effect.deserialize(data["onFalse"])
         return super().from_data(data)
 
     def to_dict(self):
         out = super().to_dict()
         on_true = Effect.serialize(self.on_true)
         on_false = Effect.serialize(self.on_false)
-        out.update({'condition': self.condition, 'onTrue': on_true, 'onFalse': on_false,
-                    'errorBehaviour': self.error_behaviour})
+        out.update(
+            {
+                "condition": self.condition,
+                "onTrue": on_true,
+                "onFalse": on_false,
+                "errorBehaviour": self.error_behaviour,
+            }
+        )
         return out
 
     def run(self, autoctx):
@@ -34,14 +40,14 @@ class Condition(Effect):
             condition_result = autoctx.parse_annostr(self.condition, is_full_expression=True)
         except AutomationEvaluationException as e:
             did_error = True
-            if self.error_behaviour == 'true':
+            if self.error_behaviour == "true":
                 do_true = True
-            elif self.error_behaviour == 'false':
+            elif self.error_behaviour == "false":
                 do_false = True
-            elif self.error_behaviour == 'both':
+            elif self.error_behaviour == "both":
                 do_true = True
                 do_false = True
-            elif self.error_behaviour == 'neither':
+            elif self.error_behaviour == "neither":
                 pass
             else:  # raise
                 raise StopExecution(f"Error when evaluating condition `{self.condition}`:\n{e}")

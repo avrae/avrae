@@ -14,21 +14,21 @@ class GameLogEvent:
 
     def __init__(self, **kwargs):
         # useful attrs
-        self.game_id = kwargs['gameId']  # type: str
-        self.user_id = kwargs['userId']  # type: str
-        self.event_type = kwargs['eventType']  # type: str
-        self.source = kwargs['source']  # type: str
-        self.data = kwargs.get('data')
-        self.entity_id = kwargs.get('entityId')  # type: str or None
-        self.entity_type = kwargs.get('entityType')  # type: str or None
-        self.message_scope = kwargs['messageScope']  # type: str
-        self.message_target = kwargs['messageTarget']  # type: str
+        self.game_id = kwargs["gameId"]  # type: str
+        self.user_id = kwargs["userId"]  # type: str
+        self.event_type = kwargs["eventType"]  # type: str
+        self.source = kwargs["source"]  # type: str
+        self.data = kwargs.get("data")
+        self.entity_id = kwargs.get("entityId")  # type: str or None
+        self.entity_type = kwargs.get("entityType")  # type: str or None
+        self.message_scope = kwargs["messageScope"]  # type: str
+        self.message_target = kwargs["messageTarget"]  # type: str
 
         # other stuff
-        self.id = kwargs['id']  # type: str
-        self.date_time = kwargs['dateTime']  # type: str
-        self.persist = kwargs['persist']  # type: bool
-        self.connection_id = kwargs.get('connectionId')
+        self.id = kwargs["id"]  # type: str
+        self.date_time = kwargs["dateTime"]  # type: str
+        self.persist = kwargs["persist"]  # type: bool
+        self.connection_id = kwargs.get("connectionId")
 
         # raw event for easy serialization
         self._raw = kwargs
@@ -39,11 +39,20 @@ class GameLogEvent:
         return cls(**data)
 
     @classmethod
-    def dice_roll_fulfilled(cls, game_id, user_id, roll_request, entity_id, entity_type='character', **kwargs):
+    def dice_roll_fulfilled(cls, game_id, user_id, roll_request, entity_id, entity_type="character", **kwargs):
         return cls(
-            gameId=game_id, userId=user_id, eventType='dice/roll/fulfilled', source=AVRAE_EVENT_SOURCE,
-            data=roll_request.to_dict(), entityId=entity_id, entityType=entity_type, id=str(uuid.uuid4()),
-            dateTime=str(int(time.time())), persist=True, messageScope='gameId', messageTarget=game_id,
+            gameId=game_id,
+            userId=user_id,
+            eventType="dice/roll/fulfilled",
+            source=AVRAE_EVENT_SOURCE,
+            data=roll_request.to_dict(),
+            entityId=entity_id,
+            entityType=entity_type,
+            id=str(uuid.uuid4()),
+            dateTime=str(int(time.time())),
+            persist=True,
+            messageScope="gameId",
+            messageTarget=game_id,
             **kwargs
         )
 

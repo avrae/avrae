@@ -1,3 +1,5 @@
+from contextlib import suppress
+
 from cogs5e.initiative import CombatNotFound, CombatantGroup
 from cogs5e.models.character import Character
 from cogs5e.models.errors import InvalidArgument, SelectionException
@@ -10,21 +12,24 @@ async def maybe_combat_caster(ctx, caster, combat=None):
     or current channel if combat is not passed.
     """
     if combat is None:
-        try:
+        with suppress(CombatNotFound):
             combat = await ctx.get_combat()
-        except CombatNotFound:
-            return caster
 
-    if isinstance(caster, Character):
+    if combat is not None and isinstance(caster, Character):
         combatant = next(
-            (c for c in combat.get_combatants()
-             if getattr(c, 'character_id', None) == caster.upstream
-             and getattr(c, 'character_owner', None) == caster.owner),
-            None
+            (
+                c
+                for c in combat.get_combatants()
+                if getattr(c, "character_id", None) == caster.upstream
+                and getattr(c, "character_owner", None) == caster.owner
+            ),
+            None,
         )
         if combatant is not None:
             await combatant.update_character_ref(ctx, inst=caster)
-            return combatant
+            caster = combatant
+
+    ctx.nlp_caster = caster  # NLP: save a reference to the caster
     return caster
 
 
@@ -34,15 +39,15 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
     If channel in combat but caster not: returns caster, list of combatants, combat.
     If channel in combat and caster in combat: returns caster as combatant, list of combatants, combat.
     """
-    target_args = args.get('t')
+    target_args = args.get("t")
     targets = []
 
     try:
         combat = await ctx.get_combat()
     except CombatNotFound:
         for i, target in enumerate(target_args):
-            if '|' in target:
-                target, contextargs = target.split('|', 1)
+            if "|" in target:
+                target, contextargs = target.split("|", 1)
                 args.add_context(target, argparse(contextargs))
             targets.append(target)
         return caster, targets, None
@@ -56,13 +61,13 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
 
 
 async def definitely_combat(combat, args, allow_groups=True):
-    target_args = args.get('t')
+    target_args = args.get("t")
     targets = []
 
     for i, t in enumerate(target_args):
         contextargs = None
-        if '|' in t:
-            t, contextargs = t.split('|', 1)
+        if "|" in t:
+            t, contextargs = t.split("|", 1)
             contextargs = argparse(contextargs)
 
         try:
@@ -80,4 +85,5 @@ async def definitely_combat(combat, args, allow_groups=True):
                 args.add_context(target, contextargs)
             targets.append(target)
 
+    combat.ctx.nlp_targets = targets  # NLP: save a reference to the targets list
     return targets

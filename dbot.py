@@ -31,10 +31,22 @@ from utils.redisIO import RedisIO
 
 # -----COGS-----
 COGS = (
-    "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
-    "cogs5e.gametrack", "cogs5e.initiative", "cogs5e.sheetManager", "cogs5e.gamelog",
-    "cogsmisc.customization", "cogsmisc.core",
-    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils", "cogsmisc.tutorials"
+    "cogs5e.dice",
+    "cogs5e.charGen",
+    "cogs5e.homebrew",
+    "cogs5e.lookup",
+    "cogs5e.pbpUtils",
+    "cogs5e.gametrack",
+    "cogs5e.initiative",
+    "cogs5e.sheetManager",
+    "cogs5e.gamelog",
+    "cogsmisc.customization",
+    "cogsmisc.core",
+    "cogsmisc.publicity",
+    "cogsmisc.stats",
+    "cogsmisc.repl",
+    "cogsmisc.adminUtils",
+    "cogsmisc.tutorials",
 )
 
 
@@ -46,12 +58,16 @@ async def get_prefix(the_bot, message):
 
 
 class Avrae(commands.AutoShardedBot):
-    def __init__(self, prefix, description=None, testing=False, **options):
-        test_guilds = None if not testing else config.COMMAND_TEST_GUILD_IDS
-
-        super().__init__(prefix, help_command=help_command, description=description, test_guilds=test_guilds,
-                         sync_commands=False, sync_commands_debug=testing, **options)
-        self.testing = testing
+    def __init__(self, prefix, description=None, **options):
+        super().__init__(
+            prefix,
+            help_command=help_command,
+            description=description,
+            test_guilds=config.COMMAND_TEST_GUILD_IDS,
+            sync_commands=False,
+            sync_commands_debug=config.TESTING,
+            **options,
+        )
         self.state = "init"
 
         # dbs
@@ -145,7 +161,7 @@ class Avrae(commands.AutoShardedBot):
         log.info(f"Launched {len(self.shards)} shards!")
 
         if self.is_cluster_0:
-            await self.rdb.incr('build_num')
+            await self.rdb.incr("build_num")
 
     async def before_identify_hook(self, shard_id, *, initial=False):
         bucket_id = shard_id % self.launch_max_concurrency
@@ -190,43 +206,59 @@ class Avrae(commands.AutoShardedBot):
         self.ldclient.close()
 
 
-desc = '''
-Avrae, a D&D 5e utility bot designed to help you and your friends play D&D online.
-A full command list can be found [here](https://avrae.io/commands)!
-Invite Avrae to your server [here](https://invite.avrae.io)!
-Join the official development server [here](https://support.avrae.io)!
-'''
+desc = (
+    "Play D&D over Discord! Featuring advanced dice, initiative tracking, D&D Beyond integration, and more, you'll "
+    "never need another D&D bot.\n"
+    "View the full list of commands [here](https://avrae.io/commands)!\n"
+    "Invite Avrae to your server [here](https://invite.avrae.io)!\n"
+    "Join the official development server [here](https://support.avrae.io)!\n"
+    "[Privacy Policy](https://www.fandom.com/privacy-policy) | [Terms of Use](https://www.fandom.com/terms-of-use)"
+)
 intents = discord.Intents(
-    guilds=True, members=True, messages=True, reactions=True,
-    bans=False, emojis=False, integrations=False, webhooks=False, invites=False, voice_states=False, presences=False,
-    typing=False
+    guilds=True,
+    members=True,
+    messages=True,
+    reactions=True,
+    bans=False,
+    emojis=False,
+    integrations=False,
+    webhooks=False,
+    invites=False,
+    voice_states=False,
+    presences=False,
+    typing=False,
 )  # https://discord.com/developers/docs/topics/gateway#gateway-intents
 bot = Avrae(
-    prefix=get_prefix, description=desc, pm_help=True, testing=config.TESTING,
-    activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'),
-    allowed_mentions=discord.AllowedMentions.none(), intents=intents, chunk_guilds_at_startup=False
+    prefix=get_prefix,
+    description=desc,
+    pm_help=True,
+    testing=config.TESTING,
+    activity=discord.Game(name=f"D&D 5e | {config.DEFAULT_PREFIX}help"),
+    allowed_mentions=discord.AllowedMentions.none(),
+    intents=intents,
+    chunk_guilds_at_startup=False,
 )
 
-log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
+log_formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(log_formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
-log = logging.getLogger('bot')
+log = logging.getLogger("bot")
 
 
 @bot.event
 async def on_ready():
-    log.info('Logged in as')
+    log.info("Logged in as")
     log.info(bot.user.name)
     log.info(bot.user.id)
-    log.info('------')
+    log.info("------")
 
 
 @bot.event
 async def on_resumed():
-    log.info('resumed.')
+    log.info("resumed.")
 
 
 @bot.event
@@ -239,7 +271,8 @@ async def on_command_error(ctx, error):
 
     elif isinstance(error, (commands.UserInputError, commands.NoPrivateMessage, ValueError)):
         return await ctx.send(
-            f"Error: {str(error)}\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help.")
+            f"Error: {str(error)}\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help."
+        )
 
     elif isinstance(error, commands.CheckFailure):
         msg = str(error) or "You are not allowed to run this command."
@@ -300,7 +333,8 @@ async def on_command_error(ctx, error):
 
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-        f"Please join <https://support.avrae.io> and let us know about the error!")
+        f"Please join <https://support.avrae.io> and let us know about the error!"
+    )
 
     log.warning("Error caused by message: `{}`".format(ctx.message.content))
     for line in traceback.format_exception(type(error), error, error.__traceback__):
@@ -328,8 +362,8 @@ async def on_command(ctx):
     try:
         log.debug(
             "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "
-            "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(
-                ctx))
+            "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx)
+        )
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 
@@ -337,7 +371,7 @@ async def on_command(ctx):
 for cog in COGS:
     bot.load_extension(cog)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     faulthandler.enable()  # assumes we log errors to stderr, traces segfaults
     bot.state = "run"
     bot.loop.create_task(compendium.reload_task(bot.mdb))

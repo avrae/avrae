@@ -19,9 +19,11 @@ class AvraeHelp(HelpCommand):
     def get_ending_note(self):
         """Returns help command's ending note. This is mainly useful to override for i18n purposes."""
         command_name = self.invoked_with
-        return f"An underlined command signifies that the command has subcommands.\n" \
-               f"Type {self.context.clean_prefix}{command_name} <command> for more info on a command.\n" \
-               f"You can also type {self.context.clean_prefix}{command_name} <category> for more info on a category."
+        return (
+            f"An underlined command signifies that the command has subcommands.\n"
+            f"Type {self.context.clean_prefix}{command_name} <command> for more info on a command.\n"
+            f"You can also type {self.context.clean_prefix}{command_name} <category> for more info on a category."
+        )
 
     def add_commands(self, commands, *, heading):
         """Adds a list of formatted commands under a field title."""
@@ -70,9 +72,11 @@ class AvraeHelp(HelpCommand):
                     self.embed_paginator.extend_field(line)
 
     def add_help_footer(self):
-        self.embed_paginator.set_footer(value="Arguments surrounded in angled brackets (<args>) are mandatory,"
-                                              " while those surrounded in square brackets ([args]) are optional."
-                                              " In either case, don't include the brackets.")
+        self.embed_paginator.set_footer(
+            value="Arguments surrounded in angled brackets (<args>) are mandatory,"
+            " while those surrounded in square brackets ([args]) are optional."
+            " In either case, don't include the brackets."
+        )
 
     # ===== HelpCommand overrides =====
     async def command_callback(self, ctx, *, command=None):
@@ -102,7 +106,7 @@ class AvraeHelp(HelpCommand):
         # Since we want to have detailed errors when someone
         # passes an invalid subcommand, we need to walk through
         # the command group chain ourselves.
-        keys = command.split(' ')
+        keys = command.split(" ")
         cmd = bot.all_commands.get(keys[0])
         if cmd is None:
             alias = await aliasing.helpers.get_personal_alias_named(ctx, keys[0])
@@ -144,7 +148,7 @@ class AvraeHelp(HelpCommand):
             # <description> portion
             self.embed_paginator.add_description(bot.description)
 
-        no_category = '\u200bUncategorized'
+        no_category = "\u200bUncategorized"
 
         def get_category(command):
             cog = command.cog
@@ -198,12 +202,13 @@ class AvraeHelp(HelpCommand):
         fqp = [full_cmd_path[0]]  # fully qualified path
         ctx = self.context
 
-        self.embed_paginator.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png",
-                                        value="User-created command.")
+        self.embed_paginator.set_footer(
+            icon_url="https://avrae.io/assets/img/homebrew.png", value="User-created command."
+        )
 
         # is this a personal alias?
         if isinstance(alias, (aliasing.personal.Alias, aliasing.personal.Servalias)):
-            name = ' '.join(fqp)
+            name = " ".join(fqp)
             self.embed_paginator.add_field(name=f"{ctx.prefix}{name}")
             self.embed_paginator.extend_field(f"{name} is a personal or server alias and has no help attached.")
             await self.send()
@@ -223,8 +228,9 @@ class AvraeHelp(HelpCommand):
 
         # metadata
         self.embed_paginator.add_field(name=f"{ctx.prefix}{' '.join(fqp)}")
-        self.embed_paginator.extend_field(f"From {the_collection.name} by {owner}.\n"
-                                          f"[View on Workshop]({the_collection.url})")
+        self.embed_paginator.extend_field(
+            f"From {the_collection.name} by {owner}.\n" f"[View on Workshop]({the_collection.url})"
+        )
 
         # docs
         self.embed_paginator.add_field(name="Help")
@@ -242,8 +248,12 @@ class AvraeHelp(HelpCommand):
         await self.send()
 
 
-help_command = AvraeHelp(verify_checks=False,  # allows guild-only commands to be shown in PMs
-                         command_attrs=dict(help="Shows the help for the bot or a specific command.\n"
-                                                 "__Valid Arguments__\n"
-                                                 "-here - Sends help to the channel instead of PMs.",
-                                            brief="Shows this message."))
+help_command = AvraeHelp(
+    verify_checks=False,  # allows guild-only commands to be shown in PMs
+    command_attrs=dict(
+        help="Shows the help for the bot or a specific command.\n"
+        "__Valid Arguments__\n"
+        "-here - Sends help to the channel instead of PMs.",
+        brief="Shows this message.",
+    ),
+)

@@ -53,8 +53,10 @@ class GameLogClient(BaseClient):
         # is the current user authorized to link this campaign?
         ddb_user = await self.ddb.get_ddb_user(ctx, ctx.author.id)
         if ddb_user is None:
-            raise CampaignLinkException("You do not have a D&D Beyond account connected to your Discord account. "
-                                        "Connect your accounts at <https://www.dndbeyond.com/account>!")
+            raise CampaignLinkException(
+                "You do not have a D&D Beyond account connected to your Discord account. "
+                "Connect your accounts at <https://www.dndbeyond.com/account>!"
+            )
         active_campaigns = await self.ddb.waterdeep.get_active_campaigns(ddb_user)
         the_campaign = next((c for c in active_campaigns if c.id == campaign_id), None)
 
@@ -69,10 +71,7 @@ class GameLogClient(BaseClient):
             await self.bot.mdb.gamelog_campaigns.insert_one(link.to_dict())
         except DuplicateKeyError:
             if overwrite:
-                await self.bot.mdb.gamelog_campaigns.replace_one(
-                    {"campaign_id": campaign_id},
-                    link.to_dict()
-                )
+                await self.bot.mdb.gamelog_campaigns.replace_one({"campaign_id": campaign_id}, link.to_dict())
             else:
                 raise CampaignAlreadyLinked()
         return link
@@ -91,7 +90,7 @@ class GameLogClient(BaseClient):
         try:
             data = message.to_dict()
             log.debug(f"Sending gamelog event {message.id!r}: {data}")
-            await self.post(ddb_user, '/postMessage', json=data)
+            await self.post(ddb_user, "/postMessage", json=data)
         except Exception as e:
             self.bot.log_exception(e)
 
@@ -177,16 +176,18 @@ class GameLogClient(BaseClient):
         Called for each event that is successfully processed. Logs the event type, ddb user, ddb campaign,
         discord user id, discord guild id, discord channel id, event id, and timestamp.
         """
-        await self.bot.mdb.analytics_gamelog_events.insert_one({
-            "event_type": gctx.event.event_type,
-            "ddb_user": gctx.event.user_id,
-            "ddb_campaign": gctx.event.game_id,
-            "discord_user": gctx.discord_user_id,
-            "guild_id": gctx.guild.id,
-            "channel_id": gctx.channel.id,
-            "event_id": gctx.event.id,
-            "timestamp": datetime.datetime.now()
-        })
+        await self.bot.mdb.analytics_gamelog_events.insert_one(
+            {
+                "event_type": gctx.event.event_type,
+                "ddb_user": gctx.event.user_id,
+                "ddb_campaign": gctx.event.game_id,
+                "discord_user": gctx.discord_user_id,
+                "guild_id": gctx.guild.id,
+                "channel_id": gctx.channel.id,
+                "event_id": gctx.event.id,
+                "timestamp": datetime.datetime.now(),
+            }
+        )
 
     # ==== game log callback registration ====
     def register_callback(self, event_type, handler):

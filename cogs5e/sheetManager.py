@@ -49,18 +49,22 @@ class SheetManager(commands.Cog):
         args = argparse(args)
         return args
 
-    @commands.group(aliases=['a', 'attack'], invoke_without_command=True, help=f"""
-    Performs an action (attack or ability) for the current active character.
-    __**Valid Arguments**__
-    {VALID_AUTOMATION_ARGS}
-    """)
-    async def action(self, ctx, atk_name=None, *, args: str = ''):
+    @commands.group(
+        aliases=["a", "attack"],
+        invoke_without_command=True,
+        help=f"""
+        Performs an action (attack or ability) for the current active character.
+        __**Valid Arguments**__
+        {VALID_AUTOMATION_ARGS}
+        """,
+    )
+    async def action(self, ctx, atk_name=None, *, args: str = ""):
         if atk_name is None:
             return await self.action_list(ctx)
 
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         args = await self.new_arg_stuff(args, ctx, char)
-        hide = args.last('h', type_=bool)
+        hide = args.last("h", type_=bool)
         embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
@@ -74,7 +78,7 @@ class SheetManager(commands.Cog):
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
-        if (gamelog := self.bot.get_cog('GameLog')) and result is not None:
+        if (gamelog := self.bot.get_cog("GameLog")) and result is not None:
             await gamelog.send_automation(ctx, char, attack_or_action.name, result)
 
     @action.command(name="list")
@@ -89,16 +93,17 @@ class SheetManager(commands.Cog):
         reaction - Only displays the available reactions.
         other - Only displays the available actions that have another activation time.
         """
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         caster = await targetutils.maybe_combat_caster(ctx, char)
         embed = embeds.EmbedWithCharacter(char, name=False)
         embed.title = f"{char.name}'s Actions"
 
         await actionutils.send_action_list(
-            ctx, caster=caster, attacks=caster.attacks, actions=char.actions, embed=embed, args=args)
+            ctx, caster=caster, attacks=caster.attacks, actions=char.actions, embed=embed, args=args
+        )
 
     # ---- attack management commands ----
-    @action.command(name="add", aliases=['create'])
+    @action.command(name="add", aliases=["create"])
     async def attack_add(self, ctx, name, *args):
         """
         Adds an attack to the active character.
@@ -113,14 +118,21 @@ class SheetManager(commands.Cog):
         -thumb <image url> - The attack's image.
         -c <extra crit damage> - How much extra damage (beyond doubling dice) this attack does on a crit.
         """
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         parsed = argparse(args)
 
-        attack = Attack.new(name, bonus_calc=parsed.join('b', '+'),
-                            damage_calc=parsed.join('d', '+'), details=parsed.join('desc', '\n'),
-                            verb=parsed.last('verb'), proper=parsed.last('proper', False, bool),
-                            criton=parsed.last('criton', type_=int), phrase=parsed.join('phrase', '\n'),
-                            thumb=parsed.last('thumb'), extra_crit_damage=parsed.last('c'))
+        attack = Attack.new(
+            name,
+            bonus_calc=parsed.join("b", "+"),
+            damage_calc=parsed.join("d", "+"),
+            details=parsed.join("desc", "\n"),
+            verb=parsed.last("verb"),
+            proper=parsed.last("proper", False, bool),
+            criton=parsed.last("criton", type_=int),
+            phrase=parsed.join("phrase", "\n"),
+            thumb=parsed.last("thumb"),
+            extra_crit_damage=parsed.last("c"),
+        )
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:
@@ -142,10 +154,10 @@ class SheetManager(commands.Cog):
         Imports an attack from JSON or YAML exported from the Avrae Dashboard.
         """
         # strip any code blocks
-        if data.startswith(('```\n', '```json\n', '```yaml\n', '```yml\n', '```py\n')) and data.endswith('```'):
-            data = '\n'.join(data.split('\n')[1:]).rstrip('`\n')
+        if data.startswith(("```\n", "```json\n", "```yaml\n", "```yml\n", "```py\n")) and data.endswith("```"):
+            data = "\n".join(data.split("\n")[1:]).rstrip("`\n")
 
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
 
         try:
             attack_json = yaml.safe_load(data)
@@ -162,8 +174,11 @@ class SheetManager(commands.Cog):
 
         conflicts = [a for a in character.overrides.attacks if a.name.lower() in [new.name.lower() for new in attacks]]
         if conflicts:
-            if await confirm(ctx, f"This will overwrite {len(conflicts)} attacks with the same name "
-                                  f"({', '.join(c.name for c in conflicts)}). Continue? (Reply with yes/no)"):
+            if await confirm(
+                ctx,
+                f"This will overwrite {len(conflicts)} attacks with the same name "
+                f"({', '.join(c.name for c in conflicts)}). Continue? (Reply with yes/no)",
+            ):
                 for conflict in conflicts:
                     character.overrides.attacks.remove(conflict)
             else:
@@ -175,12 +190,12 @@ class SheetManager(commands.Cog):
         out = f"Imported {len(attacks)} attacks:\n{attacks.build_str(character)}"
         await ctx.send(out)
 
-    @action.command(name="delete", aliases=['remove'])
+    @action.command(name="delete", aliases=["remove"])
     async def attack_delete(self, ctx, name):
         """
         Deletes an attack override.
         """
-        character: Character = await Character.from_ctx(ctx)
+        character: Character = await ctx.get_character()
         attack = await search_and_select(ctx, character.overrides.attacks, name, lambda a: a.name)
         if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}? (Reply with yes/no)")):
             return await ctx.send("Okay, aborting delete.")
@@ -188,22 +203,25 @@ class SheetManager(commands.Cog):
         await character.commit(ctx)
         await ctx.send(f"Okay, deleted attack {attack.name}.")
 
-    @commands.command(aliases=['s'], help=f"""
-    Rolls a save for your current active character.
-    {VALID_SAVE_ARGS}
-    """)
+    @commands.command(
+        aliases=["s"],
+        help=f"""
+        Rolls a save for your current active character.
+        {VALID_SAVE_ARGS}
+        """,
+    )
     async def save(self, ctx, skill, *args):
-        if skill == 'death':
-            ds_cmd = self.bot.get_command('game deathsave')
+        if skill == "death":
+            ds_cmd = self.bot.get_command("game deathsave")
             if ds_cmd is None:
                 return await ctx.send("Error: GameTrack cog not loaded.")
             return await ctx.invoke(ds_cmd, *args)
 
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
 
         args = await self.new_arg_stuff(args, ctx, char)
 
-        hide = args.last('h', type_=bool)
+        hide = args.last("h", type_=bool)
 
         embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
@@ -215,19 +233,22 @@ class SheetManager(commands.Cog):
         # send
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
-        if gamelog := self.bot.get_cog('GameLog'):
+        if gamelog := self.bot.get_cog("GameLog"):
             await gamelog.send_save(ctx, char, result.skill_name, result.rolls)
 
-    @commands.command(aliases=['c'], help=f"""
-    Rolls a check for your current active character.
-    {VALID_CHECK_ARGS}
-    """)
+    @commands.command(
+        aliases=["c"],
+        help=f"""
+        Rolls a check for your current active character.
+        {VALID_CHECK_ARGS}
+        """,
+    )
     async def check(self, ctx, check, *args):
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
         args = await self.new_arg_stuff(args, ctx, char)
 
-        hide = args.last('h', type_=bool)
+        hide = args.last("h", type_=bool)
 
         embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
         skill = char.skills[skill_key]
@@ -239,22 +260,22 @@ class SheetManager(commands.Cog):
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
-        if gamelog := self.bot.get_cog('GameLog'):
+        if gamelog := self.bot.get_cog("GameLog"):
             await gamelog.send_check(ctx, char, result.skill_name, result.rolls)
 
     @commands.group(invoke_without_command=True)
     async def desc(self, ctx):
         """Prints or edits a description of your currently active character."""
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
 
         desc = char.description
         if not desc:
-            desc = 'No description available.'
+            desc = "No description available."
 
         if len(desc) > 2048:
-            desc = desc[:2044] + '...'
+            desc = desc[:2044] + "..."
         elif len(desc) < 2:
-            desc = 'No description available.'
+            desc = "No description available."
 
         embed = embeds.EmbedWithCharacter(char, name=False)
         embed.title = char.name
@@ -263,18 +284,18 @@ class SheetManager(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @desc.command(name='update', aliases=['edit'])
+    @desc.command(name="update", aliases=["edit"])
     async def edit_desc(self, ctx, *, desc):
         """Updates the character description."""
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         char.overrides.desc = desc
         await char.commit(ctx)
         await ctx.send("Description updated!")
 
-    @desc.command(name='remove', aliases=['delete'])
+    @desc.command(name="remove", aliases=["delete"])
     async def remove_desc(self, ctx):
         """Removes the character description, returning to the default."""
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         char.overrides.desc = None
         await char.commit(ctx)
         await ctx.send(f"Description override removed!")
@@ -282,7 +303,7 @@ class SheetManager(commands.Cog):
     @commands.group(invoke_without_command=True)
     async def portrait(self, ctx):
         """Shows or edits the image of your currently active character."""
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
 
         if not char.image:
             return await ctx.send("No image available.")
@@ -295,18 +316,18 @@ class SheetManager(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @portrait.command(name='update', aliases=['edit'])
+    @portrait.command(name="update", aliases=["edit"])
     async def edit_portrait(self, ctx, *, url):
         """Updates the character portrait."""
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         char.overrides.image = url
         await char.commit(ctx)
         await ctx.send("Portrait updated!")
 
-    @portrait.command(name='remove', aliases=['delete'])
+    @portrait.command(name="remove", aliases=["delete"])
     async def remove_portrait(self, ctx):
         """Removes the character portrait, returning to the default."""
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         char.overrides.image = None
         await char.commit(ctx)
         await ctx.send(f"Portrait override removed!")
@@ -319,7 +340,7 @@ class SheetManager(commands.Cog):
         -border <gold|plain|none> - Chooses the token border.
         """
 
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
         if not char.image:
             return await ctx.send("This character has no image.")
 
@@ -341,12 +362,12 @@ class SheetManager(commands.Cog):
     @commands.command()
     async def sheet(self, ctx):
         """Prints the embed sheet of your currently active character."""
-        char: Character = await Character.from_ctx(ctx)
+        char: Character = await ctx.get_character()
 
         await ctx.send(embed=char.get_sheet_embed())
         await try_delete(ctx.message)
 
-    @commands.group(aliases=['char'], invoke_without_command=True)
+    @commands.group(aliases=["char"], invoke_without_command=True)
     async def character(self, ctx, *, name: str = None):
         """Switches the active character."""
         if name is None:
@@ -356,10 +377,11 @@ class SheetManager(commands.Cog):
 
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         if not user_characters:
-            return await ctx.send('You have no characters.')
+            return await ctx.send("You have no characters.")
 
-        selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
-                                                selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
+        selected_char = await search_and_select(
+            ctx, user_characters, name, lambda e: e["name"], selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)"
+        )
 
         char = Character.from_dict(selected_char)
         result = await char.set_active(ctx)
@@ -367,18 +389,18 @@ class SheetManager(commands.Cog):
         if result.did_unset_server_active:
             await ctx.send(
                 f"Active character changed to {char.name}. Your server active character has been unset.",
-                delete_after=30
+                delete_after=30,
             )
         else:
             await ctx.send(f"Active character changed to {char.name}.", delete_after=15)
 
-    @character.command(name='server')
+    @character.command(name="server")
     @commands.guild_only()
     async def character_server(self, ctx):
         """
         Sets the current global active character as a server character.
         If the character is already the server character, unsets the server character.
-        
+
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
         """  # noqa: E501
         char: Character = await Character.from_ctx(ctx, ignore_guild=True)
@@ -387,7 +409,7 @@ class SheetManager(commands.Cog):
             await char.unset_server_active(ctx)
             msg = f"Active server character unset from {char.name}."
             try:
-                global_character = await Character.from_ctx(ctx)
+                global_character = await ctx.get_character()
             except NoCharacter:
                 await ctx.send(f"{msg} You have no global active character.")
             else:
@@ -401,30 +423,29 @@ class SheetManager(commands.Cog):
 
         await try_delete(ctx.message)
 
-    @character.command(name='list')
+    @character.command(name="list")
     async def character_list(self, ctx):
         """Lists your characters."""
-        user_characters = await self.bot.mdb.characters.find(
-            {"owner": str(ctx.author.id)}, ['name']
-        ).to_list(None)
+        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}, ["name"]).to_list(None)
         if not user_characters:
-            return await ctx.send('You have no characters.')
-        await ctx.send('Your characters:\n{}'.format(', '.join(sorted(c['name'] for c in user_characters))))
+            return await ctx.send("You have no characters.")
+        await ctx.send("Your characters:\n{}".format(", ".join(sorted(c["name"] for c in user_characters))))
 
-    @character.command(name='delete')
+    @character.command(name="delete")
     async def character_delete(self, ctx, *, name):
         """Deletes a character."""
         user_characters = await self.bot.mdb.characters.find(
-            {"owner": str(ctx.author.id)}, ['name', 'upstream']
+            {"owner": str(ctx.author.id)}, ["name", "upstream"]
         ).to_list(None)
         if not user_characters:
-            return await ctx.send('You have no characters.')
+            return await ctx.send("You have no characters.")
 
-        selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
-                                                selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
+        selected_char = await search_and_select(
+            ctx, user_characters, name, lambda e: e["name"], selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)"
+        )
 
         if await confirm(ctx, f"Are you sure you want to delete {selected_char['name']}? (Reply with yes/no)"):
-            await Character.delete(ctx, str(ctx.author.id), selected_char['upstream'])
+            await Character.delete(ctx, str(ctx.author.id), selected_char["upstream"])
             return await ctx.send(f"{selected_char['name']} has been deleted.")
         else:
             return await ctx.send("Ok, cancelling.")
@@ -439,26 +460,26 @@ class SheetManager(commands.Cog):
         `-nocc` - Do not automatically create or update custom counters for class resources and features.
         `-noprep` - Import all known spells as prepared.
         """
-        old_character: Character = await Character.from_ctx(ctx)
+        old_character: Character = await ctx.get_character()
         url = old_character.upstream
         args = argparse(args)
 
-        prefixes = 'dicecloud-', 'google-', 'beyond-'
+        prefixes = "dicecloud-", "google-", "beyond-"
         _id = url[:]
         for p in prefixes:
             if url.startswith(p):
-                _id = url[len(p):]
+                _id = url[len(p) :]
                 break
         sheet_type = old_character.sheet_type
-        if sheet_type == 'dicecloud':
+        if sheet_type == "dicecloud":
             parser = DicecloudParser(_id)
-            loading = await ctx.send('Updating character data from Dicecloud...')
-        elif sheet_type == 'google':
+            loading = await ctx.send("Updating character data from Dicecloud...")
+        elif sheet_type == "google":
             parser = GoogleSheet(_id)
-            loading = await ctx.send('Updating character data from Google...')
-        elif sheet_type == 'beyond':
+            loading = await ctx.send("Updating character data from Google...")
+        elif sheet_type == "beyond":
             parser = BeyondSheetParser(_id)
-            loading = await ctx.send('Updating character data from Beyond...')
+            loading = await ctx.send("Updating character data from Beyond...")
         else:
             return await ctx.send(f"Error: Unknown sheet type {sheet_type}.")
 
@@ -486,28 +507,33 @@ class SheetManager(commands.Cog):
             await character.set_server_active(ctx)
 
         await loading.edit(content=f"Updated and saved data for {character.name}!")
-        if args.last('v'):
+        if args.last("v"):
             await ctx.send(embed=character.get_sheet_embed())
-        if sheet_type == 'beyond':
+        if sheet_type == "beyond":
             await send_ddb_ctas(ctx, character)
 
     @commands.command()
     async def transferchar(self, ctx, user: discord.Member):
         """Gives a copy of the active character to another user."""
-        character: Character = await Character.from_ctx(ctx)
-        overwrite = ''
+        character: Character = await ctx.get_character()
+        overwrite = ""
 
         conflict = await self.bot.mdb.characters.find_one({"owner": str(user.id), "upstream": character.upstream})
         if conflict:
             overwrite = "**WARNING**: This will overwrite an existing character."
 
-        await ctx.send(f"{user.mention}, accept a copy of {character.name}? (Type yes/no)\n{overwrite}",
-                       allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
+        await ctx.send(
+            f"{user.mention}, accept a copy of {character.name}? (Type yes/no)\n{overwrite}",
+            allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+        )
         try:
-            m = await self.bot.wait_for('message', timeout=300,
-                                        check=lambda msg: (msg.author == user
-                                                           and msg.channel == ctx.channel
-                                                           and get_positivity(msg.content) is not None))
+            m = await self.bot.wait_for(
+                "message",
+                timeout=300,
+                check=lambda msg: (
+                    msg.author == user and msg.channel == ctx.channel and get_positivity(msg.content) is not None
+                ),
+            )
         except asyncio.TimeoutError:
             m = None
 
@@ -544,11 +570,13 @@ class SheetManager(commands.Cog):
                 out.append(CHARACTER_SETTINGS[arg].run(ctx, char, list_get(i + 1, None, args)))
 
         if not out:
-            return await ctx.send(f"No valid settings found. Try `{ctx.prefix}csettings` with no arguments to use an "
-                                  f"interactive menu!")
+            return await ctx.send(
+                f"No valid settings found. Try `{ctx.prefix}csettings` with no arguments to use an "
+                f"interactive menu!"
+            )
 
         await char.options.commit(ctx.bot.mdb, char)
-        await ctx.send('\n'.join(out))
+        await ctx.send("\n".join(out))
 
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.
@@ -559,10 +587,11 @@ class SheetManager(commands.Cog):
                 ctx,
                 f"Warning: This will overwrite a character with the same ID. Do you wish to continue "
                 f"(Reply with yes/no)?\n"
-                f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
+                f"If you only wanted to update your character, run `{ctx.prefix}update` instead.",
+            )
         return True
 
-    @commands.command(name='import')
+    @commands.command(name="import")
     @commands.max_concurrency(1, BucketType.user)
     async def import_sheet(self, ctx, url: str, *args):
         """
@@ -571,7 +600,7 @@ class SheetManager(commands.Cog):
             [Dicecloud](https://dicecloud.com/)
             [GSheet v2.1](https://gsheet2.avrae.io) (auto)
             [GSheet v1.4](https://gsheet.avrae.io) (manual)
-        
+
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for class resources and features.
         `-noprep` - Import all known spells as prepared.
@@ -579,10 +608,10 @@ class SheetManager(commands.Cog):
         __Sheet-specific Notes__
         D&D Beyond:
             Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
-            
+
         Dicecloud:
             Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
-        
+
         Gsheet:
             The sheet must be shared with directly with Avrae or be publicly viewable to anyone with the link.
             Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
@@ -592,22 +621,22 @@ class SheetManager(commands.Cog):
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet
         if beyond_match := DDB_URL_RE.match(url):
-            loading = await ctx.send('Loading character data from Beyond...')
-            prefix = 'beyond'
+            loading = await ctx.send("Loading character data from Beyond...")
+            prefix = "beyond"
             url = beyond_match.group(1)
             parser = BeyondSheetParser(url)
         elif dicecloud_match := DICECLOUD_URL_RE.match(url):
-            loading = await ctx.send('Loading character data from Dicecloud...')
+            loading = await ctx.send("Loading character data from Dicecloud...")
             url = dicecloud_match.group(1)
-            prefix = 'dicecloud'
+            prefix = "dicecloud"
             parser = DicecloudParser(url)
         else:
             try:
                 url = extract_gsheet_id_from_url(url)
             except ExternalImportError:
                 return await ctx.send("Sheet type did not match accepted formats.")
-            loading = await ctx.send('Loading character data from Google...')
-            prefix = 'google'
+            loading = await ctx.send("Loading character data from Google...")
+            prefix = "google"
             parser = GoogleSheet(url)
 
         override = await self._confirm_overwrite(ctx, f"{prefix}-{url}")
@@ -619,7 +648,7 @@ class SheetManager(commands.Cog):
         if character and beyond_match:
             await send_ddb_ctas(ctx, character)
 
-    @commands.command(hidden=True, aliases=['gsheet', 'dicecloud'])
+    @commands.command(hidden=True, aliases=["gsheet", "dicecloud"])
     @commands.max_concurrency(1, BucketType.user)
     async def beyond(self, ctx, url: str, *args):
         """
@@ -640,7 +669,7 @@ class SheetManager(commands.Cog):
             await loading.edit(content=f"Error loading character: {eep}")
             return
 
-        await loading.edit(content=f'Loaded and saved data for {character.name}!')
+        await loading.edit(content=f"Loaded and saved data for {character.name}!")
 
         await character.commit(ctx)
         await character.set_active(ctx)
@@ -649,12 +678,13 @@ class SheetManager(commands.Cog):
 
     @staticmethod
     async def _check_url(ctx, url):
-        if url.startswith('<') and url.endswith('>'):
-            url = url.strip('<>')
+        if url.startswith("<") and url.endswith(">"):
+            url = url.strip("<>")
             await ctx.send(
                 "Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to "
                 "include those for other arguments!"
-                f"\nUse `{ctx.prefix}help` for more details.")
+                f"\nUse `{ctx.prefix}help` for more details."
+            )
         return url
 
     @staticmethod
@@ -663,8 +693,10 @@ class SheetManager(commands.Cog):
         active_character: Character = await ctx.get_character()
         embed = embeds.EmbedWithCharacter(active_character)
 
-        desc = (f"Your current active character is {active_character.name}. "
-                f"All of your checks, saves and actions will use this character's stats.")
+        desc = (
+            f"Your current active character is {active_character.name}. "
+            f"All of your checks, saves and actions will use this character's stats."
+        )
         if (link := active_character.get_sheet_url()) is not None:
             desc = f"{desc}\n[Go to Character Sheet]({link})"
         embed.description = desc
@@ -678,19 +710,25 @@ class SheetManager(commands.Cog):
         try:
             global_character: Character = await ctx.get_character(ignore_guild=True)
         except NoCharacter:
-            embed.set_footer(text=f"{active_character.name} is only active on {ctx.guild.name}. You have no global "
-                                  f"active character. To set one, use {ctx.prefix}character <name>.")
+            embed.set_footer(
+                text=f"{active_character.name} is only active on {ctx.guild.name}. You have no global "
+                f"active character. To set one, use {ctx.prefix}character <name>."
+            )
             return embed
 
         # global active character is server active
         if global_character.upstream == active_character.upstream:
-            embed.set_footer(text=f"{active_character.name} is active on {ctx.guild.name} and globally. "
-                                  f"To change active characters, use {ctx.prefix}character <name>.")
+            embed.set_footer(
+                text=f"{active_character.name} is active on {ctx.guild.name} and globally. "
+                f"To change active characters, use {ctx.prefix}character <name>."
+            )
             return embed
 
         # global and server active differ
-        embed.set_footer(text=f"{active_character.name} is active on {ctx.guild.name}, overriding your global active "
-                              f"character. To change active characters, use {ctx.prefix}character <name>.")
+        embed.set_footer(
+            text=f"{active_character.name} is active on {ctx.guild.name}, overriding your global active "
+            f"character. To change active characters, use {ctx.prefix}character <name>."
+        )
         return embed
 
 
@@ -701,7 +739,7 @@ async def send_ddb_ctas(ctx, character):
         ld_dict = ddb_user.to_ld_dict()
     else:
         ld_dict = {"key": str(ctx.author.id), "anonymous": True}
-    gamelog_flag = await ctx.bot.ldclient.variation('cog.gamelog.cta.enabled', ld_dict, False)
+    gamelog_flag = await ctx.bot.ldclient.variation("cog.gamelog.cta.enabled", ld_dict, False)
 
     # get server settings for whether to pull up campaign settings
     if ctx.guild is not None:
@@ -724,8 +762,8 @@ async def send_ddb_ctas(ctx, character):
         embed.add_field(
             name="Connect Your D&D Beyond Account",
             value="Visit your [Account Settings](https://www.dndbeyond.com/account) page in D&D Beyond to link your "
-                  "D&D Beyond and Discord accounts. This lets you use all your D&D Beyond content in Avrae for free!",
-            inline=False
+            "D&D Beyond and Discord accounts. This lets you use all your D&D Beyond content in Avrae for free!",
+            inline=False,
         )
     # game log
     if character.ddb_campaign_id and gamelog_flag and show_campaign_cta:
@@ -735,10 +773,10 @@ async def send_ddb_ctas(ctx, character):
             embed.add_field(
                 name="Link Your D&D Beyond Campaign",
                 value=f"Sync rolls between a Discord channel and your D&D Beyond character sheet by linking your "
-                      f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
-                      f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.\n"
-                      f"This message can be disabled in `{ctx.prefix}server_settings`.",
-                inline=False
+                f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
+                f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.\n"
+                f"This message can be disabled in `{ctx.prefix}server_settings`.",
+                inline=False,
             )
 
     if not embed.fields:

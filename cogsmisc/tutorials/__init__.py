@@ -34,7 +34,7 @@ class Tutorials(commands.Cog):
         "spellcasting": Spellcasting(),
         "runningthegame": RunningTheGame(),
         "init_player": PlayerInitiative(),
-        "init_dm": DMInitiative()
+        "init_dm": DMInitiative(),
     }
 
     def __init__(self, bot):
@@ -42,7 +42,7 @@ class Tutorials(commands.Cog):
 
     # ==== commands ====
     @commands.group(invoke_without_command=True)
-    @checks.feature_flag('command.tutorial.enabled')
+    @checks.feature_flag("command.tutorial.enabled")
     async def tutorial(self, ctx, *, name=None):
         """
         Shows the current tutorial objective, lists the available tutorials if one is not active, or begins a new tutorial.
@@ -53,8 +53,10 @@ class Tutorials(commands.Cog):
         if user_state is not None:
             tutorial, state = self.get_tutorial_and_state(user_state)
             if tutorial is None or state is None:
-                await ctx.send(f"The tutorial you were running no longer exists. "
-                               f"Please run `{ctx.prefix}tutorial end` to start a new tutorial!")
+                await ctx.send(
+                    f"The tutorial you were running no longer exists. "
+                    f"Please run `{ctx.prefix}tutorial end` to start a new tutorial!"
+                )
                 return
             # show tutorial state objective
             await state.objective(ctx, user_state)
@@ -67,20 +69,22 @@ class Tutorials(commands.Cog):
             # list available tutorials
             await self.tutorial_list(ctx)
 
-    @tutorial.command(name='list')
-    @checks.feature_flag('command.tutorial.enabled')
+    @tutorial.command(name="list")
+    @checks.feature_flag("command.tutorial.enabled")
     async def tutorial_list(self, ctx):
         """Lists the available tutorials."""
         embed = EmbedWithAuthor(ctx)
         embed.title = "Available Tutorials"
-        embed.description = f"Use `{ctx.prefix}tutorial <name>` to select a tutorial from the ones available below!\n" \
-                            f"First time here? Try `{ctx.prefix}tutorial quickstart`!"
+        embed.description = (
+            f"Use `{ctx.prefix}tutorial <name>` to select a tutorial from the ones available below!\n"
+            f"First time here? Try `{ctx.prefix}tutorial quickstart`!"
+        )
         for tutorial in self.tutorials.values():
             embed.add_field(name=tutorial.name, value=tutorial.description, inline=False)
         await ctx.send(embed=embed)
 
-    @tutorial.command(name='skip')
-    @checks.feature_flag('command.tutorial.enabled')
+    @tutorial.command(name="skip")
+    @checks.feature_flag("command.tutorial.enabled")
     async def tutorial_skip(self, ctx):
         """Skips the current objective, and moves on to the next part of the tutorial."""
         user_state = await TutorialStateMap.from_ctx(ctx)
@@ -88,8 +92,10 @@ class Tutorials(commands.Cog):
             return await ctx.send("You are not currently running a tutorial.")
         tutorial, state = self.get_tutorial_and_state(user_state)
         if tutorial is None or state is None:
-            return await ctx.send(f"The tutorial you were running no longer exists. "
-                                  f"Please run `{ctx.prefix}tutorial end` to start a new tutorial!")
+            return await ctx.send(
+                f"The tutorial you were running no longer exists. "
+                f"Please run `{ctx.prefix}tutorial end` to start a new tutorial!"
+            )
         # confirm
         result = await confirm(ctx, "Are you sure you want to skip the current tutorial objective? (Reply with yes/no)")
         if not result:
@@ -98,8 +104,8 @@ class Tutorials(commands.Cog):
         # commit new state map
         await state.transition(ctx, user_state)
 
-    @tutorial.command(name='end')
-    @checks.feature_flag('command.tutorial.enabled')
+    @tutorial.command(name="end")
+    @checks.feature_flag("command.tutorial.enabled")
     async def tutorial_end(self, ctx):
         """Ends the current tutorial."""
         user_state = await TutorialStateMap.from_ctx(ctx)
@@ -112,6 +118,14 @@ class Tutorials(commands.Cog):
         # delete tutorial state map
         await user_state.end_tutorial(ctx)
         await ctx.send("Ok, ended the tutorial.")
+
+    @commands.command(hidden=True)
+    @commands.guild_only()
+    @checks.feature_flag("cog.tutorials.guild_join.enabled")
+    async def show_join_message(self, ctx):
+        """Sends the message that appears when Avrae is added to a server."""
+        await self.send_welcome_message(ctx.guild, to_user=ctx.author)
+        await ctx.message.add_reaction("\u2705")
 
     # ==== main listener entrypoint ====
     @commands.Cog.listener()
@@ -139,12 +153,15 @@ class Tutorials(commands.Cog):
         state = tutorial.states.get(user_state.state_key)
         return tutorial, state
 
-    async def send_welcome_message(self, guild):
-        owner = await get_guild_member(guild, guild.owner_id)
-        if owner is None:
+    async def send_welcome_message(self, guild, to_user=None):
+        if to_user is None:
+            to_user = await get_guild_member(guild, guild.owner_id)
+        if to_user is None:
             return
-        flag_on = await self.bot.ldclient.variation('cog.tutorials.guild_join.enabled', discord_user_to_dict(owner),
-                                                    default=False)
+
+        flag_on = await self.bot.ldclient.variation(
+            "cog.tutorials.guild_join.enabled", discord_user_to_dict(to_user), default=False
+        )
         if not flag_on:
             return
         prefix = await self.bot.get_guild_prefix(guild)
@@ -153,74 +170,85 @@ class Tutorials(commands.Cog):
         embed = discord.Embed()
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.display_avatar.url)
         embed.colour = discord.Colour.blurple()
-        embed.description = textwrap.dedent(f"""
-        :wave: Hi there! Thanks for adding me to {guild.name}!
-        
-        I'm ready to roll, but before we get started, let's take a look at some of the things I can do! 
-        """).strip()
+        embed.description = textwrap.dedent(
+            f"""
+            :wave: Hi there! Thanks for adding me to {guild.name}!
+            
+            I'm ready to roll, but before we get started, let's take a look at some of the things I can do! 
+            """
+        ).strip()
 
         if not prefix_is_default:
             embed.add_field(
-                name="Prefix", inline=False,
+                name="Prefix",
+                inline=False,
                 value=f"Looks like you've added me to {guild.name} in the past before. On {guild.name}, my prefix is "
-                      f"`{prefix}`, but by default, it's `{config.DEFAULT_PREFIX}`. You can reset it with "
-                      f"`{prefix}prefix {config.DEFAULT_PREFIX}`, or roll with it using the examples below!"
+                f"`{prefix}`, but by default, it's `{config.DEFAULT_PREFIX}`. You can reset it with "
+                f"`{prefix}prefix {config.DEFAULT_PREFIX}`, or roll with it using the examples below!",
             )
 
         embed.add_field(
-            name="Rolling Dice", inline=False,
+            name="Rolling Dice",
+            inline=False,
             value=f"Want to get rolling as soon as possible? Just use the `{prefix}roll` command to get started! "
-                  f"Here's some examples: ```\n"
-                  f"{prefix}roll 1d20\n"
-                  f"{prefix}roll 4d6kh3\n"
-                  f"{prefix}roll 1d20+1 adv\n"
-                  f"{prefix}r 1d10[cold]+2d6[piercing]\n"
-                  f"```"
+            f"Here's some examples: ```\n"
+            f"{prefix}roll 1d20\n"
+            f"{prefix}roll 4d6kh3\n"
+            f"{prefix}roll 1d20+1 adv\n"
+            f"{prefix}r 1d10[cold]+2d6[piercing]\n"
+            f"```",
         )
 
         embed.add_field(
-            name="Quickstart", inline=False,
+            name="Quickstart",
+            inline=False,
             value=f"I can do more than just roll dice, too! If you'd like to learn more about importing a "
-                  f"character and rolling checks, saves, and attacks, try out the Quickstart tutorial!"
-                  f"```\n{prefix}tutorial quickstart\n```"
+            f"character and rolling checks, saves, and attacks, try out the Quickstart tutorial!"
+            f"```\n{prefix}tutorial quickstart\n```",
         )
 
         embed.add_field(
-            name="Content Lookup", inline=False,
+            name="Content Lookup",
+            inline=False,
             value=f"You can look up any spell, item, creature, and more right in Discord! Just use the `{prefix}spell`"
-                  f", `{prefix}item`, `{prefix}monster`, or other lookup command! You can see a full list with "
-                  f"`{prefix}help Lookup`.\n\n"
-                  f"I'll even link with your D&D Beyond account to give you access to everything you've unlocked, "
-                  f"all for free! To get started, try out the D&D Beyond tutorial."
-                  f"```\n{prefix}tutorial beyond\n```\n"
-                  f"\u203b By default, for servers with less than 250 members, a monster's full stat block will be "
-                  f"hidden unless you have a Discord role named `Dungeon Master`. You can turn this off or change the "
-                  f"DM role with `{prefix}servsettings`."
+            f", `{prefix}item`, `{prefix}monster`, or other lookup command! You can see a full list with "
+            f"`{prefix}help Lookup`.\n\n"
+            f"I'll even link with your D&D Beyond account to give you access to everything you've unlocked, "
+            f"all for free! To get started, try out the D&D Beyond tutorial."
+            f"```\n{prefix}tutorial beyond\n```\n"
+            f"\u203b By default, for servers with less than 250 members, a monster's full stat block will be "
+            f"hidden unless you have a Discord role named `Dungeon Master`. You can turn this off or change the "
+            f"DM role with `{prefix}servsettings`.",
         )
 
         embed.add_field(
-            name="Initiative Tracking", inline=False,
+            name="Initiative Tracking",
+            inline=False,
             value=f"Once you're familiar with the basics, to learn how to get started with initiative tracking, "
-                  f"try out the initiative tutorial! You can choose between a Dungeon Master's or a player's "
-                  f"perspective."
-                  f"```\n{prefix}tutorial initiative\n```"
+            f"try out the initiative tutorial! You can choose between a Dungeon Master's or a player's "
+            f"perspective."
+            f"```\n{prefix}tutorial initiative\n```",
         )
 
         embed.add_field(
-            name="Custom Commands", inline=False,
+            name="Custom Commands",
+            inline=False,
             value=f"Want to do even more? Check out the list of user-made commands at "
-                  f"https://avrae.io/dashboard/workshop, and add them to Discord with one click!"
+            f"https://avrae.io/dashboard/workshop, and add them to Discord with one click!",
         )
 
         embed.add_field(
-            name="More Resources", inline=False,
+            name="More Resources",
+            inline=False,
             value=f"If you ever want a refresher on a command or feature, use the `{prefix}help` command for help on a "
-                  f"command, or `{prefix}tutorial` for a list of available tutorials.\n\n"
-                  f"For even more resources, come join us in the development Discord at <https://support.avrae.io>!"
+            f"command, or `{prefix}tutorial` for a list of available tutorials.\n\n"
+            f"For even more resources, come join us in the development Discord at <https://support.avrae.io>!\n\n"
+            f"[Privacy Policy](https://www.fandom.com/privacy-policy) "
+            f"| [Terms of Use](https://www.fandom.com/terms-of-use)",
         )
 
         try:
-            await owner.send(embed=embed)
+            await to_user.send(embed=embed)
         except discord.HTTPException:
             pass
 

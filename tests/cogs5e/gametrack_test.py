@@ -157,6 +157,81 @@ class TestGame:
     async def test_s_death(self, avrae, dhttp):
         avrae.message("!s death")
 
+    async def test_game_coinpurse(self, avrae, dhttp):
+        avrae.message("!game coinpurse")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 0
+        assert char.coinpurse.gp == 0
+        assert char.coinpurse.ep == 0
+        assert char.coinpurse.sp == 0
+        assert char.coinpurse.cp == 0
+
+        avrae.message("!game coinpurse +10gp")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 0
+        assert char.coinpurse.gp == 10
+        assert char.coinpurse.ep == 0
+        assert char.coinpurse.sp == 0
+        assert char.coinpurse.cp == 0
+
+        avrae.message("!game coinpurse -1")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 0
+        assert char.coinpurse.gp == 9
+        assert char.coinpurse.ep == 0
+        assert char.coinpurse.sp == 0
+        assert char.coinpurse.cp == 0
+
+        avrae.message("!game coinpurse -10cp")
+        await dhttp.receive_delete()
+        await dhttp.receive_message("You don't have enough of the chosen")
+        avrae.message("Yes")
+        await dhttp.drain()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 0
+        assert char.coinpurse.gp == 8
+        assert char.coinpurse.ep == 1
+        assert char.coinpurse.sp == 4
+        assert char.coinpurse.cp == 0
+
+        avrae.message("!game coinpurse 10pp -1gp +3sp -2ep -1cp")
+        await dhttp.receive_delete()
+        await dhttp.receive_message("You don't have enough of the chosen")
+        avrae.message("Yes")
+        await dhttp.drain()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 10
+        assert char.coinpurse.gp == 6
+        assert char.coinpurse.ep == 1
+        assert char.coinpurse.sp == 6
+        assert char.coinpurse.cp == 9
+
+        avrae.message("!game coinpurse 12345cp")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 10
+        assert char.coinpurse.gp == 6
+        assert char.coinpurse.ep == 1
+        assert char.coinpurse.sp == 6
+        assert char.coinpurse.cp == 12354
+
+        avrae.message("!game coinpurse convert")
+        await dhttp.receive_delete()
+        await dhttp.receive_message()
+        char = await active_character(avrae)
+        assert char.coinpurse.pp == 23
+        assert char.coinpurse.gp == 0
+        assert char.coinpurse.ep == 1
+        assert char.coinpurse.sp == 1
+        assert char.coinpurse.cp == 4
+
 
 @pytest.mark.usefixtures("character")
 class TestSpellbook:
@@ -174,10 +249,10 @@ class TestSpellbook:
 class TestCustomCounters:
     async def test_cc_create(self, avrae, dhttp):
         avrae.message("!cc create TESTCC")
-        await dhttp.receive_message('Custom counter created.')
+        await dhttp.receive_message("Custom counter created.")
 
         avrae.message("!cc create TESTLIMITS -min 0 -max 100")
-        await dhttp.receive_message('Custom counter created.')
+        await dhttp.receive_message("Custom counter created.")
 
     async def test_cc_summary(self, avrae, dhttp):
         avrae.message("!cc")
@@ -186,7 +261,10 @@ class TestCustomCounters:
         # Needed to allow for embed comparison
 
         for _ in char.consumables:
-            cc_embed.add_field(name='.+', value=r'((◉+〇*)|(\*\*Current Value\*\*:.+))(\n)*(\*\*Range\*\*: .+)*(\n)*(\*\*Resets On\*\*: .+)*')
+            cc_embed.add_field(
+                name=".+",
+                value=r"((◉+〇*)|(\*\*Current Value\*\*:.+))(\n)*(\*\*Range\*\*: .+)*(\n)*(\*\*Resets On\*\*: .+)*",
+            )
         await dhttp.receive_message(embed=cc_embed)
 
     async def test_cc_misc(self, avrae, dhttp):
@@ -195,7 +273,7 @@ class TestCustomCounters:
         test_cc = next(cc for cc in char.consumables if cc.name == "TESTCC")
         test_cc_limits = next(cc for cc in char.consumables if cc.name == "TESTLIMITS")
 
-        cc_embed.add_field(name=r'.+', value=r'((\d+)|(\d+\/\d+)) (\((\+|-)\d+\))(\n)*(\(\d+ .+\))*')
+        cc_embed.add_field(name=r".+", value=r"((\d+)|(\d+\/\d+)) (\((\+|-)\d+\))(\n)*(\(\d+ .+\))*")
         avrae.message("!cc TESTCC +5")
         await dhttp.receive_delete()
         await dhttp.receive_message(embed=cc_embed)
@@ -216,12 +294,12 @@ class TestCustomCounters:
 
         test_cc_limits = next(cc for cc in char.consumables if cc.name == "TESTLIMITS")
         avrae.message("!cc reset TESTLIMITS")
-        await dhttp.receive_message(r'(\w+: )(\d+\/\d+ )(\((\+|-)\d+\))')
+        await dhttp.receive_message(r"(\w+: )(\d+\/\d+ )(\((\+|-)\d+\))")
         assert test_cc_limits.value == 100
 
     async def test_cc_delete(self, avrae, dhttp):
         avrae.message("!cc delete TESTCC")
-        await dhttp.receive_message('Deleted counter TESTCC.')
+        await dhttp.receive_message("Deleted counter TESTCC.")
 
         avrae.message("!cc delete TESTLIMITS")
-        await dhttp.receive_message('Deleted counter TESTLIMITS.')
+        await dhttp.receive_message("Deleted counter TESTLIMITS.")

@@ -52,22 +52,22 @@ class PBPUtils(commands.Cog):
 
         embed = embeds.EmbedWithAuthor(ctx)
         args = argparse(args)
-        embed.title = args.last('title')
-        embed.description = args.last('desc')
-        embed.set_thumbnail(url=maybe_http_url(args.last('thumb', '')))
-        embed.set_image(url=maybe_http_url(args.last('image', '')))
-        embed.set_footer(text=args.last('footer', ''))
+        embed.title = args.last("title")
+        embed.description = args.last("desc")
+        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
+        embed.set_image(url=maybe_http_url(args.last("image", "")))
+        embed.set_footer(text=args.last("footer", ""))
         try:
-            embed.colour = int(args.last('color').strip('#'), base=16)
+            embed.colour = int(args.last("color").strip("#"), base=16)
         except (AttributeError, ValueError):
             pass
 
-        embeds.add_fields_from_args(embed, args.get('f'))
+        embeds.add_fields_from_args(embed, args.get("f"))
 
         timeout = 0
-        if 't' in args:
+        if "t" in args:
             try:
-                timeout = min(max(args.last('t', type_=int), 0), 600)
+                timeout = min(max(args.last("t", type_=int), 0), 600)
             except:
                 pass
 
@@ -85,7 +85,7 @@ class PBPUtils(commands.Cog):
     @commands.command(hidden=True)
     async def pythag(self, ctx, num1: int, num2: int):
         """Performs a pythagorean theorem calculation to calculate diagonals."""
-        await ctx.send(sqrt(num1 ** 2 + num2 ** 2))
+        await ctx.send(sqrt(num1**2 + num2**2))
 
 
 def setup(bot):

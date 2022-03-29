@@ -34,9 +34,11 @@ class Actions:
     @property
     def other_actions(self):
         """Returns a list of actions that do not fall into the other action categories."""
-        return [a for a in self.actions if a.activation_type not in (ActivationType.ACTION,
-                                                                     ActivationType.BONUS_ACTION,
-                                                                     ActivationType.REACTION)]
+        return [
+            a
+            for a in self.actions
+            if a.activation_type not in (ActivationType.ACTION, ActivationType.BONUS_ACTION, ActivationType.REACTION)
+        ]
 
     def __iter__(self):
         return iter(self.actions)
@@ -49,8 +51,15 @@ class Actions:
 
 
 class Action:
-    def __init__(self, name: str, uid: Optional[str], id: int, type_id: int,
-                 activation_type: ActivationType = None, snippet: str = None):
+    def __init__(
+        self,
+        name: str,
+        uid: Optional[str],
+        id: int,
+        type_id: int,
+        activation_type: ActivationType = None,
+        snippet: str = None,
+    ):
         self.name = name
         self.uid = uid
         self.id = id
@@ -60,14 +69,18 @@ class Action:
 
     @classmethod
     def from_dict(cls, d):
-        activation_type = ActivationType(at) if (at := d.pop('activation_type')) is not None else None
+        activation_type = ActivationType(at) if (at := d.pop("activation_type")) is not None else None
         return cls(activation_type=activation_type, **d)
 
     def to_dict(self):
         activation_type = self.activation_type.value if self.activation_type is not None else None
         return {
-            "name": self.name, "uid": self.uid, "id": self.id, "type_id": self.type_id,
-            "activation_type": activation_type, "snippet": self.snippet
+            "name": self.name,
+            "uid": self.uid,
+            "id": self.id,
+            "type_id": self.type_id,
+            "activation_type": activation_type,
+            "snippet": self.snippet,
         }
 
     @property
@@ -78,6 +91,7 @@ class Action:
         if self.uid is None:
             return None
         import gamedata
+
         return gamedata.compendium.lookup_action(self.uid)
 
     @property
@@ -108,5 +122,7 @@ class Action:
         return self.build_str(caster=None)
 
     def __repr__(self):
-        return f"<Action name={self.name!r} uid={self.uid!r} id={self.id!r} type_id={self.type_id!r} " \
-               f"activation_type={self.activation_type!r} gamedata={self.gamedata!r}>"
+        return (
+            f"<Action name={self.name!r} uid={self.uid!r} id={self.id!r} type_id={self.type_id!r} "
+            f"activation_type={self.activation_type!r} gamedata={self.gamedata!r}>"
+        )

@@ -7,7 +7,7 @@ from discord.ext.commands.view import StringView
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import list_get
 
-EPHEMERAL_ARG_RE = re.compile(r'([^\s]+)(\d+)')
+EPHEMERAL_ARG_RE = re.compile(r"([^\s]+)(\d+)")
 QUOTE_PAIRS = {
     '"': '"',
     "'": "'",
@@ -53,14 +53,15 @@ def argparse(args, character=None, splitter=argsplit):
         args = splitter(args)
     if character:
         from aliasing.evaluators import MathEvaluator
+
         evaluator = MathEvaluator.with_character(character)
         args = [evaluator.transformed_str(a) for a in args]
 
     parsed = collections.defaultdict(lambda: [])
     index = 0
     for a in args:
-        if a.startswith('-'):
-            parsed[a.lstrip('-')].append(list_get(index + 1, True, args))
+        if a.startswith("-"):
+            parsed[a.lstrip("-")].append(list_get(index + 1, True, args))
         else:
             parsed[a].append(True)
         index += 1
@@ -68,8 +69,8 @@ def argparse(args, character=None, splitter=argsplit):
 
 
 def argquote(arg: str):
-    if ' ' in arg:
-        arg = arg.replace("\"", "\\\"")  # re.sub(r'(?<!\\)"', r'\"', arg)
+    if " " in arg:
+        arg = arg.replace('"', '\\"')  # re.sub(r'(?<!\\)"', r'\"', arg)
         arg = f'"{arg}"'
     return arg
 
@@ -149,14 +150,14 @@ class ParsedArguments:
 
         :return: -1 for dis, 0 for normal, 1 for adv, 2 for ea
         """
-        adv_str, dis_str, ea_str = 'adv', 'dis', 'ea'
+        adv_str, dis_str, ea_str = "adv", "dis", "ea"
         if custom is not None:
-            if 'adv' in custom:
-                adv_str = custom['adv']
-            if 'dis' in custom:
-                dis_str = custom['dis']
-            if 'ea' in custom:
-                ea_str = custom['ea']
+            if "adv" in custom:
+                adv_str = custom["adv"]
+            if "dis" in custom:
+                dis_str = custom["dis"]
+            if "ea" in custom:
+                ea_str = custom["ea"]
 
         adv_arg = self.last(adv_str, default=False, type_=bool, ephem=ephem)
         dis_arg = self.last(dis_str, default=False, type_=bool, ephem=ephem)
@@ -375,11 +376,11 @@ class CustomStringView(StringView):
                 if is_quoted:
                     # unexpected EOF
                     raise ExpectedClosingQuoteError(close_quote)
-                return ''.join(result)
+                return "".join(result)
 
             # currently we accept strings in the format of "hello world"
             # to embed a quote inside the string you must escape it: "a \"world\""
-            if current == '\\':
+            if current == "\\":
                 next_char = self.get()
                 if next_char in _escaped_quotes:
                     # escaped quote
@@ -409,18 +410,18 @@ class CustomStringView(StringView):
                     continue
 
                 # we're quoted so it's okay
-                return ''.join(result)
+                return "".join(result)
 
             if current.isspace() and not is_quoted:
                 # end of word found
-                return ''.join(result)
+                return "".join(result)
 
             result.append(current)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     while True:
         try:
-            print(argsplit(input('>>> ')))
+            print(argsplit(input(">>> ")))
         except BadArgument as e:
             print(e)

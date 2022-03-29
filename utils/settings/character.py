@@ -12,8 +12,9 @@ log = logging.getLogger(__name__)
 
 class CharacterSettings(SettingsBaseModel):
     # cosmetic
-    color: Optional[conint(ge=0, le=0xffffff)] = None
+    color: Optional[conint(ge=0, le=0xFFFFFF)] = None
     embed_image: bool = True
+    compact_coins: bool = False
 
     # gameplay
     crit_on: conint(ge=1, le=20) = 20
@@ -31,16 +32,16 @@ class CharacterSettings(SettingsBaseModel):
     def from_old_csettings(cls, d):
         """Returns a new CharacterSettings instance with all default options, updated by legacy csettings options."""
         # for each key, get it from old or fall back to class default
-        old_settings = d.get('options', {})
+        old_settings = d.get("options", {})
         return cls(
-            color=old_settings.get('color', None),
-            embed_image=old_settings.get('embedimage') or True,
-            crit_on=old_settings.get('criton') or 20,
-            extra_crit_dice=old_settings.get('critdice') or 0,
-            ignore_crit=old_settings.get('ignorecrit') or False,
-            reroll=old_settings.get('reroll', None),
-            talent=old_settings.get('talent') or False,
-            srslots=old_settings.get('srslots') or False
+            color=old_settings.get("color", None),
+            embed_image=old_settings.get("embedimage") or True,
+            crit_on=old_settings.get("criton") or 20,
+            extra_crit_dice=old_settings.get("critdice") or 0,
+            ignore_crit=old_settings.get("ignorecrit") or False,
+            reroll=old_settings.get("reroll", None),
+            talent=old_settings.get("talent") or False,
+            srslots=old_settings.get("srslots") or False,
         )
 
     async def commit(self, mdb, character):
@@ -49,8 +50,8 @@ class CharacterSettings(SettingsBaseModel):
             {"owner": character.owner, "upstream": character.upstream},
             {
                 "$set": {"options_v2": self.dict()},
-                "$unset": {"options": True}  # delete any old options - they should have been converted by now
-            }
+                "$unset": {"options": True},  # delete any old options - they should have been converted by now
+            },
         )
 
 
@@ -77,7 +78,7 @@ class CSetting:  # character settings
         self.ctx = ctx
         if arg is None:
             return self.info()
-        elif arg in ('reset', self.default):
+        elif arg in ("reset", self.default):
             return self.reset()
         else:
             return self.set(arg)
@@ -85,68 +86,94 @@ class CSetting:  # character settings
     def info(self):
         old_val = getattr(self.character.options, self.setting_key)
         if old_val is not None:
-            return f'\u2139 Your character\'s current {self.description} is {self.display_func(old_val)}. ' \
-                   f'Use "{self.ctx.prefix}csettings {self.setting_key} reset" to reset it to {self.default}.'
-        return f'\u2139 Your character\'s current {self.description} is {self.default}.'
+            return (
+                f"\u2139 Your character's current {self.description} is {self.display_func(old_val)}. "
+                f'Use "{self.ctx.prefix}csettings {self.setting_key} reset" to reset it to {self.default}.'
+            )
+        return f"\u2139 Your character's current {self.description} is {self.default}."
 
     def reset(self):
         setattr(self.character.options, self.setting_key, CharacterSettings.__fields__[self.setting_key].default)
         return f"\u2705 {self.description.capitalize()} reset to {self.default}."
 
     def set(self, new_value):
-        if self.type == 'color':
+        if self.type == "color":
             try:
                 color_val = Color(new_value)
                 r, g, b = color_val.as_rgb_tuple(alpha=False)
                 val = (r << 16) + (g << 8) + b
             except (ValueError, TypeError):
-                return f'\u274c Invalid {self.description}. ' \
-                       f'Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}.'
-        elif self.type == 'number':
+                return (
+                    f"\u274c Invalid {self.description}. "
+                    f"Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}."
+                )
+        elif self.type == "number":
             try:
                 val = int(new_value)
             except (ValueError, TypeError):
-                return f'\u274c Invalid {self.description}. ' \
-                       f'Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}.'
-        elif self.type == 'boolean':
+                return (
+                    f"\u274c Invalid {self.description}. "
+                    f"Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}."
+                )
+        elif self.type == "boolean":
             try:
                 val = get_positivity(new_value)
             except AttributeError:
-                return f'\u274c Invalid {self.description}.' \
-                       f'Use `{self.ctx.prefix}csettings {self.setting_key} false` to reset it.'
+                return (
+                    f"\u274c Invalid {self.description}."
+                    f"Use `{self.ctx.prefix}csettings {self.setting_key} false` to reset it."
+                )
         else:
             log.warning(f"No setting type for {self.type} found")
             return
         try:
             setattr(self.character.options, self.setting_key, val)
         except ValidationError as e:
-            return f"\u274c Invalid {self.description}: {e!s}.\n" \
-                   f"Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}."
+            return (
+                f"\u274c Invalid {self.description}: {e!s}.\n"
+                f"Use `{self.ctx.prefix}csettings {self.setting_key} reset` to reset it to {self.default}."
+            )
         return f"\u2705 {self.description.capitalize()} set to {self.display_func(val)}.\n"
 
 
 CHARACTER_SETTINGS = {
     "color": CSetting("color", "color", default="random", display_func=lambda val: f"#{val:06X}"),
-    "criton": CSetting(
-        "crit_on", "number", description="crit range", default=20,
-        display_func=lambda val: f"{val}-20"
-    ),
+    "criton": CSetting("crit_on", "number", description="crit range", default=20, display_func=lambda val: f"{val}-20"),
     "reroll": CSetting("reroll", "number"),
     "srslots": CSetting(
-        "srslots", "boolean", description="short rest slots", default='disabled',
-        display_func=lambda val: 'enabled' if val else 'disabled'
+        "srslots",
+        "boolean",
+        description="short rest slots",
+        default="disabled",
+        display_func=lambda val: "enabled" if val else "disabled",
     ),
     "embedimage": CSetting(
-        "embed_image", "boolean", description="embed image", default='disabled',
-        display_func=lambda val: 'enabled' if val else 'disabled'
+        "embed_image",
+        "boolean",
+        description="embed image",
+        default="disabled",
+        display_func=lambda val: "enabled" if val else "disabled",
     ),
     "critdice": CSetting("extra_crit_dice", "number", description="extra crit dice", default=0),
     "talent": CSetting(
-        "talent", "boolean", description="reliable talent", default='disabled',
-        display_func=lambda val: 'enabled' if val else 'disabled'
+        "talent",
+        "boolean",
+        description="reliable talent",
+        default="disabled",
+        display_func=lambda val: "enabled" if val else "disabled",
     ),
     "ignorecrit": CSetting(
-        "ignore_crit", "boolean", description="ignore crits", default='disabled',
-        display_func=lambda val: 'enabled' if val else 'disabled'
-    )
+        "ignore_crit",
+        "boolean",
+        description="ignore crits",
+        default="disabled",
+        display_func=lambda val: "enabled" if val else "disabled",
+    ),
+    "compactcoins": CSetting(
+        "compact_coins",
+        "boolean",
+        description="compact coin display",
+        default="disabled",
+        display_func=lambda val: "enabled" if val else "disabled",
+    ),
 }

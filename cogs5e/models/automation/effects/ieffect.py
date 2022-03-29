@@ -7,8 +7,17 @@ from ..results import IEffectResult
 
 class IEffect(Effect):
     def __init__(
-        self, name: str, duration: int, effects: str, end: bool = False, conc: bool = False,
-        desc: str = None, stacking: bool = False, save_as: str = None, parent: str = None, **kwargs
+        self,
+        name: str,
+        duration: int,
+        effects: str,
+        end: bool = False,
+        conc: bool = False,
+        desc: str = None,
+        stacking: bool = False,
+        save_as: str = None,
+        parent: str = None,
+        **kwargs,
     ):
         super().__init__("ieffect", **kwargs)
         self.name = name
@@ -25,9 +34,15 @@ class IEffect(Effect):
         out = super().to_dict()
         out.update(
             {
-                "name": self.name, "duration": self.duration, "effects": self.effects, "end": self.tick_on_end,
-                "conc": self.concentration, "desc": self.desc, "stacking": self.stacking, "save_as": self.save_as,
-                "parent": self.parent
+                "name": self.name,
+                "duration": self.duration,
+                "effects": self.effects,
+                "end": self.tick_on_end,
+                "conc": self.concentration,
+                "desc": self.desc,
+                "stacking": self.stacking,
+                "save_as": self.save_as,
+                "parent": self.parent,
             }
         )
         return out
@@ -55,13 +70,18 @@ class IEffect(Effect):
         else:
             desc = None
 
-        duration = autoctx.args.last('dur', duration, int)
+        duration = autoctx.args.last("dur", duration, int)
         conc_conflict = []
         if isinstance(autoctx.target.target, init.Combatant):
             effect = init.Effect.new(
-                autoctx.target.target.combat, autoctx.target.target, self.name,
-                duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
-                concentration=self.concentration, desc=desc
+                autoctx.target.target.combat,
+                autoctx.target.target,
+                self.name,
+                duration,
+                autoctx.parse_annostr(self.effects),
+                tick_on_end=self.tick_on_end,
+                concentration=self.concentration,
+                desc=desc,
             )
             conc_parent = None
             stack_parent = None
@@ -101,7 +121,7 @@ class IEffect(Effect):
             # add
             effect_result = autoctx.target.target.add_effect(effect)
             autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
-            if conc_conflict := effect_result['conc_conflict']:
+            if conc_conflict := effect_result["conc_conflict"]:
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
 
             # save as
@@ -109,8 +129,14 @@ class IEffect(Effect):
                 autoctx.metavars[self.save_as] = IEffectMetaVar(effect)
         else:
             effect = init.Effect.new(
-                None, None, self.name, duration, autoctx.parse_annostr(self.effects),
-                tick_on_end=self.tick_on_end, concentration=self.concentration, desc=desc
+                None,
+                None,
+                self.name,
+                duration,
+                autoctx.parse_annostr(self.effects),
+                tick_on_end=self.tick_on_end,
+                concentration=self.concentration,
+                desc=desc,
             )
             autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
 

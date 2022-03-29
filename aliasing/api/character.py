@@ -5,6 +5,8 @@ from aliasing import helpers
 from aliasing.utils import optional_cast_arg_or_default, UNSET
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
+from cogs5e.models.sheet.coinpurse import CoinsArgs
+from utils.constants import COIN_TYPES
 
 
 class AliasCharacter(AliasStatBlock):
@@ -16,6 +18,7 @@ class AliasCharacter(AliasStatBlock):
         super().__init__(character)
         self._character = character
         self._interpreter = interpreter
+        self._coinpurse = None
 
     # helpers
     def _get_consumable(self, name):
@@ -110,9 +113,19 @@ class AliasCharacter(AliasStatBlock):
         to_delete = self._get_consumable(name)
         self._character.consumables.remove(to_delete)
 
-    def create_cc_nx(self, name: str, minVal: str = None, maxVal: str = None, reset: str = None,
-                     dispType: str = None, reset_to: str = None, reset_by: str = None,
-                     title: str = None, desc: str = None):
+    def create_cc_nx(
+        self,
+        name: str,
+        minVal: str = None,
+        maxVal: str = None,
+        reset: str = None,
+        dispType: str = None,
+        reset_to: str = None,
+        reset_by: str = None,
+        title: str = None,
+        desc: str = None,
+        initial_value: str = None,
+    ):
         """
         Creates a custom counter if one with the given name does not already exist.
         Equivalent to:
@@ -136,11 +149,23 @@ class AliasCharacter(AliasStatBlock):
             title = str(title)
         if desc is not None:
             desc = str(desc)
+        if initial_value is not None:
+            initial_value = str(initial_value)
 
         if not self.cc_exists(name):
             new_consumable = player_api.CustomCounter.new(
-                self._character, name, minVal, maxVal, reset, dispType,
-                title=title, desc=desc, reset_to=reset_to, reset_by=reset_by)
+                self._character,
+                name,
+                minVal,
+                maxVal,
+                reset,
+                dispType,
+                title=title,
+                desc=desc,
+                reset_to=reset_to,
+                reset_by=reset_by,
+                initial_value=initial_value,
+            )
             self._character.consumables.append(new_consumable)
             self._consumables = None  # reset cache
             return AliasCustomCounter(new_consumable)
@@ -158,6 +183,7 @@ class AliasCharacter(AliasStatBlock):
         :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
         :param str title: The title of the counter.
         :param str desc: The description of the counter.
+        :param str initial_value: The initial value of the counter.
         :rtype: AliasCustomCounter
         :returns: The newly created counter.
         """
@@ -356,6 +382,17 @@ class AliasCharacter(AliasStatBlock):
         """
         return self._character.options.dict()
 
+    @property
+    def coinpurse(self):
+        """
+        The coinpurse of the character.
+
+        :rtype: :class:`~aliasing.api.character.AliasCoinpurse`
+        """
+        if self._coinpurse is None:
+            self._coinpurse = AliasCoinpurse(self._character.coinpurse, self._character)
+        return self._coinpurse
+
     # --- private helpers ----
     async def func_commit(self, ctx):
         await self._character.commit(ctx)
@@ -503,16 +540,18 @@ class AliasCustomCounter:
         """
         out = self._cc.full_str()
         if include_name:
-            out = f'**{self.name}**\n' + out
+            out = f"**{self.name}**\n" + out
         return out
 
     def __str__(self):
         return str(self._cc)
 
     def __repr__(self):
-        return f"<AliasCustomCounter name={self.name} value={self.value} max={self.max} min={self.min} " \
-               f"title={self.title} desc={self.desc} display_type={self.display_type} " \
-               f"reset_on={self.reset_on} reset_to={self.reset_to} reset_by={self.reset_by}>"
+        return (
+            f"<AliasCustomCounter name={self.name} value={self.value} max={self.max} min={self.min} "
+            f"title={self.title} desc={self.desc} display_type={self.display_type} "
+            f"reset_on={self.reset_on} reset_to={self.reset_to} reset_by={self.reset_by}>"
+        )
 
 
 class AliasDeathSaves:
@@ -667,5 +706,125 @@ class AliasAction:
         return f"**{self.name}**: {self.description}"
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} name={self.name!r} activation_type={self.activation_type!r} " \
-               f"activation_type_name={self.activation_type_name!r}>"
+        return (
+            f"<{self.__class__.__name__} name={self.name!r} activation_type={self.activation_type!r} "
+            f"activation_type_name={self.activation_type_name!r}>"
+        )
+
+
+class AliasCoinpurse:
+    """
+    An object holding the coinpurse for the active character.
+    """
+
+    def __init__(self, coinpurse, parent_statblock):
+        """
+        :type coinpurse: cogs5e.models.sheet.coinpurse.Coinpurse
+        :type parent_statblock: cogs5e.models.character.Character
+        """
+        self._coinpurse = coinpurse
+        self._parent_statblock = parent_statblock
+
+    def __getattr__(self, item):
+        if item not in COIN_TYPES:
+            raise ValueError(f"{item} is not valid coin.")
+        return getattr(self._coinpurse, item)
+
+    def __getitem__(self, item):
+        return self.__getattr__(item)
+
+    def __str__(self):
+        if self._parent_statblock.options.compact_coins:
+            return self._coinpurse.compact_string()
+        return str(self._coinpurse)
+
+    @property
+    def total(self) -> float:
+        """
+        Returns the total amount of coins in your bag, converted to float gold.
+
+        :rtype: float
+        """
+        return self._coinpurse.total
+
+    def coin_str(self, cointype: str) -> str:
+        """
+        Returns a string representation of the chosen coin type.
+
+        :param str cointype: The type of coin to return. ``"pp"``, ``"gp"``, ``"ep"``, ``"sp"``, and ``"cp"``
+        :return: The string representation of the chosen coin type.
+        :rtype: str
+        """
+        if cointype not in COIN_TYPES:
+            raise ValueError(f"{cointype} is not valid coin.")
+        return self._coinpurse.coin_string(cointype)
+
+    def compact_str(self) -> str:
+        """
+        Returns a string representation of the compacted coin value.
+
+        :return: The string representation of the compacted coin value.
+        :rtype: str
+        """
+        return self._coinpurse.compact_string()
+
+    def modify_coins(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0, autoconvert: bool = True):
+        """
+        Modifies your coinpurse based on the provided values. If ``autoconvert`` is enabled, it will convert down higher
+        value coins if necessary to handle the transaction. Returns a dict representation of the deltas.
+
+        :param int pp: Platinum Pieces. Defaults to ``0``.
+        :param int gp: Gold Pieces. Defaults to ``0``.
+        :param int ep: Electrum Pieces. Defaults to ``0``.
+        :param int sp: Silver Pieces. Defaults to ``0``.
+        :param int cp: Copper Pieces. Defaults to ``0``.
+        :param bool autoconvert: Whether it should attempt to convert down higher value coins. Defaults to ``True``
+        :return: A dict representation of the delta changes for each coin type.
+        :rtype: dict
+        """
+        coins = CoinsArgs(pp, gp, ep, sp, cp)
+        if autoconvert:
+            coins = self._coinpurse.auto_convert_down(coins)
+        self._coinpurse.set_currency(
+            self._coinpurse.pp + coins.pp,
+            self._coinpurse.gp + coins.gp,
+            self._coinpurse.ep + coins.ep,
+            self._coinpurse.sp + coins.sp,
+            self._coinpurse.cp + coins.cp,
+        )
+        return {"pp": coins.pp, "gp": coins.gp, "ep": coins.ep, "sp": coins.sp, "cp": coins.cp, "total": coins.total}
+
+    def set_coins(self, pp: int, gp: int, ep: int, sp: int, cp: int):
+        """
+        Sets your coinpurse to the provided values.
+
+        :param int pp: Platinum Pieces
+        :param int gp: Gold Pieces
+        :param int ep: Electrum Pieces
+        :param int sp: Silver Pieces
+        :param int cp: Copper Pieces
+        """
+        self._coinpurse.set_currency(pp, gp, ep, sp, cp)
+
+    def autoconvert(self):
+        """
+        Converts all of your coins into the highest value coins possible.
+        100cp turns into 1gp, 5sp turns into 1ep, etc.
+        """
+        self._coinpurse.consolidate_coins()
+
+    def get_coins(self) -> dict:
+        """
+        Returns a dict of your current coinpurse.
+
+        :return: A dict of your current coinpurse, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":2, "cp":3, "total": 1.23}``
+        :rtype: dict
+        """
+        return {
+            "pp": self._coinpurse.pp,
+            "gp": self._coinpurse.gp,
+            "ep": self._coinpurse.ep,
+            "sp": self._coinpurse.sp,
+            "cp": self._coinpurse.cp,
+            "total": self._coinpurse.total,
+        }

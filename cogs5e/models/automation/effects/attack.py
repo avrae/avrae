@@ -275,7 +275,7 @@ class Attack(Effect):
         out = f"Attack: {attack_bonus:+} to hit"
 
         if self.adv:
-            match stringify_intexpr(evaluator, self.bonus):
+            match stringify_intexpr(evaluator, self.adv):
                 case AdvantageType.ADV:
                     out += ", with advantage"
                 case AdvantageType.ELVEN:

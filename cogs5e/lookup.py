@@ -291,13 +291,14 @@ class Lookup(commands.Cog):
         mon_args = argparse(name)
         hide_name = mon_args.get("h", False, bool)
         name = name.replace(" -h", "").rstrip()
+        pm_lookup = pm or hide_name
 
         if hide_name:
             visible = False
             await try_delete(ctx.message)
 
         choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {"monster": choices}, name)
+        monster = await self._lookup_search3(ctx, {"monster": choices}, name, pm=pm_lookup)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -434,17 +435,17 @@ class Lookup(commands.Cog):
         image_args = argparse(name)
         hide_name = image_args.get("h", False, bool)
         name = name.replace(" -h", "").rstrip()
+        if hide_name:
+            await try_delete(ctx.message)
 
         choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {"monster": choices}, name)
+        monster = await self._lookup_search3(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
         url = monster.get_image_url()
         embed = EmbedWithAuthor(ctx)
         if not hide_name:
             embed.title = monster.name
-        else:
-            await try_delete(ctx.message)
         embed.description = f"{monster.size} monster."
 
         if not url:
@@ -471,9 +472,11 @@ class Lookup(commands.Cog):
         hide_name = token_args.get("h", False, bool)
         if not name.find("-") == -1:  # remove the args from the name
             name = name[: name.find("-")].rstrip()
+        if hide_name:
+            await try_delete(ctx.message)
 
         choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {"monster": choices}, name)
+        monster = await self._lookup_search3(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
         # select border
@@ -502,8 +505,6 @@ class Lookup(commands.Cog):
         embed = EmbedWithAuthor(ctx)
         if not hide_name:
             embed.title = monster.name
-        else:
-            await try_delete(ctx.message)
         embed.description = f"{monster.size} monster."
 
         file = discord.File(image, filename="image.png")
@@ -649,13 +650,14 @@ class Lookup(commands.Cog):
             return ctx
         return ctx.author if guild_settings.lookup_pm_result else ctx
 
-    async def _lookup_search3(self, ctx, entities, query, query_type=None):
+    async def _lookup_search3(self, ctx, entities, query, query_type=None, pm=False):
         """
         :type ctx: discord.ext.commands.Context
         :param entities: A dict mapping entitlements entity types to the entities themselves.
         :type entities: dict[str, list[T]]
         :type query: str
         :param str query_type: The type of the object being queried for (default entity type if only one dict key)
+        :param pm: Whether to PM the user the select prompt.
         :rtype: T
         :raises: RequiresLicense if an entity that requires a license is selected
         """
@@ -689,7 +691,7 @@ class Lookup(commands.Cog):
                 choices.append((entity, entity_entitlement_type))  # entity, entity type
 
         result, metadata = await search_and_select(
-            ctx, choices, query, lambda e: e[0].name, return_metadata=True, selectkey=selectkey
+            ctx, choices, query, lambda e: e[0].name, pm=pm, return_metadata=True, selectkey=selectkey
         )
 
         # get the entity

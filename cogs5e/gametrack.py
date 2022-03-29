@@ -197,7 +197,7 @@ class GameTrack(commands.Cog):
             return await gameutils.send_current_coin(ctx, character, args)
 
         coins = gameutils.parse_coin_args(args)
-        deltas = await resolve_strict_coins(character.coinpurse, coins, ctx=ctx)
+        deltas = await resolve_strict_coins(character.coinpurse, coins, ctx, character.options.autoconvert_coins)
         character.coinpurse.update_currency(deltas)
         await character.commit(ctx)
         return await gameutils.send_current_coin(ctx, character, deltas=deltas)

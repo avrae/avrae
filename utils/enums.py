@@ -10,3 +10,9 @@ class ActivationType(enum.IntEnum):
     MINUTE = 6
     HOUR = 7
     SPECIAL = 8
+
+
+class CoinsAutoConvert(enum.IntEnum):
+    ASK = 0
+    ALWAYS = 1
+    NEVER = 2

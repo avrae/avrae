@@ -4,6 +4,7 @@ from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.coinpurse import Coinpurse, CoinsArgs
 from cogs5e.utils.gameutils import parse_coin_args, resolve_strict_coins
 from tests.utils import ContextBotProxy
+from utils.enums import CoinsAutoConvert
 
 pytestmark = pytest.mark.asyncio
 
@@ -28,8 +29,17 @@ async def test_resolve_strict_coins(avrae):
         Coinpurse(pp=1), CoinsArgs(cp=-1, explicit=False), ContextBotProxy(avrae)
     ) == CoinsArgs(pp=-1, gp=9, ep=1, sp=4, cp=9)
 
+    assert await resolve_strict_coins(
+        Coinpurse(pp=1), CoinsArgs(cp=-1, explicit=True), ContextBotProxy(avrae), CoinsAutoConvert.ALWAYS
+    ) == CoinsArgs(pp=-1, gp=9, ep=1, sp=4, cp=9, explicit=True)
+
     with pytest.raises(InvalidArgument):
         await resolve_strict_coins(Coinpurse(gp=1), CoinsArgs(pp=-1, explicit=False), ContextBotProxy(avrae))
+
+    with pytest.raises(InvalidArgument):
+        await resolve_strict_coins(
+            Coinpurse(gp=1), CoinsArgs(cp=-1, explicit=True), ContextBotProxy(avrae), CoinsAutoConvert.NEVER
+        )
 
 
 async def test_coin_autoconvert_down():

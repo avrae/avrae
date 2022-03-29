@@ -132,7 +132,10 @@ class InitiativeEffect:
     @classmethod
     def from_dict(cls, d: dict, combat: _CombatT, combatant: _CombatantT):
         if d.get("_v", 1) < 2:
-            return  # todo: JIT migrator
+            from . import migrators
+
+            return migrators.jit_v1_to_v2(d, combat, combatant)
+
         effects = InitPassiveEffect.from_dict(d["effects"])
         interactions = [InitEffectInteraction.deserialize(i) for i in d["interactions"]]
         children = [InitEffectReference.from_dict(r) for r in d["children"]]

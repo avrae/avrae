@@ -93,7 +93,9 @@ class Attack(Effect):
                 dis=args.last("dis", type_=bool, ephem=True)
                 or any(eadv == AdvantageType.DIS for eadv in effect_advs)
                 or self.adv == -1,
-                ea=args.last("ea", type_=bool, ephem=True) or any(eadv == AdvantageType.ELVEN for eadv in effect_advs) or self.adv == 2,
+                ea=args.last("ea", type_=bool, ephem=True)
+                or any(eadv == AdvantageType.ELVEN for eadv in effect_advs)
+                or self.adv == 2,
             )
         else:
             adv = reconcile_adv(

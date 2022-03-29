@@ -6,7 +6,7 @@ from pydantic.color import Color
 
 from utils.functions import get_positivity
 from . import SettingsBaseModel
-from ..enums import CoinsAutoConvert
+from utils.enums import CoinsAutoConvert
 
 log = logging.getLogger(__name__)
 

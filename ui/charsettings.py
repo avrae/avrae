@@ -223,8 +223,8 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
         embed.add_field(
             name="Coin Conversion Mode",
             value=f"**{autoconvert_coins_desc(self.settings.autoconvert_coins)}**\n"
-            f"*Whether or not it should ask you if you would like to auto-convert your coins if you try so spend "
-            f"more than you currently have.*",
+            f"*If a coin transaction would cause you to have a negative number of a certain currency, "
+            f"whether to automatically convert other coins to cover the transaction.*",
             inline=False,
         )
         return {"embed": embed}

@@ -24,7 +24,7 @@ class CharacterSettings(SettingsBaseModel):
     reroll: Optional[conint(ge=1, le=20)] = None
     talent: bool = False
     srslots: bool = False
-    autoconvert_coins: int = CoinsAutoConvert.ASK
+    autoconvert_coins: CoinsAutoConvert = CoinsAutoConvert.ASK
 
     # character sync
     sync_outbound: bool = True  # avrae to upstream

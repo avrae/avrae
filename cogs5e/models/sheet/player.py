@@ -187,7 +187,7 @@ class CustomCounter:
             if min_value is not None and reset_to_value < min_value:
                 raise InvalidArgument("Reset to value is less than min value.")
             if max_value is not None and reset_to_value > max_value:
-                raise InvalidArgument("Reset to value is greater than max value.")
+                raise InvalidArgument(f"Reset to value {reset_to_value} is greater than max value {max_value}.")
 
         if reset_by is not None:
             try:

@@ -2,6 +2,7 @@ from functools import cached_property
 
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
+from aliasing.utils import optional_cast_arg_or_default, UNSET
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
 from cogs5e.models.sheet.coinpurse import CoinsArgs
@@ -17,6 +18,7 @@ class AliasCharacter(AliasStatBlock):
         super().__init__(character)
         self._character = character
         self._interpreter = interpreter
+        self._consumables = None
         self._coinpurse = None
 
     # helpers
@@ -29,14 +31,16 @@ class AliasCharacter(AliasStatBlock):
 
     # methods
     # --- ccs ---
-    @cached_property
+    @property
     def consumables(self):
         """
         Returns a list of custom counters on the character.
 
         :rtype: list[AliasCustomCounter]
         """
-        return [AliasCustomCounter(cc) for cc in self._character.consumables]
+        if self._consumables is None:
+            self._consumables = [AliasCustomCounter(cc) for cc in self._character.consumables]
+        return self._consumables
 
     def cc(self, name):
         """
@@ -88,7 +92,8 @@ class AliasCharacter(AliasStatBlock):
 
         :param str name: The name of the custom counter to set.
         :param int value: The value to set the counter to.
-        :param bool strict: If ``True``, will raise a :exc:`CounterOutOfBounds` if the new value is out of bounds, otherwise silently clips to bounds.
+        :param bool strict: If ``True``, will raise a :exc:`CounterOutOfBounds` if the new value is out of bounds,
+                            otherwise silently clips to bounds.
         :raises: :exc:`ConsumableException` if the counter does not exist.
         :returns: The cc's new value.
         :rtype: int
@@ -188,6 +193,69 @@ class AliasCharacter(AliasStatBlock):
         if self.cc_exists(name):
             self.delete_cc(name)
         return self.create_cc_nx(name, *args, **kwargs)
+
+    def edit_cc(
+        self,
+        name: str,
+        minVal: str = UNSET,
+        maxVal: str = UNSET,
+        reset: str = UNSET,
+        dispType: str = UNSET,
+        reset_to: str = UNSET,
+        reset_by: str = UNSET,
+        title: str = UNSET,
+        desc: str = UNSET,
+        new_name: str = None,
+    ):
+        """
+        Edits an existing custom counter.
+
+        Pass ``None`` to remove an argument entirely.
+        Will clamp counter value to new limits if needed.
+
+        :param str name: The name of the counter to edit.
+        :param str minVal: The minimum value of the counter. Supports :ref:`cvar-table` parsing.
+        :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
+        :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
+        :param str dispType: Either ``None`` or ``'bubble'``.
+        :param str reset_to: The value the counter should reset to. Supports :ref:`cvar-table` parsing.
+        :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
+        :param str title: The title of the counter.
+        :param str desc: The description of the counter.
+        :param str new_name: The new name of the counter.
+        :rtype: AliasCustomCounter
+        :raises: :exc:`ConsumableException` if the counter does not exist.
+        :returns: The edited counter
+        """
+        counter = self._get_consumable(name)
+
+        minVal = optional_cast_arg_or_default(minVal, default=counter.min)
+        maxVal = optional_cast_arg_or_default(maxVal, default=counter.max)
+        reset = optional_cast_arg_or_default(reset, default=counter.reset_on)
+        dispType = optional_cast_arg_or_default(dispType, default=counter.display_type)
+        reset_to = optional_cast_arg_or_default(reset_to, default=counter.reset_to)
+        reset_by = optional_cast_arg_or_default(reset_by, default=counter.reset_by)
+        title = optional_cast_arg_or_default(title, default=counter.title)
+        desc = optional_cast_arg_or_default(desc, default=counter.desc)
+        new_name = new_name or counter.name
+
+        edit_consumable = player_api.CustomCounter.new(
+            self._character,
+            str(new_name),
+            minVal,
+            maxVal,
+            reset,
+            dispType,
+            title=title,
+            desc=desc,
+            reset_to=reset_to,
+            reset_by=reset_by,
+        )
+        edit_consumable.set(counter.value)
+        self._character.consumables.insert(self._character.consumables.index(counter), edit_consumable)
+        self._character.consumables.remove(counter)
+        self._consumables = None  # reset cache
+        return AliasCustomCounter(edit_consumable)
 
     def cc_exists(self, name):
         """

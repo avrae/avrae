@@ -6,7 +6,8 @@ import disnake
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.attack import Attack, old_to_automation
 from utils.argparser import ParsedArguments
-from ._types import _IEffectT
+from .._types import _IEffectT
+from ..utils import create_button_interaction_id
 
 
 class InitEffectInteraction(abc.ABC):
@@ -41,8 +42,7 @@ class AttackInteraction(InitEffectInteraction):
 
     type = "attack"
 
-    def __init__(self, attack: Attack, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, attack: Attack):
         self.attack = attack
 
     @classmethod
@@ -68,17 +68,22 @@ class ButtonInteraction(InitEffectInteraction):
 
     type = "button"
 
-    def __init__(self, automation, label: str, style: disnake.ButtonStyle = disnake.ButtonStyle.primary, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, id: str, automation, label: str, style: disnake.ButtonStyle = disnake.ButtonStyle.primary):
+        self.id = id
         self.automation = automation
         self.label = label
         self.style = style
+
+    @classmethod
+    def new(cls, automation, label: str, style: disnake.ButtonStyle = disnake.ButtonStyle.primary):
+        return cls(id=create_button_interaction_id(), automation=automation, label=label, style=style)
 
     @classmethod
     def from_dict(cls, data):
         from cogs5e.models.automation import Automation
 
         return cls(
+            id=data["id"],
             automation=Automation.from_data(data["automation"]),
             label=data["label"],
             style=disnake.ButtonStyle(data["style"]),
@@ -87,6 +92,7 @@ class ButtonInteraction(InitEffectInteraction):
     def to_dict(self):
         return {
             "type": self.type,
+            "id": self.id,
             "automation": self.automation.to_dict(),
             "label": self.label,
             "style": int(self.style),

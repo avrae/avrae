@@ -2,10 +2,10 @@ from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.resistance import Resistance
 from utils.enums import AdvantageType
 from utils.functions import reconcile_adv
-from ._types import _CombatT, _CombatantT
 from .effect import InitEffectReference, InitiativeEffect
 from .interaction import AttackInteraction
 from .passive import InitPassiveEffect
+from .._types import _CombatT, _CombatantT
 
 
 def jit_v1_to_v2(d: dict, combat: _CombatT, combatant: _CombatantT) -> InitiativeEffect:

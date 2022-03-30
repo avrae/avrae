@@ -4,9 +4,9 @@ import math
 
 from cogs5e.models.errors import InvalidArgument
 from utils.argparser import ParsedArguments, argparse
-from ._types import _CharacterT, _CombatT, _CombatantT
 from .interaction import InitEffectInteraction, init_interactions_from_args
 from .passive import InitPassiveEffect
+from .._types import _CharacterT, _CombatT, _CombatantT
 from ..types import CombatantType
 from ..utils import create_effect_id
 

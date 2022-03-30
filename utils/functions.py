@@ -365,12 +365,12 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=("\n\n", "\n", ". ", ", ", " 
     return chunks
 
 
-def smart_trim(text, max_len=1024):
+def smart_trim(text, max_len=1024, dots="[...]"):
     """Uses chunk_text to return a trimmed str."""
-    chunks = chunk_text(text, max_len - 5)
+    chunks = chunk_text(text, max_len - len(dots))
     out = chunks[0].strip()
     if len(chunks) > 1:
-        return f"{chunks[0]}[...]"
+        return f"{chunks[0]}{dots}"
     return out
 
 

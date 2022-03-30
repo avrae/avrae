@@ -71,6 +71,12 @@ class InitTracker(commands.Cog):
         self.nlp.deregister_listeners()
         self.nlp.close()
 
+    # ==== listeners ====
+    @commands.Cog.listener()
+    async def on_button_click(self, interaction: disnake.MessageInteraction):
+        if interaction.data.custom_id.startswith(constants.B_INIT_EFFECT):
+            await interaction.send(f">:o i got an interaction with id {interaction.data.custom_id}") # todo
+
     # ==== commands ====
     @commands.group(aliases=["i"], invoke_without_command=True)
     async def init(self, ctx):
@@ -480,7 +486,11 @@ class InitTracker(commands.Cog):
         out.extend(removed_messages)
 
         # send and commit
-        await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
+        await ctx.send(
+            "\n".join(out),
+            allowed_mentions=combat.get_turn_str_mentions(),
+            components=utils.combatant_interaction_components(combat.current_combatant),
+        )
         await combat.final()
 
     @init.command(name="prev", aliases=["previous", "rewind"])
@@ -495,7 +505,11 @@ class InitTracker(commands.Cog):
 
         combat.rewind_turn()
 
-        await ctx.send(combat.get_turn_str(), allowed_mentions=combat.get_turn_str_mentions())
+        await ctx.send(
+            combat.get_turn_str(),
+            allowed_mentions=combat.get_turn_str_mentions(),
+            components=utils.combatant_interaction_components(combat.current_combatant),
+        )
         await combat.final()
 
     @init.command(name="move", aliases=["goto"])
@@ -522,7 +536,11 @@ class InitTracker(commands.Cog):
                 combatant = await combat.select_combatant(target)
                 combat.goto_turn(combatant, True)
 
-        await ctx.send(combat.get_turn_str(), allowed_mentions=combat.get_turn_str_mentions())
+        await ctx.send(
+            combat.get_turn_str(),
+            allowed_mentions=combat.get_turn_str_mentions(),
+            components=utils.combatant_interaction_components(combat.current_combatant),
+        )
         await combat.final()
 
     @init.command(name="skipround", aliases=["round", "skiprounds"])
@@ -547,7 +565,11 @@ class InitTracker(commands.Cog):
             combat.remove_combatant(co)
             out.append("{} automatically removed from combat.".format(co.name))
 
-        await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
+        await ctx.send(
+            "\n".join(out),
+            allowed_mentions=combat.get_turn_str_mentions(),
+            components=utils.combatant_interaction_components(combat.current_combatant),
+        )
         await combat.final()
 
     @init.command(name="reroll", aliases=["shuffle"])
@@ -816,7 +838,7 @@ class InitTracker(commands.Cog):
             await ctx.send("No valid options found.")
 
     @init.command()
-    async def status(self, ctx, name: str = None, *, args: str = None):
+    async def status(self, ctx, name: str = None, *args):
         """
         Gets the status of a combatant or group.
         If no name is specified, it will default to current combatant.
@@ -834,7 +856,7 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant or group not found.")
             return
 
-        private = "private" in args.lower() or name == "private"
+        private = "private" in args or name == "private"
         if not isinstance(combatant, CombatantGroup):
             private = private and utils.can_see_combatant_details(ctx.author, combatant, combat)
             status = combatant.get_status(private=private)
@@ -851,7 +873,7 @@ class InitTracker(commands.Cog):
         if private:
             await ctx.author.send(f"```markdown\n{status}\n```")
         else:
-            await ctx.send(f"```markdown\n{status}\n```")
+            await ctx.send(f"```markdown\n{status}\n```", components=utils.combatant_interaction_components(combatant))
 
     @init.group(invoke_without_command=True)
     async def hp(self, ctx, name: str, *, hp: str = None):

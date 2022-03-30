@@ -1,6 +1,8 @@
 import abc
 from typing import List
 
+import disnake
+
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.attack import Attack, old_to_automation
 from utils.argparser import ParsedArguments
@@ -66,19 +68,29 @@ class ButtonInteraction(InitEffectInteraction):
 
     type = "button"
 
-    def __init__(self, automation, label: str, **kwargs):
+    def __init__(self, automation, label: str, style: disnake.ButtonStyle = disnake.ButtonStyle.primary, **kwargs):
         super().__init__(**kwargs)
         self.automation = automation
         self.label = label
+        self.style = style
 
     @classmethod
     def from_dict(cls, data):
         from cogs5e.models.automation import Automation
 
-        return cls(label=data["label"], automation=Automation.from_data(data["automation"]))
+        return cls(
+            automation=Automation.from_data(data["automation"]),
+            label=data["label"],
+            style=disnake.ButtonStyle(data["style"]),
+        )
 
     def to_dict(self):
-        return {"type": self.type, "label": self.label, "automation": self.automation.to_dict()}
+        return {
+            "type": self.type,
+            "automation": self.automation.to_dict(),
+            "label": self.label,
+            "style": int(self.style),
+        }
 
     def __str__(self):
         return self.label

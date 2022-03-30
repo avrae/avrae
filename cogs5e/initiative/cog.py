@@ -23,7 +23,16 @@ from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
 from utils.argparser import argparse
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
-from . import Combat, Combatant, CombatantGroup, InitiativeEffect, MonsterCombatant, PlayerCombatant, utils
+from . import (
+    Combat,
+    CombatOptions,
+    Combatant,
+    CombatantGroup,
+    InitiativeEffect,
+    MonsterCombatant,
+    PlayerCombatant,
+    utils,
+)
 from .upenn_nlp import NLPRecorder
 
 log = logging.getLogger(__name__)
@@ -80,21 +89,27 @@ class InitTracker(commands.Cog):
         await Combat.ensure_unique_chan(ctx)
         guild_settings = await ctx.get_server_settings()
 
-        options = {}
+        options = CombatOptions()
 
         args = argparse(args)
         if args.last("dyn", False, bool):  # rerolls all inits at the start of each round
-            options["dynamic"] = True
+            options.dynamic = True
         if "name" in args:
-            options["name"] = args.last("name")
-        if args.last("turnnotif", False, bool):
-            options["turnnotif"] = True
-        if args.last("deathdelete", False, bool):
-            options["deathdelete"] = True
+            options.name = args.last("name")
+        if "turnnotif" in args:
+            options.turnnotif = True
+        if "deathdelete" in args:
+            options.deathdelete = False
 
         temp_summary_msg = await ctx.send("```Awaiting combatants...```")
 
-        combat = Combat.new(str(ctx.channel.id), temp_summary_msg.id, str(ctx.author.id), options, ctx)
+        combat = Combat.new(
+            channel_id=str(ctx.channel.id),
+            message_id=temp_summary_msg.id,
+            dm_id=ctx.author.id,
+            options=options,
+            ctx=ctx,
+        )
 
         with suppress(disnake.HTTPException):
             await temp_summary_msg.pin()
@@ -138,7 +153,7 @@ class InitTracker(commands.Cog):
         """
         private = False
         place = None
-        controller = str(ctx.author.id)
+        controller = ctx.author.id
         group = None
         hp = None
         ac = None
@@ -164,7 +179,7 @@ class InitTracker(commands.Cog):
         if args.last("controller"):
             controller_name = args.last("controller")
             member = await commands.MemberConverter().convert(ctx, controller_name)
-            controller = str(member.id) if member is not None and not member.bot else controller
+            controller = member.id if member is not None and not member.bot else controller
         if args.last("group"):
             group = args.last("group")
         if args.last("hp"):
@@ -240,7 +255,7 @@ class InitTracker(commands.Cog):
 
         args = argparse(args)
         private = not args.last("h", type_=bool)
-        controller = str(ctx.author.id)
+        controller = ctx.author.id
         group = args.last("group")
         adv = args.adv(boolwise=True)
         b = args.join("b", "+")
@@ -376,7 +391,7 @@ class InitTracker(commands.Cog):
             embed.title = "{} already rolled initiative!".format(char.name)
             embed.description = "Placed at initiative `{}`.".format(init)
 
-        controller = str(ctx.author.id)
+        controller = ctx.author.id
         private = args.last("h", type_=bool)
 
         combat = await ctx.get_combat()
@@ -420,11 +435,11 @@ class InitTracker(commands.Cog):
             return
 
         # check: is the user allowed to move combat on
-        author_id = str(ctx.author.id)
+        author_id = ctx.author.id
         allowed_to_pass = (
             (combat.index is None)  # no one's turn
-            or author_id == combat.current_combatant.controller  # user's turn
-            or author_id == combat.dm  # user is combat starter
+            or author_id == combat.current_combatant.controller_id  # user's turn
+            or author_id == combat.dm_id  # user is combat starter
             or servsettings.is_dm(ctx.author)  # user is DM
         )
         if not allowed_to_pass:
@@ -434,7 +449,7 @@ class InitTracker(commands.Cog):
         # get the list of combatants to remove, but don't remove them yet (we need to advance the turn first
         # to prevent a re-sort happening if the last combatant on a turn is removed)
         to_remove = []
-        if combat.current_combatant is not None and not combat.options.get("deathdelete", False):
+        if combat.current_combatant is not None and combat.options.deathdelete:
             if isinstance(combat.current_combatant, CombatantGroup):
                 this_turn = combat.current_combatant.get_combatants()
             else:
@@ -495,7 +510,7 @@ class InitTracker(commands.Cog):
             return
 
         if target is None:
-            combatant = next((c for c in combat.get_combatants() if c.controller == str(ctx.author.id)), None)
+            combatant = next((c for c in combat.get_combatants() if c.controller_id == ctx.author.id), None)
             if combatant is None:
                 return await ctx.send("You do not control any combatants.")
             combat.goto_turn(combatant, True)
@@ -555,7 +570,7 @@ class InitTracker(commands.Cog):
         # repost summary message
         old_summary = combat.get_summary_msg()
         new_summary = await ctx.send(combat.get_summary())
-        combat.summary = new_summary.id
+        combat.summary_message_id = new_summary.id
         try:
             await new_summary.pin()
             await old_summary.unpin()
@@ -576,21 +591,21 @@ class InitTracker(commands.Cog):
         """
         args = argparse(settings)
         combat = await ctx.get_combat()
-        options = combat.options
+        options: CombatOptions = combat.options
         out = ""
 
         if args.last("dyn", False, bool):  # rerolls all inits at the start of each round
-            options["dynamic"] = not options.get("dynamic")
-            out += f"Dynamic initiative turned {'on' if options['dynamic'] else 'off'}.\n"
+            options.dynamic = not options.dynamic
+            out += f"Dynamic initiative turned {'on' if options.dynamic else 'off'}.\n"
         if args.last("name"):
-            options["name"] = args.last("name")
-            out += f"Name set to {options['name']}.\n"
+            options.name = args.last("name")
+            out += f"Name set to {options.name}.\n"
         if args.last("turnnotif", False, bool):
-            options["turnnotif"] = not options.get("turnnotif")
-            out += f"Turn notification turned {'on' if options['turnnotif'] else 'off'}.\n"
+            options.turnnotif = not options.turnnotif
+            out += f"Turn notification turned {'on' if options.turnnotif else 'off'}.\n"
         if args.last("deathdelete", default=False, type_=bool):
-            options["deathdelete"] = not options.get("deathdelete", False)
-            out += f"Monsters at 0 HP will be {'left' if options['deathdelete'] else 'removed'}.\n"
+            options.deathdelete = not options.deathdelete
+            out += f"Monsters at 0 HP will be {'removed' if options.deathdelete else 'left'}.\n"
 
         combat.options = options
         await combat.commit()
@@ -605,7 +620,7 @@ class InitTracker(commands.Cog):
         combat = await ctx.get_combat()
         private = "private" in args
         destination = ctx if not private else ctx.author
-        if private and str(ctx.author.id) == combat.dm:
+        if private and ctx.author.id == combat.dm_id:
             out = combat.get_summary(True)
         else:
             out = combat.get_summary()
@@ -702,7 +717,7 @@ class InitTracker(commands.Cog):
             if member.bot:
                 return "\u274c Bots cannot control combatants."
             allowed_mentions.add(member)
-            combatant.controller = str(member.id)
+            combatant.controller_id = member.id
             return f"\u2705 {combatant.name}'s controller set to {combatant.controller_mention()}."
 
         @option()
@@ -786,7 +801,7 @@ class InitTracker(commands.Cog):
                     response = await opt_func(target)
                     if response:
                         if target.is_private:
-                            destination = (await get_guild_member(ctx.guild, int(comb.controller))) or ctx.channel
+                            destination = (await get_guild_member(ctx.guild, comb.controller_id)) or ctx.channel
                         else:
                             destination = ctx.channel
                         out[destination].append(response)
@@ -820,14 +835,14 @@ class InitTracker(commands.Cog):
 
         private = "private" in args.lower() or name == "private"
         if not isinstance(combatant, CombatantGroup):
-            private = private and str(ctx.author.id) == combatant.controller
+            private = private and ctx.author.id == combatant.controller_id
             status = combatant.get_status(private=private)
             if private and isinstance(combatant, MonsterCombatant):
                 status = f"{status}\n* This creature is a {combatant.monster_name}."
         else:
             status = "\n".join(
                 [
-                    co.get_status(private=private and str(ctx.author.id) == co.controller)
+                    co.get_status(private=private and ctx.author.id == co.controller_id)
                     for co in combatant.get_combatants()
                 ]
             )
@@ -1106,7 +1121,7 @@ class InitTracker(commands.Cog):
     async def _attack_list(ctx, combatant, *args):
         combat = await ctx.get_combat()
 
-        if combatant.is_private and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
+        if combatant.is_private and combatant.controller_id != ctx.author.id and ctx.author.id != combat.dm_id:
             return await ctx.send("You do not have permission to view this combatant's attacks.")
 
         if not combatant.is_private:

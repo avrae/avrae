@@ -33,12 +33,12 @@ class Combatant(BaseCombatant, StatBlock):
         combat,
         id: str,
         name: str,
-        controller_id: str,
+        controller_id: int,
         private: bool,
         init: int,
         index: int = None,
         notes: str = None,
-        effects: list = None,
+        effects: List[InitiativeEffect] = None,
         group_id: str = None,
         # statblock info
         stats: BaseStats = None,
@@ -76,11 +76,11 @@ class Combatant(BaseCombatant, StatBlock):
         self.combat = combat
         self.id = id
 
-        self._controller = controller_id
-        self._init = init
-        self._private = private
+        self.controller_id = int(controller_id)
+        self.init = init
+        self.is_private = private
         self._index = index  # combat write only; position in combat
-        self._notes = notes
+        self.notes = notes
         self._effects = effects
         self._group_id = group_id
 
@@ -90,7 +90,7 @@ class Combatant(BaseCombatant, StatBlock):
     def new(
         cls,
         name: str,
-        controller_id: str,
+        controller_id: int,
         init: int,
         init_skill: Skill,
         max_hp: int,
@@ -134,7 +134,7 @@ class Combatant(BaseCombatant, StatBlock):
         d = super().to_dict()
         d.update(
             {
-                "controller_id": self.controller,
+                "controller_id": self.controller_id,
                 "init": self.init,
                 "private": self.is_private,
                 "index": self.index,
@@ -154,22 +154,6 @@ class Combatant(BaseCombatant, StatBlock):
     @name.setter
     def name(self, new_name):
         self._name = new_name
-
-    @property
-    def controller(self):
-        return self._controller
-
-    @controller.setter
-    def controller(self, new_controller_id):
-        self._controller = new_controller_id
-
-    @property
-    def init(self):
-        return self._init
-
-    @init.setter
-    def init(self, new_init):
-        self._init = new_init
 
     @property
     def init_skill(self):
@@ -233,14 +217,6 @@ class Combatant(BaseCombatant, StatBlock):
     @ac.setter
     def ac(self, new_ac):
         self._ac = new_ac
-
-    @property
-    def is_private(self):
-        return self._private
-
-    @is_private.setter
-    def is_private(self, new_privacy):
-        self._private = new_privacy
 
     @property
     def resistances(self):
@@ -311,14 +287,6 @@ class Combatant(BaseCombatant, StatBlock):
     @index.setter
     def index(self, new_index):
         self._index = new_index
-
-    @property
-    def notes(self):
-        return self._notes
-
-    @notes.setter
-    def notes(self, new_notes):
-        self._notes = new_notes
 
     @property
     def group(self):
@@ -438,15 +406,15 @@ class Combatant(BaseCombatant, StatBlock):
 
     # controller stuff
     def controller_mention(self):
-        return f"<@{self.controller}>"
+        return f"<@{self.controller_id}>"
 
     async def message_controller(self, ctx, *args, **kwargs):
         """Sends a message to the combatant's controller."""
         if ctx.guild is None:
             raise RequiresContext("message_controller requires a guild context.")
-        if int(self.controller) == ctx.bot.user.id:  # don't message self
+        if self.controller_id == ctx.bot.user.id:  # don't message self
             return
-        member = await get_guild_member(ctx.guild, int(self.controller))
+        member = await get_guild_member(ctx.guild, self.controller_id)
         if member is None:  # member is not in the guild, oh well
             return
         try:
@@ -538,7 +506,7 @@ class Combatant(BaseCombatant, StatBlock):
         return f"{self.name}: {self.hp_str()}".strip()
 
     def __hash__(self):
-        return hash(f"{self.combat.channel}.{self.name}")
+        return hash(f"{self.combat.channel_id}.{self.name}")
 
 
 class MonsterCombatant(Combatant):
@@ -552,12 +520,12 @@ class MonsterCombatant(Combatant):
         combat,
         id: str,
         name: str,
-        controller_id: str,
+        controller_id: int,
         private: bool,
         init: int,
         index: int = None,
         notes: str = None,
-        effects: list = None,
+        effects: List[InitiativeEffect] = None,
         group_id: str = None,
         # statblock info
         stats: BaseStats = None,
@@ -572,12 +540,12 @@ class MonsterCombatant(Combatant):
         hp: int = None,
         temp_hp: int = 0,
         # monster specific
-        monster_name=None,
-        monster_id=None,
-        creature_type=None,
+        monster_name: str = None,
+        monster_id: int = None,
+        creature_type: str = None,
         **_,
     ):
-        super(MonsterCombatant, self).__init__(
+        super().__init__(
             ctx,
             combat,
             id,
@@ -678,12 +646,12 @@ class PlayerCombatant(Combatant):
         combat,
         id: str,
         name: str,
-        controller_id: str,
+        controller_id: int,
         private: bool,
         init: int,
         index: int = None,
         notes: str = None,
-        effects: list = None,
+        effects: List[InitiativeEffect] = None,
         group_id: str = None,
         # statblock info
         attacks: AttackList = None,
@@ -691,8 +659,8 @@ class PlayerCombatant(Combatant):
         ac: int = None,
         max_hp: int = None,
         # character specific
-        character_id=None,
-        character_owner=None,
+        character_id: str = None,
+        character_owner: str = None,
         **_,
     ):
         # note that the player combatant doesn't initialize the statblock

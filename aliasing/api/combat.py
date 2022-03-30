@@ -33,7 +33,7 @@ class SimpleCombat:
                 self.current = SimpleCombatant(current)
         else:
             self.current = None
-        self.name = self._combat.options.get("name")
+        self.name = self._combat.options.name
 
     @classmethod
     def from_ctx(cls, ctx):
@@ -95,11 +95,11 @@ class SimpleCombat:
         """
         key = str(k)
         value = str(v)
-        previous_metadata_size = sum(len(ke) + len(va) for ke, va in self._combat._metadata.items() if ke != key)
+        previous_metadata_size = sum(len(ke) + len(va) for ke, va in self._combat.metadata.items() if ke != key)
         new_metadata_size = len(key) + len(value)
         if previous_metadata_size + new_metadata_size > MAX_METADATA_SIZE:
             raise ValueError("Combat metadata is too large")
-        self._combat._metadata[key] = value
+        self._combat.metadata[key] = value
 
     def get_metadata(self, k: str, default=None) -> str:
         """
@@ -111,7 +111,7 @@ class SimpleCombat:
         >>> get_metadata("Test")
         '{"Status": ["Mario", 1, 2]}'
         """
-        return self._combat._metadata.get(str(k), default)
+        return self._combat.metadata.get(str(k), default)
 
     def delete_metadata(self, k: str) -> Optional[str]:
         """
@@ -124,7 +124,7 @@ class SimpleCombat:
         >>> delete_metadata("Test")
         '{"Status": ["Mario", 1, 2]}'
         """
-        return self._combat._metadata.pop(str(k), None)
+        return self._combat.metadata.pop(str(k), None)
 
     def set_round(self, round_num: int):
         """
@@ -218,7 +218,7 @@ class SimpleCombatant(AliasStatBlock):
 
         :rtype: int
         """
-        return int(self._combatant.controller)
+        return self._combatant.controller_id
 
     @property
     def group(self):

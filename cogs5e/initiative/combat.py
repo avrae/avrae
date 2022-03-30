@@ -1,11 +1,11 @@
 import asyncio
 from functools import cached_property
-from typing import Any, List, Optional, TYPE_CHECKING
+from typing import Any, List, Literal, Optional, TYPE_CHECKING, Tuple, overload
 
 import cachetools
-import discord
-import disnake.ext.commands
+import disnake
 from d20 import roll
+from pydantic import BaseModel
 
 from cogs5e.models.errors import NoCharacter
 from utils.functions import search_and_select
@@ -18,29 +18,39 @@ COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
 # ==== typing ====
 _NLPRecorderT = Any
+_CtxT = Any
 if TYPE_CHECKING:
     import cogs5e.initiative
     from .upenn_nlp import NLPRecorder
+    from utils.context import AvraeContext
 
     _NLPRecorderT = NLPRecorder
+    _CtxT = AvraeContext
 
 
 # ==== code ====
+class CombatOptions(BaseModel):
+    dynamic: bool = False
+    turnnotif: bool = False
+    deathdelete: bool = True
+    name: Optional[str] = None
+
+
 class Combat:
-    # cache combats for 10 seconds to avoid race conditions
+    # we cache up to 500 combats in memory for a short period
     # this makes sure that multiple calls to Combat.from_ctx() in the same invocation or two simultaneous ones
     # retrieve/modify the same Combat state
     # caches based on channel id
     # probably won't encounter any scaling issues, since a combat will be shard-specific
-    _cache = cachetools.TTLCache(maxsize=50, ttl=10)
+    _cache: cachetools.TTLCache[str, "Combat"] = cachetools.TTLCache(maxsize=500, ttl=10)
 
     def __init__(
         self,
         channel_id: str,
         message_id: int,
-        dm_id: str,
-        options: dict,
-        ctx: disnake.ext.commands.Context,
+        dm_id: int,
+        options: CombatOptions,
+        ctx: _CtxT,
         combatants: List[Combatant] = None,
         round_num: int = 0,
         turn_num: int = 0,
@@ -53,29 +63,28 @@ class Combat:
         if metadata is None:
             metadata = {}
         self._channel = str(channel_id)  # readonly
-        self._summary = int(message_id)  # readonly
-        self._dm = str(dm_id)
-        self._options = options  # readonly (?)
+        self.summary_message_id = int(message_id)  # readonly
+        self.dm_id = int(dm_id)
+        self.options = options
         self._combatants = combatants
-        self._round = round_num
+        self.round_num = round_num
         self._turn = turn_num
         self._current_index = current_index
         self.ctx = ctx
-        self._metadata = metadata
+        self.metadata = metadata
         self.nlp_record_session_id = nlp_record_session_id
 
     @classmethod
-    def new(cls, channel_id, message_id, dm_id, options, ctx):
+    def new(cls, channel_id: str, message_id: int, dm_id: int, options: CombatOptions, ctx: _CtxT):
         return cls(channel_id, message_id, dm_id, options, ctx)
 
     # async deser
     @classmethod
     async def from_ctx(cls, ctx):  # cached
-        channel_id = str(ctx.channel.id)
-        return await cls.from_id(channel_id, ctx)
+        return await cls.from_id(str(ctx.channel.id), ctx)
 
     @classmethod
-    async def from_id(cls, channel_id, ctx):
+    async def from_id(cls, channel_id: str, ctx):
         try:
             return cls._cache[channel_id]
         except KeyError:
@@ -89,18 +98,19 @@ class Combat:
 
     @classmethod
     async def from_dict(cls, raw, ctx):
+        # noinspection DuplicatedCode
         inst = cls(
-            raw["channel"],
-            raw["summary"],
-            raw["dm"],
-            raw["options"],
-            ctx,
-            [],
-            raw["round"],
-            raw["turn"],
-            raw["current"],
-            raw.get("metadata"),
-            raw.get("nlp_record_session_id"),
+            channel_id=raw["channel"],
+            message_id=raw["summary"],
+            dm_id=raw["dm"],
+            options=CombatOptions.parse_obj(raw["options"]),
+            ctx=ctx,
+            combatants=[],
+            round_num=raw["round"],
+            turn_num=raw["turn"],
+            current_index=raw["current"],
+            metadata=raw.get("metadata"),
+            nlp_record_session_id=raw.get("nlp_record_session_id"),
         )
         for c in raw["combatants"]:
             inst._combatants.append(await deserialize_combatant(c, ctx, inst))
@@ -123,18 +133,19 @@ class Combat:
 
     @classmethod
     def from_dict_sync(cls, raw, ctx):
+        # noinspection DuplicatedCode
         inst = cls(
-            raw["channel"],
-            raw["summary"],
-            raw["dm"],
-            raw["options"],
-            ctx,
-            [],
-            raw["round"],
-            raw["turn"],
-            raw["current"],
-            raw.get("metadata"),
-            raw.get("nlp_record_session_id"),
+            channel_id=raw["channel"],
+            message_id=raw["summary"],
+            dm_id=raw["dm"],
+            options=CombatOptions.parse_obj(raw["options"]),
+            ctx=ctx,
+            combatants=[],
+            round_num=raw["round"],
+            turn_num=raw["turn"],
+            current_index=raw["current"],
+            metadata=raw.get("metadata"),
+            nlp_record_session_id=raw.get("nlp_record_session_id"),
         )
         for c in raw["combatants"]:
             inst._combatants.append(deserialize_combatant_sync(c, ctx, inst))
@@ -142,57 +153,29 @@ class Combat:
 
     def to_dict(self):
         return {
-            "channel": self.channel,
-            "summary": self.summary,
-            "dm": self.dm,
-            "options": self.options,
+            "channel": self._channel,
+            "summary": self.summary_message_id,
+            "dm": self.dm_id,
+            "options": self.options.dict(skip_defaults=True),
             "combatants": [c.to_dict() for c in self._combatants],
             "turn": self.turn_num,
             "round": self.round_num,
             "current": self._current_index,
-            "metadata": self._metadata,
+            "metadata": self.metadata,
             "nlp_record_session_id": self.nlp_record_session_id,
         }
 
     # members
     @property
-    def channel(self):
-        return self._channel
-
-    @property
-    def summary(self):
-        return self._summary
-
-    @summary.setter
-    def summary(self, new_summary: int):
-        self._summary = new_summary
-
-    @property
-    def dm(self):
-        return self._dm
-
-    @property
-    def options(self):
-        return self._options
-
-    @options.setter
-    def options(self, value):
-        self._options = value
-
-    @property
-    def round_num(self):
-        return self._round
-
-    @round_num.setter
-    def round_num(self, value):
-        self._round = value
+    def channel_id(self) -> int:
+        return int(self._channel)
 
     @property  # private write
-    def turn_num(self):
+    def turn_num(self) -> int:
         return self._turn
 
     @property  # private write
-    def index(self):
+    def index(self) -> Optional[int]:
         return self._current_index
 
     @property
@@ -210,19 +193,19 @@ class Combat:
         return tuple(self._combatants)
 
     @property
-    def current_combatant(self):
+    def current_combatant(self) -> Optional[Combatant]:
         """
         The combatant whose turn it currently is.
-
-        :rtype: Combatant
         """
         if self.index is None:
             return None
         return self._combatants[self.index]
 
     @property
-    def next_combatant(self):
-        """The combatant whose turn it will be when advance_turn() is called."""
+    def next_combatant(self) -> Optional[Combatant]:
+        """
+        The combatant whose turn it will be when advance_turn() is called. Returns None iff the combatant list is empty.
+        """
         if len(self._combatants) == 0:
             return None
         if self.index is None:
@@ -242,7 +225,7 @@ class Combat:
             return None
         return combat_cog.nlp
 
-    def get_combatants(self, groups=False):
+    def get_combatants(self, groups=False) -> List[Combatant]:
         """
         Returns a list of all Combatants in a combat, regardless of if they are in a group.
         Differs from ._combatants since that won't yield combatants in groups.
@@ -260,29 +243,23 @@ class Combat:
                     combatants.append(c)
         return combatants
 
-    def get_groups(self):
+    def get_groups(self) -> List[CombatantGroup]:
         """
         Returns a list of all CombatantGroups in a combat
         :return: A list of all CombatantGroups
         """
         return [g for g in self._combatants if isinstance(g, CombatantGroup)]
 
-    def add_combatant(self, combatant):
+    def add_combatant(self, combatant: Combatant):
         """
         Adds a combatant to combat, and sorts the combatant list by init.
-
-        :type combatant: Combatant
         """
         self._combatants.append(combatant)
         self.sort_combatants()
 
-    def remove_combatant(self, combatant, ignore_remove_hook=False):
+    def remove_combatant(self, combatant: Combatant, ignore_remove_hook=False):
         """
         Removes a combatant from combat, sorts the combatant list by init (updates index), and fires the remove hook.
-
-        :type combatant: Combatant
-        :param bool ignore_remove_hook: Whether or not to ignore the remove hook.
-        :rtype: Combatant
         """
         if not ignore_remove_hook:
             combatant.on_remove()
@@ -292,7 +269,6 @@ class Combat:
         else:
             self.get_group(combatant.group).remove_combatant(combatant)
             self._check_empty_groups()
-        return self
 
     def sort_combatants(self):
         """
@@ -317,11 +293,11 @@ class Combat:
         else:
             self._current_index = None
 
-    def combatant_by_id(self, combatant_id):
+    def combatant_by_id(self, combatant_id: str) -> Optional[Combatant]:
         """Gets a combatant by their ID."""
         return self._combatant_id_map.get(combatant_id)
 
-    def get_combatant(self, name, strict=None):
+    def get_combatant(self, name: str, strict=None) -> Optional[Combatant]:
         """Gets a combatant by their name or ID.
 
         :param name: The name or id of the combatant.
@@ -341,7 +317,9 @@ class Combat:
             combatant = next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
         return combatant
 
-    def get_group(self, name, create=None, strict=None):
+    def get_group(
+        self, name: str, create: Optional[int] = None, strict: Optional[bool] = None
+    ) -> Optional[CombatantGroup]:
         """
         Gets a combatant group by its name or ID.
 
@@ -379,7 +357,7 @@ class Combat:
         if removed:
             self.sort_combatants()
 
-    def reroll_dynamic(self):
+    def reroll_dynamic(self) -> str:
         """
         Rerolls all combatant initiatives. Returns a string representing the new init order.
         """
@@ -410,7 +388,15 @@ class Combat:
         self._turn = 0
         self._current_index = None
 
-    async def select_combatant(self, name, choice_message=None, select_group=False):
+    @overload
+    async def select_combatant(
+        self, name: str, choice_message: Optional[str] = None, select_group: Literal[True] = False
+    ) -> Optional[Combatant | CombatantGroup]:
+        ...
+
+    async def select_combatant(
+        self, name: str, choice_message: Optional[str] = None, select_group: Literal[False] = False
+    ) -> Optional[Combatant]:
         """
         Opens a prompt for a user to select the combatant they were searching for.
 
@@ -429,8 +415,12 @@ class Combat:
             selectkey=lambda c: f"{c.name} {c.hp_str()}",
         )
 
-    def advance_turn(self):
-        """Advances the turn. If any caveats should be noted, returns them in messages."""
+    def advance_turn(self) -> Tuple[bool, List[str]]:
+        """
+        Advances the turn. If any caveats should be noted, returns them in messages.
+
+        :returns: A tuple (changed_round, list_of_messages).
+        """
         if len(self._combatants) == 0:
             raise NoCombatants
 
@@ -442,12 +432,12 @@ class Combat:
         changed_round = False
         if self.index is None:  # new round, no dynamic reroll
             self._current_index = 0
-            self._round += 1
+            self.round_num += 1
         elif self.index + 1 >= len(self._combatants):  # new round
-            if self.options.get("dynamic"):
+            if self.options.dynamic:
                 messages.append(f"New initiatives:\n{self.reroll_dynamic()}")
             self._current_index = 0
-            self._round += 1
+            self.round_num += 1
             changed_round = True
         else:
             self._current_index += 1
@@ -467,13 +457,13 @@ class Combat:
             self._current_index = len(self._combatants) - 1
         elif self.index == 0:  # new round
             self._current_index = len(self._combatants) - 1
-            self._round -= 1
+            self.round_num -= 1
         else:
             self._current_index -= 1
 
         self._turn = self.current_combatant.init
 
-    def goto_turn(self, init_num, is_combatant=False):
+    def goto_turn(self, init_num: int | Combatant, is_combatant=False):
         if len(self._combatants) == 0:
             raise NoCombatants
 
@@ -493,14 +483,14 @@ class Combat:
 
         self._turn = self.current_combatant.init
 
-    def skip_rounds(self, num_rounds):
+    def skip_rounds(self, num_rounds: int):
         messages = []
 
-        self._round += num_rounds
+        self.round_num += num_rounds
         for com in self.get_combatants():
             com.on_turn(num_rounds)
             com.on_turn_end(num_rounds)
-        if self.options.get("dynamic"):
+        if self.options.dynamic:
             messages.append(f"New initiatives:\n{self.reroll_dynamic()}")
 
         return messages
@@ -509,14 +499,14 @@ class Combat:
         """Ends combat in a channel."""
         for c in self._combatants:
             c.on_remove()
-        await self.ctx.bot.mdb.combats.delete_one({"channel": self.channel})
+        await self.ctx.bot.mdb.combats.delete_one({"channel": self._channel})
         try:
-            del Combat._cache[self.channel]
+            del Combat._cache[self._channel]
         except KeyError:
             pass
 
     # stringification
-    def get_turn_str(self):
+    def get_turn_str(self) -> Optional[str]:
         """Gets the string representing the current turn, and all combatants on it."""
         combatant = self.current_combatant
 
@@ -538,29 +528,29 @@ class Combat:
                 f"({combatant.controller_mention()})\n```md\n{combatant.get_status()}```"
             )
 
-        if self.options.get("turnnotif"):
-            nextTurn = self.next_combatant
-            out += f"**Next up**: {nextTurn.name} ({nextTurn.controller_mention()})\n"
+        if self.options.turnnotif:
+            next_combatant = self.next_combatant
+            out += f"**Next up**: {next_combatant.name} ({next_combatant.controller_mention()})\n"
         return out
 
-    def get_turn_str_mentions(self):
-        """Gets the :class:`discord.AllowedMentions` for the users mentioned in the current turn str."""
+    def get_turn_str_mentions(self) -> disnake.AllowedMentions:
+        """Gets the :class:`disnake.AllowedMentions` for the users mentioned in the current turn str."""
         if self.current_combatant is None:
-            return discord.AllowedMentions.none()
+            return disnake.AllowedMentions.none()
         if isinstance(self.current_combatant, CombatantGroup):
             # noinspection PyUnresolvedReferences
-            user_ids = {discord.Object(id=int(comb.controller)) for comb in self.current_combatant.get_combatants()}
+            user_ids = {disnake.Object(id=comb.controller_id) for comb in self.current_combatant.get_combatants()}
         else:
-            user_ids = {discord.Object(id=int(self.current_combatant.controller))}
+            user_ids = {disnake.Object(id=self.current_combatant.controller_id)}
 
-        if self.options.get("turnnotif") and self.next_combatant is not None:
-            user_ids.add(discord.Object(id=int(self.next_combatant.controller)))
-        return discord.AllowedMentions(users=list(user_ids))
+        if self.options.turnnotif and self.next_combatant is not None:
+            user_ids.add(disnake.Object(id=self.next_combatant.controller_id))
+        return disnake.AllowedMentions(users=list(user_ids))
 
-    def get_summary(self, private=False):
+    def get_summary(self, private=False) -> str:
         """Returns the generated summary message (pinned) content."""
         combatants = self._combatants
-        name = self.options.get("name") if self.options.get("name") else "Current initiative"
+        name = self.options.name or "Current initiative"
 
         out = f"```md\n{name}: {self.turn_num} (round {self.round_num})\n"
         out += f"{'=' * (len(out) - 7)}\n"
@@ -587,7 +577,9 @@ class Combat:
             if isinstance(pc, PlayerCombatant):
                 await pc.character.commit(self.ctx)
         await self.ctx.bot.mdb.combats.update_one(
-            {"channel": self.channel}, {"$set": self.to_dict(), "$currentDate": {"lastchanged": True}}, upsert=True
+            {"channel": self._channel},
+            {"$set": self.to_dict(), "$currentDate": {"lastchanged": True}},
+            upsert=True,
         )
 
     async def final(self):
@@ -605,25 +597,28 @@ class Combat:
 
     async def update_summary(self):
         """Edits the summary message with the latest summary."""
-        await self.get_summary_msg().edit(content=self.get_summary())
+        try:
+            await self.get_summary_msg().edit(content=self.get_summary())
+        except disnake.HTTPException:
+            pass
 
-    def get_channel(self):
+    def get_channel(self) -> disnake.TextChannel | disnake.Thread:
         """Gets the Channel object of the combat."""
         if self.ctx:
             return self.ctx.channel
         else:
-            chan = self.ctx.bot.get_channel(int(self.channel))
+            chan = self.ctx.bot.get_channel(self.channel_id)
             if chan:
                 return chan
             else:
                 raise CombatChannelNotFound()
 
-    def get_summary_msg(self):
+    def get_summary_msg(self) -> disnake.PartialMessage:
         """Gets the Message object of the combat summary."""
-        return discord.PartialMessage(channel=self.get_channel(), id=self.summary)
+        return disnake.PartialMessage(channel=self.get_channel(), id=self.summary_message_id)
 
     def __str__(self):
-        return f"Initiative in <#{self.channel}>"
+        return f"Initiative in <#{self.channel_id}>"
 
 
 async def deserialize_combatant(raw_combatant, ctx, combat):

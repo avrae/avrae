@@ -266,7 +266,7 @@ class AutomationTarget:
 
             if isinstance(self.target, init.Combatant):
                 if self.target.is_private:
-                    autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
+                    autoctx.add_pm(self.target.controller_id, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
 
                 if self.target.is_concentrating() and amount > 0:
                     autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")

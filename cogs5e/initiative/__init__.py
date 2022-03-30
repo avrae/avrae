@@ -1,4 +1,4 @@
-from .combat import Combat
+from .combat import Combat, CombatOptions
 from .combatant import Combatant, MonsterCombatant, PlayerCombatant
 from .effects import InitiativeEffect
 from .errors import *

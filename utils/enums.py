@@ -22,3 +22,4 @@ class CritDamageType(enum.IntEnum):
     NORMAL = 0
     MAX_ADD = 1
     DOUBLE_ALL = 2
+    DOUBLE_DICE = 3

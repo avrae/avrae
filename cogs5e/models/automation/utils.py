@@ -78,6 +78,13 @@ def crit_mapper(node: d20.ast.Node):
     return node
 
 
+def double_dice_crit_mapper(node: d20.ast.Node):
+    """A function that doubles the number of dice for each Dice AST node."""
+    if isinstance(node, d20.ast.Dice):
+        return d20.ast.BinOp(d20.ast.Parenthetical(node), "*", d20.ast.Literal(2))
+    return node
+
+
 def crit_dice_gen(dice_ast: d20.ast.Node, critdice: int):
     """A function that finds the size of left most Dice AST node and generates crit dice based on that."""
     left = dice_ast

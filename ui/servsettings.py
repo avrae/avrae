@@ -307,6 +307,7 @@ _CRIT_TYPE_OPTIONS = [
     disnake.SelectOption(label="Double Dice Number (Default)", value=str(CritDamageType.NORMAL.value)),
     disnake.SelectOption(label="Add Max Dice Value", value=str(CritDamageType.MAX_ADD.value)),
     disnake.SelectOption(label="Double Total", value=str(CritDamageType.DOUBLE_ALL.value)),
+    disnake.SelectOption(label="Double Dice Total", value=str(CritDamageType.DOUBLE_DICE.value)),
 ]
 
 
@@ -362,10 +363,11 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Crit Damage Type",
             value=f"**{crit_type_desc(self.settings.crit_type)}**\n"
-            f"_This affects how critical damage is treated on the server. Default is to double the amount of dice"
-            f"rolled (`2d8 + 4` -> `4d8 + 4`), 'Add Max Dice Value' will add the maximum value of each die to the "
-            f"total (`2d8 + 4` -> `2d8 + 4 + 16`), and double total will double everything (`2d8 + 4` -> `(2d8 + 4) "
-            f"* 2`)._",
+            f'_This affects how critical damage is treated on the server. "Double Dice Amount" doubles the amount of '
+            f'dice rolled (`2d8 + 4` -> `4d8 + 4`). "Add Max Dice Value" will add the maximum value of each die to '
+            f'the total (`2d8 + 4` -> `2d8 + 4 + 16`). "Double Total" will double everything (`2d8 + 4` -> `'
+            f'(2d8 + 4) * 2`). "Double Dice Toal" will double the total value of the dice rolled (`2d8 + 4` -> `(2d8) '
+            f"* 2 + 4`)._",
             inline=False,
         )
 
@@ -395,4 +397,6 @@ def crit_type_desc(mode):
         else "Add Max Dice Value"
         if mode == CritDamageType.MAX_ADD
         else "Double Total"
+        if mode == CritDamageType.DOUBLE_ALL
+        else "Double Dice Total"
     )

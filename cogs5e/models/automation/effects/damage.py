@@ -100,10 +100,12 @@ class Damage(Effect):
                 dice_ast = d20.utils.tree_map(utils.max_add_crit_mapper, dice_ast)
             elif crit_damage_type == CritDamageType.DOUBLE_ALL:
                 dice_ast.roll = d20.ast.BinOp(d20.ast.Parenthetical(dice_ast.roll), "*", d20.ast.Literal(2))
+            elif crit_damage_type == CritDamageType.DOUBLE_DICE:
+                dice_ast = d20.utils.tree_map(utils.double_dice_crit_mapper, dice_ast)
             else:
                 dice_ast = d20.utils.tree_map(utils.crit_mapper, dice_ast)
             if critdice and not autoctx.is_spell:
-                if crit_damage_type == CritDamageType.DOUBLE_ALL:
+                if crit_damage_type in (CritDamageType.DOUBLE_ALL, CritDamageType.DOUBLE_DICE):
                     crit_ast = utils.crit_dice_gen(dice_ast, critdice)
                     dice_ast.roll = d20.ast.BinOp(dice_ast.roll, "+", crit_ast)
                 else:

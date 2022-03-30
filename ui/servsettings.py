@@ -366,7 +366,7 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
             f'_This affects how critical damage is treated on the server. "Double Dice Amount" doubles the amount of '
             f'dice rolled (`2d8 + 4` -> `4d8 + 4`). "Add Max Dice Value" will add the maximum value of each die to '
             f'the total (`2d8 + 4` -> `2d8 + 4 + 16`). "Double Total" will double everything (`2d8 + 4` -> `'
-            f'(2d8 + 4) * 2`). "Double Dice Toal" will double the total value of the dice rolled (`2d8 + 4` -> `(2d8) '
+            f'(2d8 + 4) * 2`). "Double Dice Total" will double the total value of the dice rolled (`2d8 + 4` -> `(2d8) '
             f"* 2 + 4`)._",
             inline=False,
         )

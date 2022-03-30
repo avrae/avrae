@@ -303,6 +303,8 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
 
         # run
         automation_result = None
+        guild_settings = await ctx.get_server_settings()
+        crit_type = guild_settings.crit_type
         if self.automation and self.automation.effects:
             title = f"{caster.name} cast {self.name}!"
             automation_result = await self.automation.run(
@@ -318,6 +320,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
                 dc_override=dc_override,
                 spell_override=spell_override,
                 title=title,
+                crit_type=crit_type,
             )
         else:  # no automation, display spell description
             phrase = args.join("phrase", "\n")

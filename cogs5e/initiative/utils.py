@@ -27,3 +27,10 @@ async def nlp_feature_flag_enabled(bot):
         {"key": "anonymous", "anonymous": True},
         default=False,
     )
+
+
+def can_see_combatant_details(author, combatant, combat) -> bool:
+    """Returns whether the given author is allowed to see the given combatant's details (e.g. with ``private``)."""
+    if combatant.is_private:
+        return author.id == combatant.controller_id or author.id == combat.dm_id
+    return True

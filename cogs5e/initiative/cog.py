@@ -816,15 +816,16 @@ class InitTracker(commands.Cog):
             await ctx.send("No valid options found.")
 
     @init.command()
-    async def status(self, ctx, name: str = "", *, args: str = ""):
-        """Gets the status of a combatant or group.
+    async def status(self, ctx, name: str = None, *, args: str = None):
+        """
+        Gets the status of a combatant or group.
         If no name is specified, it will default to current combatant.
         __Valid Arguments__
-        `private` - PMs the controller of the combatant a more detailed status."""
-
+        `private` - If you are the combat DM or controller of the target, PMs you the full unhidden status.
+        """
         combat = await ctx.get_combat()
 
-        if name == "private" or name == "":
+        if name == "private" or name is None:
             combatant = combat.current_combatant
         else:
             combatant = await combat.select_combatant(name, select_group=True)
@@ -835,22 +836,22 @@ class InitTracker(commands.Cog):
 
         private = "private" in args.lower() or name == "private"
         if not isinstance(combatant, CombatantGroup):
-            private = private and ctx.author.id == combatant.controller_id
+            private = private and utils.can_see_combatant_details(ctx.author, combatant, combat)
             status = combatant.get_status(private=private)
             if private and isinstance(combatant, MonsterCombatant):
                 status = f"{status}\n* This creature is a {combatant.monster_name}."
         else:
             status = "\n".join(
                 [
-                    co.get_status(private=private and ctx.author.id == co.controller_id)
+                    co.get_status(private=private and utils.can_see_combatant_details(ctx.author, co, combat))
                     for co in combatant.get_combatants()
                 ]
             )
 
         if private:
-            await combatant.message_controller(ctx, f"```markdown\n{status}```")
+            await ctx.author.send(f"```markdown\n{status}\n```")
         else:
-            await ctx.send("```markdown\n" + status + "```")
+            await ctx.send(f"```markdown\n{status}\n```")
 
     @init.group(invoke_without_command=True)
     async def hp(self, ctx, name: str, *, hp: str = None):
@@ -1121,7 +1122,7 @@ class InitTracker(commands.Cog):
     async def _attack_list(ctx, combatant, *args):
         combat = await ctx.get_combat()
 
-        if combatant.is_private and combatant.controller_id != ctx.author.id and ctx.author.id != combat.dm_id:
+        if not utils.can_see_combatant_details(ctx.author, combatant, combat):
             return await ctx.send("You do not have permission to view this combatant's attacks.")
 
         if not combatant.is_private:

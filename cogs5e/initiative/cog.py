@@ -1073,11 +1073,11 @@ class InitTracker(commands.Cog):
         aliases=["a", "action"],
         invoke_without_command=True,
         help=f"""
-    Rolls an attack against another combatant.
-    __**Valid Arguments**__
-    {VALID_AUTOMATION_ARGS}
-    -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
-    """,
+        Rolls an attack against another combatant.
+        __**Valid Arguments**__
+        {VALID_AUTOMATION_ARGS}
+        -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+        """,
     )
     async def attack(self, ctx, atk_name=None, *, args=""):
         combat = await ctx.get_combat()
@@ -1100,11 +1100,11 @@ class InitTracker(commands.Cog):
 
     @init.command(
         help=f"""
-    Rolls an attack against another combatant.
-    __**Valid Arguments**__
-    {VALID_AUTOMATION_ARGS}
-    -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
-    """
+        Rolls an attack against another combatant.
+        __**Valid Arguments**__
+        {VALID_AUTOMATION_ARGS}
+        -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+        """
     )
     async def aoo(self, ctx, combatant_name, atk_name=None, *, args=""):
         combat = await ctx.get_combat()
@@ -1207,9 +1207,9 @@ class InitTracker(commands.Cog):
     @init.command(
         aliases=["c"],
         help=f"""
-    Rolls an ability check as the current combatant.
-    {VALID_CHECK_ARGS}
-    """,
+        Rolls an ability check as the current combatant.
+        {VALID_CHECK_ARGS}
+        """,
     )
     async def check(self, ctx, check, *, args=""):
         return await self._check(ctx, None, check, args)
@@ -1217,9 +1217,9 @@ class InitTracker(commands.Cog):
     @init.command(
         aliases=["oc"],
         help=f"""
-    Rolls an ability check as another combatant.
-    {VALID_CHECK_ARGS}
-    """,
+        Rolls an ability check as another combatant.
+        {VALID_CHECK_ARGS}
+        """,
     )
     async def offturncheck(self, ctx, combatant_name, check, *, args=""):
         return await self._check(ctx, combatant_name, check, args)
@@ -1257,9 +1257,9 @@ class InitTracker(commands.Cog):
     @init.command(
         aliases=["s"],
         help=f"""
-    Rolls an ability save as the current combatant.
-    {VALID_SAVE_ARGS}
-    """,
+        Rolls an ability save as the current combatant.
+        {VALID_SAVE_ARGS}
+        """,
     )
     async def save(self, ctx, save, *, args=""):
         return await self._save(ctx, None, save, args)
@@ -1267,9 +1267,9 @@ class InitTracker(commands.Cog):
     @init.command(
         aliases=["os"],
         help=f"""
-    Rolls an ability save as another combatant.
-    {VALID_CHECK_ARGS}
-    """,
+        Rolls an ability save as another combatant.
+        {VALID_CHECK_ARGS}
+        """,
     )
     async def offturnsave(self, ctx, combatant_name, save, *, args=""):
         return await self._save(ctx, combatant_name, save, args)
@@ -1305,12 +1305,12 @@ class InitTracker(commands.Cog):
 
     @init.command(
         help=f"""
-    Casts a spell against another combatant.
-    __**Valid Arguments**__
-    {VALID_SPELLCASTING_ARGS}
-    
-    {VALID_AUTOMATION_ARGS}
-    """
+        Casts a spell against another combatant.
+        __**Valid Arguments**__
+        {VALID_SPELLCASTING_ARGS}
+        
+        {VALID_AUTOMATION_ARGS}
+        """
     )
     async def cast(self, ctx, spell_name, *, args=""):
         return await self._cast(ctx, None, spell_name, args)
@@ -1318,12 +1318,12 @@ class InitTracker(commands.Cog):
     @init.command(
         aliases=["rc"],
         help=f"""
-    Casts a spell against another combatant.
-    __**Valid Arguments**__
-    {VALID_SPELLCASTING_ARGS}
-    
-    {VALID_AUTOMATION_ARGS}
-    """,
+        Casts a spell against another combatant.
+        __**Valid Arguments**__
+        {VALID_SPELLCASTING_ARGS}
+        
+        {VALID_AUTOMATION_ARGS}
+        """,
     )
     async def reactcast(self, ctx, combatant_name, spell_name, *, args=""):
         return await self._cast(ctx, combatant_name, spell_name, args)

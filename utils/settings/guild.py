@@ -1,7 +1,8 @@
 import enum
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Literal
 
 import disnake
+from pydantic import BaseModel
 
 from . import SettingsBaseModel
 
@@ -12,6 +13,12 @@ class InlineRollingType(enum.IntEnum):
     DISABLED = 0
     REACTION = 1
     ENABLED = 2
+
+
+class RandcharRule(BaseModel):
+    type: Literal["gt", "lt"]
+    amount: int
+    value: int
 
 
 class ServerSettings(SettingsBaseModel):
@@ -31,8 +38,7 @@ class ServerSettings(SettingsBaseModel):
     randchar_num: int = 6
     randchar_min: int = None
     randchar_max: int = None
-    randchar_over: Dict[str, int] = None
-    randchar_under: Dict[str, int] = None
+    randchar_rules: List[RandcharRule] = None
 
     # ==== lifecycle ====
     @classmethod

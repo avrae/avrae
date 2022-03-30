@@ -8,7 +8,7 @@ import disnake
 from utils.aldclient import discord_user_to_dict
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import natural_join
-from utils.settings.guild import InlineRollingType, ServerSettings
+from utils.settings.guild import InlineRollingType, ServerSettings, RandcharRule
 from .menu import MenuBase
 
 _AvraeT = TypeVar("_AvraeT", bound=disnake.Client)
@@ -18,6 +18,15 @@ if TYPE_CHECKING:
     _AvraeT = Avrae
 
 TOO_MANY_ROLES_SENTINEL = "__special:too_many_roles"
+
+
+def get_over_under_desc(rules) -> str:
+    if not rules:
+        return "None"
+    out = []
+    for rule in rules:
+        out.append(f"{rule.amount} {'over' if rule.type == 'gt' else 'under'} {rule.value}")
+    return f"At least {', '.join(out)}"
 
 
 class ServerSettingsMenuBase(MenuBase, abc.ABC):
@@ -45,15 +54,6 @@ class ServerSettingsMenuBase(MenuBase, abc.ABC):
                 "and react with :game_die: - click the reaction to roll!"
             )
         return "Inline rolling is currently **enabled**. I'll roll any `[[dice]]` I find in messages!"
-
-    def get_over_under_desc(self, setting: str = None) -> str:
-        settings = getattr(self.settings, f"randchar_{setting}")
-        if not settings:
-            return "None"
-        out = []
-        for val, num in settings.items():
-            out.append(f"{num} {setting} {val}")
-        return f"At least {', '.join(out)}"
 
 
 class ServerSettingsUI(ServerSettingsMenuBase):
@@ -109,8 +109,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             f"**Stat Names:** {', '.join(self.settings.randchar_stat_names or [stat.upper() for stat in STAT_ABBREVIATIONS])}\n"
             f"**Minimum Total**: {self.settings.randchar_min}\n"
             f"**Maximum Total**: {self.settings.randchar_max}\n"
-            f"**Number over value**: {self.get_over_under_desc('over')}\n"
-            f"**Number under value**: {self.get_over_under_desc('under')}\n",
+            f"**Over/Under Rules**: {get_over_under_desc(self.settings.randchar_rules)}",
             inline=False,
         )
 
@@ -579,13 +578,14 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
             button.disabled = False
             await self.refresh_content(interaction)
 
-    @disnake.ui.button(label="Add Required Over", style=disnake.ButtonStyle.primary, row=1)
-    async def add_over(self, button: disnake.ui.Button, interaction: disnake.Interaction):
+    @disnake.ui.button(label="Add Over/Under Rule", style=disnake.ButtonStyle.primary, row=1)
+    async def add_rule(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         button.disabled = True
         await self.refresh_content(interaction)
         await interaction.send(
             "Choose a new required over by sending a message in this channel.\n"
-            "Please use the format 'score|number', for example '15|1' for at least one over 15",
+            "Please use the format 'number>score' or 'number<score', for example '1>15' for at least one over 15, or "
+            "'2<10' for at least two under 10.",
             ephemeral=True,
         )
         try:
@@ -594,72 +594,38 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
                 timeout=60,
                 check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
             )
-            value, amount = input_msg.content.split("|")
-            if self.settings.randchar_over is None:
-                self.settings.randchar_over = {}
-            self.settings.randchar_over[value] = int(amount)
-            self._refresh_remove_over_select()
+            if ">" in input_msg.content:
+                rule_type = "gt"
+                amount, value = input_msg.content.split(">")
+                new_rule = RandcharRule(type=rule_type, amount=amount, value=value)
+            elif "<" in input_msg.content:
+                rule_type = "lt"
+                amount, value = input_msg.content.split("<")
+                new_rule = RandcharRule(type=rule_type, amount=amount, value=value)
+            else:
+                raise ValueError
+            if self.settings.randchar_rules is None:
+                self.settings.randchar_rules = []
+            self.settings.randchar_rules.append(new_rule)
+            self._refresh_remove_rule_select()
             with suppress(disnake.HTTPException):
                 await input_msg.delete()
         except (ValueError, asyncio.TimeoutError):
             await interaction.send(
-                "No valid required over found. Press `Add Required Over` to try again.", ephemeral=True
+                "No valid over/under rule found. Press `Add Over/Under Rule` to try again.", ephemeral=True
             )
         else:
             await self.commit_settings()
-            await interaction.send("Your required over scores has been updated.", ephemeral=True)
+            await interaction.send("Your required over/under rules has been updated.", ephemeral=True)
         finally:
             button.disabled = False
             await self.refresh_content(interaction)
 
-    @disnake.ui.button(label="Add Required Under", style=disnake.ButtonStyle.primary, row=1)
-    async def add_under(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-        button.disabled = True
-        await self.refresh_content(interaction)
-        await interaction.send(
-            "Choose a new required under by sending a message in this channel.\n"
-            "Please use the format 'score|number', for example '10|1' for at least one under 10",
-            ephemeral=True,
-        )
-        try:
-            input_msg: disnake.Message = await self.bot.wait_for(
-                "message",
-                timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
-            )
-            value, amount = input_msg.content.split("|")
-            if self.settings.randchar_under is None:
-                self.settings.randchar_under = {}
-            self.settings.randchar_under[value] = int(amount)
-            self._refresh_remove_under_select()
-            with suppress(disnake.HTTPException):
-                await input_msg.delete()
-        except (ValueError, asyncio.TimeoutError):
-            await interaction.send(
-                "No valid required over found. Press `Add Required Over` to try again.", ephemeral=True
-            )
-        else:
-            await self.commit_settings()
-            await interaction.send("Your required under scores has been updated.", ephemeral=True)
-        finally:
-            button.disabled = False
-            await self.refresh_content(interaction)
-
-    @disnake.ui.select(placeholder="Remove Required Over", min_values=0, max_values=1, row=2)
-    async def remove_over(self, select: disnake.ui.Select, interaction: disnake.Interaction):
-        removed_over = select.values
-        for remove in removed_over:
-            del self.settings.randchar_over[remove]
-        self._refresh_remove_over_select()
-        await self.commit_settings()
-        await self.refresh_content(interaction)
-
-    @disnake.ui.select(placeholder="Remove Required Under", min_values=0, max_values=1, row=3)
-    async def remove_under(self, select: disnake.ui.Select, interaction: disnake.Interaction):
-        removed_under = select.values
-        for remove in removed_under:
-            del self.settings.randchar_under[remove]
-        self._refresh_remove_under_select()
+    @disnake.ui.select(placeholder="Remove Rule", min_values=0, max_values=1, row=3)
+    async def remove_rule(self, select: disnake.ui.Select, interaction: disnake.Interaction):
+        removed_rule = int(select.values[0])
+        self.settings.randchar_rules.pop(removed_rule)
+        self._refresh_remove_rule_select()
         await self.commit_settings()
         await self.refresh_content(interaction)
 
@@ -668,31 +634,21 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
         await self.defer_to(ServerSettingsUI, interaction)
 
     # ==== content ====
-    def _refresh_remove_over_select(self):
-        """Update the options in the Remove Over select to reflect the currently available values."""
-        self.remove_over.options.clear()
-        if not self.settings.randchar_over:
-            self.remove_over.add_option(label="Empty")
-            self.remove_over.disabled = True
+    def _refresh_remove_rule_select(self):
+        """Update the options in the Remove Rule select to reflect the currently available values."""
+        self.remove_rule.options.clear()
+        if not self.settings.randchar_rules:
+            self.remove_rule.add_option(label="Empty")
+            self.remove_rule.disabled = True
             return
-        self.remove_over.disabled = False
-        for over, num in self.settings.randchar_over.items():
-            self.remove_over.add_option(label=f"{num} over {over}", value=str(over))
-
-    def _refresh_remove_under_select(self):
-        """Update the options in the Remove Over select to reflect the currently available values."""
-        self.remove_under.options.clear()
-        if not self.settings.randchar_under:
-            self.remove_under.add_option(label="Empty")
-            self.remove_under.disabled = True
-            return
-        self.remove_under.disabled = False
-        for under, num in self.settings.randchar_under.items():
-            self.remove_under.add_option(label=f"{num} under {under}", value=str(under))
+        self.remove_rule.disabled = False
+        for i, rule in enumerate(self.settings.randchar_rules):
+            self.remove_rule.add_option(
+                label=f"{rule.amount} {'over' if rule.type == 'gt' else 'under'} {rule.value}", value=str(i)
+            )
 
     async def _before_send(self):
-        self._refresh_remove_over_select()
-        self._refresh_remove_under_select()
+        self._refresh_remove_rule_select()
 
     async def get_content(self):
         embed = disnake.Embed(
@@ -741,17 +697,10 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
             inline=False,
         )
         embed.add_field(
-            name="Required Stats Over Certain Value",
-            value=f"**{self.get_over_under_desc('over')}**\n"
-            f"*This is a list of how many of the stats you require to be over a certain value, "
-            f"such as having at least 1 stat over 17.*",
-            inline=False,
-        )
-        embed.add_field(
-            name="Required Stats Under Certain Value",
-            value=f"**{self.get_over_under_desc('under')}**\n"
-            f"*This is a list of how many of the stats you require to be under a certain value, "
-            f"such as having at least 1 stat under 10.*",
+            name="Over/Under Rules",
+            value=f"**{get_over_under_desc(self.settings.randchar_rules)}**\n"
+            f"*This is a list of how many of the stats you require to be over/under a certain value, "
+            f"such as having at least one stat over 17, or two stats under 10.*",
             inline=False,
         )
 

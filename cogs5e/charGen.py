@@ -38,9 +38,13 @@ async def roll_stats(ctx):
         straight = guild_settings.randchar_straight
         min_total = guild_settings.randchar_min
         max_total = guild_settings.randchar_max
-        over = guild_settings.randchar_over or {}
-        under = guild_settings.randchar_under or {}
         stat_names = guild_settings.randchar_stat_names or stat_names
+        if guild_settings.randchar_rules:
+            for rule in guild_settings.randchar_rules:
+                if rule.type == "gt":
+                    over[rule.value] = rule.amount
+                if rule.type == "lt":
+                    under[rule.value] = rule.amount
 
     embed = EmbedWithColor()
     embed.title = "Generating Random Stats"

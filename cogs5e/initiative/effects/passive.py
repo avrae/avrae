@@ -22,13 +22,11 @@ class _PassiveEffect:
 
     def __init__(
         self,
-        datatype: Type[_DT],
         stringifier: Callable[[_DT], str],
         deserializer: Callable[[_SerializedT], _DT] = noop,
         serializer: Callable[[_DT], _SerializedT] = noop,
         default: _DefaultT = None,
     ):
-        self.datatype = datatype
         self.stringifier = stringifier
         self.deserializer = deserializer
         self.serializer = serializer
@@ -57,8 +55,6 @@ class _PassiveEffect:
     def __set__(self, obj: _OwnerT, value: _DT):
         if value is None:
             value = self.default
-        # if not isinstance(value, self.datatype):
-        #     raise ValueError(f"{self.private_name} must be {self.datatype.__name__} but got {type(value).__name__}")
         setattr(obj, self.private_name, value)
 
 
@@ -118,64 +114,57 @@ class InitPassiveEffect:
     __effect_deserializers__ = {}
     __effect_serializers__ = {}
 
-    attack_advantage = _PassiveEffect(
-        AdvantageType,
+    attack_advantage: AdvantageType = _PassiveEffect(
         stringifier=_str_attack_advantage,
         deserializer=lambda data: AdvantageType(data),
         serializer=lambda data: data.value,
     )
-    to_hit_bonus = _PassiveEffect(str, stringifier=_abstract_str_attr("Attack Bonus"))
-    damage_bonus = _PassiveEffect(str, stringifier=_abstract_str_attr("Damage Bonus"))
-    magical_damage = _PassiveEffect(bool, stringifier=_abstract_bool_attr("Magical Damage"))
-    silvered_damage = _PassiveEffect(bool, stringifier=_abstract_bool_attr("Silvered Damage"))
-    resistances = _PassiveEffect(
-        List[Resistance],
+    to_hit_bonus: str = _PassiveEffect(stringifier=_abstract_str_attr("Attack Bonus"))
+    damage_bonus: str = _PassiveEffect(stringifier=_abstract_str_attr("Damage Bonus"))
+    magical_damage: bool = _PassiveEffect(stringifier=_abstract_bool_attr("Magical Damage"))
+    silvered_damage: bool = _PassiveEffect(stringifier=_abstract_bool_attr("Silvered Damage"))
+    resistances: List[Resistance] = _PassiveEffect(
         default=[],
         stringifier=_abstract_list_attr("Resistance"),
         deserializer=lambda data: [Resistance.from_dict(r) for r in data],
         serializer=lambda data: [r.to_dict() for r in data],
     )
-    immunities = _PassiveEffect(
-        List[Resistance],
+    immunities: List[Resistance] = _PassiveEffect(
         default=[],
         stringifier=_abstract_list_attr("Immunity"),
         deserializer=lambda data: [Resistance.from_dict(r) for r in data],
         serializer=lambda data: [r.to_dict() for r in data],
     )
-    vulnerabilities = _PassiveEffect(
-        List[Resistance],
+    vulnerabilities: List[Resistance] = _PassiveEffect(
         default=[],
         stringifier=_abstract_list_attr("Vulnerability"),
         deserializer=lambda data: [Resistance.from_dict(r) for r in data],
         serializer=lambda data: [r.to_dict() for r in data],
     )
-    ignored_resistances = _PassiveEffect(
-        List[Resistance],
+    ignored_resistances: List[Resistance] = _PassiveEffect(
         default=[],
         stringifier=_abstract_list_attr("Neutral"),
         deserializer=lambda data: [Resistance.from_dict(r) for r in data],
         serializer=lambda data: [r.to_dict() for r in data],
     )
-    ac_value = _PassiveEffect(int, stringifier=_abstract_str_attr("AC"))
-    ac_bonus = _PassiveEffect(int, stringifier=_abstract_str_attr("AC Bonus"))
-    max_hp_value = _PassiveEffect(int, stringifier=_abstract_str_attr("Max HP"))
-    max_hp_bonus = _PassiveEffect(int, stringifier=_abstract_str_attr("Max HP Bonus"))
-    save_bonus = _PassiveEffect(str, stringifier=_abstract_str_attr("Save Bonus"))
-    save_adv = _PassiveEffect(
-        Set[str],
+    ac_value: int = _PassiveEffect(stringifier=_abstract_str_attr("AC"))
+    ac_bonus: int = _PassiveEffect(stringifier=_abstract_str_attr("AC Bonus"))
+    max_hp_value: int = _PassiveEffect(stringifier=_abstract_str_attr("Max HP"))
+    max_hp_bonus: int = _PassiveEffect(stringifier=_abstract_str_attr("Max HP Bonus"))
+    save_bonus: str = _PassiveEffect(stringifier=_abstract_str_attr("Save Bonus"))
+    save_adv: Set[str] = _PassiveEffect(
         default=set(),
         stringifier=_str_save_adv,
         deserializer=lambda data: set(data),
         serializer=lambda data: list(data),
     )
-    save_dis = _PassiveEffect(
-        Set[str],
+    save_dis: Set[str] = _PassiveEffect(
         default=set(),
         stringifier=_str_save_adv,
         deserializer=lambda data: set(data),
         serializer=lambda data: list(data),
     )
-    check_bonus = _PassiveEffect(str, stringifier=_abstract_str_attr("Check Bonus"))
+    check_bonus: str = _PassiveEffect(stringifier=_abstract_str_attr("Check Bonus"))
 
     def __init__(self, **kwargs):
         for attr in kwargs:

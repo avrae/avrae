@@ -5,7 +5,6 @@ from utils.functions import reconcile_adv
 from . import Effect
 from ..errors import AutomationException, NoAttackBonus, TargetException
 from ..results import AttackResult
-from ..runtime import AutomationContext, SpellContext
 from ..utils import stringify_intexpr
 
 

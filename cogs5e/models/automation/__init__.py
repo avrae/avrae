@@ -1,3 +1,5 @@
+from typing import Optional, TYPE_CHECKING, Union
+
 import aliasing.api.statblock
 import aliasing.evaluators
 from utils.functions import get_guild_member
@@ -5,6 +7,12 @@ from .effects import *
 from .errors import *
 from .results import *
 from .runtime import *
+
+if TYPE_CHECKING:
+    from cogs5e.models.sheet.statblock import StatBlock
+    from utils.argparser import ParsedArguments
+    from cogs5e.initiative import Combat, InitiativeEffect
+    from gamedata.spell import Spell
 
 
 class Automation:
@@ -25,19 +33,17 @@ class Automation:
         self,
         ctx,
         embed,
-        caster,
-        targets,
-        args,
-        combat=None,
-        spell=None,
-        conc_effect=None,
-        ab_override=None,
-        dc_override=None,
-        spell_override=None,
-        title=None,
-        before=None,
-        after=None,
-    ):
+        caster: "StatBlock",
+        targets: list[Union[str, "StatBlock"]],
+        args: "ParsedArguments",
+        combat: Optional["Combat"] = None,
+        spell: Optional["Spell"] = None,
+        conc_effect: Optional["InitiativeEffect"] = None,
+        ab_override: Optional[int] = None,
+        dc_override: Optional[int] = None,
+        spell_override: Optional[int] = None,
+        title: Optional[str] = None,
+    ) -> AutomationResult:
         """
         Runs automation.
 
@@ -46,30 +52,15 @@ class Automation:
         :param embed: The embed to add automation fields to.
         :type embed: discord.Embed
         :param caster: The StatBlock casting this automation.
-        :type caster: cogs5e.models.sheet.statblock.StatBlock
         :param targets: A list of str or StatBlock or None hit by this automation.
-        :type targets: list of str or list of cogs5e.models.sheet.statblock.StatBlock
         :param args: ParsedArguments.
-        :type args: utils.argparser.ParsedArguments
         :param combat: The combat this automation is being run in.
-        :type combat: cogs5e.models.initiative.Combat
         :param spell: The spell being cast that is running this automation.
-        :type spell: cogs5e.models.spell.Spell
         :param conc_effect: The initiative effect that is used to track concentration caused by running this.
-        :type conc_effect: cogs5e.models.initiative.Effect
         :param ab_override: Forces a default attack bonus.
-        :type ab_override: int
         :param dc_override: Forces a default DC.
-        :type dc_override: int
         :param spell_override: Forces a default spell modifier.
-        :type spell_override: int
-        :param title: The title of the action.
-        :type title: str
-        :param before: A function, taking in the AutomationContext, to run before automation runs.
-        :type before: function
-        :param after: A function, taking in the AutomationContext, to run after automation runs.
-        :type after: function
-        :rtype: AutomationResult
+        :param title: The title of the action, used when sending private messages after execution.
         """
         if not targets:
             targets = []
@@ -79,17 +70,11 @@ class Automation:
 
         automation_results = []
 
-        if before is not None:
-            before(autoctx)
-
         for effect in self.effects:
             await effect.preflight(autoctx)
 
         for effect in self.effects:
             automation_results.append(effect.run(autoctx))
-
-        if after is not None:
-            after(autoctx)
 
         autoctx.build_embed()
         for user, msgs in autoctx.pm_queue.items():

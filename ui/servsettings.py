@@ -304,10 +304,10 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
 
 
 _CRIT_TYPE_OPTIONS = [
-    disnake.SelectOption(label="Double Dice Number (Default)", value=str(CritDamageType.NORMAL.value)),
     disnake.SelectOption(label="Add Max Dice Value", value=str(CritDamageType.MAX_ADD.value)),
-    disnake.SelectOption(label="Double Total", value=str(CritDamageType.DOUBLE_ALL.value)),
+    disnake.SelectOption(label="Double Dice Number (Default)", value=str(CritDamageType.NORMAL.value)),
     disnake.SelectOption(label="Double Dice Total", value=str(CritDamageType.DOUBLE_DICE.value)),
+    disnake.SelectOption(label="Double Total", value=str(CritDamageType.DOUBLE_ALL.value)),
 ]
 
 
@@ -363,11 +363,15 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Crit Damage Type",
             value=f"**{crit_type_desc(self.settings.crit_type)}**\n"
-            f'_This affects how critical damage is treated on the server. "Double Dice Amount" doubles the amount of '
-            f'dice rolled (`2d8 + 4` -> `4d8 + 4`). "Add Max Dice Value" will add the maximum value of each die to '
-            f'the total (`2d8 + 4` -> `2d8 + 4 + 16`). "Double Total" will double everything (`2d8 + 4` -> `'
-            f'(2d8 + 4) * 2`). "Double Dice Total" will double the total value of the dice rolled (`2d8 + 4` -> `(2d8) '
-            f"* 2 + 4`)._",
+            f"_This affects how critical damage is treated on the server._\n"
+            f" ● Add Max Dice Value\n"
+            f"> _This type adds the maximum value of each die to the total._\n> `2d8 + 4` -> `2d8 + 16 + 4`\n"
+            f" ● Double Dice Amount (Default)\n"
+            f"> _This type doubles the amount of dice rolled._\n> `2d8 + 4` -> `4d8 + 4`\n"
+            f" ● Double Dice Total\n"
+            f"> _This type doubles the total value of the dice rolled._\n> `2d8 + 4` -> `(2d8) * 2 + 4`\n"
+            f" ● Double Total\n"
+            f"> _This type doubles the total, including modifiers._\n> `2d8 + 4` -> `(2d8 + 4) * 2`",
             inline=False,
         )
 

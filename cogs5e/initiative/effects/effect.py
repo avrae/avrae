@@ -49,6 +49,8 @@ class InitiativeEffect:
     ):
         if effects is None:
             effects = InitPassiveEffect()
+        if attacks is None:
+            attacks = []
         if buttons is None:
             buttons = []
         if children is None:

@@ -23,6 +23,7 @@ class AutomationContext:
         ab_override=None,
         dc_override=None,
         spell_override=None,
+        ieffect=None
     ):
         self.ctx = ctx
         self.embed = embed
@@ -37,6 +38,9 @@ class AutomationContext:
         self.dc_override = dc_override
         self.spell_level_override = None  # used in Cast Spell effect
         self.conc_effect = conc_effect
+
+        # InitiativeEffect utils
+        self.ieffect = ieffect
 
         self.metavars = {
             # caster, targets as default (#1335)

@@ -1,10 +1,9 @@
 import disnake
 
-from cogs5e.models.automation import AutomationContext, Target
+from cogs5e.models.automation import Target
 from cogs5e.utils import actionutils
 from utils.argparser import ParsedArguments
 from . import Combat, CombatNotFound, CombatantType, utils
-from .effects import InitiativeEffect
 
 
 class ButtonHandler:
@@ -19,7 +18,7 @@ class ButtonHandler:
         except CombatNotFound:
             # if the combat has ended, we can remove the buttons
             await inter.send("This channel is no longer in combat.", ephemeral=True)
-            await inter.edit_original_message(components=None)
+            await try_update_interaction_message_components(inter, None)
             return
 
         # find the combatant
@@ -27,7 +26,7 @@ class ButtonHandler:
         if combatant is None:
             # if the combatant was removed, we can remove the buttons
             await inter.send("This combatant is no longer in the referenced combat.", ephemeral=True)
-            await inter.edit_original_message(components=None)
+            await try_update_interaction_message_components(inter, None)
             return
 
         # find the effect
@@ -35,7 +34,7 @@ class ButtonHandler:
         if effect is None:
             # we can't remove all the buttons if the effect got yeeted, but we can update them
             await inter.send("This effect is no longer active on the referenced combatant.", ephemeral=True)
-            await inter.edit_original_message(components=utils.combatant_interaction_components(combatant))
+            await try_update_interaction_message_components(inter, utils.combatant_interaction_components(combatant))
             return
 
         # find the ButtonInteraction
@@ -43,16 +42,16 @@ class ButtonHandler:
         if button_interaction is None:
             # this should be impossible, but if it happens, we'll update the components anyway
             await inter.send("This effect no longer provides this button interaction.", ephemeral=True)
-            await inter.edit_original_message(components=utils.combatant_interaction_components(combatant))
+            await try_update_interaction_message_components(inter, utils.combatant_interaction_components(combatant))
             return
 
-        # anyway, we're good to run the automation! Set up an IEffectButtonContext and (mario voice) let's'a go
-        embed = disnake.Embed(color=combatant.get_color())
-        autoctx = IEffectButtonContext(ctx=inter, embed=embed, caster=combatant, combat=combat, effect=effect)
+        # we need to set up the autoctx to target the combatant this effect is on before running, so we use the before
+        # hook to run a phony Target effect
+        def set_up_caster_target(autoctx):
+            Target(target="self", effects=[]).run_target(autoctx, target=combatant, target_index=0)
 
-        # since we want the button to always target the combatant the button is on, we just run an empty target to set
-        # up the automation runtime
-        Target(target="self", effects=[]).run_target(autoctx, target=combatant, target_index=0)
+        # anyway, we're good to run the automation!
+        embed = disnake.Embed(color=combatant.get_color())
         result = await actionutils.run_automation(
             ctx=inter,
             embed=embed,
@@ -61,8 +60,17 @@ class ButtonHandler:
             automation=button_interaction.automation,
             targets=[],
             combat=combat,
-            autoctx=autoctx,
+            ieffect=effect,
+            before=set_up_caster_target,
         )
-        await inter.send(embed=embed)
+        await inter.response.edit_message(components=utils.combatant_interaction_components(combatant))
+        await inter.channel.send(embed=embed)
         if (gamelog := self.bot.get_cog("GameLog")) and combatant.type == CombatantType.PLAYER and result is not None:
             await gamelog.send_automation(inter, combatant.character, button_interaction.label, result)
+
+
+async def try_update_interaction_message_components(inter: disnake.MessageInteraction, components):
+    try:
+        await inter.message.edit(components=components)
+    except disnake.HTTPException:
+        pass

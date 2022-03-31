@@ -1,5 +1,6 @@
 from . import Effect
 from .. import utils
+from ..errors import TargetException
 from ..results import TargetResult
 from ..runtime import AutomationTarget
 
@@ -26,6 +27,12 @@ class Target(Effect):
 
     def run(self, autoctx):
         super().run(autoctx)
+        if autoctx.ieffect is not None:
+            raise TargetException(
+                "You cannot set targets on an InitiativeEffect interaction; these interactions will automatically "
+                "target the combatant the effect is on."
+            )
+
         # WEB-038 (.io #121) - this will semantically work correctly, but will make the display really weird
         previous_target = autoctx.target
 

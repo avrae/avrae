@@ -56,9 +56,9 @@ def jit_v1_to_v2(d: dict, combat: _CombatT, combatant: _CombatantT) -> Initiativ
         save_dis=set(data.get("sdis", [])),
         check_bonus=data.get("cb"),
     )
-    interactions = []
+    attacks = []
     if data.get("attack"):
-        interactions.append(AttackInteraction(attack=Attack.from_dict(data["attack"])))
+        attacks.append(AttackInteraction(attack=Attack.from_dict(data["attack"])))
 
     # migrate ticks to end round
     end_round = None
@@ -85,7 +85,7 @@ def jit_v1_to_v2(d: dict, combat: _CombatT, combatant: _CombatantT) -> Initiativ
         id=d["id"],
         name=name,
         effects=effects,
-        interactions=interactions,
+        attacks=attacks,
         duration=d["duration"],
         end_round=end_round,
         end_on_turn_end=end_on_turn_end,

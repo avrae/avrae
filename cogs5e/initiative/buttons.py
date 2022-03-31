@@ -1,6 +1,6 @@
 import disnake
 
-from cogs5e.models.automation import AutomationContext
+from cogs5e.models.automation import AutomationContext, Target
 from cogs5e.utils import actionutils
 from utils.argparser import ParsedArguments
 from . import Combat, CombatNotFound, CombatantType, utils
@@ -39,9 +39,7 @@ class ButtonHandler:
             return
 
         # find the ButtonInteraction
-        button_interaction = next(
-            (i for i in effect.interactions if isinstance(i, ButtonInteraction) and i.id == button_id), None
-        )
+        button_interaction = next((i for i in effect.buttons if i.id == button_id), None)
         if button_interaction is None:
             # this should be impossible, but if it happens, we'll update the components anyway
             await inter.send("This effect no longer provides this button interaction.", ephemeral=True)
@@ -50,8 +48,11 @@ class ButtonHandler:
 
         # anyway, we're good to run the automation! Set up an IEffectButtonContext and (mario voice) let's'a go
         embed = disnake.Embed(color=combatant.get_color())
-
         autoctx = IEffectButtonContext(ctx=inter, embed=embed, caster=combatant, combat=combat, effect=effect)
+
+        # since we want the button to always target the combatant the button is on, we just run an empty target to set
+        # up the automation runtime
+        Target(target="self", effects=[]).run_target(autoctx, target=combatant, target_index=0)
         result = await actionutils.run_automation(
             ctx=inter,
             embed=embed,
@@ -71,4 +72,3 @@ class IEffectButtonContext(AutomationContext):
     def __init__(self, ctx, embed, caster, combat, effect: InitiativeEffect):
         super().__init__(ctx, embed=embed, caster=caster, targets=[], args=ParsedArguments.empty_args(), combat=combat)
         self.ieffect = effect
-        self.target = caster  # in an ieffect context, we're always targeting the caster

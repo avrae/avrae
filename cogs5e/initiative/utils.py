@@ -76,10 +76,7 @@ def _combatant_interaction_components_single(combatant: _CombatantT, label_prefi
 
     buttons = []
     for effect in combatant.get_effects():
-        for interaction in effect.interactions:
-            if not isinstance(interaction, ButtonInteraction):
-                continue
-
+        for interaction in effect.buttons:
             if label_prefix is not None:
                 label = smart_trim(label_prefix + interaction.label, max_len=80, dots="...")
             else:

@@ -14,7 +14,6 @@ from utils.constants import RESIST_TYPES
 from utils.functions import get_guild_member, search_and_select
 from ._types import _CombatantGroupT
 from .effects import InitiativeEffect
-from .effects.interaction import AttackInteraction
 from .errors import RequiresContext
 from .types import BaseCombatant, CombatantType
 from .utils import create_combatant_id
@@ -269,7 +268,7 @@ class Combatant(BaseCombatant, StatBlock):
         if "attacks" not in self._cache:
             # attacks granted by effects are cached so that the same object is referenced in initTracker (#950)
             effect_attacks = self.active_effects(
-                mapper=lambda effect: [i.attack for i in effect.interactions if isinstance(i, AttackInteraction)],
+                mapper=lambda effect: [i.attack for i in effect.attacks],
                 reducer=lambda attacks: AttackList(list(itertools.chain(*attacks))),
             )
             if effect_attacks is not None:

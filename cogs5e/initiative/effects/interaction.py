@@ -11,7 +11,6 @@ from ..utils import create_button_interaction_id
 
 
 class InitEffectInteraction(abc.ABC):
-    type: str
     effect: _IEffectT  # injected by the parent effect during construction
 
     @classmethod
@@ -24,23 +23,12 @@ class InitEffectInteraction(abc.ABC):
     def __str__(self):
         raise NotImplementedError
 
-    @staticmethod
-    def deserialize(interaction_data: dict):
-        match interaction_data:
-            case {"type": AttackInteraction.type, **rest}:
-                return AttackInteraction.from_dict(rest)
-            case {"type": ButtonInteraction.type, **rest}:
-                return ButtonInteraction.from_dict(rest)
-        raise ValueError(f"Could not deserialize InitEffectInteraction: {interaction_data!r}")
-
 
 class AttackInteraction(InitEffectInteraction):
     """
     This interaction adds an additional attack the combatant can take using !a.
     For compatibility with ``actionutils.run_attack``, this is actually just a wrapper around an Attack.
     """
-
-    type = "attack"
 
     def __init__(self, attack: Attack):
         self.attack = attack
@@ -53,7 +41,6 @@ class AttackInteraction(InitEffectInteraction):
 
     def to_dict(self):
         return {
-            "type": self.type,
             "attack": self.attack.to_dict(),
         }
 
@@ -65,8 +52,6 @@ class AttackInteraction(InitEffectInteraction):
 
 class ButtonInteraction(InitEffectInteraction):
     """This interaction adds a button to the combatant's turn message to run some automation."""
-
-    type = "button"
 
     def __init__(self, id: str, automation, label: str, style: disnake.ButtonStyle = disnake.ButtonStyle.primary):
         self.id = id
@@ -91,7 +76,6 @@ class ButtonInteraction(InitEffectInteraction):
 
     def to_dict(self):
         return {
-            "type": self.type,
             "id": self.id,
             "automation": self.automation.to_dict(),
             "label": self.label,
@@ -103,7 +87,7 @@ class ButtonInteraction(InitEffectInteraction):
 
 
 # ==== parsing ====
-def init_interactions_from_args(args: ParsedArguments, effect_name: str) -> List[InitEffectInteraction]:
+def attack_interactions_from_args(args: ParsedArguments, effect_name: str) -> List[AttackInteraction]:
     out = []
     for attack_arg in args.get("attack"):
         out.append(action_interaction_from_arg(attack_arg, effect_name=effect_name))

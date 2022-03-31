@@ -1,10 +1,11 @@
+import itertools
 from typing import Iterator, List, Optional, Tuple, Union
 
 import math
 
 from cogs5e.models.errors import InvalidArgument
 from utils.argparser import ParsedArguments, argparse
-from .interaction import InitEffectInteraction, init_interactions_from_args
+from .interaction import AttackInteraction, ButtonInteraction, attack_interactions_from_args
 from .passive import InitPassiveEffect
 from .._types import _CharacterT, _CombatT, _CombatantT
 from ..types import CombatantType
@@ -36,7 +37,8 @@ class InitiativeEffect:
         id: str,
         name: str,
         effects: InitPassiveEffect = None,
-        interactions: List[InitEffectInteraction] = None,
+        attacks: List[AttackInteraction] = None,
+        buttons: List[ButtonInteraction] = None,
         duration: Optional[int] = None,
         end_round: Optional[int] = None,
         end_on_turn_end: bool = False,
@@ -47,13 +49,15 @@ class InitiativeEffect:
     ):
         if effects is None:
             effects = InitPassiveEffect()
-        if interactions is None:
-            interactions = []
+        if buttons is None:
+            buttons = []
         if children is None:
             children = []
 
-        # inject effect instance into the child interaction
-        for interaction in interactions:
+        # inject effect instance into the child interactions
+        for interaction in attacks:
+            interaction.effect = self
+        for interaction in buttons:
             interaction.effect = self
 
         self.combat = combat
@@ -61,7 +65,8 @@ class InitiativeEffect:
         self.id = id
         self.name = name
         self.effects = effects
-        self.interactions = interactions
+        self.attacks = attacks
+        self.buttons = buttons
         self.duration = duration
         self.end_round = end_round
         self.end_on_turn_end = bool(end_on_turn_end)
@@ -90,7 +95,7 @@ class InitiativeEffect:
                 effect_args = argparse(effect_args)
 
         effects = InitPassiveEffect.from_args(effect_args)
-        interactions = init_interactions_from_args(effect_args, effect_name=name)
+        attacks = attack_interactions_from_args(effect_args, effect_name=name)
 
         # duration handling
         if duration is not None:
@@ -121,7 +126,7 @@ class InitiativeEffect:
             id=create_effect_id(),
             name=name,
             effects=effects,
-            interactions=interactions,
+            attacks=attacks,
             duration=duration,
             end_round=end_round,
             end_on_turn_end=end_on_turn_end,
@@ -137,7 +142,8 @@ class InitiativeEffect:
             return migrators.jit_v1_to_v2(d, combat, combatant)
 
         effects = InitPassiveEffect.from_dict(d["effects"])
-        interactions = [InitEffectInteraction.deserialize(i) for i in d["interactions"]]
+        attacks = [AttackInteraction.from_dict(i) for i in d["attacks"]]
+        buttons = [ButtonInteraction.from_dict(i) for i in d["buttons"]]
         children = [InitEffectReference.from_dict(r) for r in d["children"]]
         if parent_data := d["parent"]:
             parent = InitEffectReference.from_dict(parent_data)
@@ -149,7 +155,8 @@ class InitiativeEffect:
             id=d["id"],
             name=d["name"],
             effects=effects,
-            interactions=interactions,
+            attacks=attacks,
+            buttons=buttons,
             duration=d["duration"],
             end_round=d["end_round"],
             end_on_turn_end=d["end_on_turn_end"],
@@ -161,14 +168,16 @@ class InitiativeEffect:
 
     def to_dict(self):
         effects = self.effects.to_dict()
-        interactions = [i.to_dict() for i in self.interactions]
+        attacks = [i.to_dict() for i in self.attacks]
+        buttons = [i.to_dict() for i in self.buttons]
         children = [ref.to_dict() for ref in self.children]
         parent = self.parent.to_dict() if self.parent else None
         return {
             "id": self.id,
             "name": self.name,
             "effects": effects,
-            "interactions": interactions,
+            "attacks": attacks,
+            "buttons": buttons,
             "duration": self.duration,
             "end_round": self.end_round,
             "end_on_turn_end": self.end_on_turn_end,
@@ -282,7 +291,7 @@ class InitiativeEffect:
         text = []
         if self.effects:
             text.append(str(self.effects))
-        for interaction in self.interactions:
+        for interaction in itertools.chain(self.attacks, self.buttons):
             interaction_str = str(interaction)
             if interaction_str:
                 text.append(interaction_str)

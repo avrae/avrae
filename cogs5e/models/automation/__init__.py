@@ -29,10 +29,14 @@ class Automation:
         targets,
         args,
         combat=None,
+        spell=None,
+        conc_effect=None,
+        ab_override=None,
+        dc_override=None,
+        spell_override=None,
         title=None,
         before=None,
         after=None,
-        autoctx=None,
     ):
         """
         Runs automation.
@@ -49,19 +53,29 @@ class Automation:
         :type args: utils.argparser.ParsedArguments
         :param combat: The combat this automation is being run in.
         :type combat: cogs5e.models.initiative.Combat
+        :param spell: The spell being cast that is running this automation.
+        :type spell: cogs5e.models.spell.Spell
+        :param conc_effect: The initiative effect that is used to track concentration caused by running this.
+        :type conc_effect: cogs5e.models.initiative.Effect
+        :param ab_override: Forces a default attack bonus.
+        :type ab_override: int
+        :param dc_override: Forces a default DC.
+        :type dc_override: int
+        :param spell_override: Forces a default spell modifier.
+        :type spell_override: int
         :param title: The title of the action.
         :type title: str
         :param before: A function, taking in the AutomationContext, to run before automation runs.
-        :type before: Callable[[AutomationContext], Any]
+        :type before: function
         :param after: A function, taking in the AutomationContext, to run after automation runs.
-        :type after: Callable[[AutomationContext], Any]
-        :type autoctx: AutomationContext
+        :type after: function
         :rtype: AutomationResult
         """
         if not targets:
             targets = []
-        if autoctx is None:
-            autoctx = AutomationContext(ctx, embed, caster, targets, args, combat)
+        autoctx = AutomationContext(
+            ctx, embed, caster, targets, args, combat, spell, conc_effect, ab_override, dc_override, spell_override
+        )
 
         automation_results = []
 

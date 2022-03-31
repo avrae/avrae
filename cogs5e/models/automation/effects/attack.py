@@ -34,7 +34,7 @@ class Attack(Effect):
             out["adv"] = self.adv
         return out
 
-    def run(self, autoctx: AutomationContext):
+    def run(self, autoctx):
         super().run(autoctx)
         if autoctx.target is None:
             raise TargetException(
@@ -111,11 +111,7 @@ class Attack(Effect):
             nocrit = nocrit or autoctx.target.character.options.ignore_crit
 
         # ==== execution ====
-        attack_bonus = autoctx.caster.spellbook.sab
-
-        # spellcasting override
-        if isinstance(autoctx, SpellContext):
-            attack_bonus = autoctx.ab_override
+        attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
 
         # explicit bonus
         if self.bonus:

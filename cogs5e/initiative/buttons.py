@@ -4,7 +4,7 @@ from cogs5e.models.automation import AutomationContext, Target
 from cogs5e.utils import actionutils
 from utils.argparser import ParsedArguments
 from . import Combat, CombatNotFound, CombatantType, utils
-from .effects import ButtonInteraction, InitiativeEffect
+from .effects import InitiativeEffect
 
 
 class ButtonHandler:
@@ -66,9 +66,3 @@ class ButtonHandler:
         await inter.send(embed=embed)
         if (gamelog := self.bot.get_cog("GameLog")) and combatant.type == CombatantType.PLAYER and result is not None:
             await gamelog.send_automation(inter, combatant.character, button_interaction.label, result)
-
-
-class IEffectButtonContext(AutomationContext):
-    def __init__(self, ctx, embed, caster, combat, effect: InitiativeEffect):
-        super().__init__(ctx, embed=embed, caster=caster, targets=[], args=ParsedArguments.empty_args(), combat=combat)
-        self.ieffect = effect

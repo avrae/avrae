@@ -6,7 +6,6 @@ import discord
 from cogs5e.initiative import InitiativeEffect
 from cogs5e.initiative.types import BaseCombatant
 from cogs5e.models import embeds
-from cogs5e.models.automation.runtime import SpellContext
 from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLicense
 from gamedata import lookuputils
 from utils import constants
@@ -260,19 +259,11 @@ async def cast_spell(spell, ctx, caster, targets, args, combat=None):
             targets,
             combat,
             always_commit_caster=True,
-            autoctx=SpellContext(
-                ctx=ctx,
-                embed=embed,
-                caster=caster,
-                targets=targets,
-                args=args,
-                combat=combat,
-                spell=spell,
-                conc_effect=conc_effect,
-                ab_override=ab_override,
-                dc_override=dc_override,
-                spell_override=spell_override,
-            ),
+            spell=spell,
+            conc_effect=conc_effect,
+            ab_override=ab_override,
+            dc_override=dc_override,
+            spell_override=spell_override,
         )
     else:  # no automation, display spell description
         phrase = args.join("phrase", "\n")
@@ -301,9 +292,7 @@ async def cast_spell(spell, ctx, caster, targets, args, combat=None):
 CastResult = namedtuple("CastResult", "embed success automation_result")
 
 
-async def run_automation(
-    ctx, embed, args, caster, automation, targets, combat, always_commit_caster=False, autoctx=None
-):
+async def run_automation(ctx, embed, args, caster, automation, targets, combat, always_commit_caster=False, **kwargs):
     """
     Common automation runner
 
@@ -315,10 +304,9 @@ async def run_automation(
     :type targets: list of str or list of cogs5e.models.sheet.statblock.StatBlock
     :type combat: None or cogs5e.models.initiative.Combat
     :type always_commit_caster: bool
-    :type autoctx: cogs5e.models.automation.runtime.AutomationContext
     :rtype: cogs5e.models.automation.AutomationResult
     """
-    result = await automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title, autoctx=autoctx)
+    result = await automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title, **kwargs)
     if combat:
         await combat.final()
     # commit character only if we have not already committed it via combat final

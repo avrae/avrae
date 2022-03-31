@@ -63,9 +63,12 @@ def combatant_interaction_components(combatant: _CombatantT | _CombatantGroupT) 
         buttons = []
         for c in combatant.get_combatants():
             buttons.extend(_combatant_interaction_components_single(c, label_prefix=f"{c.name}: "))
-        return buttons
     else:
-        return _combatant_interaction_components_single(combatant)
+        buttons = _combatant_interaction_components_single(combatant)
+
+    if len(buttons) > 25:
+        buttons = buttons[:25]
+    return buttons
 
 
 def _combatant_interaction_components_single(combatant: _CombatantT, label_prefix=None):

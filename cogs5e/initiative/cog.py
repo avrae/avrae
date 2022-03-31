@@ -33,6 +33,7 @@ from . import (
     PlayerCombatant,
     utils,
 )
+from .buttons import ButtonHandler
 from .upenn_nlp import NLPRecorder
 
 log = logging.getLogger(__name__)
@@ -53,6 +54,7 @@ class InitTracker(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.nlp = NLPRecorder(bot)
+        self.buttons = ButtonHandler(bot)
 
     # ==== special methods ====
     async def cog_load(self):
@@ -75,7 +77,14 @@ class InitTracker(commands.Cog):
     @commands.Cog.listener()
     async def on_button_click(self, interaction: disnake.MessageInteraction):
         if interaction.data.custom_id.startswith(constants.B_INIT_EFFECT):
-            await interaction.send(f">:o i got an interaction with id {interaction.data.custom_id}") # todo
+            try:
+                # ieb:<combatant_id>:<effect_id>:<button_id>
+                _, combatant_id, effect_id, button_id = interaction.data.custom_id.split(":")
+                await self.buttons.handle(
+                    interaction, combatant_id=combatant_id, effect_id=effect_id, button_id=button_id
+                )
+            except ValueError:
+                log.exception("Failed to handle init effect button click interaction:")
 
     # ==== commands ====
     @commands.group(aliases=["i"], invoke_without_command=True)

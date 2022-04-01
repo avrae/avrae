@@ -409,7 +409,7 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
                 timeout=60,
                 check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
             )
-            self.settings.randchar_dice = d20.parse(input_msg.content)
+            self.settings.randchar_dice = str(d20.parse(input_msg.content))
             with suppress(disnake.HTTPException):
                 await input_msg.delete()
         except (ValueError, asyncio.TimeoutError, d20.errors.RollSyntaxError):

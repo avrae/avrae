@@ -455,23 +455,23 @@ class Lookup(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def token(self, ctx, *, name=""):
+    async def token(self, ctx, name=None, *args):
         """
         Shows a monster or your character's token.
         __Valid Arguments__
         -border <plain|none (player token only)> - Overrides the token border.
         """
-        if not name or name.startswith("-"):
+        if name is None or name.startswith("-"):
             token_cmd = self.bot.get_command("playertoken")
             if token_cmd is None:
                 return await ctx.send("Error: SheetManager cog not loaded.")
-            return await ctx.invoke(token_cmd, name)
+            if name:
+                args = (name, *args)
+            return await ctx.invoke(token_cmd, *args)
 
         # select monster
-        token_args = argparse(name)
+        token_args = argparse(args)
         hide_name = token_args.get("h", False, bool)
-        if not name.find("-") == -1:  # remove the args from the name
-            name = name[: name.find("-")].rstrip()
         if hide_name:
             await try_delete(ctx.message)
 

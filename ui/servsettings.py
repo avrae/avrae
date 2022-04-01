@@ -30,6 +30,10 @@ def get_over_under_desc(rules) -> str:
     return f"At least {', '.join(out)}"
 
 
+def stat_names_desc(stat_names: list) -> str:
+    return ", ".join(stat_names or [stat.upper() for stat in STAT_ABBREVIATIONS])
+
+
 class ServerSettingsMenuBase(MenuBase, abc.ABC):
     __menu_copy_attrs__ = ("bot", "settings", "guild")
     bot: _AvraeT
@@ -107,7 +111,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             value=f"**Dice**: {self.settings.randchar_dice}\n"
             f"**Number of Sets**: {self.settings.randchar_sets}\n"
             f"**Assign Stats**: {self.settings.randchar_straight}\n"
-            f"**Stat Names:** {', '.join(self.settings.randchar_stat_names or [stat.upper() for stat in STAT_ABBREVIATIONS])}\n"
+            f"**Stat Names:** {stat_names_desc(self.settings.randchar_stat_names)}\n"
             f"**Minimum Total**: {self.settings.randchar_min}\n"
             f"**Maximum Total**: {self.settings.randchar_max}\n"
             f"**Over/Under Rules**: {get_over_under_desc(self.settings.randchar_rules)}",
@@ -680,7 +684,7 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
         embed.add_field(
             name="Assign Stats Directly",
             value=f"**{self.settings.randchar_straight}**\n"
-            f"**Stat Names:** {', '.join(self.settings.randchar_stat_names or [stat.upper() for stat in STAT_ABBREVIATIONS])}\n"
+            f"**Stat Names:** {stat_names_desc(self.settings.randchar_stat_names)}\n"
             f"*If this is enabled, stats will automatically be assigned to stats in the order "
             f"they are rolled.*",
             inline=False,

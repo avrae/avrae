@@ -647,6 +647,8 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
         self.remove_rule.disabled = False
         if len(self.settings.randchar_rules) < 25:
             self.add_rule.disabled = False
+        else:
+            self.add_rule.disabled = True
         for i, rule in enumerate(self.settings.randchar_rules):
             self.remove_rule.add_option(
                 label=f"{rule.amount} {'over' if rule.type == 'gt' else 'under'} {rule.value}", value=str(i)

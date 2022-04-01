@@ -3,6 +3,7 @@ import asyncio
 from contextlib import suppress
 from typing import List, Optional, TYPE_CHECKING, TypeVar
 
+import d20
 import disnake
 
 from utils.aldclient import discord_user_to_dict
@@ -404,10 +405,10 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
                 timeout=60,
                 check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
             )
-            self.settings.randchar_dice = input_msg.content
+            self.settings.randchar_dice = d20.parse(input_msg.content)
             with suppress(disnake.HTTPException):
                 await input_msg.delete()
-        except (ValueError, asyncio.TimeoutError):
+        except (ValueError, asyncio.TimeoutError, d20.errors.RollSyntaxError):
             await interaction.send("No valid dice found. Press `Set Dice` to try again.", ephemeral=True)
         else:
             await self.commit_settings()

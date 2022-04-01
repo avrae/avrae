@@ -3,6 +3,7 @@ import logging
 import random
 import textwrap
 
+import d20
 import discord
 from d20 import roll
 from discord.ext import commands
@@ -13,6 +14,7 @@ from cogs5e.models.errors import InvalidArgument
 from gamedata.compendium import compendium
 from gamedata.lookuputils import available, get_race_choices
 from utils.constants import STAT_ABBREVIATIONS
+from utils.dice import PersistentRollContext
 from utils.functions import get_selection, search_and_select
 
 log = logging.getLogger(__name__)
@@ -66,38 +68,44 @@ async def roll_stats(ctx):
     for m, t in under.items():
         rules.append(f"At least {t} under {m}")
 
+    ast = d20.parse(dice, allow_comments=True)
+    roller = d20.Roller(context=PersistentRollContext(max_rolls=5000))
+
     stat_rolls = []
     # Only attempt 1000 times to achieve the desired stat sets
-    for _ in range(1000):
-        # We need an individual copy per set
-        current_set = []
-        current_over = over.copy()
-        current_under = under.copy()
-        current_sum = 0
-        for i in range(stats):
-            current_roll = roll(dice)
-            current_sum += current_roll.total
-            current_set.append(current_roll)
+    try:
+        for _ in range(1000):
+            # We need an individual copy per set
+            current_set = []
+            current_over = over.copy()
+            current_under = under.copy()
+            current_sum = 0
+            for i in range(stats):
+                current_roll = roller.roll(ast)
+                current_sum += current_roll.total
+                current_set.append(current_roll)
 
-            if current_over and any(current_over.values()):
-                for m, t in current_over.items():
-                    if t and current_roll.total > int(m):
-                        current_over[m] -= 1
+                if current_over and any(current_over.values()):
+                    for m, t in current_over.items():
+                        if t and current_roll.total > int(m):
+                            current_over[m] -= 1
 
-            if current_under and any(current_under.values()):
-                for m, t in current_under.items():
-                    if t and current_roll.total < int(m):
-                        current_under[m] -= 1
+                if current_under and any(current_under.values()):
+                    for m, t in current_under.items():
+                        if t and current_roll.total < int(m):
+                            current_under[m] -= 1
 
-        meets_over = not current_over or not any(current_over.values())
-        meets_under = not current_under or not any(current_under.values())
-        meets_min = (current_sum >= min_total) if min_total else True
-        meets_max = (current_sum <= max_total) if max_total else True
-        if meets_over and meets_under and meets_max and meets_min:
-            stat_rolls.append({"rolls": current_set, "total": current_sum})
-            if len(stat_rolls) == sets:
-                break
-    else:
+            meets_over = not current_over or not any(current_over.values())
+            meets_under = not current_under or not any(current_under.values())
+            meets_min = (current_sum >= min_total) if min_total else True
+            meets_max = (current_sum <= max_total) if max_total else True
+            if meets_over and meets_under and meets_max and meets_min:
+                stat_rolls.append({"rolls": current_set, "total": current_sum})
+                if len(stat_rolls) == sets:
+                    break
+        else:
+            raise d20.TooManyRolls
+    except d20.TooManyRolls:
         embed.description = (
             "Unable to roll stat rolls that meet the current rule set.\n\n"
             "Please examine your current randchar settings to ensure that they are achievable."

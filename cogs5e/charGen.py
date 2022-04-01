@@ -69,12 +69,11 @@ async def roll_stats(ctx):
         rules.append(f"At least {t} under {m}")
 
     ast = d20.parse(dice, allow_comments=True)
-    roller = d20.Roller(context=PersistentRollContext(max_rolls=5000))
+    roller = d20.Roller(context=PersistentRollContext(max_rolls=1000))
 
     stat_rolls = []
-    # Only attempt 1000 times to achieve the desired stat sets
     try:
-        for _ in range(1000):
+        while True:
             # We need an individual copy per set
             current_set = []
             current_over = over.copy()
@@ -103,8 +102,6 @@ async def roll_stats(ctx):
                 stat_rolls.append({"rolls": current_set, "total": current_sum})
                 if len(stat_rolls) == sets:
                     break
-        else:
-            raise d20.TooManyRolls
     except d20.TooManyRolls:
         embed.description = (
             "Unable to roll stat rolls that meet the current rule set.\n\n"

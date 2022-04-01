@@ -507,7 +507,6 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
                 else:
                     stats = message.replace(", ", ",").split(",")
                 if len(stats) != self.settings.randchar_num:
-                    print(stats, len(stats), self.settings.randchar_num)
                     raise ValueError
                 self.settings.randchar_stat_names = stats
                 with suppress(disnake.HTTPException):
@@ -609,8 +608,6 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
                 new_rule = RandcharRule(type=rule_type, amount=amount, value=value)
             else:
                 raise ValueError
-            if self.settings.randchar_rules is None:
-                self.settings.randchar_rules = []
             self.settings.randchar_rules.append(new_rule)
             self._refresh_remove_rule_select()
             with suppress(disnake.HTTPException):

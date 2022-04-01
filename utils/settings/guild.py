@@ -38,7 +38,7 @@ class ServerSettings(SettingsBaseModel):
     randchar_num: int = 6
     randchar_min: int = None
     randchar_max: int = None
-    randchar_rules: List[RandcharRule] = None
+    randchar_rules: List[RandcharRule] = []
 
     # ==== lifecycle ====
     @classmethod

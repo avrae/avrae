@@ -132,13 +132,16 @@ class CharGenerator(commands.Cog):
     @commands.command(name="randchar")
     @commands.max_concurrency(1, per=commands.BucketType.user)
     async def randchar(self, ctx, level=None):
-        """Rolls up a random 5e character.
-
-        If a level is not specified, it will only roll stats. Servers can customize their stat rolling requirements via `!servsettings`."""
+        """Rolls up a random 5e character."""
         if level is None:
 
-            stats = await roll_stats(ctx)
-            await ctx.send(f"{ctx.author.mention} rolled stats...", embed=stats)
+            rolls = [roll("4d6kh3") for _ in range(6)]
+            stats = "\n".join(str(r) for r in rolls)
+            total = sum([r.total for r in rolls])
+            await ctx.send(
+                f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`",
+                allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+            )
             return
 
         try:
@@ -152,6 +155,16 @@ class CharGenerator(commands.Cog):
             return
 
         await self.send_character_details(ctx, level)
+
+    @commands.command(name="rollstats")
+    @commands.max_concurrency(1, per=commands.BucketType.user)
+    async def rollstats(self, ctx):
+        """Rolls up a random 5e character.
+
+        Servers can customize their stat rolling requirements via `!servsettings`."""
+
+        stats = await roll_stats(ctx)
+        await ctx.send(f"{ctx.author.mention} rolled stats...", embed=stats)
 
     @commands.command(aliases=["name"])
     async def randname(self, ctx, race=None, option=None):
@@ -243,8 +256,8 @@ class CharGenerator(commands.Cog):
         # Stat Gen
         #    4d6d1
         #        reroll if too low/high
-        stats = await roll_stats(ctx)
-        await ctx.author.send(embed=stats)
+        stats = [roll("4d6kh3").total for _ in range(6)]
+        await ctx.author.send("**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
         race = race or random.choice(await get_race_choices(ctx))
@@ -358,7 +371,7 @@ class CharGenerator(commands.Cog):
             f"{ctx.author.mention}\n"
             f"{name}, {race.name} {subclass.name if subclass else ''} {_class.name} {final_level}. "
             f"{background.name} Background.\n"
-            f"I have PM'd you full character details."
+            f"Stat Array: `{stats}`\nI have PM'd you full character details."
         )
 
         await loadingMessage.edit(content=out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))

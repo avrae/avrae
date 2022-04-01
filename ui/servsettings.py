@@ -620,7 +620,8 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
             await self.commit_settings()
             await interaction.send("Your required over/under rules has been updated.", ephemeral=True)
         finally:
-            button.disabled = False
+            if len(self.settings.randchar_rules) < 25:
+                button.disabled = False
             await self.refresh_content(interaction)
 
     @disnake.ui.select(placeholder="Remove Rule", min_values=0, max_values=1, row=3)
@@ -644,6 +645,8 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
             self.remove_rule.disabled = True
             return
         self.remove_rule.disabled = False
+        if len(self.settings.randchar_rules) < 25:
+            self.add_rule.disabled = False
         for i, rule in enumerate(self.settings.randchar_rules):
             self.remove_rule.add_option(
                 label=f"{rule.amount} {'over' if rule.type == 'gt' else 'under'} {rule.value}", value=str(i)

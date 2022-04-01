@@ -79,17 +79,17 @@ def crit_mapper(node: d20.ast.Node):
 
 
 def double_dice_crit_mapper(node: d20.ast.Node):
-    """A function that doubles the number of dice for each Dice AST node."""
+    """A function that replaces each Dice AST node with itself multiplied by 2."""
     if isinstance(node, d20.ast.Dice):
-        return d20.ast.BinOp(d20.ast.Parenthetical(node), "*", d20.ast.Literal(2))
+        return d20.ast.BinOp(node, "*", d20.ast.Literal(2))
     return node
 
 
 def crit_dice_gen(dice_ast: d20.ast.Node, critdice: int):
-    """A function that finds the size of left most Dice AST node and generates crit dice based on that."""
-    left = dice_ast
-    while left.children:
-        left = left.children[0]
+    """A function that finds the size of left most Dice AST node and generates crit dice based on that, for
+    crit types that double all original dice, but not any additional crit dice. By finding the left most dice,
+    we do our best to ensure its based on the weapon/source and not any other additional bonuses."""
+    left = d20.utils.leftmost(dice_ast)
 
     # if we're at the bottom of the branch and it's the dice, add *critdice*
     if isinstance(left, d20.ast.Dice):

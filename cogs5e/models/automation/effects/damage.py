@@ -53,8 +53,6 @@ class Damage(Effect):
         hide = args.last("h", type_=bool)
 
         crit_damage_type = autoctx.crit_type
-        if crit_damage_type is None:
-            crit_damage_type = CritDamageType.NORMAL
 
         # character-specific arguments
         if autoctx.character and "critdice" not in args:
@@ -107,7 +105,8 @@ class Damage(Effect):
             if critdice and not autoctx.is_spell:
                 if crit_damage_type in (CritDamageType.DOUBLE_ALL, CritDamageType.DOUBLE_DICE):
                     crit_ast = utils.crit_dice_gen(dice_ast, critdice)
-                    dice_ast.roll = d20.ast.BinOp(dice_ast.roll, "+", crit_ast)
+                    if crit_ast:
+                        dice_ast.roll = d20.ast.BinOp(dice_ast.roll, "+", crit_ast)
                 else:
                     utils.critdice_tree_update(dice_ast, int(critdice))
 

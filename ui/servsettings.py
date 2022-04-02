@@ -78,9 +78,9 @@ class ServerSettingsUI(ServerSettingsMenuBase):
     async def inline_rolling_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(_InlineRollingSettingsUI, interaction)
 
-    @disnake.ui.button(label="Randchar Settings", style=disnake.ButtonStyle.primary)
-    async def randchar_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
-        await self.defer_to(_RandcharSettingsUI, interaction)
+    @disnake.ui.button(label="Custom Stat Roll Settings", style=disnake.ButtonStyle.primary)
+    async def rollstats_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        await self.defer_to(_RollStatsSettingsUI, interaction)
 
     @disnake.ui.button(label="Miscellaneous Settings", style=disnake.ButtonStyle.primary)
     async def miscellaneous_settings(self, _: disnake.ui.Button, interaction: disnake.Interaction):
@@ -107,7 +107,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         embed.add_field(name="Inline Rolling Settings", value=await self.get_inline_rolling_desc(), inline=False)
 
         embed.add_field(
-            name="Randchar Settings",
+            name="Custom Stat Roll Settings",
             value=f"**Dice**: {self.settings.randchar_dice}\n"
             f"**Number of Sets**: {self.settings.randchar_sets}\n"
             f"**Assign Stats**: {self.settings.randchar_straight}\n"
@@ -393,7 +393,7 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         return {"embed": embed}
 
 
-class _RandcharSettingsUI(ServerSettingsMenuBase):
+class _RollStatsSettingsUI(ServerSettingsMenuBase):
     # ==== ui ====
     @disnake.ui.button(label="Set Dice", style=disnake.ButtonStyle.primary)
     async def select_dice(self, button: disnake.ui.Button, interaction: disnake.Interaction):
@@ -402,12 +402,12 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
                 interaction, "Choose a new dice string to roll by sending a message in this channel."
             )
             if randchar_dice is None:
-                await interaction.send("No valid dice found. Press `Set Dice` to try again.", ephemeral=True)
+                await interaction.send(f"No valid dice found. Press `{button.label}` to try again.", ephemeral=True)
                 return
             try:
                 d20.parse(randchar_dice)
             except d20.errors.RollSyntaxError:
-                await interaction.send("Invalid dice string. Press `Set Dice` to try again.", ephemeral=True)
+                await interaction.send(f"Invalid dice string. Press `{button.label}` to try again.", ephemeral=True)
                 return
 
             self.settings.randchar_dice = randchar_dice
@@ -416,206 +416,163 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
 
     @disnake.ui.button(label="Set Number of Sets", style=disnake.ButtonStyle.primary)
     async def select_sets(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-        button.disabled = True
-        await self.refresh_content(interaction)
-        await interaction.send(
-            "Choose a new number of sets to roll by sending a message in this channel.",
-            ephemeral=True,
-        )
-        try:
-            input_msg: disnake.Message = await self.bot.wait_for(
-                "message",
-                timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+        async with self.disable_component(interaction, button):
+            randchar_sets = await self.prompt_message(
+                interaction, "Choose a new number of sets to roll by sending a message in this channel."
             )
-            if not 1 <= int(input_msg.content) <= 25:
-                raise ValueError
-            self.settings.randchar_sets = int(input_msg.content)
-            with suppress(disnake.HTTPException):
-                await input_msg.delete()
-        except (ValueError, asyncio.TimeoutError):
-            await interaction.send(
-                "No valid number of sets found. Press `Set Number of Sets` to try again.", ephemeral=True
-            )
-        else:
+            if randchar_sets is None:
+                await interaction.send(
+                    f"No valid number of sets found. Press `{button.label}` to try again.", ephemeral=True
+                )
+                return
+            if not (randchar_sets.isdigit() and 1 <= int(randchar_sets) <= 25):
+                await interaction.send(
+                    f"Number of sets not between 1 and 25. Press `{button.label}` to try again.", ephemeral=True
+                )
+                return
+            self.settings.randchar_sets = int(randchar_sets)
             await self.commit_settings()
             await interaction.send("Your number of sets have been updated.", ephemeral=True)
-        finally:
-            button.disabled = False
-            await self.refresh_content(interaction)
 
     @disnake.ui.button(label="Set Number of Stats", style=disnake.ButtonStyle.primary)
     async def select_stats(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-        button.disabled = True
-        await self.refresh_content(interaction)
-        await interaction.send(
-            "Choose a new number of stats to roll by sending a message in this channel.",
-            ephemeral=True,
-        )
-        try:
-            input_msg: disnake.Message = await self.bot.wait_for(
-                "message",
-                timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+
+        async with self.disable_component(interaction, button):
+            randchar_stats = await self.prompt_message(
+                interaction, "Choose a new number of stats to roll by sending a message in this channel."
             )
-            if not 1 <= int(input_msg.content) <= 10:
-                raise ValueError
-            self.settings.randchar_num = int(input_msg.content)
-            if self.settings.randchar_num != len(self.settings.randchar_stat_names):
+            if randchar_stats is None:
+                await interaction.send(
+                    f"No valid number of stats found. Press `{button.label}` to try again.", ephemeral=True
+                )
+                return
+            if not (randchar_stats.isdigit() and 1 <= int(randchar_stats) <= 10):
+                await interaction.send(
+                    f"Number of stats not between 1 and 10. Press `{button.label}` to try again.", ephemeral=True
+                )
+                return
+            self.settings.randchar_num = int(randchar_stats)
+            if self.settings.randchar_num != len(self.settings.randchar_stat_names) and self.settings.randchar_straight:
                 self.settings.randchar_straight = False
-            with suppress(disnake.HTTPException):
-                await input_msg.delete()
-        except (ValueError, asyncio.TimeoutError):
-            await interaction.send(
-                "No valid number of stats found. Press `Set Number of Stats` to try again.", ephemeral=True
-            )
-        else:
+                await interaction.send(
+                    "Disabled `Assign Stats` due to the number of stat names not matching the number of stats.",
+                    ephemeral=True,
+                )
             await self.commit_settings()
             await interaction.send("Your number of stats have been updated.", ephemeral=True)
-        finally:
-            button.disabled = False
-            await self.refresh_content(interaction)
 
     @disnake.ui.button(label="Toggle Assign Stats", style=disnake.ButtonStyle.primary)
     async def toggle_straight(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.randchar_straight = not self.settings.randchar_straight
         if self.settings.randchar_straight:
-            button.disabled = True
-            await self.refresh_content(interaction)
-            await interaction.send(
-                "Choose the stat names to automatically assign the rolled stats to, separated by commas.\n"
-                "If you wish to use the default stats, respond with 'default'. This will only work if your number "
-                "of stats is 6.",
-                ephemeral=True,
-            )
-            try:
-                input_msg: disnake.Message = await self.bot.wait_for(
-                    "message",
-                    timeout=60,
-                    check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+            async with self.disable_component(interaction, button):
+                randchar_stat_names = await self.prompt_message(
+                    interaction,
+                    "Choose the stat names to automatically assign the rolled stats to, separated by commas.\n"
+                    "If you wish to use the default stats, respond with 'default'. This will only work if your number "
+                    "of stats is 6.",
                 )
-                message = input_msg.content
-                if message.lower() == "default":
-                    stats = [stat.upper() for stat in STAT_ABBREVIATIONS]
+                if randchar_stat_names is None:
+                    await interaction.send(
+                        f"No valid stat names found. Press `{button.label}` to try again.", ephemeral=True
+                    )
+                    self.settings.randchar_straight = False
+                    await self.commit_settings()
+                    await self.refresh_content(interaction)
+                    return
+                if randchar_stat_names.lower() == "default":
+                    stat_names = [stat.upper() for stat in STAT_ABBREVIATIONS]
                 else:
-                    stats = message.replace(", ", ",").split(",")
-                if len(stats) != self.settings.randchar_num:
-                    raise ValueError
-                self.settings.randchar_stat_names = stats
-                with suppress(disnake.HTTPException):
-                    await input_msg.delete()
-            except (ValueError, asyncio.TimeoutError):
-                self.settings.randchar_straight = False
-                await interaction.send(
-                    "Invalid stat names over found. Press `Toggle Assign Stats` to try again.", ephemeral=True
-                )
-            else:
+                    stat_names = randchar_stat_names.replace(", ", ",").split(",")
+                if len(stat_names) != self.settings.randchar_num:
+                    await interaction.send(
+                        f"Number of stat names does not match the number of stats. Press `{button.label}` to try again.",
+                        ephemeral=True,
+                    )
+                    self.settings.randchar_straight = False
+                    await self.commit_settings()
+                    await self.refresh_content(interaction)
+                    return
+                self.settings.randchar_stat_names = stat_names
                 await self.commit_settings()
                 await interaction.send("Your stat names have been updated.", ephemeral=True)
-            finally:
-                button.disabled = False
-        await self.commit_settings()
-        await self.refresh_content(interaction)
+        else:
+            await self.commit_settings()
+            await self.refresh_content(interaction)
 
     @disnake.ui.button(label="Set Minimum", style=disnake.ButtonStyle.primary, row=1)
     async def select_minimum(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-        button.disabled = True
-        await self.refresh_content(interaction)
-        await interaction.send(
-            "Choose a new minimum roll total by sending a message in this channel. To reset it, respond with 'default'.",
-            ephemeral=True,
-        )
-        try:
-            input_msg: disnake.Message = await self.bot.wait_for(
-                "message",
-                timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+        async with self.disable_component(interaction, button):
+            randchar_min = await self.prompt_message(
+                interaction,
+                "Choose a new minimum roll total by sending a message in this channel. "
+                "To reset it, respond with 'reset'.",
             )
-            if input_msg.content.lower() == "default":
+            if randchar_min is None:
+                await interaction.send(f"No valid minimum found. Press `{button.label}` to try again.", ephemeral=True)
+                return
+            if randchar_min.lower() == "reset":
                 self.settings.randchar_min = None
+            elif not randchar_min.isdigit():
+                await interaction.send(f"No valid minimum found. Press `{button.label}` to try again.", ephemeral=True)
+                return
             else:
-                self.settings.randchar_min = int(input_msg.content)
-            with suppress(disnake.HTTPException):
-                await input_msg.delete()
-        except (ValueError, asyncio.TimeoutError):
-            await interaction.send("No valid minimum found. Press `Set Minimum` to try again.", ephemeral=True)
-        else:
+                self.settings.randchar_min = int(randchar_min)
             await self.commit_settings()
             await interaction.send("Your minimum score has been updated.", ephemeral=True)
-        finally:
-            button.disabled = False
-            await self.refresh_content(interaction)
 
     @disnake.ui.button(label="Set Maximum", style=disnake.ButtonStyle.primary, row=1)
     async def select_maximum(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-        button.disabled = True
-        await self.refresh_content(interaction)
-        await interaction.send(
-            "Choose a new maximum roll total by sending a message in this channel. To reset it, respond with 'default'.",
-            ephemeral=True,
-        )
-        try:
-            input_msg: disnake.Message = await self.bot.wait_for(
-                "message",
-                timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+        async with self.disable_component(interaction, button):
+            randchar_max = await self.prompt_message(
+                interaction,
+                "Choose a new maximum roll total by sending a message in this channel. "
+                "To reset it, respond with 'reset'.",
             )
-            if input_msg.content.lower() == "default":
+            if randchar_max is None:
+                await interaction.send(f"No valid maximum found. Press `{button.label}` to try again.", ephemeral=True)
+                return
+            if randchar_max.lower() == "reset":
                 self.settings.randchar_max = None
+            elif not randchar_max.isdigit():
+                await interaction.send(f"No valid maximum found. Press `{button.label}` to try again.", ephemeral=True)
+                return
             else:
-                self.settings.randchar_max = int(input_msg.content)
-            with suppress(disnake.HTTPException):
-                await input_msg.delete()
-        except (ValueError, asyncio.TimeoutError):
-            await interaction.send("No valid maximum found. Press `Set Maximum` to try again.", ephemeral=True)
-        else:
+                self.settings.randchar_max = int(randchar_max)
             await self.commit_settings()
             await interaction.send("Your maximum score has been updated.", ephemeral=True)
-        finally:
-            button.disabled = False
-            await self.refresh_content(interaction)
 
     @disnake.ui.button(label="Add Over/Under Rule", style=disnake.ButtonStyle.primary, row=1)
     async def add_rule(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-        button.disabled = True
-        await self.refresh_content(interaction)
-        await interaction.send(
-            "Choose a new required over by sending a message in this channel.\n"
-            "Please use the format 'number>score' or 'number<score', for example '1>15' for at least one over 15, or "
-            "'2<10' for at least two under 10.",
-            ephemeral=True,
-        )
-        try:
-            input_msg: disnake.Message = await self.bot.wait_for(
-                "message",
-                timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+        async with self.disable_component(interaction, button):
+            randchar_rule = await self.prompt_message(
+                interaction,
+                "Choose a new required over by sending a message in this channel.\n"
+                'Please use the format "number>score" or "number<score", for example "1>15" for at least one over 15, '
+                'or "2<10" for at least two under 10.',
             )
-            if ">" in input_msg.content:
+            if randchar_rule is None:
+                await interaction.send(f"No valid maximum found. Press `{button.label}` to try again.", ephemeral=True)
+                return
+            if ">" in randchar_rule:
                 rule_type = "gt"
-                amount, value = input_msg.content.split(">")
+                amount, value = randchar_rule.split(">")
                 new_rule = RandcharRule(type=rule_type, amount=amount, value=value)
-            elif "<" in input_msg.content:
+            elif "<" in randchar_rule:
                 rule_type = "lt"
-                amount, value = input_msg.content.split("<")
+                amount, value = randchar_rule.split("<")
                 new_rule = RandcharRule(type=rule_type, amount=amount, value=value)
             else:
-                raise ValueError
+                await interaction.send(
+                    f"No valid over/under rule found. Press `{button.label}` to try again.", ephemeral=True
+                )
+                return
             self.settings.randchar_rules.append(new_rule)
-            self._refresh_remove_rule_select()
-            with suppress(disnake.HTTPException):
-                await input_msg.delete()
-        except (ValueError, asyncio.TimeoutError):
-            await interaction.send(
-                "No valid over/under rule found. Press `Add Over/Under Rule` to try again.", ephemeral=True
-            )
-        else:
-            await self.commit_settings()
-            await interaction.send("Your required over/under rules has been updated.", ephemeral=True)
-        finally:
             if len(self.settings.randchar_rules) < 25:
                 button.disabled = False
-            await self.refresh_content(interaction)
+            self._refresh_remove_rule_select()
+            await self.commit_settings()
+            await interaction.send("Your required over/under rules has been updated.", ephemeral=True)
 
     @disnake.ui.select(placeholder="Remove Rule", min_values=0, max_values=1, row=3)
     async def remove_rule(self, select: disnake.ui.Select, interaction: disnake.Interaction):
@@ -652,7 +609,7 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
 
     async def get_content(self):
         embed = disnake.Embed(
-            title=f"Server Settings ({self.guild.name}) / Randchar Settings",
+            title=f"Server Settings ({self.guild.name}) / Custom Stat Roll Settings",
             colour=disnake.Colour.blurple(),
         )
         embed.add_field(

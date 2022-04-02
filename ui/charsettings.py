@@ -132,32 +132,25 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
 class _CosmeticSettingsUI(CharacterSettingsMenuBase):
     @disnake.ui.button(label="Select Color", style=disnake.ButtonStyle.primary)
     async def select_color(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-        button.disabled = True
-        await self.refresh_content(interaction)
-        await interaction.send(
-            "Choose a new color by sending a message in this channel. You can use a hex code or color like `pink`.",
-            ephemeral=True,
-        )
-
-        try:
-            input_msg: disnake.Message = await self.bot.wait_for(
-                "message",
-                timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+        async with self.disable_component(interaction, button):
+            color = await self.prompt_message(
+                interaction,
+                "Choose a new color by sending a message in this channel. You can use a hex code or color like `pink`.",
             )
-            color_val = pydantic.color.Color(input_msg.content)
-            r, g, b = color_val.as_rgb_tuple(alpha=False)
-            self.settings.color = (r << 16) + (g << 8) + b
-            with suppress(disnake.HTTPException):
-                await input_msg.delete()
-        except (ValueError, asyncio.TimeoutError, pydantic.ValidationError):
-            await interaction.send("No valid color found. Press `Select Color` to try again.", ephemeral=True)
-        else:
+            if color is None:
+                await interaction.send(f"No valid color found. Press `{button.label}` to try again.", ephemeral=True)
+                return
+            try:
+                color_val = pydantic.color.Color(color)
+                r, g, b = color_val.as_rgb_tuple(alpha=False)
+                self.settings.color = (r << 16) + (g << 8) + b
+            except pydantic.errors.ColorError as e:
+                e.msg_template = "Invalid input, {reason}. Press `Select Color` to try again."
+                await interaction.send(e, ephemeral=True)
+                return
+
             await self.commit_settings()
             await interaction.send("Your embed color has been updated.", ephemeral=True)
-        finally:
-            button.disabled = False
-            await self.refresh_content(interaction)
 
     @disnake.ui.button(label="Reset Color", style=disnake.ButtonStyle.danger)
     async def reset_color(self, _: disnake.ui.Button, interaction: disnake.Interaction):

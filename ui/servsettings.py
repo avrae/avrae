@@ -397,29 +397,22 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
     # ==== ui ====
     @disnake.ui.button(label="Set Dice", style=disnake.ButtonStyle.primary)
     async def select_dice(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-        button.disabled = True
-        await self.refresh_content(interaction)
-        await interaction.send(
-            "Choose a new dice string to roll by sending a message in this channel.",
-            ephemeral=True,
-        )
-        try:
-            input_msg: disnake.Message = await self.bot.wait_for(
-                "message",
-                timeout=60,
-                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+        async with self.disable_component(interaction, button):
+            randchar_dice = await self.prompt_message(
+                interaction, "Choose a new dice string to roll by sending a message in this channel."
             )
-            self.settings.randchar_dice = str(d20.parse(input_msg.content))
-            with suppress(disnake.HTTPException):
-                await input_msg.delete()
-        except (ValueError, asyncio.TimeoutError, d20.errors.RollSyntaxError):
-            await interaction.send("No valid dice found. Press `Set Dice` to try again.", ephemeral=True)
-        else:
+            if randchar_dice is None:
+                await interaction.send("No valid dice found. Press `Set Dice` to try again.", ephemeral=True)
+                return
+            try:
+                d20.parse(randchar_dice)
+            except d20.errors.RollSyntaxError:
+                await interaction.send("Invalid dice string. Press `Set Dice` to try again.", ephemeral=True)
+                return
+
+            self.settings.randchar_dice = randchar_dice
             await self.commit_settings()
             await interaction.send("Your dice have been updated.", ephemeral=True)
-        finally:
-            button.disabled = False
-            await self.refresh_content(interaction)
 
     @disnake.ui.button(label="Set Number of Sets", style=disnake.ButtonStyle.primary)
     async def select_sets(self, button: disnake.ui.Button, interaction: disnake.Interaction):

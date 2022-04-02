@@ -512,7 +512,7 @@ class _RandcharSettingsUI(ServerSettingsMenuBase):
                 with suppress(disnake.HTTPException):
                     await input_msg.delete()
             except (ValueError, asyncio.TimeoutError):
-                self.settings.randchar_straight = not self.settings.randchar_straight
+                self.settings.randchar_straight = False
                 await interaction.send(
                     "Invalid stat names over found. Press `Toggle Assign Stats` to try again.", ephemeral=True
                 )

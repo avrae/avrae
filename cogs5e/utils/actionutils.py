@@ -10,6 +10,8 @@ from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLic
 from gamedata import lookuputils
 from utils import constants
 from utils.functions import a_or_an, confirm, maybe_http_url, natural_join, search_and_select, smart_trim, verbose_stat
+from utils.enums import CritDamageType
+from utils.functions import a_or_an, maybe_http_url, natural_join, search_and_select
 
 
 async def run_attack(ctx, embed, args, caster, attack, targets, combat):
@@ -306,7 +308,13 @@ async def run_automation(ctx, embed, args, caster, automation, targets, combat, 
     :type always_commit_caster: bool
     :rtype: cogs5e.models.automation.AutomationResult
     """
-    result = await automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title, **kwargs)
+    guild_settings = await ctx.get_server_settings()
+    if guild_settings:
+        crit_type = guild_settings.crit_type
+    else:
+        crit_type = CritDamageType.NORMAL
+
+    result = await automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title, crit_type=crit_type, **kwargs)
     if combat:
         await combat.final()
     # commit character only if we have not already committed it via combat final

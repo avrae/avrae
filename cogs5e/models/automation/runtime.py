@@ -3,6 +3,7 @@ import aliasing.api.statblock
 import aliasing.evaluators
 import cogs5e.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
+from utils.enums import CritDamageType
 from .errors import AutomationEvaluationException, InvalidIntExpression
 from .utils import maybe_alias_statblock
 
@@ -23,6 +24,7 @@ class AutomationContext:
         ab_override=None,
         dc_override=None,
         spell_override=None,
+        crit_type=CritDamageType.NORMAL,
         ieffect=None
     ):
         self.ctx = ctx
@@ -31,6 +33,7 @@ class AutomationContext:
         self.targets = targets
         self.args = args
         self.combat = combat
+        self.crit_type = crit_type
 
         # spellcasting utils
         self.spell = spell

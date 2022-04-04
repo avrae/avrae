@@ -145,6 +145,9 @@ FILLED_BUBBLE = "\u25c9"
 # pact slots
 EMPTY_BUBBLE_ALT = "\u25a2"
 FILLED_BUBBLE_ALT = "\u25a3"
+# homebrew
+HOMEBREW_EMOJI = "<:homebrew:783780183525818418>"
+HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
 
 # ==== Discord component custom id prefixes ====
 # any string, up to 100 characters long

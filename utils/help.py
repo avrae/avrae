@@ -7,6 +7,7 @@ import aliasing.errors
 import aliasing.helpers
 import aliasing.personal
 from cogs5e.models.embeds import EmbedPaginator
+from utils.constants import HOMEBREW_ICON
 from utils.functions import user_from_id
 
 
@@ -202,9 +203,7 @@ class AvraeHelp(HelpCommand):
         fqp = [full_cmd_path[0]]  # fully qualified path
         ctx = self.context
 
-        self.embed_paginator.set_footer(
-            icon_url="https://avrae.io/assets/img/homebrew.png", value="User-created command."
-        )
+        self.embed_paginator.set_footer(icon_url=HOMEBREW_ICON, value="User-created command.")
 
         # is this a personal alias?
         if isinstance(alias, (aliasing.personal.Alias, aliasing.personal.Servalias)):

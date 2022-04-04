@@ -4,6 +4,7 @@ from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.coinpurse import Coinpurse, CoinsArgs
 from cogs5e.utils.gameutils import parse_coin_args, resolve_strict_coins
 from tests.utils import ContextBotProxy
+from utils.enums import CoinsAutoConvert
 
 pytestmark = pytest.mark.asyncio
 
@@ -11,7 +12,7 @@ pytestmark = pytest.mark.asyncio
 async def test_parse_coin_args():
     assert parse_coin_args("+10") == CoinsArgs(gp=10, explicit=False)
     assert parse_coin_args("+10cp +10gp -8ep") == CoinsArgs(gp=10, ep=-8, cp=10, explicit=True)
-    assert parse_coin_args("-10.47") == CoinsArgs(gp=-10, sp=-4, cp=-7, explicit=False)
+    assert parse_coin_args("-10.47") == CoinsArgs(cp=-1047, explicit=False)
     assert parse_coin_args("+10.388888") == CoinsArgs(gp=10, sp=3, cp=8, explicit=False)
 
 
@@ -28,8 +29,17 @@ async def test_resolve_strict_coins(avrae):
         Coinpurse(pp=1), CoinsArgs(cp=-1, explicit=False), ContextBotProxy(avrae)
     ) == CoinsArgs(pp=-1, gp=9, ep=1, sp=4, cp=9)
 
+    assert await resolve_strict_coins(
+        Coinpurse(pp=1), CoinsArgs(cp=-1, explicit=True), ContextBotProxy(avrae), CoinsAutoConvert.ALWAYS
+    ) == CoinsArgs(pp=-1, gp=9, ep=1, sp=4, cp=9, explicit=True)
+
     with pytest.raises(InvalidArgument):
         await resolve_strict_coins(Coinpurse(gp=1), CoinsArgs(pp=-1, explicit=False), ContextBotProxy(avrae))
+
+    with pytest.raises(InvalidArgument):
+        await resolve_strict_coins(
+            Coinpurse(gp=1), CoinsArgs(cp=-1, explicit=True), ContextBotProxy(avrae), CoinsAutoConvert.NEVER
+        )
 
 
 async def test_coin_autoconvert_down():
@@ -37,6 +47,9 @@ async def test_coin_autoconvert_down():
     assert Coinpurse(pp=10, gp=3, cp=1).auto_convert_down(CoinsArgs(cp=-2)) == CoinsArgs(gp=-1, ep=1, sp=4, cp=8)
     with pytest.raises(InvalidArgument):
         Coinpurse(gp=1).auto_convert_down(CoinsArgs(pp=-1, explicit=False))
+    assert Coinpurse(pp=10, gp=10).auto_convert_down(CoinsArgs(pp=-11)) == CoinsArgs(pp=-10, gp=-10)
+    with pytest.raises(InvalidArgument):
+        Coinpurse(pp=10, gp=9).auto_convert_down(CoinsArgs(pp=-11, explicit=False))
 
 
 async def test_coin_autoconvert_up():

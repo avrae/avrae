@@ -2,6 +2,7 @@ import random
 
 import discord
 
+from utils.constants import HOMEBREW_ICON
 from utils.functions import chunk_text, trim_str
 
 MAX_NUM_FIELDS = 25
@@ -31,7 +32,7 @@ class HomebrewEmbedWithAuthor(EmbedWithAuthor):
 
     def __init__(self, ctx, **kwargs):
         super().__init__(ctx, **kwargs)
-        self.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
+        self.set_footer(text="Homebrew content.", icon_url=HOMEBREW_ICON)
 
 
 class EmbedWithCharacter(discord.Embed):

@@ -37,6 +37,7 @@ class Automation:
         title=None,
         before=None,
         after=None,
+        crit_type=None,
     ):
         """
         Runs automation.
@@ -69,12 +70,25 @@ class Automation:
         :type before: function
         :param after: A function, taking in the AutomationContext, to run after automation runs.
         :type after: function
+        :param crit_type: The method of adding critical damage
+        :type crit_type: utils.enums.CritDamageType
         :rtype: AutomationResult
         """
         if not targets:
             targets = [None]  # outputs a single iteration of effects in a generic meta field
         autoctx = AutomationContext(
-            ctx, embed, caster, targets, args, combat, spell, conc_effect, ab_override, dc_override, spell_override
+            ctx,
+            embed,
+            caster,
+            targets,
+            args,
+            combat,
+            spell,
+            conc_effect,
+            ab_override,
+            dc_override,
+            spell_override,
+            crit_type=crit_type,
         )
 
         results = []

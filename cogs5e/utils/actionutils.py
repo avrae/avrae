@@ -5,6 +5,7 @@ import discord
 from cogs5e.models import embeds
 from cogs5e.models.errors import RequiresLicense
 from gamedata import lookuputils
+from utils.enums import CritDamageType
 from utils.functions import a_or_an, maybe_http_url, natural_join, search_and_select
 
 
@@ -108,7 +109,15 @@ async def _run_common(ctx, embed, args, caster, action, targets, combat):
     :type combat: None or cogs5e.models.initiative.Combat
     :rtype: cogs5e.models.automation.AutomationResult
     """
-    result = await action.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
+    guild_settings = await ctx.get_server_settings()
+    if guild_settings:
+        crit_type = guild_settings.crit_type
+    else:
+        crit_type = CritDamageType.NORMAL
+
+    result = await action.automation.run(
+        ctx, embed, caster, targets, args, combat=combat, title=embed.title, crit_type=crit_type
+    )
     if combat:
         await combat.final()
     # commit character only if we have not already committed it via combat final

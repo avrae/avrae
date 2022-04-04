@@ -12,13 +12,23 @@ from utils.config import (
 
 
 class BeyondUser:
-    def __init__(self, token: str, user_id: str, username: str, roles: list, subscriber=None, subscription_tier=None):
+    def __init__(
+        self,
+        token: str,
+        user_id: str,
+        username: str,
+        roles: list,
+        subscriber=None,
+        subscription_tier=None,
+        display_name=None,
+    ):
         self.token = token
         self.user_id = user_id
         self.username = username
         self.roles = roles
         self.subscriber = subscriber
         self.subscription_tier = subscription_tier
+        self.display_name = display_name or username
 
     @classmethod
     def from_jwt(cls, token):
@@ -34,11 +44,12 @@ class BeyondUser:
         )
         return cls(
             token,
-            payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"],
-            payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
-            payload.get("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", []),
-            payload.get("http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriber"),
-            payload.get("http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriptiontier"),
+            user_id=payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"],
+            username=payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
+            roles=payload.get("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", []),
+            subscriber=payload.get("http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriber"),
+            subscription_tier=payload.get("http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriptiontier"),
+            display_name=payload.get("displayName"),
         )
 
     @classmethod
@@ -53,6 +64,7 @@ class BeyondUser:
             "roles": self.roles,
             "subscriber": self.subscriber,
             "subscription_tier": self.subscription_tier,
+            "display_name": self.display_name,
         }
 
     def to_ld_dict(self):

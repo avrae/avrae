@@ -131,7 +131,9 @@ class BeyondClient(BeyondClientBase):
 
         user = auth.BeyondUser.from_jwt(token)
         await asyncio.gather(
-            ctx.bot.rdb.jsetex(user_cache_key, user.to_dict(), ttl),
+            # to avoid 403's when using a cached token on the verge of expiring, we expire the token from cache
+            # 1 second before its *exp* attribute
+            ctx.bot.rdb.jsetex(user_cache_key, user.to_dict(), max(ttl - 1, 1)),
             Stats.count_ddb_link(ctx, user_id, user),
             update_user_map(ctx, ddb_id=user.user_id, discord_id=user_id),
         )
@@ -219,7 +221,7 @@ class BeyondClient(BeyondClientBase):
 
         :param str claim: The JWT representing the Discord user.
         :returns: A tuple representing the short-term token for the user and its TTL, or (None, None).
-        :rtype: tuple[str or None,int or None]
+        :rtype: tuple[str, int] or tuple[None, None]
         """
         body = {"Token": claim}
         try:

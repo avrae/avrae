@@ -25,7 +25,7 @@ class AutomationContext:
         dc_override=None,
         spell_override=None,
         crit_type=CritDamageType.NORMAL,
-        ieffect=None
+        ieffect=None,
     ):
         self.ctx = ctx
         self.embed = embed

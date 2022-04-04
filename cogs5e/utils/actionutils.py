@@ -9,9 +9,9 @@ from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLicense
 from gamedata import lookuputils
 from utils import constants
-from utils.functions import a_or_an, confirm, maybe_http_url, natural_join, search_and_select, smart_trim, verbose_stat
 from utils.enums import CritDamageType
-from utils.functions import a_or_an, maybe_http_url, natural_join, search_and_select
+from utils.functions import a_or_an, confirm, maybe_http_url, natural_join, search_and_select, smart_trim, verbose_stat
+from utils.settings import ServerSettings
 
 
 async def run_attack(ctx, embed, args, caster, attack, targets, combat):
@@ -298,7 +298,7 @@ async def run_automation(ctx, embed, args, caster, automation, targets, combat, 
     """
     Common automation runner
 
-    :type ctx: discord.ext.commands.Context
+    :type ctx: utils.context.AvraeContext | disnake.Interaction
     :type embed: discord.Embed
     :type args: utils.argparser.ParsedArguments
     :type caster: cogs5e.models.sheet.statblock.StatBlock
@@ -308,13 +308,24 @@ async def run_automation(ctx, embed, args, caster, automation, targets, combat, 
     :type always_commit_caster: bool
     :rtype: cogs5e.models.automation.AutomationResult
     """
-    guild_settings = await ctx.get_server_settings()
+    # get crit type in context
+    # this could be running from an Interaction, which doesn't have the get_server_settings utility;
+    # for now we load from AvraeContext if it's available, otherwise we get it from the db directly
+    if hasattr(ctx, "get_server_settings"):
+        guild_settings = await ctx.get_server_settings()
+    else:
+        guild_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
     if guild_settings:
         crit_type = guild_settings.crit_type
     else:
         crit_type = CritDamageType.NORMAL
 
-    result = await automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title, crit_type=crit_type, **kwargs)
+    # run the automation
+    result = await automation.run(
+        ctx, embed, caster, targets, args, combat=combat, title=embed.title, crit_type=crit_type, **kwargs
+    )
+
+    # do commits
     if combat:
         await combat.final()
     # commit character only if we have not already committed it via combat final
@@ -325,6 +336,7 @@ async def run_automation(ctx, embed, args, caster, automation, targets, combat, 
     ):
         await caster.commit(ctx)
 
+    # common embed operations
     embeds.add_fields_from_args(embed, args.get("f"))
     if "thumb" in args:
         embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))

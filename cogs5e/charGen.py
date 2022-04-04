@@ -3,18 +3,129 @@ import logging
 import random
 import textwrap
 
+import d20
 import discord
 from d20 import roll
 from discord.ext import commands
 
 from cogs5e.models import embeds
-from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithColor
 from cogs5e.models.errors import InvalidArgument
 from gamedata.compendium import compendium
 from gamedata.lookuputils import available, get_race_choices
+from utils.constants import STAT_ABBREVIATIONS
+from utils.dice import PersistentRollContext
 from utils.functions import get_selection, search_and_select
 
 log = logging.getLogger(__name__)
+
+
+async def roll_stats(ctx):
+    guild_settings = await ctx.get_server_settings()
+
+    dice = "4d6kh3"
+    sets = 1
+    stats = 6
+    straight = False
+    min_total = None
+    max_total = None
+    over = {}
+    under = {}
+    stat_names = [stat.upper() for stat in STAT_ABBREVIATIONS]
+
+    if guild_settings:
+        dice = guild_settings.randchar_dice
+        sets = guild_settings.randchar_sets
+        stats = guild_settings.randchar_num
+        straight = guild_settings.randchar_straight
+        min_total = guild_settings.randchar_min
+        max_total = guild_settings.randchar_max
+        stat_names = guild_settings.randchar_stat_names or stat_names
+        if guild_settings.randchar_rules:
+            for rule in guild_settings.randchar_rules:
+                if rule.type == "gt":
+                    over[rule.value] = rule.amount
+                if rule.type == "lt":
+                    under[rule.value] = rule.amount
+
+    embed = EmbedWithColor()
+    embed.title = "Generating Random Stats"
+
+    # Generate our rule text
+    rules = []
+    if sets > 1:
+        rules.append(f"Rolling {sets} sets")
+    if straight:
+        rules.append("Assigning stats directly")
+    if stats != 6:
+        rules.append(f"Rolling {stats} per set")
+    if min_total:
+        rules.append(f"Minimum of {min_total}")
+    if max_total:
+        rules.append(f"Maximum of {max_total}")
+    for m, t in over.items():
+        rules.append(f"At least {t} over {m}")
+    for m, t in under.items():
+        rules.append(f"At least {t} under {m}")
+
+    ast = d20.parse(dice, allow_comments=True)
+    roller = d20.Roller(context=PersistentRollContext(max_rolls=1000))
+
+    stat_rolls = []
+    try:
+        while True:
+            # We need an individual copy per set
+            current_set = []
+            current_over = over.copy()
+            current_under = under.copy()
+            current_sum = 0
+            for i in range(stats):
+                current_roll = roller.roll(ast)
+                current_sum += current_roll.total
+                current_set.append(current_roll)
+
+                if current_over and any(current_over.values()):
+                    for m, t in current_over.items():
+                        if t and current_roll.total > int(m):
+                            current_over[m] -= 1
+
+                if current_under and any(current_under.values()):
+                    for m, t in current_under.items():
+                        if t and current_roll.total < int(m):
+                            current_under[m] -= 1
+
+            meets_over = not current_over or not any(current_over.values())
+            meets_under = not current_under or not any(current_under.values())
+            meets_min = (current_sum >= min_total) if min_total else True
+            meets_max = (current_sum <= max_total) if max_total else True
+            if meets_over and meets_under and meets_max and meets_min:
+                stat_rolls.append({"rolls": current_set, "total": current_sum})
+                if len(stat_rolls) == sets:
+                    break
+    except d20.TooManyRolls:
+        embed.description = (
+            "Unable to roll stat rolls that meet the current rule set.\n\n"
+            "Please examine your current randchar settings to ensure that they are achievable."
+        )
+        return embed
+
+    if rules:
+        embed.description = "**Server Settings:**\n" + "\n".join([f"● {rule}" for rule in rules])
+
+    for i, rolls in enumerate(stat_rolls, 1):
+        embed.add_field(
+            name=f"""Stats {f"#{i}" if len(stat_rolls)>1 else ""}""",
+            value="\n".join(
+                [
+                    (f"**{stat_names[x]}:** " if straight else f"**Stat {x+1}:** ") + str(rolls["rolls"][x])
+                    for x in range(stats)
+                ]
+            )
+            + f"\n-----\nTotal = `{rolls['total']}`",
+            inline=True,
+        )
+
+    return embed
 
 
 class CharGenerator(commands.Cog):
@@ -28,6 +139,7 @@ class CharGenerator(commands.Cog):
     async def randchar(self, ctx, level=None):
         """Rolls up a random 5e character."""
         if level is None:
+
             rolls = [roll("4d6kh3") for _ in range(6)]
             stats = "\n".join(str(r) for r in rolls)
             total = sum([r.total for r in rolls])
@@ -39,7 +151,7 @@ class CharGenerator(commands.Cog):
 
         try:
             level = int(level)
-        except:
+        except ValueError:
             await ctx.send("Invalid level.")
             return
 
@@ -48,6 +160,16 @@ class CharGenerator(commands.Cog):
             return
 
         await self.send_character_details(ctx, level)
+
+    @commands.command(name="rollstats")
+    @commands.max_concurrency(1, per=commands.BucketType.user)
+    async def rollstats(self, ctx):
+        """Rolls random stats.
+
+        Servers can customize their stat rolling requirements via `!servsettings`."""
+
+        stats = await roll_stats(ctx)
+        await ctx.send(f"{ctx.author.mention} rolled stats...", embed=stats)
 
     @commands.command(aliases=["name"])
     async def randname(self, ctx, race=None, option=None):

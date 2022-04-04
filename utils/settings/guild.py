@@ -1,7 +1,8 @@
 import enum
-from typing import List, Optional
+from typing import List, Optional, Literal
 
 import disnake
+from pydantic import BaseModel
 
 from . import SettingsBaseModel
 from utils.enums import CritDamageType
@@ -15,6 +16,12 @@ class InlineRollingType(enum.IntEnum):
     ENABLED = 2
 
 
+class RandcharRule(BaseModel):
+    type: Literal["gt", "lt"]
+    amount: int
+    value: int
+
+
 class ServerSettings(SettingsBaseModel):
     guild_id: int
     dm_roles: Optional[List[int]] = None
@@ -25,6 +32,15 @@ class ServerSettings(SettingsBaseModel):
     show_campaign_cta: bool = True
     upenn_nlp_opt_in: bool = False
     crit_type: CritDamageType = CritDamageType.NORMAL
+
+    randchar_dice: str = "4d6kh3"
+    randchar_sets: int = 1
+    randchar_straight: bool = False
+    randchar_stat_names: Optional[List[str]] = None
+    randchar_num: int = 6
+    randchar_min: int = None
+    randchar_max: int = None
+    randchar_rules: List[RandcharRule] = []
 
     # ==== lifecycle ====
     @classmethod

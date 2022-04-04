@@ -30,6 +30,7 @@ __Valid Arguments__
 *adv/dis* - Give advantage/disadvantage to the save roll(s).
 *-b <bonus>* - Adds a bonus to the roll.
 -dc <dc> - Sets a DC and counts successes/failures.
+-mc <minimum roll> - Sets the minimum roll on the dice (e.g. Starry Form: Dragon, Trance of Order)
 -rr <iterations> - How many saves to roll (does not apply to Death Saves).
 
 -phrase <phrase> - Adds flavor text.
@@ -57,6 +58,7 @@ An italicized argument below means the argument supports ephemeral arguments - e
 *hit* - The attack automatically hits.
 *miss* - The attack automatically misses.
 *-attackroll <value>* - Force the rolled attack to be a fixed number plus modifiers.
+*-attackmin <value>* - Minimum value of the rolled attack before modifiers.
 *crit* - The attack automatically crits.
 -ac <target ac> - Overrides target AC.
 *-b <bonus>* - Adds a bonus to hit.

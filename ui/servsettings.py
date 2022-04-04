@@ -9,6 +9,7 @@ import disnake
 
 from utils.aldclient import discord_user_to_dict
 from utils.constants import STAT_ABBREVIATIONS
+from utils.enums import CritDamageType
 from utils.functions import natural_join
 from utils.settings.guild import InlineRollingType, ServerSettings, RandcharRule
 from .menu import MenuBase
@@ -127,7 +128,9 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             nlp_enabled_description = f"\n**Contribute Message Data to NLP Training**: {self.settings.upenn_nlp_opt_in}"
         embed.add_field(
             name="Miscellaneous Settings",
-            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}" f"{nlp_enabled_description}",
+            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}\n"
+            f"**Critical Damage Type**: {crit_type_desc(self.settings.crit_type)}"
+            f"{nlp_enabled_description}",
             inline=False,
         )
 
@@ -332,11 +335,26 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
         return {"embed": embed}
 
 
+_CRIT_TYPE_OPTIONS = [
+    disnake.SelectOption(label="Add Max Dice Value", value=str(CritDamageType.MAX_ADD.value)),
+    disnake.SelectOption(label="Double Dice Number (Default)", value=str(CritDamageType.NORMAL.value)),
+    disnake.SelectOption(label="Double Dice Total", value=str(CritDamageType.DOUBLE_DICE.value)),
+    disnake.SelectOption(label="Double Total", value=str(CritDamageType.DOUBLE_ALL.value)),
+]
+
+
 class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
     # ==== ui ====
     @disnake.ui.button(label="Toggle DDB Campaign Message", style=disnake.ButtonStyle.primary, row=1)
     async def toggle_campaign_cta(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.show_campaign_cta = not self.settings.show_campaign_cta
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.select(placeholder="Crit Damage Type", options=_CRIT_TYPE_OPTIONS)
+    async def crit_type_select(self, select: disnake.ui.Select, interaction: disnake.Interaction):
+        value = select.values[0]
+        self.settings.crit_type = int(value)
         await self.commit_settings()
         await self.refresh_content(interaction)
 
@@ -372,6 +390,20 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
             value=f"**{self.settings.show_campaign_cta}**\n"
             f"*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when "
             f"you import a character in an unlinked campaign.*",
+            inline=False,
+        )
+        embed.add_field(
+            name="Crit Damage Type",
+            value=f"**{crit_type_desc(self.settings.crit_type)}**\n"
+            f"_This affects how critical damage is treated on the server._\n"
+            f" ● Add Max Dice Value\n"
+            f"> _This type adds the maximum value of each die to the total._\n> `2d8 + 4` -> `2d8 + 16 + 4`\n"
+            f" ● Double Dice Amount (Default)\n"
+            f"> _This type doubles the amount of dice rolled._\n> `2d8 + 4` -> `4d8 + 4`\n"
+            f" ● Double Dice Total\n"
+            f"> _This type doubles the total value of the dice rolled._\n> `2d8 + 4` -> `(2d8) * 2 + 4`\n"
+            f" ● Double Total\n"
+            f"> _This type doubles the total, including modifiers._\n> `2d8 + 4` -> `(2d8 + 4) * 2`",
             inline=False,
         )
 
@@ -665,3 +697,14 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
         )
 
         return {"embed": embed}
+
+def crit_type_desc(mode):
+    return (
+        "Double Dice Amount (Default)"
+        if mode == CritDamageType.NORMAL
+        else "Add Max Dice Value"
+        if mode == CritDamageType.MAX_ADD
+        else "Double Total"
+        if mode == CritDamageType.DOUBLE_ALL
+        else "Double Dice Total"
+    )

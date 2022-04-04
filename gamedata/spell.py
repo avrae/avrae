@@ -10,6 +10,7 @@ from cogs5e.models.errors import AvraeException, InvalidArgument
 from cogs5e.initiative.effect import Effect
 from cogs5e.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
+from utils.enums import CritDamageType
 from utils.functions import confirm, maybe_http_url, smart_trim, verbose_stat
 from .mixins import AutomatibleMixin, DescribableMixin
 from .shared import Sourced
@@ -301,6 +302,12 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             effect_result = caster.add_effect(conc_effect)
             conc_conflict = effect_result["conc_conflict"]
 
+        guild_settings = await ctx.get_server_settings()
+        if guild_settings:
+            crit_type = guild_settings.crit_type
+        else:
+            crit_type = CritDamageType.NORMAL
+
         # run
         automation_result = None
         if self.automation and self.automation.effects:
@@ -318,6 +325,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
                 dc_override=dc_override,
                 spell_override=spell_override,
                 title=title,
+                crit_type=crit_type,
             )
         else:  # no automation, display spell description
             phrase = args.join("phrase", "\n")

@@ -63,6 +63,7 @@ Attack
         hit: Effect[];
         miss: Effect[];
         attackBonus?: IntExpression;
+        adv?: IntExpression;
     }
 
 An Attack effect makes an attack roll against a targeted creature.
@@ -80,6 +81,11 @@ It must be inside a Target effect.
 
      *optional* - An IntExpression that details what attack bonus to use (defaults to caster's spell attack mod).
 
+.. attribute:: adv
+
+     *optional* - An IntExpression that details whether the attack has inherent advantage or not. ``0`` for flat, ``1``;
+     for Advantage, ``2`` for Elven Accuracy, ``-1`` for Disadvantage (Default is flat).
+
 **Variables**
 
 - ``lastAttackDidHit`` (:class:`bool`) Whether the attack hit.
@@ -87,6 +93,8 @@ It must be inside a Target effect.
 - ``lastAttackRollTotal`` (:class:`int`) The result of the last to-hit roll (0 if no roll was made).
 - ``lastAttackNaturalRoll`` (:class:`int`) The natural roll of the last to-hit roll (e.g. `10` in `1d20 (10) + 5 = 15`;
   0 if no roll was made).
+- ``lastAttackHadAdvantage`` (:class:`int`) The advantage type of the last to-hit roll. ``0`` for flat, ``1`` for;
+  Advantage, ``2`` for Elven Accuracy, ``-1`` for Disadvantage
 
 Save
 ----

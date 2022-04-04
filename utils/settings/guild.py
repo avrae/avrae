@@ -5,6 +5,7 @@ import disnake
 from pydantic import BaseModel
 
 from . import SettingsBaseModel
+from utils.enums import CritDamageType
 
 DEFAULT_DM_ROLE_NAMES = {"dm", "gm", "dungeon master", "game master"}
 
@@ -30,6 +31,7 @@ class ServerSettings(SettingsBaseModel):
     inline_enabled: InlineRollingType = InlineRollingType.DISABLED
     show_campaign_cta: bool = True
     upenn_nlp_opt_in: bool = False
+    crit_type: CritDamageType = CritDamageType.NORMAL
 
     randchar_dice: str = "4d6kh3"
     randchar_sets: int = 1

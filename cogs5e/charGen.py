@@ -164,7 +164,7 @@ class CharGenerator(commands.Cog):
     @commands.command(name="rollstats")
     @commands.max_concurrency(1, per=commands.BucketType.user)
     async def rollstats(self, ctx):
-        """Rolls up a random 5e character.
+        """Rolls random stats.
 
         Servers can customize their stat rolling requirements via `!servsettings`."""
 

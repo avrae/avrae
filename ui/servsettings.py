@@ -1,5 +1,6 @@
 import abc
 import asyncio
+import re
 from contextlib import suppress
 from typing import List, Optional, TYPE_CHECKING, TypeVar
 
@@ -547,32 +548,34 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
         async with self.disable_component(interaction, button):
             randchar_rule = await self.prompt_message(
                 interaction,
-                "Choose a new required over by sending a message in this channel.\n"
+                "Add a new score rule by sending a message in this channel.\n"
                 'Please use the format "number>score" or "number<score", for example "1>15" for at least one over 15, '
                 'or "2<10" for at least two under 10.',
             )
             if randchar_rule is None:
-                await interaction.send(f"No valid maximum found. Press `{button.label}` to try again.", ephemeral=True)
+                await interaction.send(
+                    f"No valid over/under found. Press `{button.label}` to try again.", ephemeral=True
+                )
                 return
-            if ">" in randchar_rule:
-                rule_type = "gt"
-                amount, value = randchar_rule.split(">")
-                new_rule = RandcharRule(type=rule_type, amount=amount, value=value)
-            elif "<" in randchar_rule:
-                rule_type = "lt"
-                amount, value = randchar_rule.split("<")
-                new_rule = RandcharRule(type=rule_type, amount=amount, value=value)
-            else:
+            rule_match = re.fullmatch(r"(\d+)(>|<)(\d+)", randchar_rule)
+            if rule_match is None:
                 await interaction.send(
                     f"No valid over/under rule found. Press `{button.label}` to try again.", ephemeral=True
                 )
                 return
+            match rule_match.groups():
+                case [amount, "<", value]:
+                    new_rule = RandcharRule(type="lt", amount=amount, value=value)
+                case [amount, ">", value]:
+                    new_rule = RandcharRule(type="gt", amount=amount, value=value)
             self.settings.randchar_rules.append(new_rule)
-            if len(self.settings.randchar_rules) < 25:
-                button.disabled = False
             self._refresh_remove_rule_select()
             await self.commit_settings()
             await interaction.send("Your required over/under rules has been updated.", ephemeral=True)
+        # Disable button if we have >= 25 rules, so we don't overfill the select
+        if len(self.settings.randchar_rules) >= 25:
+            button.disabled = True
+            await self.refresh_content(interaction)
 
     @disnake.ui.select(placeholder="Remove Rule", min_values=0, max_values=1, row=3)
     async def remove_rule(self, select: disnake.ui.Select, interaction: disnake.Interaction):

@@ -144,7 +144,7 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
                 color_val = pydantic.color.Color(color)
                 r, g, b = color_val.as_rgb_tuple(alpha=False)
                 self.settings.color = (r << 16) + (g << 8) + b
-            except pydantic.errors.ColorError as e:
+            except pydantic.errors.ColorError:
                 await interaction.send(f"No valid color found. Press `{button.label}` to try again.", ephemeral=True)
                 return
 

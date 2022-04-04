@@ -1,5 +1,5 @@
 import enum
-from typing import List, Optional, Dict, Literal
+from typing import List, Optional, Literal
 
 import disnake
 from pydantic import BaseModel

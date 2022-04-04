@@ -698,6 +698,7 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
 
         return {"embed": embed}
 
+
 def crit_type_desc(mode):
     return (
         "Double Dice Amount (Default)"

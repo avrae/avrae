@@ -145,7 +145,7 @@ class SheetManager(commands.Cog):
 
         out = f"Created attack {attack.name}!"
         if conflict:
-            out += f" Removed a duplicate attack."
+            out += " Removed a duplicate attack."
         await ctx.send(out)
 
     @action.command(name="import")
@@ -298,7 +298,7 @@ class SheetManager(commands.Cog):
         char: Character = await ctx.get_character()
         char.overrides.desc = None
         await char.commit(ctx)
-        await ctx.send(f"Description override removed!")
+        await ctx.send("Description override removed!")
 
     @commands.group(invoke_without_command=True)
     async def portrait(self, ctx):
@@ -330,7 +330,7 @@ class SheetManager(commands.Cog):
         char: Character = await ctx.get_character()
         char.overrides.image = None
         await char.commit(ctx)
-        await ctx.send(f"Portrait override removed!")
+        await ctx.send("Portrait override removed!")
 
     @commands.command(hidden=True)  # hidden, as just called by token command
     async def playertoken(self, ctx, *args):

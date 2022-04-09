@@ -466,7 +466,16 @@ Draconic Functions
     :return: A random integer.
     :rtype: int
 
-.. function:: randchoice(population, weights=None, cum_weights=None, k=1)
+.. function:: randchoice(seq)
+    
+    Returns a random item from ``seq``.
+    
+    :param seq: The itterable to choose a random item from.
+    :type seq: iterable.
+    :return: A random item from the iterable.
+    :rtype: Any.
+
+.. function:: randchoices(population, weights=None, cum_weights=None, k=1)
     
     Returns a list of random items from ``population`` of ``k`` length with either weighted or cumulatively weighted odds.
     The ``weights`` [2,1,1] are equal to ``cum_weights`` [2,3,4]. 
@@ -483,16 +492,7 @@ Draconic Functions
     :type k: int
     :return: A list of random items from the iterable.
     :rtype: list
-
-.. function:: randchoices(seq)
     
-    Returns a random item from ``seq``.
-    
-    :param seq: The itterable to choose a random item from.
-    :type seq: iterable.
-    :return: A random item from the iterable.
-    :rtype: Any.
-
 .. autofunction:: aliasing.api.functions.roll
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.set_uvar(name, value)

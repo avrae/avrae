@@ -482,7 +482,7 @@ Draconic Functions
     If no ``weights`` or ``cum_weights`` are input, the items in ``population`` will have equal odds of being chosen.
     If no ``k`` is input, the output length will be 1.
     
-    :param population: The itterable to choose a random items from.
+    :param population: The itterable to choose random items from.
     :type population: iterable.
     :param weights: The odds for each item in the ``population`` iterable.
     :type weights: list of ints

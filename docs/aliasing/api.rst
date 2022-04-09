@@ -466,7 +466,25 @@ Draconic Functions
     :return: A random integer.
     :rtype: int
 
-.. function:: randchoice(seq)
+.. function:: randchoice(population, weights=None, cum_weights=None, k=1)
+    
+    Returns a list of random items from ``population`` of ``k`` length with either weighted or cumulatively weighted odds.
+    The ``weights`` [2,1,1] are equal to ``cum_weights`` [2,3,4]. 
+    If no ``weights`` or ``cum_weights`` are input, the items in ``population`` will have equal odds of being chosen.
+    If no ``k`` is input, the output length will be 1.
+    
+    :param population: The itterable to choose a random items from.
+    :type population: iterable.
+    :param weights: The odds for each item in the ``population`` iterable.
+    :type weights: list of ints
+    :param cum_weights: The cumulative odds for each item in the ``population`` itterable.
+    :type cum_weights: list of ints
+    :param k: The length of the output.
+    :type k: int
+    :return: A list of random items from the iterable.
+    :rtype: list
+
+.. function:: randchoices(seq)
     
     Returns a random item from ``seq``.
     

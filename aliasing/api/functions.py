@@ -176,6 +176,10 @@ def randchoice(seq):
     return random.choice(seq)
 
 
+def randchoices(population, weights=None, cum_weights=None, k=1):
+    return random.choices(population, weights=weights, cum_weights=cum_weights, k=k)
+
+
 # signatures
 SIG_SECRET = config.DRACONIC_SIGNATURE_SECRET
 SIG_STRUCT = struct.Struct("!QQQ12sB")  # u64, u64, u64, byte[12], u8 - https://docs.python.org/3/library/struct.html

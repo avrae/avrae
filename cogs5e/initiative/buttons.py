@@ -51,7 +51,13 @@ class ButtonHandler:
             Target(target="self", effects=[]).run_target(autoctx, target=combatant, target_index=0)
 
         # anyway, we're good to run the automation!
+        if button_interaction.verb is not None:
+            verb = button_interaction.verb
+        else:
+            verb = f"uses {button_interaction.label}"
+
         embed = disnake.Embed(color=combatant.get_color())
+        embed.title = f"{combatant.get_title_name()} {verb}!"
         result = await actionutils.run_automation(
             ctx=inter,
             embed=embed,

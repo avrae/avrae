@@ -1,5 +1,5 @@
 import abc
-from typing import List
+from typing import List, Optional
 
 import disnake
 
@@ -53,15 +53,29 @@ class AttackInteraction(InitEffectInteraction):
 class ButtonInteraction(InitEffectInteraction):
     """This interaction adds a button to the combatant's turn message to run some automation."""
 
-    def __init__(self, id: str, automation, label: str, style: disnake.ButtonStyle = disnake.ButtonStyle.primary):
+    def __init__(
+        self,
+        id: str,
+        automation,
+        label: str,
+        verb: Optional[str] = None,
+        style: disnake.ButtonStyle = disnake.ButtonStyle.primary,
+    ):
         self.id = id
         self.automation = automation
         self.label = label
+        self.verb = verb
         self.style = style
 
     @classmethod
-    def new(cls, automation, label: str, style: disnake.ButtonStyle = disnake.ButtonStyle.primary):
-        return cls(id=create_button_interaction_id(), automation=automation, label=label, style=style)
+    def new(
+        cls,
+        automation,
+        label: str,
+        verb: Optional[str] = None,
+        style: disnake.ButtonStyle = disnake.ButtonStyle.primary,
+    ):
+        return cls(id=create_button_interaction_id(), automation=automation, label=label, verb=verb, style=style)
 
     @classmethod
     def from_dict(cls, data):
@@ -71,6 +85,7 @@ class ButtonInteraction(InitEffectInteraction):
             id=data["id"],
             automation=Automation.from_data(data["automation"]),
             label=data["label"],
+            verb=data["verb"],
             style=disnake.ButtonStyle(data["style"]),
         )
 
@@ -79,6 +94,7 @@ class ButtonInteraction(InitEffectInteraction):
             "id": self.id,
             "automation": self.automation.to_dict(),
             "label": self.label,
+            "verb": self.verb,
             "style": int(self.style),
         }
 

@@ -449,7 +449,7 @@ async def user_from_id(ctx, the_id):
                 "$set": {
                     "username": the_user.name,
                     "discriminator": the_user.discriminator,
-                    "avatar": the_user.display_avatar.key,
+                    "avatar": the_user.display_avatar.key if the_user.avatar else None,  # None if using default avatar
                     "bot": the_user.bot,
                 }
             },

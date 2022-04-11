@@ -29,6 +29,16 @@ class ButtonHandler:
             await try_update_interaction_message_components(inter, None)
             return
 
+        # check ownership
+        author_id = inter.author.id
+        if not (author_id == combatant.controller_id or author_id == combat.dm_id):
+            await inter.send(
+                "You do not have permission to control this combatant. Only the combatant owner and combat DM may use "
+                "this button.",
+                ephemeral=True,
+            )
+            return
+
         # find the effect
         effect = combatant.effect_by_id(effect_id)
         if effect is None:

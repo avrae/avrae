@@ -50,6 +50,7 @@ class Damage(Effect):
         mi_arg = args.last("mi", None, int)
         dtype_args = args.get("dtype", [], ephem=True)
         critdice = sum(args.get("critdice", type_=int))
+        savage = args.last("savage", None, bool, ephem=True)
         hide = args.last("h", type_=bool)
 
         crit_damage_type = autoctx.crit_type
@@ -79,6 +80,11 @@ class Damage(Effect):
         damage = autoctx.parse_annostr(damage)
         dice_ast = copy.copy(d20.parse(damage))
         dice_ast = utils.upcast_scaled_dice(self, autoctx, dice_ast)
+
+        if savage:
+            dice_ast.roll = d20.ast.OperatedSet(
+                d20.ast.NumberSet([dice_ast.roll, dice_ast.roll]), d20.SetOperator("k", [d20.SetSelector("h", 1)])
+            )
 
         # -mi # (#527)
         if mi_arg:

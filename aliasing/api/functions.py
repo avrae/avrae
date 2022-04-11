@@ -177,6 +177,10 @@ def randchoice(seq):
 
 
 def randchoices(population, weights=None, cum_weights=None, k=1):
+    if k > MAX_ITER_LENGTH:
+        draconic._raise_in_context(draconic.IterableTooLong, "The length of the output is too large.")
+    if max(population, key=approx_len_of) * k > MAX_ITER_LENGTH:
+        draconic._raise_in_context(draconic.IterableTooLong, "The length of your input is too large.")
     return random.choices(population, weights=weights, cum_weights=cum_weights, k=k)
 
 

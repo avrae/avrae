@@ -1,12 +1,13 @@
 import abc
-import typing
 from dataclasses import dataclass, field
+from typing import Iterable, List, Optional, TYPE_CHECKING, Tuple, Union
 
 import d20
 
-import cogs5e.initiative
-import cogs5e.models.sheet.statblock
-import gamedata
+if TYPE_CHECKING:
+    from cogs5e.models.sheet.statblock import StatBlock
+    from cogs5e.initiative import InitiativeEffect
+    from gamedata import Spell
 
 __all__ = (
     "EffectResult",
@@ -31,7 +32,7 @@ class EffectResult(abc.ABC):
     Base class for the result of an automation effect.
     """
 
-    def get_children(self) -> typing.Iterable["EffectResult"]:
+    def get_children(self) -> Iterable["EffectResult"]:
         if hasattr(self, "children"):
             return self.children
         return []
@@ -47,7 +48,7 @@ class EffectResult(abc.ABC):
 class AutomationResult(EffectResult):
     """Class for the overall result of automation (technically not an effect, but eh)."""
 
-    children: typing.List[EffectResult]
+    children: List[EffectResult]
     is_spell: bool = False
     caster_needs_commit: bool = False
 
@@ -60,8 +61,8 @@ class TargetResult(EffectResult):
     The same target may appear multiple times consecutively, which represents the multiple iterations of -rr.
     """
 
-    targets: typing.Tuple[typing.Union[None, str, "cogs5e.models.sheet.statblock.StatBlock"]] = ()
-    results: typing.Tuple[typing.List[EffectResult], ...] = ()
+    targets: Tuple[Union[None, str, "StatBlock"]] = ()
+    results: Tuple[List[EffectResult], ...] = ()
 
     def get_children(self):
         for inst in self.results:
@@ -71,22 +72,22 @@ class TargetResult(EffectResult):
 @dataclass(frozen=True)
 class AttackResult(EffectResult):
     attack_bonus: int  # does not include -b bonuses
-    ac: typing.Optional[int]
-    to_hit_roll: typing.Optional[d20.RollResult]  # can be None iff automatic hit/miss - see did_hit
+    ac: Optional[int]
+    to_hit_roll: Optional[d20.RollResult]  # can be None iff automatic hit/miss - see did_hit
     adv: int
     did_hit: bool
     did_crit: bool
-    children: typing.List[EffectResult]
+    children: List[EffectResult]
 
 
 @dataclass(frozen=True)
 class SaveResult(EffectResult):
     dc: int
     ability: str
-    save_roll: typing.Optional[d20.RollResult]  # None if target is simple or automatic fail/pass
+    save_roll: Optional[d20.RollResult]  # None if target is simple or automatic fail/pass
     adv: int
     did_save: bool
-    children: typing.List[EffectResult]
+    children: List[EffectResult]
 
 
 @dataclass(frozen=True)
@@ -107,8 +108,8 @@ class TempHPResult(EffectResult):
 
 @dataclass(frozen=True)
 class IEffectResult(EffectResult):
-    effect: "cogs5e.initiative.Effect"
-    conc_conflict: typing.List["cogs5e.initiative.Effect"]
+    effect: "InitiativeEffect"
+    conc_conflict: List["InitiativeEffect"]
 
 
 @dataclass(frozen=True)
@@ -135,12 +136,12 @@ class ConditionResult(EffectResult):
     did_true: bool
     did_false: bool
     did_error: bool
-    children: typing.List[EffectResult]
+    children: List[EffectResult]
 
 
 @dataclass(frozen=True)
 class UseCounterResult(EffectResult):
-    counter_name: typing.Optional[str] = None  # None if the counter was not used successfully
+    counter_name: Optional[str] = None  # None if the counter was not used successfully
     counter_remaining: int = 0
     used_amount: int = 0
     requested_amount: int = 0
@@ -150,5 +151,5 @@ class UseCounterResult(EffectResult):
 @dataclass(frozen=True)
 class CastSpellResult(EffectResult):
     success: bool
-    spell: typing.Optional["gamedata.Spell"] = None
-    children: typing.List[EffectResult] = field(default_factory=list)
+    spell: Optional["Spell"] = None
+    children: List[EffectResult] = field(default_factory=list)

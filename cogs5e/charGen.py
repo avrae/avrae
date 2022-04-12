@@ -69,7 +69,7 @@ async def roll_stats(ctx):
         rules.append(f"At least {t} under {m}")
 
     ast = d20.parse(dice, allow_comments=True)
-    roller = d20.Roller(context=PersistentRollContext(max_rolls=1000))
+    roller = d20.Roller(context=PersistentRollContext(max_rolls=2500))
 
     stat_rolls = []
     try:

@@ -207,10 +207,12 @@ IEffect
 .. code-block:: typescript
 
     {
-        type: "ieffect";
+        type: "ieffect2";
         name: string;
-        duration: int | IntExpression;
-        effects: AnnotatedString;
+        duration?: int | IntExpression;
+        effects?: PassiveEffects;
+        attacks?: AttackInteraction[];
+        buttons?: ButtonInteraction[];
         end?: boolean;
         conc?: boolean;
         desc?: AnnotatedString;
@@ -224,32 +226,42 @@ It must be inside a Target effect.
 
 .. attribute:: name
 
-     The name of the effect to add.
+    The name of the effect to add.
 
 .. attribute:: duration
 
-     The duration of the effect, in rounds of combat.
+    *optional, default infinite* - The duration of the effect, in rounds of combat. If this is negative, creates an
+    effect with infinite duration.
 
 .. attribute:: effects
 
-     The effects to add (see :func:`~aliasing.api.combat.SimpleCombatant.add_effect()`).
+    *optional, default no effects* - The effects to add. See :ref:`passiveeffects`.
+
+.. attribute:: attacks
+
+    *optional, default no attacks* - The attacks granted by this effect. See :ref:`attackinteraction`.
+
+.. attribute:: buttons
+
+    *optional, default no buttons* - The buttons granted by this effect. See :ref:`buttoninteraction`.
 
 .. attribute:: end
 
-     *optional, default false* - Whether the effect timer should tick on the end of the turn, rather than start.
+    *optional, default false* - Whether the effect timer should tick on the end of the turn, rather than start.
 
 .. attribute:: conc
 
-     *optional, default false* - Whether the effect requires concentration.
+    *optional, default false* - Whether the effect requires concentration.
 
 .. attribute:: desc
 
-     *optional* - The description of the effect (displays on combatant's turn).
+    *optional* - The description of the effect (displays on combatant's turn).
 
 .. attribute:: stacking
 
-     *optional, default false* - If true and another effect with the same name is found on the target, instead of
-     overwriting, add a child effect with name ``{name} x{count}`` and no description, duration, or concentration.
+    *optional, default false* - If true and another effect with the same name is found on the target, instead of
+    overwriting, add a child effect with name ``{name} x{count}`` and no description, duration, concentration,
+    attacks, or buttons.
 
 .. attribute:: save_as
 
@@ -272,6 +284,188 @@ It must be inside a Target effect.
 - ``(supplied save_as)`` (:class:`IEffectMetaVar` or ``None``) A reference to the effect that was added to the target.
   Use this in another IEffect's ``parent`` key to set that IEffect's parent to the given one.
 
+.. _passiveeffects:
+
+PassiveEffects
+^^^^^^^^^^^^^^
+
+.. code-block:: typescript
+
+    {
+        attack_advantage: IntExpression;
+        to_hit_bonus: AnnotatedString;
+        damage_bonus: AnnotatedString;
+        magical_damage: IntExpression;
+        silvered_damage: IntExpression;
+        resistances: AnnotatedString[];
+        immunities: AnnotatedString[];
+        vulnerabilities: AnnotatedString[];
+        ignored_resistances: AnnotatedString[];
+        ac_value: IntExpression;
+        ac_bonus: IntExpression;
+        max_hp_value: IntExpression;
+        max_hp_bonus: IntExpression;
+        save_bonus: AnnotatedString;
+        save_adv: AnnotatedString[];
+        save_dis: AnnotatedString[];
+        check_bonus: AnnotatedString;
+    }
+
+Used to specify the passive effects granted by an initiative effect.
+
+.. attribute:: attack_advantage
+
+    *optional, default no advantage* - Whether this effect gives the combatant advantage on all attacks.
+    -1 for dis, 1 for adv, 2 for elven accuracy.
+
+.. attribute:: to_hit_bonus
+
+    *optional* - A bonus that this effect grants to all of the combatant's to-hit rolls.
+
+.. attribute:: damage_bonus
+
+    *optional* - A bonus that this effect grants to all of the combatant's damage rolls.
+
+.. attribute:: magical_damage
+
+    *optional, default false* - Whether this effect makes all of the combatant's attacks do magical damage.
+    0 for false, anything else for true.
+
+.. attribute:: silvered_damage
+
+    *optional, default false* - Whether this effect makes all of the combatant's attacks do silvered damage.
+    0 for false, anything else for true.
+
+.. attribute:: resistances
+
+    *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the combatant
+    should be resistant to while this effect is active.
+
+.. attribute:: immunities
+
+    *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the combatant
+    should be immune to while this effect is active.
+
+.. attribute:: vulnerabilities
+
+    *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the combatant
+    should be vulnerable to while this effect is active.
+
+.. attribute:: ignored_resistances
+
+    *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the combatant
+    should *not* be resistant, immune, or vulnerable to while this effect is active.
+
+.. attribute:: ac_value
+
+    *optional* - A value to set the combatant's armor class to while this effect is active.
+
+    .. note::
+        If both ``ac_value`` and ``ac_bonus`` are specified, the resulting value will be equal to
+        ``ac_value + ac_bonus``.
+
+        If multiple effects specify ``ac_value``, the highest value will be used.
+
+.. attribute:: ac_bonus
+
+    *optional* - A bonus added to the combatant's armor class while this effect is active.
+
+.. attribute:: max_hp_value
+
+    *optional* - A value to set the combatant's maximum hit points to while this effect is active.
+
+    .. note::
+        If both ``max_hp_value`` and ``max_hp_bonus`` are specified, the resulting value will be equal to
+        ``max_hp_value + max_hp_bonus``.
+
+        If multiple effects specify ``max_hp_value``, the highest value will be used.
+
+.. attribute:: max_hp_bonus
+
+    *optional* - A bonus added to the combatant's maximum hit points while this effect is active.
+
+.. attribute:: save_bonus
+
+    *optional* - A bonus that this effect grants to all of the combatant's saving throws.
+
+.. attribute:: save_adv
+
+    *optional* - A list of stat names (e.g. ``strength``) that the combatant should have advantage on for their
+    respective saving throws while this effect is active.
+
+.. attribute:: save_dis
+
+    *optional* - A list of stat names (e.g. ``strength``) that the combatant should have disadvantage on for their
+    respective saving throws while this effect is active.
+
+.. attribute:: check_bonus
+
+    *optional* - A bonus that this effect grants to all of the combatant's skill checks.
+
+.. _attackinteraction:
+
+AttackInteraction
+^^^^^^^^^^^^^^^^^
+
+.. code-block:: typescript
+
+    {
+        attack: Attack;
+    }
+
+Used to specify an attack granted by an initiative effect. The Attack model is any valid individual entity as exported
+by the attack editor on the Avrae Dashboard:
+
+.. code-block:: typescript
+
+    {
+        _v: 2;
+        name: string;
+        automation: Effect[];
+        verb?: string;
+        proper?: boolean;
+        criton?: number;
+        phrase?: string;
+        thumb?: string;
+        extra_crit_damage?: string;
+    }
+
+.. _buttoninteraction:
+
+ButtonInteraction
+^^^^^^^^^^^^^^^^^
+
+.. code-block:: typescript
+
+    {
+        automation: Effect[];
+        label: AnnotatedString;
+        verb?: AnnotatedString;
+        style?: IntExpression;
+    }
+
+Used to specify a button that will appear on the targeted combatant's turn and execute some automation when pressed.
+
+.. attribute:: automation
+
+    The automation to run when this button is pressed.
+
+    .. note::
+        By default, this automation will target the combatant the effect is on. Adding a Target effect may lead to
+        unexpected behaviour.
+
+.. attribute:: label
+
+    The label displayed on the button.
+
+.. attribute:: verb
+
+    *optional, default "uses {label}"* - The verb to use for the displayed output when the button is pressed (e.g. "is
+    on fire" would display "NAME is on fire!").
+
+.. attribute:: style
+
+    *optional, default blurple* - The color of the button (1 = blurple, 2 = grey, 3 = green, 4 = red).
 
 Roll
 ----

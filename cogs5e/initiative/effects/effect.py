@@ -83,21 +83,29 @@ class InitiativeEffect:
         combat: Optional[_CombatT],
         combatant: Optional[_CombatantT],
         name: str,
-        effect_args: Union[str, ParsedArguments],
-        duration: Optional[int],
+        effect_args: Union[str, ParsedArguments] = None,
+        duration: Optional[int] = None,
         end_on_turn_end: bool = False,
         concentration: bool = False,
         character: Optional[_CharacterT] = None,
         desc: Optional[str] = None,
+        passive_effects: InitPassiveEffect = None,
+        attacks: list[AttackInteraction] = None,
+        buttons: list[ButtonInteraction] = None,
     ):
-        if isinstance(effect_args, str):
-            if (combatant and combatant.type == CombatantType.PLAYER) or character:
-                effect_args = argparse(effect_args, character=combatant.character or character)
-            else:
-                effect_args = argparse(effect_args)
+        # either parse effect_args or passive_effects/attacks
+        if effect_args is not None and (passive_effects is not None or attacks is not None):
+            raise ValueError("You cannot use both 'effect_args' and either of 'passive_effects' or 'attacks'.")
 
-        effects = InitPassiveEffect.from_args(effect_args)
-        attacks = attack_interactions_from_args(effect_args, effect_name=name)
+        if effect_args is not None:
+            if isinstance(effect_args, str):
+                if (combatant and combatant.type == CombatantType.PLAYER) or character:
+                    effect_args = argparse(effect_args, character=combatant.character or character)
+                else:
+                    effect_args = argparse(effect_args)
+
+            passive_effects = InitPassiveEffect.from_args(effect_args)
+            attacks = attack_interactions_from_args(effect_args, effect_name=name)
 
         # duration handling
         if duration is not None:
@@ -127,8 +135,9 @@ class InitiativeEffect:
             combatant=combatant,
             id=create_effect_id(),
             name=name,
-            effects=effects,
+            effects=passive_effects,
             attacks=attacks,
+            buttons=buttons,
             duration=duration,
             end_round=end_round,
             end_on_turn_end=end_on_turn_end,

@@ -243,7 +243,7 @@ async def cast_spell(spell, ctx, caster, targets, args, combat=None):
     if all((spell.concentration, isinstance(caster, BaseCombatant), combat, not noconc)):
         duration = args.last("dur", spell.get_combat_duration(), int)
         conc_effect = InitiativeEffect.new(
-            combat=combat, combatant=caster, name=spell.name, duration=duration, effect_args="", concentration=True
+            combat=combat, combatant=caster, name=spell.name, duration=duration, concentration=True
         )
         # noinspection PyUnresolvedReferences
         effect_result = caster.add_effect(conc_effect)

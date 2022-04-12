@@ -6,3 +6,4 @@ Maybe I should fly more.
 """
 from .effect import InitiativeEffect
 from .interaction import AttackInteraction, ButtonInteraction
+from .passive import InitPassiveEffect

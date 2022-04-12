@@ -16,6 +16,7 @@ from utils import config
 from utils.dice import RerollableStringifier
 from .context import AliasAuthor, AliasChannel, AliasGuild
 from ..utils import ExecutionScope
+from draconic.types import approx_len_of
 
 MAX_ITER_LENGTH = 10000
 

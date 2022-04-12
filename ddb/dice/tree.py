@@ -232,7 +232,7 @@ class DiceNotation:
 
         recurse(result.expr.roll)
 
-        return cls(dice_set, sum(constants))
+        return cls(dice_set, int(sum(constants)))
 
     def d20_ast(self, **kwargs):
         """

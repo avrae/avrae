@@ -79,6 +79,7 @@ sadv/sdis - Gives the target advantage/disadvantage on the saving throw.
 *-d <damage>* - Adds additional damage.
 *-c <damage>* - Adds additional damage for when the attack crits, not doubled.
 *-mi <value>* - Minimum value of each die on the damage roll.
+*savage* - Rolls two sets of the base damage dice, choosing the higher of the two.
 
 __Damage Types__
 *magical* - Makes the damage type of the attack magical.

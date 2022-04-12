@@ -1,7 +1,7 @@
 import logging
 
-from ..runtime import AutomationContext
 from ..errors import AutomationException, StopExecution
+from ..runtime import AutomationContext
 
 __all__ = (
     "Effect",
@@ -10,6 +10,7 @@ __all__ = (
     "Save",
     "Damage",
     "TempHP",
+    "LegacyIEffect",
     "IEffect",
     "Roll",
     "Text",
@@ -96,13 +97,27 @@ class Effect:
         return self.meta
 
 
-from . import attack, condition, damage, ieffect, roll, save, target, temphp, text, usecounter, variable, castspell
+from . import (
+    attack,
+    condition,
+    damage,
+    ieffect,
+    roll,
+    save,
+    target,
+    temphp,
+    text,
+    usecounter,
+    variable,
+    castspell,
+)
 
 Target = target.Target
 Attack = attack.Attack
 Save = save.Save
 Damage = damage.Damage
 TempHP = temphp.TempHP
+LegacyIEffect = ieffect.LegacyIEffect
 IEffect = ieffect.IEffect
 Roll = roll.Roll
 Text = text.Text
@@ -117,7 +132,8 @@ EFFECT_MAP = {
     "save": Save,
     "damage": Damage,
     "temphp": TempHP,
-    "ieffect": IEffect,
+    "ieffect": LegacyIEffect,
+    "ieffect2": IEffect,
     "roll": Roll,
     "text": Text,
     "variable": SetVariable,

@@ -25,6 +25,7 @@ from aliasing.api.functions import (
     err,
     rand,
     randchoice,
+    randchoices,
     randint,
     roll,
     safe_range,
@@ -67,6 +68,7 @@ DEFAULT_BUILTINS = {
     "rand": rand,
     "randint": randint,
     "randchoice": randchoice,
+    "randchoices": randchoices,
 }
 SCRIPTING_RE = re.compile(
     r"(?<!\\)(?:"  # backslash-escape

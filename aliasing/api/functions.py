@@ -16,6 +16,7 @@ from utils import config
 from utils.dice import RerollableStringifier
 from .context import AliasAuthor, AliasChannel, AliasGuild
 from ..utils import ExecutionScope
+from draconic.types import approx_len_of
 
 MAX_ITER_LENGTH = 10000
 
@@ -174,6 +175,14 @@ def randint(start, stop=None, step=1):
 
 def randchoice(seq):
     return random.choice(seq)
+
+
+def randchoices(population, weights=None, cum_weights=None, k=1):
+    if k > MAX_ITER_LENGTH:
+        draconic._raise_in_context(draconic.IterableTooLong, "The length of the output is too large.")
+    if max(population, key=approx_len_of) * k > MAX_ITER_LENGTH:
+        draconic._raise_in_context(draconic.IterableTooLong, "The length of your input is too large.")
+    return random.choices(population, weights=weights, cum_weights=cum_weights, k=k)
 
 
 # signatures

@@ -421,13 +421,14 @@ async def user_from_id(ctx, the_id):
     """
 
     async def update_known_user(the_user):
+        avatar_hash = the_user.avatar.key if the_user.avatar is not None else None
         await ctx.bot.mdb.users.update_one(
             {"id": str(the_user.id)},
             {
                 "$set": {
                     "username": the_user.name,
                     "discriminator": the_user.discriminator,
-                    "avatar": the_user.display_avatar.url,
+                    "avatar": avatar_hash,
                     "bot": the_user.bot,
                 }
             },

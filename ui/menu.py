@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 from typing import Mapping, Optional, Type
 
 import disnake
@@ -79,3 +81,40 @@ class MenuBase(disnake.ui.View):
             await interaction.edit_original_message(view=self, **content_kwargs, **kwargs)
         else:
             await interaction.response.edit_message(view=self, **content_kwargs, **kwargs)
+
+    @contextlib.asynccontextmanager
+    async def disable_component(
+        self, interaction: disnake.Interaction, component: disnake.ui.Button | disnake.ui.Select
+    ):
+        """
+        Updates the view such that the passed component is disabled while this context manager is active.
+        Refreshes the view content after the context exits.
+        """
+        component.disabled = True
+        await self.refresh_content(interaction)
+        try:
+            yield
+        finally:
+            component.disabled = False
+            await self.refresh_content(interaction)
+
+    @staticmethod
+    async def prompt_message(
+        interaction: disnake.Interaction, prompt: str, ephemeral: bool = True, timeout: int = 60
+    ) -> str | None:
+        """
+        Send the user a prompt in the channel and return a value from their reply.
+        Returns None if the user did not reply before the timeout.
+        """
+        await interaction.send(prompt, ephemeral=ephemeral)
+        try:
+            input_msg: disnake.Message = await interaction.bot.wait_for(
+                "message",
+                timeout=timeout,
+                check=lambda msg: msg.author == interaction.author and msg.channel.id == interaction.channel_id,
+            )
+            with contextlib.suppress(disnake.HTTPException):
+                await input_msg.delete()
+            return input_msg.content
+        except asyncio.TimeoutError:
+            return None

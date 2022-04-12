@@ -38,6 +38,13 @@ async def test_randchar(avrae, dhttp):
     await dhttp.drain()
 
 
+async def test_rollstats(avrae, dhttp):
+    dhttp.clear()
+
+    avrae.message("!rollstats")
+    await dhttp.receive_message(embed=discord.Embed(title="Generating Random Stats"))
+
+
 @requires_data()
 async def test_randname(avrae, dhttp):
     dhttp.clear()

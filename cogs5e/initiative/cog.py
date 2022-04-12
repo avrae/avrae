@@ -211,7 +211,7 @@ class InitTracker(commands.Cog):
 
         combat = await ctx.get_combat()
 
-        if combat.get_combatant(name) is not None:
+        if combat.get_combatant(name, True) is not None:
             await ctx.send("Combatant already exists.")
             return
 
@@ -304,7 +304,7 @@ class InitTracker(commands.Cog):
             raw_name = name_template
             to_continue = False
 
-            while combat.get_combatant(name) and name_num < 100:  # keep increasing to avoid duplicates
+            while combat.get_combatant(name, True) and name_num < 100:  # keep increasing to avoid duplicates
                 if "#" in raw_name:
                     name_num += 1
                     name = raw_name.replace("#", str(name_num))
@@ -411,7 +411,7 @@ class InitTracker(commands.Cog):
 
         combat = await ctx.get_combat()
 
-        if combat.get_combatant(char.name) is not None:
+        if combat.get_combatant(char.name, True) is not None:
             await ctx.send("Combatant already exists.")
             return
 

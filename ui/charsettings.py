@@ -102,7 +102,7 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
     async def get_content(self):
         embed = embeds.EmbedWithCharacter(self.character, title=f"Character Settings for {self.character.name}")
         embed.add_field(
-            name="**__Cosmetic Settings__**",
+            name="__Cosmetic Settings__",
             value=f"**Embed Color**: {color_setting_desc(self.settings.color)}\n"
             f"**Show Character Image**: {self.settings.embed_image}\n"
             f"**Use Compact Coin Display:** {self.settings.compact_coins}\n"
@@ -110,7 +110,7 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
             inline=False,
         )
         embed.add_field(
-            name="**__Gameplay Settings__**",
+            name="__Gameplay Settings__",
             value=f"**Crit Range**: {crit_range_desc(self.settings.crit_on)}\n"
             f"**Extra Crit Dice**: {self.settings.extra_crit_dice}\n"
             f"**Reroll**: {self.settings.reroll}\n"
@@ -127,7 +127,7 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
                 sync_desc_lines.append(f"**Outbound Sync**: {self.settings.sync_outbound}")
             if inbound:
                 sync_desc_lines.append(f"**Inbound Sync**: {self.settings.sync_inbound}")
-            embed.add_field(name="**__Character Sync Settings__**", value="\n".join(sync_desc_lines), inline=False)
+            embed.add_field(name="__Character Sync Settings__", value="\n".join(sync_desc_lines), inline=False)
         return {"embed": embed}
 
 

@@ -432,11 +432,15 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
     async def select_dice(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         async with self.disable_component(interaction, button):
             randchar_dice = await self.prompt_message(
-                interaction, "Choose a new dice string to roll by sending a message in this channel."
+                interaction,
+                "Choose a new dice string to roll by sending a message in this channel. If you wish to "
+                "use the default dice (4d6kh3), respond with 'default'.",
             )
             if randchar_dice is None:
                 await interaction.send(f"No valid dice found. Press `{button.label}` to try again.", ephemeral=True)
                 return
+            if randchar_dice.lower() == "default":
+                randchar_dice = "4d6kh3"
             try:
                 d20.parse(randchar_dice)
             except d20.errors.RollSyntaxError:

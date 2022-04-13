@@ -45,9 +45,7 @@ class AttackInteraction(InitEffectInteraction):
         }
 
     def __str__(self):
-        if self.effect.combatant is None:
-            return f"Attack: {self.attack.name}"
-        return f"Automation: {self.attack.automation.build_str(self.effect.combatant)}"
+        return f"Attack: {self.attack.name}"
 
 
 class ButtonInteraction(InitEffectInteraction):

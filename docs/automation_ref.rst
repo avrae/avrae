@@ -391,12 +391,12 @@ Used to specify the passive effects granted by an initiative effect.
 .. attribute:: save_adv
 
     *optional* - A list of stat names (e.g. ``strength``) that the combatant should have advantage on for their
-    respective saving throws while this effect is active.
+    respective saving throws while this effect is active. Use ``all`` as a stat name to specify all stats.
 
 .. attribute:: save_dis
 
     *optional* - A list of stat names (e.g. ``strength``) that the combatant should have disadvantage on for their
-    respective saving throws while this effect is active.
+    respective saving throws while this effect is active. Use ``all`` as a stat name to specify all stats.
 
 .. attribute:: check_bonus
 

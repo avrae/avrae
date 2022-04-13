@@ -4,7 +4,7 @@ import aliasing.evaluators
 import cogs5e.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
 from utils.enums import CritDamageType
-from .errors import AutomationEvaluationException, InvalidIntExpression
+from .errors import AutomationEvaluationException, AutomationException, InvalidIntExpression
 from .utils import maybe_alias_statblock
 
 __all__ = ("AutomationContext", "AutomationTarget")
@@ -175,6 +175,8 @@ class AutomationContext:
         :param str annostr: The string to parse.
         :param bool is_full_expression: Whether to evaluate the result rather than running interpolation.
         """
+        if not isinstance(annostr, str):
+            raise AutomationException(f"Expected an AnnotatedString, got {type(annostr).__name__}")
         if not is_full_expression:
             return self.evaluator.transformed_str(annostr, extra_names=self.metavars)
 

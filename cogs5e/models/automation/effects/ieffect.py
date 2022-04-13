@@ -1,9 +1,14 @@
 from typing import List, Optional
 
+import disnake
+
 from cogs5e import initiative as init
 from cogs5e.models.errors import InvalidArgument
+from cogs5e.models.sheet.resistance import Resistance
+from utils.enums import AdvantageType
+from utils.functions import smart_trim
 from . import Effect
-from ..errors import AutomationException, TargetException
+from ..errors import AutomationException, InvalidIntExpression, TargetException
 from ..results import IEffectResult
 
 
@@ -155,7 +160,7 @@ class IEffect(Effect):
     def __init__(
         self,
         name: str,
-        duration: Optional[int] = None,
+        duration: Optional[str | int] = None,
         effects: Optional["_PassiveEffectsWrapper"] = None,
         attacks: List["_AttackInteractionWrapper"] = None,
         buttons: List["_ButtonInteractionWrapper"] = None,
@@ -186,24 +191,24 @@ class IEffect(Effect):
 
     @classmethod
     def from_data(cls, data):
-        if data["effects"] is not None:
-            data["effects"] = _PassiveEffectsWrapper.from_dict(data["effects"])
-        if data["attacks"] is not None:
-            data["attacks"] = [_AttackInteractionWrapper.from_dict(d) for d in data["attacks"]]
-        if data["buttons"] is not None:
-            data["buttons"] = [_ButtonInteractionWrapper.from_dict(d) for d in data["buttons"]]
+        if data.get("effects") is not None:
+            data["effects"] = _PassiveEffectsWrapper(data["effects"])
+        if data.get("attacks") is not None:
+            data["attacks"] = [_AttackInteractionWrapper(d) for d in data["attacks"]]
+        if data.get("buttons") is not None:
+            data["buttons"] = [_ButtonInteractionWrapper(d) for d in data["buttons"]]
         return super().from_data(data)
 
     def to_dict(self):
         out = super().to_dict()
-        effects = self.effects.to_dict() if self.effects is not None else None
+        effects = self.effects.data if self.effects is not None else None
         out.update(
             {
                 "name": self.name,
                 "duration": self.duration,
                 "effects": effects,
-                "attacks": [a.to_dict() for a in self.attacks],
-                "buttons": [b.to_dict() for b in self.buttons],
+                "attacks": [a.data for a in self.attacks],
+                "buttons": [b.data for b in self.buttons],
                 "end": self.end_on_turn_end,
                 "conc": self.concentration,
                 "desc": self.desc,
@@ -231,9 +236,7 @@ class IEffect(Effect):
             duration = self.duration
 
         if self.desc:
-            desc = autoctx.parse_annostr(self.desc)
-            if len(desc) > 500:
-                desc = f"{desc[:500]}..."
+            desc = smart_trim(autoctx.parse_annostr(self.desc), max_len=500, dots="...")
         else:
             desc = None
 
@@ -327,39 +330,122 @@ class IEffect(Effect):
 
 # ==== helpers ====
 class _PassiveEffectsWrapper:
-    @classmethod
-    def from_dict(cls, d):
-        pass
+    """This class stores the dict in ``effects`` and uses it to construct an InitPassiveEffect when necessary."""
 
-    def to_dict(self):
-        pass
+    def __init__(self, data: dict[str, str | list[str]]):
+        self.data = data
 
     def resolve(self, autoctx) -> init.effects.InitPassiveEffect:
-        pass
+        return init.effects.InitPassiveEffect(
+            attack_advantage=self.resolve_attack_advantage(autoctx),
+            to_hit_bonus=self.resolve_annotatedstring(autoctx, "to_hit_bonus"),
+            damage_bonus=self.resolve_annotatedstring(autoctx, "damage_bonus"),
+            magical_damage=bool(self.resolve_intexpression(autoctx, "magical_damage")),
+            silvered_damage=bool(self.resolve_intexpression(autoctx, "silvered_damage")),
+            resistances=self.resolve_resistances(autoctx, "resistances"),
+            immunities=self.resolve_resistances(autoctx, "immunities"),
+            vulnerabilities=self.resolve_resistances(autoctx, "vulnerabilities"),
+            ignored_resistances=self.resolve_resistances(autoctx, "ignored_resistances"),
+            ac_value=self.resolve_intexpression(autoctx, "ac_value"),
+            ac_bonus=self.resolve_intexpression(autoctx, "ac_bonus"),
+            max_hp_value=self.resolve_intexpression(autoctx, "max_hp_value"),
+            max_hp_bonus=self.resolve_intexpression(autoctx, "max_hp_bonus"),
+            save_bonus=self.resolve_annotatedstring(autoctx, "save_bonus"),
+            save_adv=self.resolve_save_advs(autoctx, "save_adv"),
+            save_dis=self.resolve_save_advs(autoctx, "save_dis"),
+            check_bonus=self.resolve_annotatedstring(autoctx, "check_bonus"),
+        )
+
+    def resolve_annotatedstring(self, autoctx, attr: str) -> str | None:
+        data = self.data.get(attr)
+        if data is None:
+            return None
+        return autoctx.parse_annostr(data)
+
+    def resolve_intexpression(self, autoctx, attr: str) -> int | None:
+        data = self.data.get(attr)
+        if data is None:
+            return None
+        return autoctx.parse_intexpression(data)
+
+    def resolve_attack_advantage(self, autoctx) -> AdvantageType | None:
+        """attack_advantage: a special IntExpression that must be a valid AdvantageType"""
+        value = self.resolve_intexpression(autoctx, "attack_advantage")
+        if value is None:
+            return None
+        try:
+            return AdvantageType(value)
+        except ValueError as e:
+            raise InvalidIntExpression("`attack_advantage` must be -1, 0, 1, or 2.") from e
+
+    def resolve_annotatedstring_list(self, autoctx, attr: str) -> list[str]:
+        """Given an attr, evaluates each element in data[attr] as an AnnotatedString."""
+        data = self.data.get(attr)
+        if data is None:
+            return []
+        if not isinstance(data, list):
+            raise AutomationException(f"`{attr}` must be a list of AnnotatedString if supplied.")
+        out = []
+        for value in data:
+            out.append(autoctx.parse_annostr(value))
+        return out
+
+    def resolve_resistances(self, autoctx, attr: str) -> list[Resistance]:
+        """resistances: a list of AnnotatedString -> a list of Resistance"""
+        data = self.resolve_annotatedstring_list(autoctx, attr)
+        return [Resistance.from_str(dt) for dt in data if dt]
+
+    def resolve_save_advs(self, autoctx, attr: str) -> set[str]:
+        """save_adv: a list of AnnotatedString -> a set of str"""
+        data = self.resolve_annotatedstring_list(autoctx, attr)
+        return init.effects.passive.resolve_save_advs(data)
 
 
 class _AttackInteractionWrapper:
-    @classmethod
-    def from_dict(cls, d):
-        pass
+    """This is used to hold the AttackInteraction data until it is used (lazy deserialization)."""
 
-    def to_dict(self):
-        pass
+    def __init__(self, data: dict):
+        self.data = data
 
-    def resolve(self, autoctx) -> init.effects.AttackInteraction:
-        pass
+    def resolve(self, _) -> init.effects.AttackInteraction:
+        if not isinstance(self.data, dict):
+            raise AutomationException("Invalid attack granted by an effect.")
+        if "attack" not in self.data:
+            raise AutomationException("Attacks granted by effects must include the 'attack' key.")
+        return init.effects.AttackInteraction.from_dict(self.data)
 
 
 class _ButtonInteractionWrapper:
-    @classmethod
-    def from_dict(cls, d):
-        pass
+    """This is used to hold the ButtonInteraction data until it is used (lazy deserialization)."""
 
-    def to_dict(self):
-        pass
+    def __init__(self, data: dict):
+        self.data = data
 
     def resolve(self, autoctx) -> init.effects.ButtonInteraction:
-        pass
+        from .. import Automation
+
+        if not isinstance(self.data, dict):
+            raise AutomationException("Invalid button granted by an effect.")
+        if "automation" not in self.data:
+            raise AutomationException("Buttons granted by effects must include the 'automation' key.")
+        if "label" not in self.data:
+            raise AutomationException("Buttons granted by effects must include the 'label' key.")
+
+        automation = Automation.from_data(self.data["automation"])
+        label = autoctx.parse_annostr(self.data["label"])
+
+        verb = None
+        if verb_data := self.data.get("verb"):
+            verb = autoctx.parse_annostr(verb_data)
+
+        style = disnake.ButtonStyle.primary
+        if style_data := self.data.get("style"):
+            style = autoctx.parse_intexpression(style_data)
+            if not 1 <= style <= 4:
+                raise AutomationException("Button styles must be between 1 and 4 inclusive.")
+            style = disnake.ButtonStyle(style)
+
+        return init.effects.ButtonInteraction.new(automation=automation, label=label, verb=verb, style=style)
 
 
 class IEffectMetaVar:

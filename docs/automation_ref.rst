@@ -18,7 +18,7 @@ Target
 
     {
         type: "target";
-        target: "all"|"each"|int|"self";
+        target: "all" | "each" | int | "self" | "parent" | "children";
         effects: Effect[];
         sortBy?: "hp_asc" | "hp_desc";
     }
@@ -28,10 +28,13 @@ It designates what creatures to affect.
 
 .. attribute:: target
 
-    - ``"all"``: Affects all targets (usually save spells)
-    - ``"each"``: Affects each target (usually attack spells)
-    - ``int``: Affects the Nth target (1-indexed)
-    - ``"self"``: Affects the caster
+    - ``"all"`` or ``"each"`` (actions only): Affects each of the given (by the ``-t`` argument) targets.
+    - ``int`` (actions only): Affects the Nth target (1-indexed).
+    - ``"self"``: Affects the caster, or the actor the triggering effect is on if run from an IEffect button.
+    - ``"parent"`` (IEffect buttons only): If the triggering effect has a parent effect, affects the actor the parent
+      effect is on.
+    - ``"children"`` (IEffect buttons only): If the triggering effect has any children effects, affects each actor a
+      child effect is on.
 
 .. attribute:: effects
 
@@ -50,8 +53,8 @@ It designates what creatures to affect.
 - ``target`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The current target.
 - ``targetIteration`` (:class:`int`) If running multiple iterations (i.e. ``-rr``), the current iteration (1-indexed).
 - ``targetIndex`` (:class:`int`) The index of the target in the list of targets processed by this effect
-  (0-indexed - first target = ``0``, second = ``1``, etc.). Self targets and nth-targets (``target: "self"`` and
-  ``target: int``) will always be ``0``.
+  (0-indexed - first target = ``0``, second = ``1``, etc.). Self targets, nth-targets, and parent targets will always
+  be ``0``.
 - ``targetNumber`` (:class:`int`) Same as ``targetIndex``, but 1-indexed (equivalent to ``targetIndex + 1``).
 
 Attack
@@ -449,10 +452,6 @@ Used to specify a button that will appear on the targeted combatant's turn and e
 .. attribute:: automation
 
     The automation to run when this button is pressed.
-
-    .. note::
-        By default, this automation will target the combatant the effect is on. Adding a Target effect may lead to
-        unexpected behaviour.
 
 .. attribute:: label
 

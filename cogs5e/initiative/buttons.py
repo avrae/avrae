@@ -55,11 +55,6 @@ class ButtonHandler:
             await try_update_interaction_message_components(inter, utils.combatant_interaction_components(combatant))
             return
 
-        # we need to set up the autoctx to target the combatant this effect is on before running, so we use the before
-        # hook to run a phony Target effect
-        def set_up_caster_target(autoctx):
-            Target(target="self", effects=[]).run_target(autoctx, target=combatant, target_index=0)
-
         # anyway, we're good to run the automation!
         if button_interaction.verb is not None:
             verb = button_interaction.verb
@@ -77,7 +72,6 @@ class ButtonHandler:
             targets=[],
             combat=combat,
             ieffect=effect,
-            before=set_up_caster_target,
         )
         await inter.response.edit_message(components=utils.combatant_interaction_components(combatant))
         await inter.channel.send(embed=embed)

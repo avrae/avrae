@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional, TYPE_CHECKING, Union
+from typing import Optional, TYPE_CHECKING, Union
 
 import aliasing.api.statblock
 import aliasing.evaluators
@@ -44,7 +44,6 @@ class Automation:
         dc_override: Optional[int] = None,
         spell_override: Optional[int] = None,
         title: Optional[str] = None,
-        before: Callable[[AutomationContext], Any] = None,
         crit_type: CritDamageType = None,
         ieffect: Optional["InitiativeEffect"] = None,
     ) -> AutomationResult:
@@ -65,7 +64,6 @@ class Automation:
         :param dc_override: Forces a default DC.
         :param spell_override: Forces a default spell modifier.
         :param title: The title of the action, used when sending private messages after execution.
-        :param before: A function, taking in the AutomationContext, to run before automation runs.
         :param crit_type: The method of adding critical damage
         :param ieffect: If the automation is running as an effect of an InitiativeEffect, the InitiativeEffect that has
                         the interaction that triggered this run (used for the Remove IEffect automation effect).
@@ -87,9 +85,6 @@ class Automation:
             crit_type=crit_type,
             ieffect=ieffect,
         )
-
-        if before is not None:
-            before(autoctx)
 
         automation_results = []
 

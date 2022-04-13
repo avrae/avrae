@@ -272,16 +272,19 @@ class IEffect(Effect):
                 conc_parent = autoctx.conc_effect
 
             # stacking
+            # find the next correct name for the effect and create a new one, without conflicting pieces
             if self.stacking and (stack_parent := autoctx.target.target.get_effect(effect.name, strict=True)):
                 count = 2
-                effect.desc = None
-                effect.duration = effect.remaining = -1
-                effect.concentration = False
-                original_name = effect.name
-                effect.name = f"{original_name} x{count}"
+                new_name = f"{self.name} x{count}"
                 while autoctx.target.target.get_effect(effect.name, strict=True):
                     count += 1
-                    effect.name = f"{original_name} x{count}"
+                    new_name = f"{self.name} x{count}"
+                effect = init.InitiativeEffect.new(
+                    combat=autoctx.target.target.combat,
+                    combatant=autoctx.target.target,
+                    name=new_name,
+                    passive_effects=effects,
+                )
 
             # parenting
             explicit_parent = None

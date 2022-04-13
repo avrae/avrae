@@ -160,7 +160,7 @@ class InitPassiveEffect:
     )
     save_dis: Set[str] = _PassiveEffect(
         default=set(),
-        stringifier=_str_save_adv,
+        stringifier=_str_save_dis,
         deserializer=lambda data: set(data),
         serializer=lambda data: list(data),
     )

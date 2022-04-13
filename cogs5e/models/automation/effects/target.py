@@ -113,7 +113,7 @@ class Target(Effect):
 
         result_pairs = []
         for idx, target in enumerate(self.sorted_targets(targets)):
-            result_pairs.append(self.run_one_target(autoctx, target, idx))
+            result_pairs.extend(self.run_one_target(autoctx, target, idx))
         return result_pairs
 
     # ==== helpers ====

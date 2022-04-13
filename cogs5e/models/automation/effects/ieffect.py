@@ -194,9 +194,9 @@ class IEffect(Effect):
         if data.get("effects") is not None:
             data["effects"] = _PassiveEffectsWrapper(data["effects"])
         if data.get("attacks") is not None:
-            data["attacks"] = [_AttackInteractionWrapper(d) for d in data["attacks"]]
+            data["attacks"] = [_AttackInteractionWrapper.from_dict(d) for d in data["attacks"]]
         if data.get("buttons") is not None:
-            data["buttons"] = [_ButtonInteractionWrapper(d) for d in data["buttons"]]
+            data["buttons"] = [_ButtonInteractionWrapper.from_dict(d) for d in data["buttons"]]
         return super().from_data(data)
 
     def to_dict(self):
@@ -207,8 +207,8 @@ class IEffect(Effect):
                 "name": self.name,
                 "duration": self.duration,
                 "effects": effects,
-                "attacks": [a.data for a in self.attacks],
-                "buttons": [b.data for b in self.buttons],
+                "attacks": [a.to_dict() for a in self.attacks],
+                "buttons": [b.to_dict() for b in self.buttons],
                 "end": self.end_on_turn_end,
                 "conc": self.concentration,
                 "desc": self.desc,
@@ -245,7 +245,7 @@ class IEffect(Effect):
             effects = self.effects.resolve(autoctx)
         else:
             effects = init.effects.InitPassiveEffect()
-        attacks = [a.resolve(autoctx) for a in self.attacks]
+        attacks = [a.data for a in self.attacks]
         buttons = [b.resolve(autoctx) for b in self.buttons]
 
         conc_conflict = []
@@ -407,48 +407,62 @@ class _PassiveEffectsWrapper:
 class _AttackInteractionWrapper:
     """This is used to hold the AttackInteraction data until it is used (lazy deserialization)."""
 
-    def __init__(self, data: dict):
+    def __init__(self, data: init.effects.AttackInteraction):
         self.data = data
 
-    def resolve(self, _) -> init.effects.AttackInteraction:
-        if not isinstance(self.data, dict):
+    @classmethod
+    def from_dict(cls, d):
+        if not isinstance(d, dict):
             raise AutomationException("Invalid attack granted by an effect.")
-        if "attack" not in self.data:
+        if "attack" not in d:
             raise AutomationException("Attacks granted by effects must include the 'attack' key.")
-        return init.effects.AttackInteraction.from_dict(self.data)
+        return cls(init.effects.AttackInteraction.from_dict(d))
+
+    def to_dict(self):
+        return self.data.to_dict()
 
 
 class _ButtonInteractionWrapper:
     """This is used to hold the ButtonInteraction data until it is used (lazy deserialization)."""
 
-    def __init__(self, data: dict):
-        self.data = data
+    def __init__(self, label: str, automation, verb: str = None, style: str = None):
+        self.label = label
+        self.automation = automation
+        self.verb = verb
+        self.style = style
 
-    def resolve(self, autoctx) -> init.effects.ButtonInteraction:
+    @classmethod
+    def from_dict(cls, d):
         from .. import Automation
 
-        if not isinstance(self.data, dict):
+        if not isinstance(d, dict):
             raise AutomationException("Invalid button granted by an effect.")
-        if "automation" not in self.data:
+        if "automation" not in d:
             raise AutomationException("Buttons granted by effects must include the 'automation' key.")
-        if "label" not in self.data:
+        if "label" not in d:
             raise AutomationException("Buttons granted by effects must include the 'label' key.")
 
-        automation = Automation.from_data(self.data["automation"])
-        label = autoctx.parse_annostr(self.data["label"])
+        automation = Automation.from_data(d["automation"])
+        return cls(label=d["label"], automation=automation, verb=d.get("verb"), style=d.get("style"))
+
+    def to_dict(self):
+        return {"label": self.label, "automation": self.automation.to_dict(), "verb": self.verb, "style": self.style}
+
+    def resolve(self, autoctx) -> init.effects.ButtonInteraction:
+        label = autoctx.parse_annostr(self.label)
 
         verb = None
-        if verb_data := self.data.get("verb"):
-            verb = autoctx.parse_annostr(verb_data)
+        if self.verb is not None:
+            verb = autoctx.parse_annostr(self.verb)
 
         style = disnake.ButtonStyle.primary
-        if style_data := self.data.get("style"):
-            style = autoctx.parse_intexpression(style_data)
+        if self.style is not None:
+            style = autoctx.parse_intexpression(self.style)
             if not 1 <= style <= 4:
                 raise AutomationException("Button styles must be between 1 and 4 inclusive.")
             style = disnake.ButtonStyle(style)
 
-        return init.effects.ButtonInteraction.new(automation=automation, label=label, verb=verb, style=style)
+        return init.effects.ButtonInteraction.new(automation=self.automation, label=label, verb=verb, style=style)
 
 
 class IEffectMetaVar:

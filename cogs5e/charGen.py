@@ -175,7 +175,11 @@ class CharGenerator(commands.Cog):
         Servers can customize their stat rolling requirements via `!servsettings`."""
 
         stats = await roll_stats(ctx)
-        await ctx.send(f"{ctx.author.mention} rolled stats...", embed=stats)
+        await ctx.send(
+            f"{ctx.author.mention} rolled stats...",
+            embed=stats,
+            allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+        )
 
     @commands.command(aliases=["name"])
     async def randname(self, ctx, race=None, option=None):

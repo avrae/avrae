@@ -298,7 +298,11 @@ class Combatant(BaseCombatant, StatBlock):
 
     @property
     def _effect_id_map(self) -> dict[str, InitiativeEffect]:
-        return {e.id: e for e in self._effects}
+        if "effect_id_map" in self._cache:
+            return self._cache["effect_id_map"]
+        effect_id_map = {e.id: e for e in self._effects}
+        self._cache["effect_id_map"] = effect_id_map
+        return effect_id_map
 
     def set_group(self, group_name: Optional[str]) -> Optional[_CombatantGroupT]:
         current = self.combat.current_combatant
@@ -399,6 +403,8 @@ class Combatant(BaseCombatant, StatBlock):
     def _invalidate_effect_cache(self):
         if "attacks" in self._cache:
             del self._cache["attacks"]
+        if "effect_id_map" in self._cache:
+            del self._cache["effect_id_map"]
 
     def is_concentrating(self) -> bool:
         return any(e.concentration for e in self.get_effects())

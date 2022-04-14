@@ -1,5 +1,4 @@
 import base64
-import itertools
 import os
 import time
 import uuid
@@ -72,8 +71,6 @@ def combatant_interaction_components(combatant: _CombatantT | _CombatantGroupT) 
 
 
 def _combatant_interaction_components_single(combatant: _CombatantT, label_prefix=None):
-    from .effects.interaction import ButtonInteraction
-
     buttons = []
     for effect in combatant.get_effects():
         for interaction in effect.buttons:

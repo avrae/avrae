@@ -61,8 +61,11 @@ class Effect:
         return cls(**data)
 
     def to_dict(self):
-        meta = Effect.serialize(self.meta or [])
-        return {"type": self.type, "meta": meta}
+        if self.meta:
+            meta = Effect.serialize(self.meta)
+            return {"type": self.type, "meta": meta}
+        else:
+            return {"type": self.type}
 
     async def preflight(self, autoctx: AutomationContext):
         """Runs exactly once (in a DFS manner) before any effects are executed. Do any async stuff here."""
@@ -102,6 +105,7 @@ from . import (
     condition,
     damage,
     ieffect,
+    remove_ieffect,
     roll,
     save,
     target,
@@ -119,6 +123,7 @@ Damage = damage.Damage
 TempHP = temphp.TempHP
 LegacyIEffect = ieffect.LegacyIEffect
 IEffect = ieffect.IEffect
+RemoveIEffect = remove_ieffect.RemoveIEffect
 Roll = roll.Roll
 Text = text.Text
 SetVariable = variable.SetVariable
@@ -134,6 +139,7 @@ EFFECT_MAP = {
     "temphp": TempHP,
     "ieffect": LegacyIEffect,
     "ieffect2": IEffect,
+    "remove_ieffect": RemoveIEffect,
     "roll": Roll,
     "text": Text,
     "variable": SetVariable,

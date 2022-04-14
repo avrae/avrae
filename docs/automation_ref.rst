@@ -466,6 +466,35 @@ Used to specify a button that will appear on the targeted combatant's turn and e
 
     *optional, default blurple* - The color of the button (1 = blurple, 2 = grey, 3 = green, 4 = red).
 
+Remove IEffect
+--------------
+.. versionadded:: 3.6.0
+
+
+.. code-block:: typescript
+
+    {
+        type: "remove_ieffect";
+        removeParent?: "always" | "if_no_children";
+    }
+
+Removes the initiative effect that triggered this automation.
+Only works when run in execution triggered by an initiative effect, such as a ButtonInteraction
+(see :ref:`buttoninteraction`).
+
+.. attribute:: removeParent
+
+    *optional, default null* - If the removed effect has a parent, whether to remove the parent.
+
+    - ``null`` (default) - Do not remove the parent effect.
+    - ``"always"`` - If the removed effect has a parent, remove it too.
+    - ``"if_no_children"`` - If the removed effect has a parent and its only remaining child was the removed effect,
+      remove it too.
+
+**Variables**
+
+No variables are exposed.
+
 Roll
 ----
 .. code-block:: typescript
@@ -994,10 +1023,10 @@ A spell that does different amounts of damage based on whether or not the target
       }
     ]
 
-Area Draining Effect
-^^^^^^^^^^^^^^^^^^^^
+Area Vampiric Drain
+^^^^^^^^^^^^^^^^^^^
 
-An effect that heals the caster for the total damage dealt:
+An effect that heals the caster for the total damage dealt to all targets:
 
 .. code-block:: json
 
@@ -1037,3 +1066,60 @@ An effect that heals the caster for the total damage dealt:
         "text": "Each creature within 10 feet of you takes 1d6 necrotic damage. You regain hit points equal to the sum of the necrotic damage dealt."
       }
     ]
+
+Damage Over Time Effect
+^^^^^^^^^^^^^^^^^^^^^^^
+
+An effect that lights the target on fire, adding two buttons on their turn to take the fire damage and douse themselves.
+
+.. code-block::
+
+    [
+      {
+        "type": "target",
+        "target": "each",
+        "effects": [
+          {
+            "type": "ieffect2",
+            "name": "Burning",
+            "buttons": [
+              {
+                "label": "Burning",
+                "verb": "is on fire",
+                "style": "4",
+                "automation": [
+                  {
+                    "type": "target",
+                    "target": "self",
+                    "effects": [
+                      {
+                        "type": "damage",
+                        "damage": "1d6 [fire]"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": "At the start of each of the target's turns, the target takes 1d6 fire damage."
+                  }
+                ]
+              },
+              {
+                "label": "Douse",
+                "verb": "puts themself out",
+                "automation": [
+                  {
+                    "type": "remove_ieffect"
+                  },
+                  {
+                    "type": "text",
+                    "text": "The target can use an action to put themselves out."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+

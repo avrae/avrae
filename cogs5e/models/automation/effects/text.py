@@ -2,7 +2,6 @@ import gamedata
 import gamedata.lookuputils
 from cogs5e.models.errors import RequiresLicense
 from . import Effect
-from ..errors import AutomationException
 from ..results import TextResult
 
 

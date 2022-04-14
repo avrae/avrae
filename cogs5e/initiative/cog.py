@@ -866,23 +866,12 @@ class InitTracker(commands.Cog):
             return
 
         private = "private" in args or name == "private"
-        if not isinstance(combatant, CombatantGroup):
-            private = private and utils.can_see_combatant_details(ctx.author, combatant, combat)
-            status = combatant.get_status(private=private)
-            if private and isinstance(combatant, MonsterCombatant):
-                status = f"{status}\n* This creature is a {combatant.monster_name}."
-        else:
-            status = "\n".join(
-                [
-                    co.get_status(private=private and utils.can_see_combatant_details(ctx.author, co, combat))
-                    for co in combatant.get_combatants()
-                ]
-            )
+        result = utils.get_combatant_status_content(combatant=combatant, author=ctx.author, show_hidden_attrs=private)
 
         if private:
-            await ctx.author.send(f"```markdown\n{status}\n```")
+            await ctx.author.send(result)
         else:
-            await ctx.send(f"```markdown\n{status}\n```", components=utils.combatant_interaction_components(combatant))
+            await ctx.send(result, components=utils.combatant_interaction_components(combatant))
 
     @init.group(invoke_without_command=True)
     async def hp(self, ctx, name: str, *, hp: str = None):

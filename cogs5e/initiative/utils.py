@@ -53,6 +53,28 @@ def can_see_combatant_details(author, combatant, combat) -> bool:
     return True
 
 
+def get_combatant_status_content(
+    combatant: _CombatantT | _CombatantGroupT,
+    author: disnake.User,
+    show_hidden_attrs: bool = False,
+) -> str:
+    """Given a combatant, return a Markdown-formatted string to display their current status."""
+    if not combatant.type == CombatantType.GROUP:
+        private = show_hidden_attrs and can_see_combatant_details(author, combatant, combatant.combat)
+        status = combatant.get_status(private=private)
+        if private and combatant.type == CombatantType.MONSTER:
+            status = f"{status}\n* This creature is a {combatant.monster_name}."
+    else:
+        combat = combatant.combat
+        status = "\n".join(
+            [
+                co.get_status(private=show_hidden_attrs and can_see_combatant_details(author, co, combat))
+                for co in combatant.get_combatants()
+            ]
+        )
+    return f"```markdown\n{status}\n```"
+
+
 def combatant_interaction_components(combatant: _CombatantT | _CombatantGroupT) -> list[disnake.ui.Button]:
     """Given a combatant, returns a list of components with up to 25 valid interactions for that combatant."""
     if combatant is None:

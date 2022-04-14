@@ -584,10 +584,13 @@ class Combat:
 
     async def final(self):
         """Commit, update the summary message, and fire any recorder events in parallel."""
+        # Eventually edit the summary message with the latest summary - this is fire-and-forget so that edit ratelimits
+        # do not hold up the rest of the execution that might be waiting on this.
+        asyncio.create_task(self.update_summary())
         if self.nlp_recorder is None:
-            await asyncio.gather(self.commit(), self.update_summary())
+            await self.commit()
         else:
-            await asyncio.gather(self.commit(), self.update_summary(), self.nlp_recorder.on_combat_commit(self))
+            await asyncio.gather(self.commit(), self.nlp_recorder.on_combat_commit(self))
 
     # misc
     @staticmethod

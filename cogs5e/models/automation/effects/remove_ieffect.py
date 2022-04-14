@@ -26,7 +26,7 @@ class RemoveIEffect(Effect):
 
         # remove the effect
         autoctx.ieffect.remove()
-        autoctx.queue(f"**Removed Effect**: {autoctx.ieffect.name}")
+        autoctx.meta_queue(f"**Removed Effect**: {autoctx.ieffect.name}")
 
         # remove parent, if applicable
         if self.remove_parent is not None and (parent_effect := autoctx.ieffect.get_parent_effect()) is not None:
@@ -38,7 +38,7 @@ class RemoveIEffect(Effect):
         )
         if do_remove:
             parent_effect.remove()
-            autoctx.queue(f"**Removed Effect**: {parent_effect.name}")
+            autoctx.meta_queue(f"**Removed Effect**: {parent_effect.name}")
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

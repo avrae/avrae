@@ -1,7 +1,9 @@
+import copy
 from typing import Callable
 
 import d20
 import draconic
+from d20.utils import TreeType
 
 import aliasing.api.statblock
 from cogs5e.models.sheet.statblock import StatBlock
@@ -65,10 +67,16 @@ def max_mapper(node: d20.ast.Node):
 
 
 def max_add_crit_mapper(node: d20.ast.Node):
-    """A function that adds the maximum value of each Dice AST node as a literal"""
+    """A function that adds the maximum value of each Dice AST node as a literal
+
+    :return: A tuple containing the node and a bool for if the tree mapper should continue.
+    :rtype: tuple(node, bool)
+    """
+    if isinstance(node, d20.ast.OperatedDice):
+        return d20.ast.BinOp(node, "+", d20.ast.Literal(node.value.num * node.value.size)), False
     if isinstance(node, d20.ast.Dice):
-        return d20.ast.BinOp(node, "+", d20.ast.Literal(node.num * node.size))
-    return node
+        return d20.ast.BinOp(node, "+", d20.ast.Literal(node.num * node.size)), False
+    return node, True
 
 
 def crit_mapper(node: d20.ast.Node):
@@ -79,10 +87,14 @@ def crit_mapper(node: d20.ast.Node):
 
 
 def double_dice_crit_mapper(node: d20.ast.Node):
-    """A function that replaces each Dice AST node with itself multiplied by 2."""
-    if isinstance(node, d20.ast.Dice):
-        return d20.ast.BinOp(node, "*", d20.ast.Literal(2))
-    return node
+    """A function that replaces each Dice AST node with itself multiplied by 2.
+
+    :return: A tuple containing the node and a bool for if the tree mapper should continue.
+    :rtype: tuple(node, bool)
+    """
+    if isinstance(node, (d20.ast.OperatedDice, d20.ast.Dice)):
+        return d20.ast.BinOp(node, "*", d20.ast.Literal(2)), False
+    return node, True
 
 
 def crit_dice_gen(dice_ast: d20.ast.Node, critdice: int):
@@ -140,3 +152,18 @@ def target_hp_or_default(target, default):
         return target.hp
     else:
         return default
+
+
+def tree_map_prefix(func: Callable[[TreeType], tuple[TreeType, bool]], node: TreeType) -> TreeType:
+    """
+    Returns a copy of the tree, with each node replaced with ``func(node)[0]``.
+
+    :param func: A transformer function that takes a node and returns a tuple (replacement, continue_iteration).
+    :param node: The root of the tree to transform.
+    """
+    copied = copy.copy(node)
+    operated, continue_iteration = func(copied)
+    if continue_iteration:
+        for i, child in enumerate(copied.children):
+            copied.set_child(i, tree_map_prefix(func, child))
+    return operated

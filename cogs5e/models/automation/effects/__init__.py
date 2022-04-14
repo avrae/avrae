@@ -12,6 +12,7 @@ __all__ = (
     "TempHP",
     "LegacyIEffect",
     "IEffect",
+    "RemoveIEffect",
     "Roll",
     "Text",
     "SetVariable",

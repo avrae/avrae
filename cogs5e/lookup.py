@@ -32,6 +32,10 @@ from utils.functions import chunk_text, get_positivity, search_and_select, smart
 
 LARGE_THRESHOLD = 200
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class Lookup(commands.Cog):
     """Commands to help look up items, status effects, rules, etc."""
@@ -574,8 +578,14 @@ class Lookup(commands.Cog):
     @commands.command(name="item")
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
-        choices = await get_item_choices(ctx, filter_by_license=False)
-        item = await self._lookup_search3(ctx, {"magic-item": choices}, name, query_type="item")
+        choices = await get_item_choices(ctx)
+        # i1 = await self._lookup_search3(
+        #     ctx, {"adventuring-gear": choices["adventuring-gear"]}, name, query_type="adventuring-gear"
+        # )
+        # i1 = await self._lookup_search3(ctx, {"armor": choices["armor"]}, name, query_type="armor")
+        # i3 = await self._lookup_search3(ctx, {"magic-items": choices["magic-items"]}, name, query_type="magic-items")
+        # i4 = await self._lookup_search3(ctx, {"weapons": choices["weapons"]}, name, query_type="weapons")
+        item = await self._lookup_search3(ctx, choices, name, query_type="item")
 
         embed = EmbedWithAuthor(ctx)
 
@@ -661,7 +671,11 @@ class Lookup(commands.Cog):
         :rtype: T
         :raises: RequiresLicense if an entity that requires a license is selected
         """
-        # sanity checks
+        log_entities = {}
+        for k, v in entities.items():
+            log_entities[k] = len(v)
+        log.info(f"entities: {log_entities}\n")
+        log.info(f"query_type: {query_type}\n")
         if len(entities) == 0:
             raise ValueError("At least 1 entity type must be passed in")
         if query_type is None and len(entities) != 1:
@@ -693,6 +707,7 @@ class Lookup(commands.Cog):
         result, metadata = await search_and_select(
             ctx, choices, query, lambda e: e[0].name, pm=pm, return_metadata=True, selectkey=selectkey
         )
+        log.info(f"result: {result}\nmetadata: {metadata}\n")
 
         # get the entity
         entity, entity_entitlement_type = result
@@ -708,6 +723,9 @@ class Lookup(commands.Cog):
         )
 
         # display error if not srd
+        log.info(f"entity: {entity}\n")
+        log.info(f"available_ids: {available_ids}\n")
+        log.info(f"entity_entitlement_type: {entity_entitlement_type}\n")
         if not can_access(entity, available_ids[entity_entitlement_type]):
             raise errors.RequiresLicense(entity, available_ids[entity_entitlement_type] is not None)
         return entity

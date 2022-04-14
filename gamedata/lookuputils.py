@@ -57,6 +57,8 @@ async def handle_required_license(ctx, err):
     """
     result = err.entity
 
+    log.info(f"err: {err}")
+
     await ctx.bot.mdb.analytics_nsrd_lookup.update_one(
         {"type": result.entity_type, "name": result.name}, {"$inc": {"num_lookups": 1}}, upsert=True
     )
@@ -323,9 +325,25 @@ async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
     :param homebrew: Whether to include homebrew entities.
     """
     if filter_by_license:
-        available_items = await available(ctx, compendium.items, "magic-item")
+        adventuring_gear = await available(ctx, compendium.adventuring_gear, "adventuring-gear")
+        armor = await available(ctx, compendium.armor, "armor")
+        magic_items = await available(ctx, compendium.magic_items, "magic-item")
+        weapons = await available(ctx, compendium.weapons, "weapon")
+        # available_items = adventuring_gear + armor + magic_items + weapons
+        available_items = {
+            "adventuring-gear": adventuring_gear,
+            "armor": armor,
+            "magic-item": magic_items,
+            "weapon": weapons,
+        }
     else:
-        available_items = compendium.items
+        # available_items = compendium.adventuring_gear + compendium.armor + compendium.magic_items + compendium.weapons
+        available_items = {
+            "adventuring-gear": compendium.adventuring_gear,
+            "armor": compendium.armor,
+            "magic-item": compendium.magic_items,
+            "weapon": compendium.weapons,
+        }
 
     if not homebrew:
         return available_items
@@ -345,6 +363,8 @@ async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
         async for servpack in Pack.server_active(ctx):
             if servpack.id != pack_id:
                 choices.extend(servpack.items)
+    log.info(f"len(choices): {len(choices)}\n")
+    log.info(f"len(choices[0]): {len(choices[0])}\n")
     return choices
 
 

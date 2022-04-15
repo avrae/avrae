@@ -260,7 +260,7 @@ def resolve_value_or_bonus(values: List[str]) -> Tuple[Optional[int], Optional[i
 def resolve_save_advs(values: List[str]) -> Set[str]:
     out = set()
     for arg in values:
-        if arg is True or arg.lower() == "all":
+        if arg is True or arg.lower() == "all" or arg == "True":
             return set(STAT_ABBREVIATIONS)
         stat_abbr = arg[:3].lower()  # only check first three arg characters against STAT_ABBREVIATIONS
         if stat_abbr not in STAT_ABBREVIATIONS:

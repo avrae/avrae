@@ -114,9 +114,7 @@ class Damage(Effect):
                     if crit_ast:
                         dice_ast.roll = d20.ast.BinOp(dice_ast.roll, "+", crit_ast)
                 else:
-                    _dice_ast = copy.deepcopy(dice_ast)
-                    utils.critdice_tree_update(_dice_ast, int(critdice))
-                    dice_ast = _dice_ast
+                    utils.critdice_tree_update(dice_ast, int(critdice))
 
         # -c #
         if in_crit:

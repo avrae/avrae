@@ -158,12 +158,16 @@ def tree_map_prefix(func: Callable[[TreeType], tuple[TreeType, bool]], node: Tre
     """
     Returns a copy of the tree, with each node replaced with ``func(node)[0]``.
 
-    :param func: A transformer function that takes a node and returns a tuple (replacement, continue_iteration).
+    :param func: A transformer function that takes a node and returns a tuple (replacement,
+                 continue_operations_on_children).
     :param node: The root of the tree to transform.
     """
     copied = copy.copy(node)
-    operated, continue_iteration = func(copied)
-    if continue_iteration:
-        for i, child in enumerate(copied.children):
-            copied.set_child(i, tree_map_prefix(func, child))
+    operated, continue_operations_on_children = func(copied)
+    if not continue_operations_on_children:
+        # we still recurse on the children so that it satisfies the "returns a copy of the tree" property
+        # so make the function a no-op
+        func = lambda x: (x, True)  # noqa E731
+    for i, child in enumerate(copied.children):
+        copied.set_child(i, tree_map_prefix(func, child))
     return operated

@@ -1050,13 +1050,37 @@ SimpleEffect
 
     .. attribute:: duration
 
-        The initial duration of the effect, in rounds (``-1`` = infinite).
+        The initial duration of the effect, in rounds. ``None`` if the effect has indefinite duration.
 
-        :type: int
+        :type: int or None
 
     .. attribute:: effect
 
-        The applied effect of the object.
+        The applied passive effects of the object:
+
+        .. code-block:: text
+
+            {
+                attack_advantage: int
+                to_hit_bonus: str
+                damage_bonus: str
+                magical_damage: bool
+                silvered_damage: bool
+                resistances: List[Resistance]
+                immunities: List[Resistance]
+                vulnerabilities: List[Resistance]
+                ignored_resistances: List[Resistance]
+                ac_value: int
+                ac_bonus: int
+                max_hp_value: int
+                max_hp_bonus: int
+                save_bonus: str
+                save_adv: List[str]
+                save_dis: List[str]
+                check_bonus: str
+            }
+
+        Each attribute in the dictionary is optional and may not be present.
 
         :type: dict
 
@@ -1068,9 +1092,9 @@ SimpleEffect
 
     .. attribute:: remaining
 
-        The remaining duration of the effect, in rounds.
+        The remaining duration of the effect, in rounds. ``None`` if the effect has indefinite duration.
 
-        :type: int
+        :type: int or None
 
     .. attribute:: ticks_on_end
 

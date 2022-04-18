@@ -14,7 +14,7 @@ MAX_METADATA_SIZE = 100000
 
 # noinspection PyProtectedMember
 class SimpleCombat:
-    def __init__(self, combat, me):
+    def __init__(self, combat: init.Combat, me: Optional[init.Combatant]):
         self._combat = combat
 
         self.combatants = [SimpleCombatant(c) for c in combat.get_combatants()]
@@ -170,7 +170,7 @@ class SimpleCombatant(AliasStatBlock):
     Represents a combatant in combat.
     """
 
-    def __init__(self, combatant, hidestats=True):
+    def __init__(self, combatant: init.Combatant, hidestats: bool = True):
         super().__init__(combatant)
         self._combatant = combatant
         self._hidden = hidestats and self._combatant.is_private
@@ -188,10 +188,10 @@ class SimpleCombatant(AliasStatBlock):
         elif combatant.type == init.CombatantType.PLAYER:
             self._race = combatant.character.race
         # deprecated drac 2.1
-        self.resists = self.resistances  # use .resistances instead
-        self.level = (
-            self._combatant.spellbook.caster_level
-        )  # use .spellbook.caster_level or .levels.total_level instead
+        # use .resistances instead
+        self.resists = self.resistances
+        # use .spellbook.caster_level or .levels.total_level instead
+        self.level = self._combatant.spellbook.caster_level
 
     @property
     def id(self):
@@ -399,7 +399,7 @@ class SimpleCombatant(AliasStatBlock):
     def add_effect(
         self,
         name: str,
-        args: str,
+        args: str = None,
         duration: int = -1,
         concentration: bool = False,
         parent=None,
@@ -415,7 +415,7 @@ class SimpleCombatant(AliasStatBlock):
         :param bool concentration: Whether the effect requires concentration.
         :param parent: The parent of the effect.
         :type parent: :class:`~aliasing.api.combat.SimpleEffect`
-        :param bool end: Whether the effect ticks on the end of turn.
+        :param bool end: Whether the effect ends on the end of turn.
         :param str desc: A description of the effect.
         """  # noqa: E501
         name, args, duration = str(name), str(args), int(duration)
@@ -428,11 +428,11 @@ class SimpleCombatant(AliasStatBlock):
         effect_obj = init.InitiativeEffect.new(
             combat=self._combatant.combat,
             combatant=self._combatant,
-            duration=duration,
             name=name,
             effect_args=args,
-            concentration=concentration,
+            duration=duration,
             end_on_turn_end=end,
+            concentration=concentration,
             desc=desc,
         )
         if parent:
@@ -524,7 +524,7 @@ class SimpleCombatant(AliasStatBlock):
 
 
 class SimpleGroup:
-    def __init__(self, group):
+    def __init__(self, group: init.CombatantGroup):
         self._group = group
         self.type = "group"
         self.combatants = [SimpleCombatant(c) for c in self._group.get_combatants()]
@@ -588,16 +588,16 @@ class SimpleGroup:
 
 
 class SimpleEffect:
-    def __init__(self, effect):
+    def __init__(self, effect: init.InitiativeEffect):
         self._effect = effect
 
         self.name = self._effect.name
         self.duration = self._effect.duration
         self.remaining = self._effect.remaining
-        self.effect = self._effect.effect
+        self.effect = self._effect.effects.to_dict()
         self.conc = self._effect.concentration
         self.desc = self._effect.desc
-        self.ticks_on_end = self._effect.ticks_on_end
+        self.ticks_on_end = self._effect.end_on_turn_end
         self.combatant_name = self._effect.combatant.name
         self._parent = None
         self._children = None
@@ -633,6 +633,8 @@ class SimpleEffect:
         :param parent: The parent.
         :type parent: :class:`~aliasing.api.combat.SimpleEffect`
         """
+        if not isinstance(parent, SimpleEffect):
+            raise TypeError(f"Parent effect must be a SimpleEffect, not {type(parent).__name__}")
         self._effect.set_parent(parent._effect)
 
     def __str__(self):

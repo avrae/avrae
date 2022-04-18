@@ -208,6 +208,23 @@ class InitiativeEffect:
         parent.children.append(InitEffectReference.from_effect(self))
         return self
 
+    # --- properties ---
+    @property
+    def remaining(self) -> Optional[int]:
+        """Returns the number of ticks this effect has remaining, or None if the effect has infinite duration."""
+        if self.duration is None:
+            return None
+        elif self.combat is None:
+            return self.duration
+        elif self.combatant is None or self.combat.index is None:
+            return self.end_round - self.combat.round_num
+
+        if self.end_on_turn_end:
+            has_ticked_this_round = self.combat.index > self.combatant.index
+        else:
+            has_ticked_this_round = self.combat.index >= self.combatant.index
+        return self.end_round - (self.combat.round_num - (0 if has_ticked_this_round else 1))
+
     # --- stringification ---
     def __str__(self):
         return self.get_str(duration=True, parenthetical=True, concentration=True, description=True)
@@ -260,6 +277,7 @@ class InitiativeEffect:
         if math.isinf(end_round):
             return ""
 
+        # we don't use self.remaining here since we consider a potential lesser duration in a parent
         if self.combat is None:
             ticks_remaining = self.duration
         elif self.combatant is None or self.combat.index is None:
@@ -340,7 +358,7 @@ class InitiativeEffect:
         if self.end_on_turn_end and self.combat.round_num >= self.end_round and num_turns > 0:
             self.remove()
 
-    # parenting
+    # --- parenting ---
     def get_parent_effect(self) -> Optional["InitiativeEffect"]:
         if self.parent:
             return self._effect_from_reference(self.parent)
@@ -366,7 +384,7 @@ class InitiativeEffect:
             return None
         return effect
 
-    # misc
+    # --- helpers ---
     def remove(self, removed=None):
         if removed is None:
             removed = [self]

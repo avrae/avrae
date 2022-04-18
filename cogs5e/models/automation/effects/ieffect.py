@@ -82,12 +82,13 @@ class LegacyIEffect(Effect):
         duration = autoctx.args.last("dur", duration, int)
         conc_conflict = []
         if autoctx.target.combatant is not None:
+            effect_args = autoctx.parse_annostr(self.effects)
             effect = init.InitiativeEffect.new(
                 combat=autoctx.target.target.combat,
                 combatant=autoctx.target.target,
                 name=self.name,
                 duration=duration,
-                effect_args=autoctx.parse_annostr(self.effects),
+                effect_args=effect_args,
                 end_on_turn_end=self.tick_on_end,
                 concentration=self.concentration,
                 desc=desc,
@@ -104,14 +105,16 @@ class LegacyIEffect(Effect):
             # stacking
             if self.stacking and (stack_parent := autoctx.target.target.get_effect(effect.name, strict=True)):
                 count = 2
-                effect.desc = None
-                effect.duration = effect.remaining = -1
-                effect.concentration = False
-                original_name = effect.name
-                effect.name = f"{original_name} x{count}"
+                new_name = f"{self.name} x{count}"
                 while autoctx.target.target.get_effect(effect.name, strict=True):
                     count += 1
-                    effect.name = f"{original_name} x{count}"
+                    new_name = f"{self.name} x{count}"
+                effect = init.InitiativeEffect.new(
+                    combat=autoctx.target.target.combat,
+                    combatant=autoctx.target.target,
+                    name=new_name,
+                    effect_args=effect_args,
+                )
 
             # parenting
             explicit_parent = None

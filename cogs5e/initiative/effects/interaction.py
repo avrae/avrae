@@ -1,17 +1,19 @@
 import abc
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 import disnake
 
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.attack import Attack, old_to_automation
 from utils.argparser import ParsedArguments
-from .._types import _IEffectT
 from ..utils import create_button_interaction_id
+
+if TYPE_CHECKING:
+    from .effect import InitiativeEffect
 
 
 class InitEffectInteraction(abc.ABC):
-    effect: _IEffectT  # injected by the parent effect during construction
+    effect: "InitiativeEffect"  # injected by the parent effect during construction
 
     @classmethod
     def from_dict(cls, data):

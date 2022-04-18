@@ -2,13 +2,16 @@ import base64
 import os
 import time
 import uuid
+from typing import TYPE_CHECKING, Union
 
 import disnake.ui
 
 from utils import constants
 from utils.functions import smart_trim
-from ._types import _CombatantGroupT, _CombatantT
 from .types import CombatantType
+
+if TYPE_CHECKING:
+    from . import Combatant, CombatantGroup
 
 
 def create_combatant_id():
@@ -54,7 +57,7 @@ def can_see_combatant_details(author, combatant, combat) -> bool:
 
 
 def get_combatant_status_content(
-    combatant: _CombatantT | _CombatantGroupT,
+    combatant: Union["Combatant", "CombatantGroup"],
     author: disnake.User,
     show_hidden_attrs: bool = False,
 ) -> str:
@@ -75,7 +78,7 @@ def get_combatant_status_content(
     return f"```markdown\n{status}\n```"
 
 
-def combatant_interaction_components(combatant: _CombatantT | _CombatantGroupT) -> list[disnake.ui.Button]:
+def combatant_interaction_components(combatant: Union["Combatant", "CombatantGroup"]) -> list[disnake.ui.Button]:
     """Given a combatant, returns a list of components with up to 25 valid interactions for that combatant."""
     if combatant is None:
         return []
@@ -92,7 +95,7 @@ def combatant_interaction_components(combatant: _CombatantT | _CombatantGroupT) 
     return buttons
 
 
-def _combatant_interaction_components_single(combatant: _CombatantT, label_prefix=None):
+def _combatant_interaction_components_single(combatant: "Combatant", label_prefix=None):
     buttons = []
     for effect in combatant.get_effects():
         for interaction in effect.buttons:

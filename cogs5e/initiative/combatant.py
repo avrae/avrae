@@ -1,5 +1,5 @@
 import itertools
-from typing import Callable, List, Optional, TypeVar
+from typing import Callable, List, Optional, TYPE_CHECKING, TypeVar
 
 import discord
 
@@ -12,11 +12,13 @@ from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
 from utils.functions import get_guild_member, search_and_select
-from ._types import _CombatantGroupT
 from .effects import InitiativeEffect
 from .errors import RequiresContext
 from .types import BaseCombatant, CombatantType
 from .utils import create_combatant_id
+
+if TYPE_CHECKING:
+    from .group import CombatantGroup
 
 _IntermediateT = TypeVar("_IntermediateT")
 T = TypeVar("T")
@@ -304,7 +306,7 @@ class Combatant(BaseCombatant, StatBlock):
         self._cache["effect_id_map"] = effect_id_map
         return effect_id_map
 
-    def set_group(self, group_name: Optional[str]) -> Optional[_CombatantGroupT]:
+    def set_group(self, group_name: Optional[str]) -> Optional["CombatantGroup"]:
         current = self.combat.current_combatant
         was_current = current is not None and (
             self is current or (current.type == CombatantType.GROUP and self in current and len(current) == 1)
@@ -324,7 +326,7 @@ class Combatant(BaseCombatant, StatBlock):
                 self.combat.goto_turn(self, True)
             return c_group
 
-    def get_group(self) -> Optional[_CombatantGroupT]:
+    def get_group(self) -> Optional["CombatantGroup"]:
         return self.combat.get_group(self._group_id) if self._group_id else None
 
     # effects

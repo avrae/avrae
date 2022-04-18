@@ -1,5 +1,5 @@
 import itertools
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import Iterator, List, Optional, TYPE_CHECKING, Tuple, Union
 
 import math
 
@@ -7,9 +7,12 @@ from cogs5e.models.errors import InvalidArgument
 from utils.argparser import ParsedArguments, argparse
 from .interaction import AttackInteraction, ButtonInteraction, attack_interactions_from_args
 from .passive import InitPassiveEffect
-from .._types import _CharacterT, _CombatT, _CombatantT
 from ..types import CombatantType
 from ..utils import create_effect_id
+
+if TYPE_CHECKING:
+    from .. import Combat, Combatant
+    from cogs5e.models.character import Character
 
 
 class InitEffectReference:
@@ -32,8 +35,8 @@ class InitEffectReference:
 class InitiativeEffect:
     def __init__(
         self,
-        combat: Optional[_CombatT],
-        combatant: Optional[_CombatantT],
+        combat: Optional["Combat"],
+        combatant: Optional["Combatant"],
         id: str,
         name: str,
         effects: InitPassiveEffect = None,
@@ -80,14 +83,14 @@ class InitiativeEffect:
     @classmethod
     def new(
         cls,
-        combat: Optional[_CombatT],
-        combatant: Optional[_CombatantT],
+        combat: Optional["Combat"],
+        combatant: Optional["Combatant"],
         name: str,
         effect_args: Union[str, ParsedArguments] = None,
         duration: Optional[int] = None,
         end_on_turn_end: bool = False,
         concentration: bool = False,
-        character: Optional[_CharacterT] = None,
+        character: Optional["Character"] = None,
         desc: Optional[str] = None,
         passive_effects: InitPassiveEffect = None,
         attacks: list[AttackInteraction] = None,
@@ -146,7 +149,7 @@ class InitiativeEffect:
         )
 
     @classmethod
-    def from_dict(cls, d: dict, combat: _CombatT, combatant: _CombatantT):
+    def from_dict(cls, d: dict, combat: "Combat", combatant: "Combatant"):
         if d.get("_v", 1) < 2:
             from . import migrators
 

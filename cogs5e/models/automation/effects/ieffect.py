@@ -106,7 +106,7 @@ class LegacyIEffect(Effect):
             if self.stacking and (stack_parent := autoctx.target.target.get_effect(effect.name, strict=True)):
                 count = 2
                 new_name = f"{self.name} x{count}"
-                while autoctx.target.target.get_effect(effect.name, strict=True):
+                while autoctx.target.target.get_effect(new_name, strict=True):
                     count += 1
                     new_name = f"{self.name} x{count}"
                 effect = init.InitiativeEffect.new(
@@ -279,7 +279,7 @@ class IEffect(Effect):
             if self.stacking and (stack_parent := autoctx.target.target.get_effect(effect.name, strict=True)):
                 count = 2
                 new_name = f"{self.name} x{count}"
-                while autoctx.target.target.get_effect(effect.name, strict=True):
+                while autoctx.target.target.get_effect(new_name, strict=True):
                     count += 1
                     new_name = f"{self.name} x{count}"
                 effect = init.InitiativeEffect.new(

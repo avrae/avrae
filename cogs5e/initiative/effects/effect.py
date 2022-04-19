@@ -281,10 +281,10 @@ class InitiativeEffect:
         if self.combat is None:
             ticks_remaining = self.duration
         elif self.combatant is None or self.combat.index is None:
-            ticks_remaining = self.end_round - self.combat.round_num
+            ticks_remaining = end_round - self.combat.round_num
         else:
             has_ticked_this_round = self.combat.index > tick_index if ticks_on_end else self.combat.index >= tick_index
-            ticks_remaining = self.end_round - (self.combat.round_num - (0 if has_ticked_this_round else 1))
+            ticks_remaining = end_round - (self.combat.round_num - (0 if has_ticked_this_round else 1))
 
         if ticks_remaining <= 1:  # effect ends on next tick
             if self.combat is not None and self.combatant is not None and tick_index != self.combatant.index:

@@ -1,4 +1,5 @@
 import copy
+from functools import cached_property
 
 import d20
 import draconic
@@ -87,16 +88,25 @@ class RollEffectMetaVar:
 
     def __init__(self, simplified_expr: d20.Expression):
         self._expr = simplified_expr
-        self._str = RerollableStringifier().stringify(simplified_expr.roll)
 
+    # cached props
+    @cached_property
+    def _str(self):
+        return RerollableStringifier().stringify(self._expr.roll)
+
+    @cached_property
+    def _total(self):
+        return self._expr.total
+
+    # magic methods
     def __str__(self):
         return self._str
 
     def __int__(self):
-        return int(self._expr)
+        return int(self._total)
 
     def __float__(self):
-        return self._expr.total
+        return float(self._total)
 
     def __eq__(self, other):
-        return self._expr == other
+        return self._total == other

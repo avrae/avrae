@@ -153,11 +153,11 @@ class Attack(Effect):
 
             if force_roll:
                 formatted_d20 = f"{force_roll}"
-            elif adv == 1:
+            elif adv == AdvantageType.ADV:
                 formatted_d20 = f"2d20{reroll_str}kh1"
-            elif adv == 2:
+            elif adv == AdvantageType.ELVEN:
                 formatted_d20 = f"3d20{reroll_str}kh1"
-            elif adv == -1:
+            elif adv == AdvantageType.DIS:
                 formatted_d20 = f"2d20{reroll_str}kl1"
             else:
                 formatted_d20 = f"1d20{reroll_str}"

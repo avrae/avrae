@@ -1,5 +1,7 @@
 import enum
 
+from utils.enums import AdvantageType
+
 
 class RollType(enum.Enum):
     ROLL = "roll"
@@ -20,9 +22,9 @@ class RollKind(enum.Enum):
 
     @classmethod
     def from_d20_adv(cls, result):
-        if result == 0:
+        if result == AdvantageType.NONE:
             return cls.NONE
-        elif result == -1:
+        elif result == AdvantageType.DIS:
             return cls.DISADVANTAGE
         return cls.ADVANTAGE
 

@@ -46,6 +46,8 @@ class Automation:
         title: Optional[str] = None,
         crit_type: CritDamageType = None,
         ieffect: Optional["InitiativeEffect"] = None,
+        allow_caster_ieffects: bool = True,
+        allow_target_ieffects: bool = True,
     ) -> AutomationResult:
         """
         Runs automation.
@@ -67,6 +69,10 @@ class Automation:
         :param crit_type: The method of adding critical damage
         :param ieffect: If the automation is running as an effect of an InitiativeEffect, the InitiativeEffect that has
                         the interaction that triggered this run (used for the Remove IEffect automation effect).
+        :param allow_caster_ieffects: Whether effects granted by ieffects on the caster (usually offensive like
+                                      -d, adv, magical, etc) are considered during execution.
+        :param allow_target_ieffects: Whether effects granted by ieffects on a target (usually defensive like
+                                      -sb, sadv, -ac, -resist, etc) are considered during execution.
         """
         if not targets:
             targets = []
@@ -84,6 +90,8 @@ class Automation:
             spell_override=spell_override,
             crit_type=crit_type,
             ieffect=ieffect,
+            allow_caster_ieffects=allow_caster_ieffects,
+            allow_target_ieffects=allow_target_ieffects,
         )
 
         automation_results = []

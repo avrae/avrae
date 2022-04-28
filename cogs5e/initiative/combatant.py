@@ -221,6 +221,11 @@ class Combatant(BaseCombatant, StatBlock):
         self._ac = new_ac
 
     @property
+    def base_ac(self) -> Optional[int]:
+        """The base AC, unaffected by any passive effects."""
+        return self._ac
+
+    @property
     def resistances(self) -> Resistances:
         out = self._resistances.copy()
         out.update(
@@ -249,6 +254,11 @@ class Combatant(BaseCombatant, StatBlock):
             overwrite=False,
         )
         return out
+
+    @property
+    def base_resistances(self) -> Resistances:
+        """The base resistances, unaffected by any passive effects."""
+        return self._resistances
 
     def set_resist(self, damage_type: str, resist_type: str):
         if resist_type not in RESIST_TYPES:
@@ -789,7 +799,7 @@ class PlayerCombatant(Combatant):
 
     @property
     def ac(self) -> int:
-        base_ac = self._ac or self.character.ac
+        base_ac = self.base_ac
         base_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_value, reducer=max, default=0)
         bonus_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_bonus, reducer=sum, default=0)
         return max(base_effect_ac, base_ac) + bonus_effect_ac
@@ -800,6 +810,10 @@ class PlayerCombatant(Combatant):
         :param int|None new_ac: The new AC
         """
         self._ac = new_ac
+
+    @property
+    def base_ac(self) -> int:
+        return self._ac or self.character.ac
 
     @property
     def spellbook(self) -> Spellbook:

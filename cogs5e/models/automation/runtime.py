@@ -16,13 +16,14 @@ if TYPE_CHECKING:
     from cogs5e.models.sheet.statblock import StatBlock
     from cogs5e.initiative import Combat, InitiativeEffect
     from utils.argparser import ParsedArguments
+    from utils.context import AvraeContext
     from gamedata import Spell
 
 
 class AutomationContext:
     def __init__(
         self,
-        ctx,
+        ctx: Union["AvraeContext", "disnake.Interaction"],
         embed: "disnake.Embed",
         caster: "StatBlock",
         targets: List[Optional[Union["StatBlock", str]]],
@@ -35,6 +36,8 @@ class AutomationContext:
         spell_override: Optional[int] = None,
         crit_type: CritDamageType = CritDamageType.NORMAL,
         ieffect: Optional["InitiativeEffect"] = None,
+        allow_caster_ieffects: bool = True,
+        allow_target_ieffects: bool = True,
     ):
         self.ctx = ctx
         self.embed = embed
@@ -53,6 +56,8 @@ class AutomationContext:
 
         # InitiativeEffect utils
         self.ieffect = ieffect
+        self.allow_caster_ieffects = allow_caster_ieffects
+        self.allow_target_ieffects = allow_target_ieffects
 
         self.metavars = {
             # caster, targets as default (#1335)
@@ -179,11 +184,15 @@ class AutomationContext:
 
     # ===== init utils =====
     def caster_active_effects(self, mapper, reducer=lambda mapped: mapped, default=None):
+        if not self.allow_caster_ieffects:
+            return default
         if self.combatant is None:
             return default
         return self.combatant.active_effects(mapper, reducer, default)
 
     def target_active_effects(self, mapper, reducer=lambda mapped: mapped, default=None):
+        if not self.allow_target_ieffects:
+            return default
         if self.target.combatant is None:
             return default
         return self.target.combatant.active_effects(mapper, reducer, default)
@@ -248,9 +257,13 @@ class AutomationTarget:
     def ac(self) -> Optional[int]:
         if self.is_simple:
             return None
+        if not self.autoctx.allow_target_ieffects and self.combatant is not None:
+            return self.combatant.base_ac
         return self.target.ac
 
     def get_resists(self):
+        if not self.autoctx.allow_target_ieffects and self.combatant is not None:
+            return self.combatant.base_resistances
         return self.target.resistances
 
     def get_save_dice(self, save_skill: str, adv: AdvantageType = None, sb: list[str] = None) -> str:
@@ -263,10 +276,12 @@ class AutomationTarget:
         save_obj = self.target.saves.get(save_skill)
 
         # combatant
-        if sb:
-            sb += self.autoctx.target_active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
-        else:
-            sb = self.autoctx.target_active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
+        combatant = self.combatant
+        if combatant and self.autoctx.allow_target_ieffects:
+            if sb:
+                sb.extend(combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[]))
+            else:
+                sb = combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
 
         # character-specific arguments (#1443)
         reroll = None

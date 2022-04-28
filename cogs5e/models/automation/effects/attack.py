@@ -73,36 +73,25 @@ class Attack(Effect):
                 raise AutomationException(f"{self.adv!r} cannot be interpreted as an advantage type.")
 
         # check for combatant IEffects
-        if autoctx.combatant:
-            # bonus (#224)
-            effect_b = autoctx.combatant.active_effects(
-                mapper=lambda effect: effect.effects.to_hit_bonus, reducer="+".join
-            )
-            if effect_b and b:
-                b = f"{b}+{effect_b}"
-            elif effect_b:
-                b = effect_b
-            # Combine args/ieffect advantages - adv/dis (#1552)
-            effect_advs = autoctx.combatant.active_effects(
-                mapper=lambda effect: effect.effects.attack_advantage, default=[]
-            )
-            adv = reconcile_adv(
-                adv=args.last("adv", type_=bool, ephem=True)
-                or any(eadv == AdvantageType.ADV for eadv in effect_advs)
-                or explicit_adv == AdvantageType.ADV,
-                dis=args.last("dis", type_=bool, ephem=True)
-                or any(eadv == AdvantageType.DIS for eadv in effect_advs)
-                or explicit_adv == AdvantageType.DIS,
-                ea=args.last("ea", type_=bool, ephem=True)
-                or any(eadv == AdvantageType.ELVEN for eadv in effect_advs)
-                or explicit_adv == AdvantageType.ELVEN,
-            )
-        else:
-            adv = reconcile_adv(
-                adv=args.last("adv", type_=bool, ephem=True) or explicit_adv == AdvantageType.ADV,
-                dis=args.last("dis", type_=bool, ephem=True) or explicit_adv == AdvantageType.DIS,
-                ea=args.last("ea", type_=bool, ephem=True) or explicit_adv == AdvantageType.ELVEN,
-            )
+        # bonus (#224)
+        effect_b = autoctx.caster_active_effects(mapper=lambda effect: effect.effects.to_hit_bonus, reducer="+".join)
+        if effect_b and b:
+            b = f"{b}+{effect_b}"
+        elif effect_b:
+            b = effect_b
+        # Combine args/ieffect advantages - adv/dis (#1552)
+        effect_advs = autoctx.caster_active_effects(mapper=lambda effect: effect.effects.attack_advantage, default=[])
+        adv = reconcile_adv(
+            adv=args.last("adv", type_=bool, ephem=True)
+            or any(eadv == AdvantageType.ADV for eadv in effect_advs)
+            or explicit_adv == AdvantageType.ADV,
+            dis=args.last("dis", type_=bool, ephem=True)
+            or any(eadv == AdvantageType.DIS for eadv in effect_advs)
+            or explicit_adv == AdvantageType.DIS,
+            ea=args.last("ea", type_=bool, ephem=True)
+            or any(eadv == AdvantageType.ELVEN for eadv in effect_advs)
+            or explicit_adv == AdvantageType.ELVEN,
+        )
 
         # ==== target options ====
         if autoctx.target.character:
@@ -178,9 +167,10 @@ class Attack(Effect):
             d20_value = d20.utils.leftmost(to_hit_roll.expr).total
 
             # -ac #
-            target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
+            target_ac = autoctx.target.ac
+            target_has_ac = target_ac is not None
             if target_has_ac:
-                ac = ac or autoctx.target.ac
+                ac = ac or target_ac
 
             # assign hit values
             if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # natural crit

@@ -296,7 +296,7 @@ class SimpleCombatant(AliasStatBlock):
             def __init__(self, caster, target, args, combat, crit=False):
                 super().__init__(None, None, caster, [target], args, combat)
                 self.in_crit = crit
-                self.target = AutomationTarget(target)
+                self.target = AutomationTarget(self, target)
 
         args = ParsedArguments.from_dict({"critdice": [critdice]})
         if d:

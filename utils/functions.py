@@ -13,7 +13,7 @@ import discord
 from fuzzywuzzy import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
-from utils import constants
+from utils import constants, enums
 
 log = logging.getLogger(__name__)
 
@@ -477,14 +477,13 @@ async def get_guild_member(guild, member_id):
     return None
 
 
-def reconcile_adv(adv=False, dis=False, ea=False):
+def reconcile_adv(adv=False, dis=False, ea=False) -> enums.AdvantageType:
     """
     Reconciles sets of advantage passed in
 
     :param adv: Combined advantage
     :param dis: Combined disadvantage
     :param ea:  Combined elven accuracy
-    :rtype: int
     :return: The combined advantage result
     """
     result = 0
@@ -493,8 +492,8 @@ def reconcile_adv(adv=False, dis=False, ea=False):
     if dis:
         result += -1
     if ea and not dis:
-        return 2
-    return result
+        return enums.AdvantageType.ELVEN
+    return enums.AdvantageType(result)
 
 
 def maybe_http_url(url: str):

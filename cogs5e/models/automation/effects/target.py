@@ -126,7 +126,7 @@ class Target(Effect):
 
     def run_one_target(self, autoctx, target, target_index):
         result_pairs = []
-        autoctx.target = AutomationTarget(target)
+        autoctx.target = AutomationTarget(autoctx, target)
         autoctx.metavars["target"] = utils.maybe_alias_statblock(target)  # #1335
         autoctx.metavars["targetIndex"] = target_index  # #1711
         autoctx.metavars["targetNumber"] = target_index + 1

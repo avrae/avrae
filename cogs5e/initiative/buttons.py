@@ -76,6 +76,7 @@ class ButtonHandler:
             targets=[],
             combat=combat,
             ieffect=effect,
+            allow_caster_ieffects=False,  # do not allow things like damage-boosting effects to affect dot ticks
         )
 
         # and send the result

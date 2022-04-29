@@ -1,3 +1,6 @@
+import asyncio
+
+import ddb.errors
 from cogs5e.models.sheet.integrations import LiveIntegration
 
 _sentinel = object()
@@ -91,6 +94,12 @@ class DDBSheetSync(LiveIntegration):
             fail_count=clamp(0, death_saves.fails, 3),
             character_id=int(self.character.upstream_id),
         )
+
+    async def _run_awaitables(self, awaitables):
+        try:
+            return await asyncio.gather(*awaitables)
+        except ddb.errors.Forbidden:
+            pass
 
     async def commit(self, ctx):
         ddb_user = await ctx.bot.ddb.get_ddb_user(ctx)

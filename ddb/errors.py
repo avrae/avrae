@@ -19,6 +19,12 @@ class ClientResponseError(ClientException):
     pass
 
 
+class Forbidden(ClientResponseError):
+    """The response is 403 Forbidden"""
+
+    pass
+
+
 class ClientValueError(ClientException):
     """We cannot deserialize the client's response"""
 

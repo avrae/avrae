@@ -69,6 +69,28 @@ class LiveIntegration(abc.ABC):
         self._should_sync_ccs = {}
         self._should_sync_death_saves = False
 
+    def _collect_awaitables(self):
+        """Returns a list of coroutines to await to complete the sync."""
+        to_await = []
+        if self._should_sync_hp:
+            to_await.append(self._do_sync_hp())
+        if self._should_sync_coins:
+            to_await.append(self._do_sync_coins())
+        if self._should_sync_slots:
+            to_await.append(self._do_sync_slots())
+        if self._should_sync_death_saves:
+            to_await.append(self._do_sync_death_saves())
+        for cc in self._should_sync_ccs.values():
+            to_await.append(self._do_sync_consumable(cc))
+        return to_await
+
+    async def _run_awaitables(self, awaitables):
+        """
+        Submit the awaitables to the event loop and return their results.
+        This is a separate method to allow subclasses to add lower-level error handling and whatnot.
+        """
+        return await asyncio.gather(*awaitables)
+
     async def commit(self, ctx):
         """
         Called when the character is committed. Should fire all pending sync tasks.
@@ -76,18 +98,8 @@ class LiveIntegration(abc.ABC):
         """
         self._ctx = ctx
         try:
-            to_await = []
-            if self._should_sync_hp:
-                to_await.append(self._do_sync_hp())
-            if self._should_sync_coins:
-                to_await.append(self._do_sync_coins())
-            if self._should_sync_slots:
-                to_await.append(self._do_sync_slots())
-            if self._should_sync_death_saves:
-                to_await.append(self._do_sync_death_saves())
-            for cc in self._should_sync_ccs.values():
-                to_await.append(self._do_sync_consumable(cc))
-            await asyncio.gather(*to_await)
+            to_await = self._collect_awaitables()
+            await self._run_awaitables(to_await)
             self.clear()
         except asyncio.CancelledError:
             pass

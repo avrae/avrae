@@ -40,7 +40,7 @@ class AttackInteraction(InitEffectInteraction):
         override_default_attack_bonus: Optional[int] = None,
         override_default_casting_mod: Optional[int] = None,
     ):
-        self.attack = attack
+        self.inner_attack = attack
         self.override_default_dc = override_default_dc
         self.override_default_attack_bonus = override_default_attack_bonus
         self.override_default_casting_mod = override_default_casting_mod
@@ -56,14 +56,30 @@ class AttackInteraction(InitEffectInteraction):
 
     def to_dict(self):
         return {
-            "attack": self.attack.to_dict(),
+            "attack": self.inner_attack.to_dict(),
             "override_default_dc": self.override_default_dc,
             "override_default_attack_bonus": self.override_default_attack_bonus,
             "override_default_casting_mod": self.override_default_casting_mod,
         }
 
+    @property
+    def attack(self) -> Attack:
+        """
+        To handle the custom runtime settings like overriding the default attack bonus, we set the
+        ``__run_automation_kwargs__`` attribute.
+
+        Not the most elegant solution ever, but oh well.
+        """
+        attack = Attack.copy(self.inner_attack)
+        attack.__run_automation_kwargs__ = dict(
+            ab_override=self.override_default_attack_bonus,
+            dc_override=self.override_default_dc,
+            spell_override=self.override_default_casting_mod,
+        )
+        return attack
+
     def __str__(self):
-        return f"Attack: {self.attack.name}"
+        return f"Attack: {self.inner_attack.name}"
 
 
 class ButtonInteraction(InitEffectInteraction):

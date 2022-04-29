@@ -265,7 +265,7 @@ class TestIEffect:
         assert result.duration is None
         assert result.effects.data == {"save_dis": ["all"], "damage_bonus": "1 [fire]"}
         assert len(result.attacks) == 1
-        assert result.attacks[0].data.attack.name == "Burning Hand (not the spell)"
+        assert result.attacks[0].attack.name == "Burning Hand (not the spell)"
         assert len(result.buttons) == 2
         assert result.buttons[0].label == "Take Fire Damage"
         assert result.buttons[1].label == "Douse"

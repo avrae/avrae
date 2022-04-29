@@ -53,7 +53,9 @@ async def run_attack(ctx, embed, args, caster, attack, targets, combat):
     }
     args.update_nx(arg_defaults)
 
-    return await run_automation(ctx, embed, args, caster, attack.automation, targets, combat)
+    return await run_automation(
+        ctx, embed, args, caster, attack.automation, targets, combat, **attack.__run_automation_kwargs__
+    )
 
 
 async def run_action(ctx, embed, args, caster, action, targets, combat):

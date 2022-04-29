@@ -414,24 +414,49 @@ AttackInteraction
 
     {
         attack: Attack;
+        defaultDc?: IntExpression;
+        defaultAttackBonus?: IntExpression;
+        defaultCastingMod?: IntExpression;
     }
 
-Used to specify an attack granted by an initiative effect. The Attack model is any valid individual entity as exported
-by the attack editor on the Avrae Dashboard:
+Used to specify an attack granted by an initiative effect: some automation that appears in the combatant's
+``!action list`` and can be run with a command.
 
-.. code-block:: typescript
+.. attribute:: attack
 
-    {
-        _v: 2;
-        name: string;
-        automation: Effect[];
-        verb?: string;
-        proper?: boolean;
-        criton?: number;
-        phrase?: string;
-        thumb?: string;
-        extra_crit_damage?: string;
-    }
+    The Attack model is any valid individual entity as exported by the attack editor on the Avrae Dashboard:
+
+    .. code-block:: typescript
+
+        {
+            _v: 2;
+            name: string;
+            automation: Effect[];
+            verb?: string;
+            proper?: boolean;
+            criton?: number;
+            phrase?: string;
+            thumb?: string;
+            extra_crit_damage?: string;
+        }
+
+.. attribute:: defaultDc
+
+    *optional* - The default saving throw DC to use when running the automation. If not provided, defaults to the
+    targeted combatant's default spellcasting DC (or any DC specified in the automation). Use this if the effect's
+    DC depends on the original caster's DC, rather than the target's DC.
+
+.. attribute:: defaultAttackBonus
+
+    *optional* - The default attack bonus to use when running the automation. If not provided, defaults to the targeted
+    combatant's default attack bonus (or any attack bonus specified in the automation). Use this if the effect's
+    attack bonus depends on the original caster's attack bonus, rather than the target's attack bonus.
+
+.. attribute:: defaultCastingMod
+
+    *optional* - The default spellcasting modifier to use when running the automation. If not provided, defaults to the
+    targeted combatant's default spellcasting modifier. Use this if the effect's spellcasting modifier depends on the
+    original caster's spellcasting modifier, rather than the target's spellcasting modifier.
 
 .. _buttoninteraction:
 
@@ -445,6 +470,9 @@ ButtonInteraction
         label: AnnotatedString;
         verb?: AnnotatedString;
         style?: IntExpression;
+        defaultDc?: IntExpression;
+        defaultAttackBonus?: IntExpression;
+        defaultCastingMod?: IntExpression;
     }
 
 Used to specify a button that will appear on the targeted combatant's turn and execute some automation when pressed.
@@ -465,6 +493,24 @@ Used to specify a button that will appear on the targeted combatant's turn and e
 .. attribute:: style
 
     *optional, default blurple* - The color of the button (1 = blurple, 2 = grey, 3 = green, 4 = red).
+
+.. attribute:: defaultDc
+
+    *optional* - The default saving throw DC to use when running the automation. If not provided, defaults to the
+    targeted combatant's default spellcasting DC (or any DC specified in the automation). Use this if the effect's
+    DC depends on the original caster's DC, rather than the target's DC.
+
+.. attribute:: defaultAttackBonus
+
+    *optional* - The default attack bonus to use when running the automation. If not provided, defaults to the targeted
+    combatant's default attack bonus (or any attack bonus specified in the automation). Use this if the effect's
+    attack bonus depends on the original caster's attack bonus, rather than the target's attack bonus.
+
+.. attribute:: defaultCastingMod
+
+    *optional* - The default spellcasting modifier to use when running the automation. If not provided, defaults to the
+    targeted combatant's default spellcasting modifier. Use this if the effect's spellcasting modifier depends on the
+    original caster's spellcasting modifier, rather than the target's spellcasting modifier.
 
 Remove IEffect
 --------------

@@ -77,6 +77,9 @@ class ButtonHandler:
             combat=combat,
             ieffect=effect,
             allow_caster_ieffects=False,  # do not allow things like damage-boosting effects to affect dot ticks
+            ab_override=button_interaction.override_default_attack_bonus,
+            dc_override=button_interaction.override_default_dc,
+            spell_override=button_interaction.override_default_casting_mod,
         )
 
         # and send the result

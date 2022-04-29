@@ -32,18 +32,34 @@ class AttackInteraction(InitEffectInteraction):
     For compatibility with ``actionutils.run_attack``, this is actually just a wrapper around an Attack.
     """
 
-    def __init__(self, attack: Attack):
+    def __init__(
+        self,
+        attack: Attack,
+        *,
+        override_default_dc: Optional[int] = None,
+        override_default_attack_bonus: Optional[int] = None,
+        override_default_casting_mod: Optional[int] = None,
+    ):
         self.attack = attack
+        self.override_default_dc = override_default_dc
+        self.override_default_attack_bonus = override_default_attack_bonus
+        self.override_default_casting_mod = override_default_casting_mod
 
     @classmethod
     def from_dict(cls, data):
         return cls(
             attack=Attack.from_dict(data["attack"]),
+            override_default_dc=data.get("override_default_dc"),
+            override_default_attack_bonus=data.get("override_default_attack_bonus"),
+            override_default_casting_mod=data.get("override_default_casting_mod"),
         )
 
     def to_dict(self):
         return {
             "attack": self.attack.to_dict(),
+            "override_default_dc": self.override_default_dc,
+            "override_default_attack_bonus": self.override_default_attack_bonus,
+            "override_default_casting_mod": self.override_default_casting_mod,
         }
 
     def __str__(self):
@@ -60,12 +76,19 @@ class ButtonInteraction(InitEffectInteraction):
         label: str,
         verb: Optional[str] = None,
         style: disnake.ButtonStyle = disnake.ButtonStyle.primary,
+        *,
+        override_default_dc: Optional[int] = None,
+        override_default_attack_bonus: Optional[int] = None,
+        override_default_casting_mod: Optional[int] = None,
     ):
         self.id = id
         self.automation = automation
         self.label = label
         self.verb = verb
         self.style = style
+        self.override_default_dc = override_default_dc
+        self.override_default_attack_bonus = override_default_attack_bonus
+        self.override_default_casting_mod = override_default_casting_mod
 
     @classmethod
     def new(
@@ -74,8 +97,21 @@ class ButtonInteraction(InitEffectInteraction):
         label: str,
         verb: Optional[str] = None,
         style: disnake.ButtonStyle = disnake.ButtonStyle.primary,
+        *,
+        override_default_dc: Optional[int] = None,
+        override_default_attack_bonus: Optional[int] = None,
+        override_default_casting_mod: Optional[int] = None,
     ):
-        return cls(id=create_button_interaction_id(), automation=automation, label=label, verb=verb, style=style)
+        return cls(
+            id=create_button_interaction_id(),
+            automation=automation,
+            label=label,
+            verb=verb,
+            style=style,
+            override_default_dc=override_default_dc,
+            override_default_attack_bonus=override_default_attack_bonus,
+            override_default_casting_mod=override_default_casting_mod,
+        )
 
     @classmethod
     def from_dict(cls, data):
@@ -87,6 +123,9 @@ class ButtonInteraction(InitEffectInteraction):
             label=data["label"],
             verb=data["verb"],
             style=disnake.ButtonStyle(data["style"]),
+            override_default_dc=data.get("override_default_dc"),
+            override_default_attack_bonus=data.get("override_default_attack_bonus"),
+            override_default_casting_mod=data.get("override_default_casting_mod"),
         )
 
     def to_dict(self):
@@ -96,6 +135,9 @@ class ButtonInteraction(InitEffectInteraction):
             "label": self.label,
             "verb": self.verb,
             "style": int(self.style),
+            "override_default_dc": self.override_default_dc,
+            "override_default_attack_bonus": self.override_default_attack_bonus,
+            "override_default_casting_mod": self.override_default_casting_mod,
         }
 
     def __str__(self):

@@ -248,14 +248,15 @@ class IEffect(Effect):
             effects = self.effects.resolve(autoctx)
         else:
             effects = init.effects.InitPassiveEffect()
-        attacks = [a.data for a in self.attacks]
+        attacks = [a.resolve(autoctx) for a in self.attacks]
         buttons = [b.resolve(autoctx) for b in self.buttons]
 
         conc_conflict = []
         if autoctx.target.combatant is not None:
+            combatant = autoctx.target.combatant
             effect = init.InitiativeEffect.new(
-                combat=autoctx.target.target.combat,
-                combatant=autoctx.target.target,
+                combat=combatant.combat,
+                combatant=combatant,
                 name=self.name,
                 duration=duration,
                 passive_effects=effects,
@@ -270,21 +271,21 @@ class IEffect(Effect):
 
             # concentration spells
             if autoctx.conc_effect:
-                if autoctx.conc_effect.combatant is autoctx.target.target and self.concentration:
+                if autoctx.conc_effect.combatant is combatant and self.concentration:
                     raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
                 conc_parent = autoctx.conc_effect
 
             # stacking
             # find the next correct name for the effect and create a new one, without conflicting pieces
-            if self.stacking and (stack_parent := autoctx.target.target.get_effect(effect.name, strict=True)):
+            if self.stacking and (stack_parent := combatant.get_effect(effect.name, strict=True)):
                 count = 2
                 new_name = f"{self.name} x{count}"
-                while autoctx.target.target.get_effect(new_name, strict=True):
+                while combatant.get_effect(new_name, strict=True):
                     count += 1
                     new_name = f"{self.name} x{count}"
                 effect = init.InitiativeEffect.new(
-                    combat=autoctx.target.target.combat,
-                    combatant=autoctx.target.target,
+                    combat=combatant.combat,
+                    combatant=combatant,
                     name=new_name,
                     passive_effects=effects,
                 )
@@ -304,7 +305,7 @@ class IEffect(Effect):
                 effect.set_parent(parent_effect)
 
             # add
-            effect_result = autoctx.target.target.add_effect(effect)
+            effect_result = combatant.add_effect(effect)
             autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
             if conc_conflict := effect_result["conc_conflict"]:
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
@@ -332,6 +333,23 @@ class IEffect(Effect):
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
         return f"Effect: {self.name}"
+
+
+# ==== metavars ====
+class IEffectMetaVar:
+    """
+    Proxy type to hold a reference to a created IEffect. This type can be used to set the parent of another IEffect
+    later in the execution.
+    """
+
+    def __init__(self, effect: init.InitiativeEffect):
+        self._effect = effect
+
+    def __str__(self):
+        return self._effect.get_str(description=False)
+
+    def __eq__(self, other):
+        return self._effect == other
 
 
 # ==== helpers ====
@@ -410,29 +428,70 @@ class _PassiveEffectsWrapper:
 class _AttackInteractionWrapper:
     """This is used to hold the AttackInteraction data until it is used (lazy deserialization)."""
 
-    def __init__(self, data: init.effects.AttackInteraction):
-        self.data = data
+    def __init__(
+        self,
+        attack,
+        default_dc: Optional[str] = None,
+        default_attack_bonus: Optional[str] = None,
+        default_casting_mod: Optional[str] = None,
+    ):
+        self.attack = attack
+        self.default_dc = default_dc
+        self.default_attack_bonus = default_attack_bonus
+        self.default_casting_mod = default_casting_mod
 
     @classmethod
     def from_dict(cls, d):
+        from cogs5e.models.sheet.attack import Attack
+
         if not isinstance(d, dict):
             raise AutomationException("Invalid attack granted by an effect.")
         if "attack" not in d:
             raise AutomationException("Attacks granted by effects must include the 'attack' key.")
-        return cls(init.effects.AttackInteraction.from_dict(d))
+        return cls(
+            attack=Attack.from_dict(d["attack"]),
+            default_dc=d.get("defaultDc"),
+            default_attack_bonus=d.get("defaultAttackBonus"),
+            default_casting_mod=d.get("defaultCastingMod"),
+        )
 
     def to_dict(self):
-        return self.data.to_dict()
+        return {
+            "attack": self.attack.to_dict(),
+            "defaultDc": self.default_dc,
+            "defaultAttackBonus": self.default_attack_bonus,
+            "defaultCastingMod": self.default_casting_mod,
+        }
+
+    def resolve(self, autoctx) -> init.effects.AttackInteraction:
+        return init.effects.AttackInteraction(
+            attack=self.attack,
+            override_default_dc=maybe_intexpression(autoctx, self.default_dc),
+            override_default_attack_bonus=maybe_intexpression(autoctx, self.default_attack_bonus),
+            override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
+        )
 
 
 class _ButtonInteractionWrapper:
     """This is used to hold the ButtonInteraction data until it is used (lazy deserialization)."""
 
-    def __init__(self, label: str, automation, verb: str = None, style: str = None):
+    def __init__(
+        self,
+        label: str,
+        automation,
+        verb: Optional[str] = None,
+        style: Optional[str] = None,
+        default_dc: Optional[str] = None,
+        default_attack_bonus: Optional[str] = None,
+        default_casting_mod: Optional[str] = None,
+    ):
         self.label = label
         self.automation = automation
         self.verb = verb
         self.style = style
+        self.default_dc = default_dc
+        self.default_attack_bonus = default_attack_bonus
+        self.default_casting_mod = default_casting_mod
 
     @classmethod
     def from_dict(cls, d):
@@ -446,10 +505,26 @@ class _ButtonInteractionWrapper:
             raise AutomationException("Buttons granted by effects must include the 'label' key.")
 
         automation = Automation.from_data(d["automation"])
-        return cls(label=d["label"], automation=automation, verb=d.get("verb"), style=d.get("style"))
+        return cls(
+            label=d["label"],
+            automation=automation,
+            verb=d.get("verb"),
+            style=d.get("style"),
+            default_dc=d.get("defaultDc"),
+            default_attack_bonus=d.get("defaultAttackBonus"),
+            default_casting_mod=d.get("defaultCastingMod"),
+        )
 
     def to_dict(self):
-        return {"label": self.label, "automation": self.automation.to_dict(), "verb": self.verb, "style": self.style}
+        return {
+            "label": self.label,
+            "automation": self.automation.to_dict(),
+            "verb": self.verb,
+            "style": self.style,
+            "defaultDc": self.default_dc,
+            "defaultAttackBonus": self.default_attack_bonus,
+            "defaultCastingMod": self.default_casting_mod,
+        }
 
     def resolve(self, autoctx) -> init.effects.ButtonInteraction:
         label = autoctx.parse_annostr(self.label)
@@ -465,20 +540,18 @@ class _ButtonInteractionWrapper:
                 raise AutomationException("Button styles must be between 1 and 4 inclusive.")
             style = disnake.ButtonStyle(style)
 
-        return init.effects.ButtonInteraction.new(automation=self.automation, label=label, verb=verb, style=style)
+        return init.effects.ButtonInteraction.new(
+            automation=self.automation,
+            label=label,
+            verb=verb,
+            style=style,
+            override_default_dc=maybe_intexpression(autoctx, self.default_dc),
+            override_default_attack_bonus=maybe_intexpression(autoctx, self.default_attack_bonus),
+            override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
+        )
 
 
-class IEffectMetaVar:
-    """
-    Proxy type to hold a reference to a created IEffect. This type can be used to set the parent of another IEffect
-    later in the execution.
-    """
-
-    def __init__(self, effect: init.InitiativeEffect):
-        self._effect = effect
-
-    def __str__(self):
-        return self._effect.get_str(description=False)
-
-    def __eq__(self, other):
-        return self._effect == other
+def maybe_intexpression(autoctx, value: Optional[str]):
+    if value is None:
+        return value
+    return autoctx.parse_intexpression(value)

@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import List, Optional, TYPE_CHECKING, Union
 
 import aliasing.api
@@ -310,13 +311,13 @@ class AutomationTarget:
                     autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
 
     # ==== target base class helpers ====
-    @property
+    @cached_property
     def combatant(self) -> Optional[init.Combatant]:
         if isinstance(self.target, init.Combatant):
             return self.target
         return None
 
-    @property
+    @cached_property
     def character(self) -> Optional[character_api.Character]:
         if isinstance(self.target, init.PlayerCombatant):
             return self.target.character

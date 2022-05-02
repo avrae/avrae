@@ -5,7 +5,31 @@ This page details the structure of Avrae's Automation system, the backbone behin
 
 Basic Structure
 ---------------
-An automation run is made up of a list of *effects*. See below for what each effect does.
+An automation run is made up of a list of *effects* (AKA *automation node*), each of which may have additional *effects*
+that it runs under certain conditions. This recursive structure is called the *automation tree*.
+
+**Glossary**
+
+.. data:: automation engine
+
+    The Automation Engine is the code responsible for reading the automation tree and executing it against the current
+    game state. It handles rolling the dice, checking against your targets' armor classes, modifying hit points, and
+    other game mechanics.
+
+.. data:: automation tree
+          automation
+
+    The automation tree (sometimes just called "automation") is the program that the Automation Engine runs. It's made
+    up of multiple nodes that all link together to make an attack, action, spell, or more.
+
+.. data:: effect
+          node
+
+    A single step of automation - usually, this is a D&D game mechanic like rolling to hit, making a saving throw,
+    or dealing damage, but this can also be used in more programmatic ways to help set up other nodes.
+
+Runtime Variables
+-----------------
 
 All Automation runs provide the following variables:
 

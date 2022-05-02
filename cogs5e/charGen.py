@@ -69,11 +69,11 @@ async def roll_stats(ctx):
         rules.append(f"At least {t} under {m}")
 
     ast = d20.parse(dice, allow_comments=True)
-    roller = d20.Roller(context=PersistentRollContext(max_rolls=1000))
+    roller = d20.Roller(context=PersistentRollContext(max_rolls=2500))
 
     stat_rolls = []
     try:
-        while True:
+        for _ in range(250):
             # We need an individual copy per set
             current_set = []
             current_over = over.copy()
@@ -102,6 +102,12 @@ async def roll_stats(ctx):
                 stat_rolls.append({"rolls": current_set, "total": current_sum})
                 if len(stat_rolls) == sets:
                     break
+        else:
+            embed.description = (
+                "Unable to roll stat rolls that meet the current rule set.\n\n"
+                "Please examine your current randchar settings to ensure that they are achievable."
+            )
+            return embed
     except d20.TooManyRolls:
         embed.description = (
             "Unable to roll stat rolls that meet the current rule set.\n\n"
@@ -169,7 +175,11 @@ class CharGenerator(commands.Cog):
         Servers can customize their stat rolling requirements via `!servsettings`."""
 
         stats = await roll_stats(ctx)
-        await ctx.send(f"{ctx.author.mention} rolled stats...", embed=stats)
+        await ctx.send(
+            f"{ctx.author.mention} rolled stats...",
+            embed=stats,
+            allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+        )
 
     @commands.command(aliases=["name"])
     async def randname(self, ctx, race=None, option=None):

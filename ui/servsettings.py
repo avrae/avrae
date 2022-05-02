@@ -99,7 +99,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         else:
             dm_roles = "Dungeon Master, DM, Game Master, or GM"
         embed.add_field(
-            name="Lookup Settings",
+            name="__Lookup Settings__",
             value=f"**DM Roles**: {dm_roles}\n"
             f"**Monsters Require DM**: {self.settings.lookup_dm_required}\n"
             f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
@@ -109,7 +109,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         embed.add_field(name="Inline Rolling Settings", value=await self.get_inline_rolling_desc(), inline=False)
 
         embed.add_field(
-            name="Custom Stat Roll Settings",
+            name="__Custom Stat Roll Settings__",
             value=f"**Dice**: {self.settings.randchar_dice}\n"
             f"**Number of Sets**: {self.settings.randchar_sets}\n"
             f"**Assign Stats**: {self.settings.randchar_straight}\n"
@@ -127,7 +127,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         if nlp_feature_flag:
             nlp_enabled_description = f"\n**Contribute Message Data to NLP Training**: {self.settings.upenn_nlp_opt_in}"
         embed.add_field(
-            name="Miscellaneous Settings",
+            name="__Miscellaneous Settings__",
             value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}\n"
             f"**Critical Damage Type**: {crit_type_desc(self.settings.crit_type)}"
             f"{nlp_enabled_description}",
@@ -432,11 +432,15 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
     async def select_dice(self, button: disnake.ui.Button, interaction: disnake.Interaction):
         async with self.disable_component(interaction, button):
             randchar_dice = await self.prompt_message(
-                interaction, "Choose a new dice string to roll by sending a message in this channel."
+                interaction,
+                "Choose a new dice string to roll by sending a message in this channel. If you wish to "
+                "use the default dice (4d6kh3), respond with 'default'.",
             )
             if randchar_dice is None:
                 await interaction.send(f"No valid dice found. Press `{button.label}` to try again.", ephemeral=True)
                 return
+            if randchar_dice.lower() == "default":
+                randchar_dice = "4d6kh3"
             try:
                 d20.parse(randchar_dice)
             except d20.errors.RollSyntaxError:

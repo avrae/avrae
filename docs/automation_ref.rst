@@ -39,6 +39,12 @@ All Automation runs provide the following variables:
 - ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`, :class:`str`, or None) A list of combatants
   targeted by this automation (i.e. the ``-t`` argument).
 
+Additionally, runs triggered by an initiative effect (such as automation provided in a :ref:`ButtonInteraction`) provide
+the following variables:
+
+- ``ieffect`` (:class:`~aliasing.api.combat.SimpleEffect`) The initiative effect responsible for providing the
+  automation.
+
 Target
 ------
 .. code-block:: typescript

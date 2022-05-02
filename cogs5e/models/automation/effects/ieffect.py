@@ -2,6 +2,7 @@ from typing import List, Optional
 
 import disnake
 
+import aliasing.api.combat
 from cogs5e import initiative as init
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
@@ -119,7 +120,7 @@ class LegacyIEffect(Effect):
             # parenting
             explicit_parent = None
             if self.parent is not None and (parent_ref := autoctx.metavars.get(self.parent, None)) is not None:
-                if not isinstance(parent_ref, IEffectMetaVar):
+                if not isinstance(parent_ref, (IEffectMetaVar, aliasing.api.combat.SimpleEffect)):
                     raise InvalidArgument(
                         f"Could not set IEffect parent: The variable `{self.parent}` is not an IEffectMetaVar "
                         f"(got `{type(parent_ref).__name__}`)."
@@ -293,10 +294,10 @@ class IEffect(Effect):
             # parenting
             explicit_parent = None
             if self.parent is not None and (parent_ref := autoctx.metavars.get(self.parent, None)) is not None:
-                if not isinstance(parent_ref, IEffectMetaVar):
+                if not isinstance(parent_ref, (IEffectMetaVar, aliasing.api.combat.SimpleEffect)):
                     raise InvalidArgument(
-                        f"Could not set IEffect parent: The variable `{self.parent}` is not an IEffectMetaVar "
-                        f"(got `{type(parent_ref).__name__}`)."
+                        f"Could not set IEffect parent: The variable `{self.parent}` is not an initiative effect "
+                        f"(expected IEffectMetaVar or SimpleEffect, got `{type(parent_ref).__name__}`)."
                     )
                 # noinspection PyProtectedMember
                 explicit_parent = parent_ref._effect

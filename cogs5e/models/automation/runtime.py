@@ -1,7 +1,7 @@
 from functools import cached_property
 from typing import List, Optional, TYPE_CHECKING, Union
 
-import aliasing.api
+import aliasing.api.combat
 import aliasing.api.statblock
 import aliasing.evaluators
 import cogs5e.initiative.combatant as init
@@ -40,6 +40,7 @@ class AutomationContext:
         allow_caster_ieffects: bool = True,
         allow_target_ieffects: bool = True,
     ):
+        # runtime options
         self.ctx = ctx
         self.embed = embed
         self.caster = caster
@@ -48,28 +49,35 @@ class AutomationContext:
         self.combat = combat
         self.crit_type = crit_type
 
-        # spellcasting utils
-        self.spell = spell
-        self.ab_override = ab_override
-        self.dc_override = dc_override
-        self.spell_level_override = None  # used in Cast Spell effect
-        self.conc_effect = conc_effect
-
-        # InitiativeEffect utils
-        self.ieffect = ieffect
-        self.allow_caster_ieffects = allow_caster_ieffects
-        self.allow_target_ieffects = allow_target_ieffects
-
+        # runtime internals
+        self.caster_needs_commit = False
+        self.evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster)
         self.metavars = {
             # caster, targets as default (#1335)
             "caster": aliasing.api.statblock.AliasStatBlock(caster),
             "targets": [maybe_alias_statblock(t) for t in targets],
         }
+
+        # spellcasting utils
+        self.spell = spell
+        self.ab_override = ab_override
+        self.dc_override = dc_override
+        if spell_override is not None:
+            self.evaluator.builtins["spell"] = spell_override
+        self.spell_level_override = None  # used in Cast Spell effect
+        self.conc_effect = conc_effect
+
+        # InitiativeEffect utils
+        self.ieffect = ieffect
+        if ieffect is not None:
+            self.metavars["ieffect"] = aliasing.api.combat.SimpleEffect(ieffect)
+        self.allow_caster_ieffects = allow_caster_ieffects
+        self.allow_target_ieffects = allow_target_ieffects
+
+        # node-specific behaviour
         self.target: Optional[AutomationTarget] = None
         self.in_crit = False
         self.in_save = False
-
-        self.caster_needs_commit = False
 
         # embed text fields, in order
         self._meta_queue = []
@@ -82,15 +90,12 @@ class AutomationContext:
         self._field_queue = []
         self.pm_queue = {}
 
+        # type helpers
         self.character: Optional[character_api.Character] = None
         if isinstance(caster, init.PlayerCombatant):
             self.character = caster.character
         elif isinstance(caster, character_api.Character):
             self.character: character_api.Character = caster  # type annotation to narrow type here
-
-        self.evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster)
-        if spell_override is not None:
-            self.evaluator.builtins["spell"] = spell_override
 
         self.combatant: Optional[init.Combatant] = None
         if isinstance(caster, init.Combatant):

@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Tuple, Union
 
 import d20
 
 from utils import constants
-from utils.functions import camel_to_title, maybe_mod, reconcile_adv
+from utils.functions import camel_to_title, maybe_mod, natural_join, reconcile_adv
 from . import Effect
 from ..errors import AutomationException, InvalidIntExpression, TargetException
 from ..results import CheckResult
@@ -11,6 +11,7 @@ from ..utils import stringify_intexpr
 
 if TYPE_CHECKING:
     from ..runtime import AutomationContext, AutomationTarget
+    from cogs5e.models.sheet.statblock import StatBlock
     from cogs5e.models.sheet.base import Skill
 
 
@@ -56,13 +57,15 @@ class Check(Effect):
             )
 
         # ==== args ====
-        ability = autoctx.args.last("ability") or self.ability
+        ability_list = autoctx.args.get("ability") or self.ability_list
         auto_pass = autoctx.args.last("cpass", type_=bool, ephem=True)
         auto_fail = autoctx.args.last("cfail", type_=bool, ephem=True)
         hide = autoctx.args.last("h", type_=bool)
 
-        if ability not in constants.SKILL_NAMES:
-            raise AutomationException(f"{ability!r} is not a valid skill name.")
+        if not ability_list:
+            raise AutomationException("No ability passed to Check node!")
+        if invalid_abilities := set(ability_list).difference(constants.SKILL_NAMES):
+            raise AutomationException(f"Invalid skill names in check node: {', '.join(invalid_abilities)}")
 
         # ==== dc ====
         check_dc = None
@@ -76,7 +79,7 @@ class Check(Effect):
             check_dc = maybe_mod(autoctx.args.last("cdc"), base=check_dc or 0)
 
         # ==== execution ====
-        skill_name = camel_to_title(ability)
+        skill_name = natural_join([camel_to_title(a) for a in ability_list], "or")
         check_roll = None
         is_success = None
         autoctx.metavars["lastCheckRollTotal"] = 0
@@ -89,15 +92,15 @@ class Check(Effect):
             autoctx.meta_queue(f"**Check DC**: {check_dc}")
 
         if not autoctx.target.is_simple:
-            check_blurb = f"{skill_name} Check"
             if auto_pass:
                 is_success = True
-                autoctx.queue(f"**{check_blurb}:** Automatic success!")
+                autoctx.queue(f"**{skill_name} Check:** Automatic success!")
             elif auto_fail:
                 is_success = False
-                autoctx.queue(f"**{check_blurb}:** Automatic failure!")
+                autoctx.queue(f"**{skill_name} Check:** Automatic failure!")
             else:
-                skill = autoctx.target.target.skills[ability]
+                skill, skill_key = get_highest_skill(autoctx.target.target, ability_list)
+                skill_name = camel_to_title(skill_key)
                 check_dice = get_check_dice_for_statblock(autoctx, statblock_holder=autoctx, skill=skill)
                 check_roll = d20.roll(check_dice)
 
@@ -106,6 +109,7 @@ class Check(Effect):
 
                 autoctx.metavars["lastCheckRollTotal"] = check_roll.total
                 autoctx.metavars["lastCheckNaturalRoll"] = d20_value
+                autoctx.metavars["lastCheckAbility"] = skill_name
 
                 if check_dc is not None:
                     is_success = check_roll.total >= check_dc
@@ -113,13 +117,13 @@ class Check(Effect):
                 else:
                     success_str = ""
 
-                out = f"**{check_blurb}**: {check_roll.result}{success_str}"
+                out = f"**{skill_name} Check**: {check_roll.result}{success_str}"
 
                 if not hide:
                     autoctx.queue(out)
                 else:
                     autoctx.add_pm(str(autoctx.ctx.author.id), out)
-                    autoctx.queue(f"**{check_blurb}**: 1d20...{success_str}")
+                    autoctx.queue(f"**{skill_name} Check**: 1d20...{success_str}")
         else:
             autoctx.meta_queue(f"{skill_name} Check")
             is_success = True
@@ -149,7 +153,7 @@ class Check(Effect):
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
-        skill_name = camel_to_title(self.ability)
+        skill_name = natural_join([camel_to_title(a) for a in self.ability_list], "or")
         if self.dc is None:
             return f"{skill_name} Check"
 
@@ -168,6 +172,18 @@ class Check(Effect):
     @property
     def children(self):
         return super().children + (self.fail or []) + (self.success or [])
+
+    # ==== helpers ====
+    @property
+    def ability_list(self) -> list[str]:
+        if isinstance(self.ability, str):
+            return [self.ability]
+        return self.ability
+
+
+def get_highest_skill(statblock: "StatBlock", skill_keys: list[str]) -> Tuple["Skill", str]:
+    """Returns a pair of (skill, skill_key) that has the highest mod for the given statblock out of the given keys."""
+    return max(((statblock.skills[ability], ability) for ability in skill_keys), key=lambda pair: pair[0].value)
 
 
 def get_check_dice_for_statblock(

@@ -4,7 +4,7 @@ import logging
 import aiohttp
 
 from .auth import BeyondUser
-from .errors import ClientResponseError, ClientTimeoutError, ClientValueError
+from .errors import ClientResponseError, ClientTimeoutError, ClientValueError, Forbidden
 
 
 class BaseClient(abc.ABC):
@@ -26,7 +26,10 @@ class BaseClient(abc.ABC):
                     self.logger.warning(
                         f"{method} {self.SERVICE_BASE}{route} returned {resp.status} {resp.reason}\n{data}"
                     )
-                    raise ClientResponseError(f"D&D Beyond returned an error: {resp.status}: {resp.reason}")
+                    if resp.status == 403:
+                        raise Forbidden(f"D&D Beyond returned an error: {resp.status}: {resp.reason}")
+                    else:
+                        raise ClientResponseError(f"D&D Beyond returned an error: {resp.status}: {resp.reason}")
                 try:
                     data = await resp.json()
                     self.logger.debug(data)

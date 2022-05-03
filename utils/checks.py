@@ -2,6 +2,7 @@ import discord.utils
 from discord.ext import commands
 
 from utils import config
+from utils.functions import natural_join
 from utils.aldclient import discord_user_to_dict
 
 
@@ -118,5 +119,17 @@ def feature_flag(flag_name, use_ddb_user=False, default=False):
             return True
 
         raise commands.CheckFailure("This command is currently disabled. Check back later!")
+
+    return commands.check(predicate)
+
+
+def user_permissions(*permissions: str):
+    """The user must have all of the specified permissions granted by `!admin set_user_permissions`"""
+
+    async def predicate(ctx):
+        user_p = await ctx.bot.mdb.user_permissions.find_one({"id": str(ctx.author.id)})
+        if all(user_p.get(p) for p in permissions):
+            return True
+        raise commands.CheckFailure(f"This command requires the {natural_join(permissions, 'and')} permissions.")
 
     return commands.check(predicate)

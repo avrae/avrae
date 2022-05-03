@@ -311,9 +311,11 @@ Rolls some dice and saves the result in a variable. Displays the roll and its na
 
 **Variables**
 
-- ``(supplied name)`` (:class:`RollEffectMetaVar`) The result of the roll. You can use this in an AnnotatedString to
-  retrieve the simplified result of the roll, or in an IntExpression to retrieve the roll total. Note that using this
-  variable in an AnnotatedString will always return a string that itself can be rolled.
+- ``(supplied name)`` (:class:`RollEffectMetaVar`) The result of the roll.
+    - You can use this in an AnnotatedString to retrieve the simplified result of the roll. Using this variable in an
+      AnnotatedString will always return a string that itself can be rolled.
+    - You can use this in an IntExpression to retrieve the roll total.
+    - You can compare this variable against a number to determine if the total of the roll equals that number.
 - ``lastRoll`` (:class:`int`) The integer total of the roll.
 
 Text

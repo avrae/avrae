@@ -2,7 +2,6 @@ import logging
 
 import discord
 
-from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
 from ddb.gamelog.errors import IgnoreEvent
 from ddb.utils import ddb_id_to_discord_user
@@ -123,6 +122,8 @@ class GameLogEventContext:
 
         :rtype: cogs5e.models.character.Character or None
         """
+        from cogs5e.models.character import Character
+
         if self._character is not _sentinel:
             return self._character
 

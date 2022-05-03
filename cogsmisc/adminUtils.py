@@ -15,10 +15,14 @@ import discord
 from discord.errors import NotFound
 from discord.ext import commands
 
+import cogs5e.models.sheet.action
 import utils.redisIO as redis
+from cogs5e.models import embeds
+from cogs5e.utils import actionutils, targetutils
 from gamedata.compendium import compendium
 from utils import checks, config
-from utils.functions import confirm, search_and_select
+from utils.argparser import argparse
+from utils.functions import confirm, get_selection, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -179,12 +183,6 @@ class AdminUtils(commands.Cog):
         resp = await self.pscall("loglevel", args=[level], kwargs={"logger": logger})
         await self._send_replies(ctx, resp)
 
-    @admin.command(hidden=True)
-    @checks.is_owner()
-    async def reload_static(self, ctx):
-        resp = await self.pscall("reload_static")
-        await self._send_replies(ctx, resp)
-
     @admin.command(hidden=True, name="su")
     @checks.is_owner()
     async def admin_su(self, ctx, member: discord.Member, *, content):
@@ -203,7 +201,12 @@ class AdminUtils(commands.Cog):
     @admin.command(hidden=True)
     @checks.is_owner()
     async def set_user_permissions(self, ctx, member: discord.Member, permission: str, value: bool):
-        """Sets a user's global permission."""
+        """
+        Sets a user's global permission.
+        __Current used permissions__
+        `moderator` - allows user to use Workshop moderator endpoints
+        `content-admin` - allows user to use `!admin reload_static` and `!admin debug_entity`
+        """
         await self.bot.mdb.user_permissions.update_one(
             {"id": str(member.id)}, {"$set": {permission: value}}, upsert=True
         )
@@ -211,9 +214,26 @@ class AdminUtils(commands.Cog):
         del permissions["_id"]
         await ctx.send(f"Updated user permissions: ```json\n{json.dumps(permissions, indent=2)}\n```")
 
-    @admin.command(hidden=True, name="debug_entity")
+    @admin.command(hidden=True, name="dd-sample-rate")
     @checks.is_owner()
+    async def admin_dd_sample_rate(self, ctx, sample_rate: float):
+        """Sets the DataDog sample rate."""
+        if not 0.0 <= sample_rate <= 1.0:
+            return await ctx.send("sample rate must be between 0 and 1")
+        resp = await self.pscall("set_dd_sample_rate", kwargs={"sample_rate": sample_rate})
+        await self._send_replies(ctx, resp)
+
+    # ---- entity management ----
+    @admin.command(hidden=True, name="reload_static")
+    @checks.user_permissions("content-admin")
+    async def admin_reload_static(self, ctx):
+        resp = await self.pscall("reload_static")
+        await self._send_replies(ctx, resp)
+
+    @admin.group(hidden=True, name="debug_entity", invoke_without_command=True)
+    @checks.user_permissions("content-admin")
     async def admin_debug_entity(self, ctx, tid, eid: int = None):
+        """Print debug information about an entity"""
         if eid is not None:
             e = compendium.lookup_entity(int(tid), eid)
         else:
@@ -231,14 +251,29 @@ class AdminUtils(commands.Cog):
             f"{e!r}\n```"
         )
 
-    @admin.command(hidden=True, name="dd-sample-rate")
-    @checks.is_owner()
-    async def admin_dd_sample_rate(self, ctx, sample_rate: float):
-        """Sets the DataDog sample rate."""
-        if not 0.0 <= sample_rate <= 1.0:
-            return await ctx.send("sample rate must be between 0 and 1")
-        resp = await self.pscall("set_dd_sample_rate", kwargs={"sample_rate": sample_rate})
-        await self._send_replies(ctx, resp)
+    @admin_debug_entity.command(hidden=True, name="run")
+    @checks.user_permissions("content-admin")
+    async def admin_debug_entity_run(self, ctx, tid: int, eid: int, *, args=""):
+        """Run an automation-granting entity with the current active character"""
+        entity = compendium.lookup_entity(tid, eid)
+        if entity is None:
+            return await ctx.send("that entity doesn't exist, use `!admin debug_entity` to find tid/eid")
+        args = argparse(args)
+        actions = compendium.lookup_actions_for_entity(tid, eid)
+        options = [(a.name, a) for a in actions]
+        g_action = await get_selection(ctx, options)
+        sheet_action = cogs5e.models.sheet.action.Action(
+            name=g_action.name,
+            uid=g_action.uid,
+            id=g_action.id,
+            type_id=g_action.type_id,
+            activation_type=g_action.activation_type,
+        )
+        character = await ctx.get_character()
+        caster, targets, combat = await targetutils.maybe_combat(ctx, character, args)
+        embed = embeds.EmbedWithCharacter(character, name=False)
+        await actionutils.run_action(ctx, embed, args, caster, sheet_action, targets, combat)
+        await ctx.send(embed=embed)
 
     # ---- cluster management ----
     @admin.command(hidden=True, name="restart-shard")

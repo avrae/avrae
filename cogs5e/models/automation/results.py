@@ -25,6 +25,7 @@ __all__ = (
     "ConditionResult",
     "UseCounterResult",
     "CastSpellResult",
+    "CheckResult",
 )
 
 
@@ -160,3 +161,12 @@ class CastSpellResult(EffectResult):
     success: bool
     spell: Optional["Spell"] = None
     children: List[EffectResult] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class CheckResult(EffectResult):
+    skill_name: str
+    check_roll: Optional[d20.RollResult]  # None if target is simple or automatic fail/pass
+    dc: Optional[int]
+    did_succeed: Optional[bool]
+    children: List[EffectResult]

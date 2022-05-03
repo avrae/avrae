@@ -18,6 +18,7 @@ __all__ = (
     "DamageResult",
     "TempHPResult",
     "IEffectResult",
+    "RemoveIEffectResult",
     "RollResult",
     "TextResult",
     "SetVariableResult",
@@ -110,6 +111,12 @@ class TempHPResult(EffectResult):
 class IEffectResult(EffectResult):
     effect: "InitiativeEffect"
     conc_conflict: List["InitiativeEffect"]
+
+
+@dataclass(frozen=True)
+class RemoveIEffectResult(EffectResult):
+    removed_effect: "InitiativeEffect"
+    removed_parent: Optional["InitiativeEffect"]
 
 
 @dataclass(frozen=True)

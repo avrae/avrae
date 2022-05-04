@@ -675,7 +675,7 @@ async def test_check_deserialize():
     result = automation.Check.from_data(data)
     assert result
     assert result.ability_list == ["arcana"]
-    assert result.contest_ability_list == []
+    assert result.contest_ability_list is None
     assert result.dc is None
     assert result.contest_tie_behaviour is None
 

@@ -535,7 +535,7 @@ ButtonInteraction
         label: AnnotatedString;
         verb?: AnnotatedString;
         style?: IntExpression;
-        defaultDc?: IntExpression;
+        defaultDC?: IntExpression;
         defaultAttackBonus?: IntExpression;
         defaultCastingMod?: IntExpression;
     }
@@ -561,7 +561,7 @@ Used to specify a button that will appear on the targeted combatant's turn and e
 
         *optional, default blurple* - The color of the button (1 = blurple, 2 = grey, 3 = green, 4 = red).
 
-    .. attribute:: defaultDc
+    .. attribute:: defaultDC
 
         *optional* - The default saving throw DC to use when running the automation. If not provided, defaults to the
         targeted combatant's default spellcasting DC (or any DC specified in the automation). Use this if the effect's

@@ -477,7 +477,7 @@ AttackInteraction
 
     {
         attack: Attack;
-        defaultDc?: IntExpression;
+        defaultDC?: IntExpression;
         defaultAttackBonus?: IntExpression;
         defaultCastingMod?: IntExpression;
     }
@@ -505,7 +505,7 @@ Used to specify an attack granted by an initiative effect: some automation that 
                 extra_crit_damage?: string;
             }
 
-    .. attribute:: defaultDc
+    .. attribute:: defaultDC
 
         *optional* - The default saving throw DC to use when running the automation. If not provided, defaults to the
         targeted combatant's default spellcasting DC (or any DC specified in the automation). Use this if the effect's

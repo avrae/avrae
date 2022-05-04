@@ -917,12 +917,14 @@ Ability Check
     {
         type: "check";
         ability: string | string[];
+        contestAbility?: string | string[];
         dc?: IntExpression;
         success?: Effect[];
         fail?: Effect[];
+        contestTie?: "fail" | "success" | "neither";
     }
 
-An Ability Check effect forces a targeted creature to make an ability check.
+An Ability Check effect forces a targeted creature to make an ability check, optionally as a contest against the caster.
 It must be inside a Target effect.
 
 .. class:: Check
@@ -961,17 +963,33 @@ It must be inside a Target effect.
 
         If multiple skills are specified, uses the highest modifier of all the specified skills.
 
+    .. attribute:: contestAbility
+
+        *optional* - Which ability of the caster's to make a contest against.
+        Must be one of or a list of the valid skills listed above.
+        If multiple skills are specified, uses the highest modifier of all the specified skills.
+
+        Mutually exclusive with ``dc``.
+
     .. attribute:: dc
 
         *optional* - An IntExpression that details what DC to use (defaults to caster's spell DC).
 
+        Mutually exclusive with ``contestAbility``.
+
     .. attribute:: success
 
-        *optional* - A list of effects to execute on a successful check. Requires the *dc* attribute to be set.
+        *optional* - A list of effects to execute on a successful check or if the **target** wins the contest.
+        Requires the *contestAbility* or *dc* attribute to be set.
 
     .. attribute:: fail
 
-        *optional* - A list of effects to execute on a failed check. Requires the *dc* attribute to be set.
+        *optional* - A list of effects to execute on a failed check or if the **target** loses the contest.
+        Requires the *contestAbility* or *dc* attribute to be set.
+
+    .. attribute:: contestTie
+
+        *optional, default success* - Which list of effects to run if the ability contest results in a tie.
 
 **Variables**
 
@@ -980,98 +998,20 @@ It must be inside a Target effect.
   ``1d20 (10) + 5 = 15``; 0 if no roll was made).
 - ``lastCheckAbility`` (:class:`str`) The title-case full name of the rolled skill (e.g. ``"Animal Handling"``,
   ``"Arcana"``).
-- ``lastCheckDidPass`` (:class:`bool` or ``None``) If a DC was given, whether the target succeeded the check. ``None``
-  if no DC given.
+- ``lastCheckDidPass`` (:class:`bool` or ``None``) If a DC was given, whether the target succeeded the check.
+  If a contest was specified, whether the target won the contest.
+  ``None`` if no or contest given.
 - ``lastCheckDC`` (:class:`int` or ``None``) If a DC was given, the DC of the last save roll. ``None`` if no DC given.
 
-.. todo: ability contests
-    Ability Contest
-    ---------------
-    .. versionadded:: 3.6.0
+*Contest Variables*
 
-    .. code-block:: typescript
-
-        {
-            type: "contest";
-            casterAbility: string | string[];
-            targetAbility: string | string[];
-            success: Effect[];
-            fail: Effect[];
-            tie?: "fail" | "success" | "neither";
-        }
-
-    An Ability Contest effect roll compares an ability check performed by the caster to an ability check performed by the
-    current target. It must be inside a Target effect.
-
-    .. class:: Contest
-
-        .. attribute:: casterAbility
-
-            The ability to make a check for. Must be one of the or a list of valid ability names (see below).
-
-            If multiple skills are specified, uses the highest modifier of all the specified skills.
-
-        .. attribute:: targetAbility
-
-            The ability to make a check for. Must be one of the or a list of valid ability names:
-
-            .. code-block:: text
-
-                "acrobatics"
-                "animalHandling"
-                "arcana"
-                "athletics"
-                "deception"
-                "history"
-                "initiative"
-                "insight"
-                "intimidation"
-                "investigation"
-                "medicine"
-                "nature"
-                "perception"
-                "performance"
-                "persuasion"
-                "religion"
-                "sleightOfHand"
-                "stealth"
-                "survival"
-                "strength"
-                "dexterity"
-                "constitution"
-                "intelligence"
-                "wisdom"
-                "charisma"
-
-            If multiple skills are specified, uses the highest modifier of all the specified skills.
-
-        .. attribute:: success
-
-            A list of effects to execute if the **caster** wins the ability contest.
-
-        .. attribute:: fail
-
-            A list of effects to execute if the **caster** loses the ability contest.
-
-        .. attribute:: tie
-
-            *optional, default fail* - Which list of effects to run if the ability contest results in a tie.
-
-    **Variables**
-
-    - ``lastContestCasterRollTotal`` (:class:`int`) The result of the caster's contest roll.
-    - ``lastContestTargetRollTotal`` (:class:`int`) The result of the target's contest roll.
-    - ``lastContestCasterNaturalRoll`` (:class:`int`) The natural roll of the caster's contest roll (e.g. ``10`` in
-      ``1d20 (10) + 5 = 15``; 0 if no roll was made).
-    - ``lastContestTargetNaturalRoll`` (:class:`int`) The natural roll of the target's contest roll (e.g. ``10`` in
-      ``1d20 (10) + 5 = 15``; 0 if no roll was made).
-    - ``lastContestCasterAbility`` (:class:`str`) The title-case full name of the skill the caster rolled
-      (e.g. ``"Animal Handling"``, ``"Arcana"``).
-    - ``lastContestTargetAbility`` (:class:`str`) The title-case full name of the skill the target rolled
-      (e.g. ``"Animal Handling"``, ``"Arcana"``).
-    - ``lastContestDidWin`` (:class:`bool`) Whether the caster won the ability contest, or tied and the tie behaviour was
-      "win".
-    - ``lastContestDidTie`` (:class:`bool`) Whether the ability contest resulted in a tie.
+- ``lastContestRollTotal`` (:class:`int` or ``None``) The result of the caster's contest roll; ``None`` if no contest
+  was made.
+- ``lastContestNaturalRoll`` (:class:`int` or ``None``) The natural roll of the caster's contest roll (e.g. ``10`` in
+  ``1d20 (10) + 5 = 15``; ``None`` if no contest was made).
+- ``lastContestAbility`` (:class:`str` or ``None``) The title-case full name of the skill the caster rolled
+  (e.g. ``"Animal Handling"``, ``"Arcana"``). ``None`` if no contest was made.
+- ``lastContestDidTie`` (:class:`bool`) Whether a ability contest resulted in a tie.
 
 AnnotatedString
 ---------------

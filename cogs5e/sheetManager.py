@@ -7,8 +7,11 @@ import asyncio
 import logging
 import time
 import traceback
+from typing import List
 
+import automation_common.validation
 import discord
+import pydantic
 import yaml
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
@@ -162,15 +165,20 @@ class SheetManager(commands.Cog):
         try:
             attack_json = yaml.safe_load(data)
         except yaml.YAMLError:
-            return await ctx.send("This is not a valid attack.")
+            return await ctx.send("This is not a valid attack: invalid data.")
 
         if not isinstance(attack_json, list):
             attack_json = [attack_json]
 
+        # to validate, we normalize using pydantic and then pass it to AttackList
         try:
-            attacks = AttackList.from_dict(attack_json)
-        except Exception:
-            return await ctx.send("This is not a valid attack.")
+            normalized_obj = pydantic.parse_obj_as(
+                List[automation_common.validation.models.AttackModel], attack_json, type_name="AttackList"
+            )
+        except pydantic.ValidationError as e:
+            return await ctx.send(f"This is not a valid attack: ```py\n{e!s}\n```")
+
+        attacks = AttackList.from_dict([atk.dict() for atk in normalized_obj])
 
         conflicts = [a for a in character.overrides.attacks if a.name.lower() in [new.name.lower() for new in attacks]]
         if conflicts:

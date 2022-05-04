@@ -19,6 +19,7 @@ __all__ = (
     "Condition",
     "UseCounter",
     "CastSpell",
+    "Check",
 )
 
 log = logging.getLogger(__name__)

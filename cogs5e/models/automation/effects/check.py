@@ -118,6 +118,7 @@ class Check(Effect):
         autoctx.metavars["lastCheckDC"] = check_dc
 
         # ==== contest ====
+        contest_skill_name = None
         contest_roll = None
         if self.contest_ability is not None:
             contest_skill, contest_skill_key = get_highest_skill(autoctx.caster, self.contest_ability_list)
@@ -193,7 +194,13 @@ class Check(Effect):
             children = self.on_fail(autoctx)
 
         return CheckResult(
-            skill_name=skill_name, check_roll=check_roll, dc=check_dc, did_succeed=is_success, children=children
+            skill_name=skill_name,
+            check_roll=check_roll,
+            dc=check_dc,
+            did_succeed=is_success,
+            children=children,
+            contest_skill_name=contest_skill_name,
+            contest_roll=contest_roll,
         )
 
     def on_success(self, autoctx):

@@ -168,5 +168,7 @@ class CheckResult(EffectResult):
     skill_name: str
     check_roll: Optional[d20.RollResult]  # None if target is simple or automatic fail/pass
     dc: Optional[int]
+    contest_roll: Optional[d20.RollResult]
+    contest_skill_name: Optional[str]
     did_succeed: Optional[bool]
     children: List[EffectResult]

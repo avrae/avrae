@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Tuple, Union
 
 import d20
 
-from utils import constants
+from utils import constants, enums
 from utils.functions import camel_to_title, maybe_mod, natural_join, reconcile_adv
 from . import Effect
 from ..errors import AutomationException, InvalidIntExpression, TargetException
@@ -75,6 +75,12 @@ class Check(Effect):
         ability_list = autoctx.args.get("ability") or self.ability_list
         auto_pass = autoctx.args.last("cpass", type_=bool, ephem=True)
         auto_fail = autoctx.args.last("cfail", type_=bool, ephem=True)
+        check_bonus = autoctx.args.get("cb", ephem=True)
+        base_adv = reconcile_adv(
+            adv=autoctx.args.last("cadv", type_=bool, ephem=True),
+            dis=autoctx.args.last("cdis", type_=bool, ephem=True),
+        )
+        min_check = autoctx.args.last("mc", type_=int, ephem=True)
         hide = autoctx.args.last("h", type_=bool)
 
         if not ability_list:
@@ -136,7 +142,14 @@ class Check(Effect):
             # roll for the target
             skill, skill_key = get_highest_skill(autoctx.target.target, ability_list)
             skill_name = camel_to_title(skill_key)
-            check_dice = get_check_dice_for_statblock(autoctx, statblock_holder=autoctx.target, skill=skill)
+            check_dice = get_check_dice_for_statblock(
+                autoctx,
+                statblock_holder=autoctx.target,
+                skill=skill,
+                bonus=check_bonus,
+                base_adv=base_adv,
+                min_check=min_check,
+            )
             check_roll = d20.roll(check_dice)
 
             autoctx.metavars["lastCheckRollTotal"] = check_roll.total
@@ -241,12 +254,15 @@ def get_highest_skill(statblock: "StatBlock", skill_keys: list[str]) -> Tuple["S
 
 
 def get_check_dice_for_statblock(
-    autoctx: "AutomationContext", statblock_holder: Union["AutomationContext", "AutomationTarget"], skill: "Skill"
+    autoctx: "AutomationContext",
+    statblock_holder: Union["AutomationContext", "AutomationTarget"],
+    skill: "Skill",
+    bonus: list[str] = None,
+    base_adv: enums.AdvantageType = None,
+    min_check: int = None,
 ) -> str:
     """
     Resolves the check dice for the given skill, taking into account character settings and ieffects.
-
-    Consumed arguments: -cb, cadv, cdis, -mc
     """
 
     # ==== ieffects ====
@@ -263,28 +279,27 @@ def get_check_dice_for_statblock(
     # ==== options / ieffects ====
     # reliable talent, halfling luck
     reroll = None
-    min_check = None
     if statblock_holder.character:
         char_options = statblock_holder.character.options
         has_talent = bool(char_options.talent and (skill and skill.prof >= 1))
-        min_check = 10 * has_talent
+        min_check = min_check or 10 * has_talent
         reroll = char_options.reroll
 
     # ieffects
-    cb = []
+    cb = bonus or []
     if statblock_holder.combatant and autoctx.allow_target_ieffects:
-        cb = statblock_holder.combatant.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
-
-    # ==== args ====
-    cb.extend(autoctx.args.get("cb", default=[], ephem=True))
-    base_adv = reconcile_adv(
-        adv=autoctx.args.last("cadv", type_=bool, ephem=True),
-        dis=autoctx.args.last("cdis", type_=bool, ephem=True),
-    )
-    min_check = autoctx.args.last("mc", default=min_check, type_=int, ephem=True)
+        cb.extend(
+            statblock_holder.combatant.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
+        )
 
     # build final dice
-    check_dice = skill.d20(base_adv=base_adv, reroll=reroll, min_val=min_check)
+    if base_adv == enums.AdvantageType.ADV:
+        boolwise_adv = True
+    elif base_adv == enums.AdvantageType.DIS:
+        boolwise_adv = False
+    else:
+        boolwise_adv = None
+    check_dice = skill.d20(base_adv=boolwise_adv, reroll=reroll, min_val=min_check)
     if cb:
         check_dice = f"{check_dice}+{'+'.join(cb)}"
     return check_dice

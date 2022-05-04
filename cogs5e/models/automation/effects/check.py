@@ -167,7 +167,7 @@ class Check(Effect):
                 elif check_roll.total == contest_roll.total:
                     success_str = "; Tie!"
                     autoctx.metavars["lastContestDidTie"] = True
-                    if self.contest_tie_behaviour == "fail":
+                    if self.contest_tie_behaviour == "fail" or self.contest_tie_behaviour is None:
                         is_success = False
                     elif self.contest_tie_behaviour == "success":
                         is_success = True

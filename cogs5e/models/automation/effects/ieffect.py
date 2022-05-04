@@ -450,7 +450,7 @@ class _AttackInteractionWrapper:
             raise AutomationException("Attacks granted by effects must include the 'attack' key.")
         return cls(
             attack=Attack.from_dict(d["attack"]),
-            default_dc=d.get("defaultDc"),
+            default_dc=d.get("defaultDC"),
             default_attack_bonus=d.get("defaultAttackBonus"),
             default_casting_mod=d.get("defaultCastingMod"),
         )
@@ -458,7 +458,7 @@ class _AttackInteractionWrapper:
     def to_dict(self):
         return {
             "attack": self.attack.to_dict(),
-            "defaultDc": self.default_dc,
+            "defaultDC": self.default_dc,
             "defaultAttackBonus": self.default_attack_bonus,
             "defaultCastingMod": self.default_casting_mod,
         }
@@ -510,7 +510,7 @@ class _ButtonInteractionWrapper:
             automation=automation,
             verb=d.get("verb"),
             style=d.get("style"),
-            default_dc=d.get("defaultDc"),
+            default_dc=d.get("defaultDC"),
             default_attack_bonus=d.get("defaultAttackBonus"),
             default_casting_mod=d.get("defaultCastingMod"),
         )
@@ -521,7 +521,7 @@ class _ButtonInteractionWrapper:
             "automation": self.automation.to_dict(),
             "verb": self.verb,
             "style": self.style,
-            "defaultDc": self.default_dc,
+            "defaultDC": self.default_dc,
             "defaultAttackBonus": self.default_attack_bonus,
             "defaultCastingMod": self.default_casting_mod,
         }

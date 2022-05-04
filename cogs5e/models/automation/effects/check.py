@@ -19,16 +19,20 @@ class Check(Effect):
     def __init__(
         self,
         ability: str | list[str],
+        contestAbility: str | list[str] = None,
         dc: str = None,
         success: list[Effect] = None,
         fail: list[Effect] = None,
+        contestTie: str = None,
         **kwargs,
     ):
         super().__init__("check", **kwargs)
         self.ability = ability
+        self.contest_ability = contestAbility
         self.dc = dc
         self.success = success
         self.fail = fail
+        self.contest_tie_behaviour = contestTie
 
     @classmethod
     def from_data(cls, data):
@@ -41,20 +45,31 @@ class Check(Effect):
     def to_dict(self):
         out = super().to_dict()
         out.update({"ability": self.ability})
+        if self.contest_ability is not None:
+            out["contestAbility"] = self.contest_ability
         if self.dc is not None:
             out["dc"] = self.dc
         if self.success:
             out["success"] = Effect.serialize(self.success)
         if self.fail:
             out["fail"] = Effect.serialize(self.fail)
+        if self.contest_tie_behaviour:
+            out["contestTie"] = self.contest_tie_behaviour
         return out
 
     def run(self, autoctx: "AutomationContext"):
         super().run(autoctx)
+
+        # ==== checks ====
+        # must be in target
         if autoctx.target is None:
             raise TargetException(
                 "Tried to make a check without a target! Make sure all Check effects are inside of a Target effect."
             )
+
+        # dc and ability contest are mutually exclusive
+        if self.dc is not None and self.contest_ability is not None:
+            raise AutomationException("Cannot specify both a check's DC and a contest ability.")
 
         # ==== args ====
         ability_list = autoctx.args.get("ability") or self.ability_list
@@ -67,6 +82,19 @@ class Check(Effect):
         if invalid_abilities := set(ability_list).difference(constants.SKILL_NAMES):
             raise AutomationException(f"Invalid skill names in check node: {', '.join(invalid_abilities)}")
 
+        # ==== setup ====
+        skill_name = natural_join([camel_to_title(a) for a in ability_list], "or")
+        check_roll = None
+        is_success = None
+        autoctx.metavars["lastCheckRollTotal"] = 0
+        autoctx.metavars["lastCheckNaturalRoll"] = 0
+        autoctx.metavars["lastCheckAbility"] = skill_name
+        autoctx.metavars["lastCheckDidPass"] = None
+        autoctx.metavars["lastContestRollTotal"] = None
+        autoctx.metavars["lastContestNaturalRoll"] = None
+        autoctx.metavars["lastContestAbility"] = None
+        autoctx.metavars["lastContestDidTie"] = False
+
         # ==== dc ====
         check_dc = None
         if self.dc:
@@ -78,62 +106,78 @@ class Check(Effect):
         if "cdc" in autoctx.args:
             check_dc = maybe_mod(autoctx.args.last("cdc"), base=check_dc or 0)
 
-        # ==== execution ====
-        skill_name = natural_join([camel_to_title(a) for a in ability_list], "or")
-        check_roll = None
-        is_success = None
-        autoctx.metavars["lastCheckRollTotal"] = 0
-        autoctx.metavars["lastCheckNaturalRoll"] = 0
-        autoctx.metavars["lastCheckAbility"] = skill_name
-        autoctx.metavars["lastCheckDidPass"] = None
-        autoctx.metavars["lastCheckDC"] = check_dc
-
         if check_dc is not None:
             autoctx.meta_queue(f"**Check DC**: {check_dc}")
 
-        if not autoctx.target.is_simple:
-            if auto_pass:
-                is_success = True
-                autoctx.queue(f"**{skill_name} Check:** Automatic success!")
-            elif auto_fail:
-                is_success = False
-                autoctx.queue(f"**{skill_name} Check:** Automatic failure!")
+        autoctx.metavars["lastCheckDC"] = check_dc
+
+        # ==== contest ====
+        contest_roll = None
+        if self.contest_ability is not None:
+            contest_skill, contest_skill_key = get_highest_skill(autoctx.caster, self.contest_ability_list)
+            contest_skill_name = camel_to_title(contest_skill_key)
+            contest_dice = get_check_dice_for_statblock(autoctx, statblock_holder=autoctx, skill=contest_skill)
+            contest_roll = d20.roll(contest_dice)
+
+            autoctx.metavars["lastContestRollTotal"] = contest_roll.total
+            autoctx.metavars["lastContestNaturalRoll"] = d20.utils.leftmost(contest_roll.expr).total
+            autoctx.metavars["lastContestAbility"] = contest_skill_name
+
+            autoctx.queue(f"**{contest_skill_name} Contest ({autoctx.caster.name})**: {contest_roll.result}")
+
+        # ==== execution ====
+        if auto_pass:
+            is_success = True
+            autoctx.queue(f"**{skill_name} Check:** Automatic success!")
+        elif auto_fail:
+            is_success = False
+            autoctx.queue(f"**{skill_name} Check:** Automatic failure!")
+        elif not autoctx.target.is_simple:
+            # roll for the target
+            skill, skill_key = get_highest_skill(autoctx.target.target, ability_list)
+            skill_name = camel_to_title(skill_key)
+            check_dice = get_check_dice_for_statblock(autoctx, statblock_holder=autoctx.target, skill=skill)
+            check_roll = d20.roll(check_dice)
+
+            autoctx.metavars["lastCheckRollTotal"] = check_roll.total
+            autoctx.metavars["lastCheckNaturalRoll"] = d20.utils.leftmost(check_roll.expr).total
+            autoctx.metavars["lastCheckAbility"] = skill_name
+
+            success_str = ""
+            if check_dc is not None:
+                is_success = check_roll.total >= check_dc
+                success_str = "; Success!" if is_success else "; Failure!"
+            elif contest_roll is not None:
+                if check_roll.total > contest_roll.total:
+                    is_success = True
+                    success_str = "; Success!"
+                elif check_roll.total == contest_roll.total:
+                    success_str = "; Tie!"
+                    autoctx.metavars["lastContestDidTie"] = True
+                    if self.contest_tie_behaviour == "fail":
+                        is_success = False
+                    elif self.contest_tie_behaviour == "success":
+                        is_success = True
+                else:
+                    is_success = False
+                    success_str = "; Failure!"
+
+            out = f"**{skill_name} Check**: {check_roll.result}{success_str}"
+
+            if not hide:
+                autoctx.queue(out)
             else:
-                skill, skill_key = get_highest_skill(autoctx.target.target, ability_list)
-                skill_name = camel_to_title(skill_key)
-                check_dice = get_check_dice_for_statblock(autoctx, statblock_holder=autoctx, skill=skill)
-                check_roll = d20.roll(check_dice)
-
-                # get natural roll
-                d20_value = d20.utils.leftmost(check_roll.expr).total
-
-                autoctx.metavars["lastCheckRollTotal"] = check_roll.total
-                autoctx.metavars["lastCheckNaturalRoll"] = d20_value
-                autoctx.metavars["lastCheckAbility"] = skill_name
-
-                if check_dc is not None:
-                    is_success = check_roll.total >= check_dc
-                    success_str = "; Success!" if is_success else "; Failure!"
-                else:
-                    success_str = ""
-
-                out = f"**{skill_name} Check**: {check_roll.result}{success_str}"
-
-                if not hide:
-                    autoctx.queue(out)
-                else:
-                    autoctx.add_pm(str(autoctx.ctx.author.id), out)
-                    autoctx.queue(f"**{skill_name} Check**: 1d20...{success_str}")
+                autoctx.add_pm(str(autoctx.ctx.author.id), out)
+                autoctx.queue(f"**{skill_name} Check**: 1d20...{success_str}")
         else:
             autoctx.meta_queue(f"{skill_name} Check")
             is_success = True
 
         children = []
-        if check_dc is not None:
-            if is_success:
-                children = self.on_success(autoctx)
-            else:
-                children = self.on_fail(autoctx)
+        if is_success is True:  # this is a literal comp because it can be None, in which case we do not want to run
+            children = self.on_success(autoctx)
+        elif is_success is False:
+            children = self.on_fail(autoctx)
 
         return CheckResult(
             skill_name=skill_name, check_roll=check_roll, dc=check_dc, did_succeed=is_success, children=children
@@ -154,11 +198,15 @@ class Check(Effect):
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
         skill_name = natural_join([camel_to_title(a) for a in self.ability_list], "or")
-        if self.dc is None:
+        if self.dc is not None:
+            dc = stringify_intexpr(evaluator, self.dc)
+            out = f"DC {dc} {skill_name} Check"
+        elif self.contest_ability is not None:
+            contest_skill_name = natural_join([camel_to_title(a) for a in self.contest_ability_list], "or")
+            out = f"{skill_name} Check vs. caster's {contest_skill_name} Check"
+        else:
             return f"{skill_name} Check"
 
-        dc = stringify_intexpr(evaluator, self.dc)
-        out = f"DC {dc} {skill_name} Check"
         if self.fail:
             fail_out = self.build_child_str(self.fail, caster, evaluator)
             if fail_out:
@@ -179,6 +227,12 @@ class Check(Effect):
         if isinstance(self.ability, str):
             return [self.ability]
         return self.ability
+
+    @property
+    def contest_ability_list(self) -> list[str] | None:
+        if isinstance(self.contest_ability, str):
+            return [self.contest_ability]
+        return self.contest_ability
 
 
 def get_highest_skill(statblock: "StatBlock", skill_keys: list[str]) -> Tuple["Skill", str]:

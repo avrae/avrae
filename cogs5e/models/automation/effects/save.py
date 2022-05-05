@@ -1,6 +1,7 @@
 import d20
 
 from cogs5e.models.errors import InvalidSaveType
+from utils import enums
 from utils.functions import maybe_mod, reconcile_adv, verbose_stat
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
@@ -9,18 +10,21 @@ from ..utils import stringify_intexpr
 
 
 class Save(Effect):
-    def __init__(self, stat: str, fail: list, success: list, dc: str = None, **kwargs):
+    def __init__(self, stat: str, fail: list, success: list, dc: str = None, adv: enums.AdvantageType = None, **kwargs):
         super().__init__("save", **kwargs)
         self.stat = stat
         self.fail = fail
         self.success = success
         self.dc = dc
+        self.adv = adv
 
     @classmethod
     def from_data(cls, data):
         data["fail"] = Effect.deserialize(data["fail"])
         data["success"] = Effect.deserialize(data["success"])
-        return super(Save, cls).from_data(data)
+        if data.get("adv") is not None:
+            data["adv"] = enums.AdvantageType(data["adv"])
+        return super().from_data(data)
 
     def to_dict(self):
         out = super().to_dict()
@@ -29,6 +33,8 @@ class Save(Effect):
         out.update({"stat": self.stat, "fail": fail, "success": success})
         if self.dc is not None:
             out["dc"] = self.dc
+        if self.adv is not None:
+            out["adv"] = self.adv.value
         return out
 
     def run(self, autoctx):
@@ -90,8 +96,8 @@ class Save(Effect):
 
         # ==== adv ====
         adv = reconcile_adv(
-            adv=autoctx.args.last("sadv", type_=bool, ephem=True) or sadv,
-            dis=autoctx.args.last("sdis", type_=bool, ephem=True) or sdis,
+            adv=autoctx.args.last("sadv", type_=bool, ephem=True) or sadv or self.adv == enums.AdvantageType.ADV,
+            dis=autoctx.args.last("sdis", type_=bool, ephem=True) or sdis or self.adv == enums.AdvantageType.DIS,
         )
 
         # ==== execution ====

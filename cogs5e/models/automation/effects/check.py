@@ -24,6 +24,7 @@ class Check(Effect):
         success: list[Effect] = None,
         fail: list[Effect] = None,
         contestTie: str = None,
+        adv: enums.AdvantageType = None,
         **kwargs,
     ):
         super().__init__("check", **kwargs)
@@ -33,6 +34,7 @@ class Check(Effect):
         self.success = success
         self.fail = fail
         self.contest_tie_behaviour = contestTie
+        self.adv = adv
 
     @classmethod
     def from_data(cls, data):
@@ -40,6 +42,8 @@ class Check(Effect):
             data["success"] = Effect.deserialize(data["success"])
         if data.get("fail"):
             data["fail"] = Effect.deserialize(data["fail"])
+        if data.get("adv") is not None:
+            data["adv"] = enums.AdvantageType(data["adv"])
         return super().from_data(data)
 
     def to_dict(self):
@@ -55,6 +59,8 @@ class Check(Effect):
             out["fail"] = Effect.serialize(self.fail)
         if self.contest_tie_behaviour:
             out["contestTie"] = self.contest_tie_behaviour
+        if self.adv:
+            out["adv"] = self.adv.value
         return out
 
     def run(self, autoctx: "AutomationContext"):
@@ -77,8 +83,8 @@ class Check(Effect):
         auto_fail = autoctx.args.last("cfail", type_=bool, ephem=True)
         check_bonus = autoctx.args.get("cb", ephem=True)
         base_adv = reconcile_adv(
-            adv=autoctx.args.last("cadv", type_=bool, ephem=True),
-            dis=autoctx.args.last("cdis", type_=bool, ephem=True),
+            adv=autoctx.args.last("cadv", type_=bool, ephem=True) or self.adv == enums.AdvantageType.ADV,
+            dis=autoctx.args.last("cdis", type_=bool, ephem=True) or self.adv == enums.AdvantageType.DIS,
         )
         min_check = autoctx.args.last("mc", type_=int, ephem=True)
         hide = autoctx.args.last("h", type_=bool)

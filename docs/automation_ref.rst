@@ -150,6 +150,7 @@ Save
         fail: Effect[];
         success: Effect[];
         dc?: IntExpression;
+        adv?: -1 | 0 | 1;
     }
 
 A Save effect forces a targeted creature to make a saving throw.
@@ -172,6 +173,11 @@ It must be inside a Target effect.
     .. attribute:: dc
 
         *optional* - An IntExpression that details what DC to use (defaults to caster's spell DC).
+
+    .. attribute:: adv
+
+        *optional, default 0* - Whether the saving throw should have advantage by default (``-1`` = disadvantage,
+        ``1`` = advantage, ``0`` = no advantage).
 
 **Variables**
 
@@ -938,6 +944,7 @@ Ability Check
         success?: Effect[];
         fail?: Effect[];
         contestTie?: "fail" | "success" | "neither";
+        adv?: -1 | 0 | 1;
     }
 
 An Ability Check effect forces a targeted creature to make an ability check, optionally as a contest against the caster.
@@ -1007,6 +1014,11 @@ It must be inside a Target effect.
     .. attribute:: contestTie
 
         *optional, default success* - Which list of effects to run if the ability contest results in a tie.
+
+    .. attribute:: adv
+
+        *optional, default 0* - Whether the check should have advantage by default (``-1`` = disadvantage,
+        ``1`` = advantage, ``0`` = no advantage).
 
 **Variables**
 

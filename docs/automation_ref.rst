@@ -564,6 +564,14 @@ ButtonInteraction
 
 Used to specify a button that will appear on the targeted combatant's turn and execute some automation when pressed.
 
+.. note::
+
+    Any initiative effects applying an offensive effect to the caster will not be considered when a ButtonInteraction
+    is run, to prevent scenarios where an effect granting a damage bonus to the caster increases the damage done by
+    a damage over time effect and other similar scenarios.
+
+    You may think of this as a ButtonInteraction's caster being a temporary actor without any active initiative effects.
+
 .. class:: ButtonInteraction
 
     .. attribute:: automation

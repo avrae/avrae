@@ -379,6 +379,8 @@ class _PassiveEffectsWrapper:
             save_adv=self.resolve_save_advs(autoctx, "save_adv"),
             save_dis=self.resolve_save_advs(autoctx, "save_dis"),
             check_bonus=self.resolve_annotatedstring(autoctx, "check_bonus"),
+            check_adv=self.resolve_check_advs(autoctx, "check_adv"),
+            check_dis=self.resolve_check_advs(autoctx, "check_dis"),
         )
 
     def resolve_annotatedstring(self, autoctx, attr: str) -> str | None:
@@ -424,6 +426,11 @@ class _PassiveEffectsWrapper:
         """save_adv: a list of AnnotatedString -> a set of str"""
         data = self.resolve_annotatedstring_list(autoctx, attr)
         return init.effects.passive.resolve_save_advs(data)
+
+    def resolve_check_advs(self, autoctx, attr: str) -> set[str]:
+        """check_adv: a list of AnnotatedString -> a set of str"""
+        data = self.resolve_annotatedstring_list(autoctx, attr)
+        return init.effects.passive.resolve_check_advs(data)
 
 
 class _AttackInteractionWrapper:

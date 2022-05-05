@@ -123,7 +123,9 @@ class Check(Effect):
         if self.contest_ability is not None:
             contest_skill, contest_skill_key = get_highest_skill(autoctx.caster, self.contest_ability_list)
             contest_skill_name = camel_to_title(contest_skill_key)
-            contest_dice = get_check_dice_for_statblock(autoctx, statblock_holder=autoctx, skill=contest_skill)
+            contest_dice = get_check_dice_for_statblock(
+                autoctx, statblock_holder=autoctx, skill=contest_skill, skill_key=contest_skill_key
+            )
             contest_roll = d20.roll(contest_dice)
 
             autoctx.metavars["lastContestRollTotal"] = contest_roll.total
@@ -147,6 +149,7 @@ class Check(Effect):
                 autoctx,
                 statblock_holder=autoctx.target,
                 skill=skill,
+                skill_key=skill_key,
                 bonus=check_bonus,
                 base_adv=base_adv,
                 min_check=min_check,
@@ -264,6 +267,7 @@ def get_check_dice_for_statblock(
     autoctx: "AutomationContext",
     statblock_holder: Union["AutomationContext", "AutomationTarget"],
     skill: "Skill",
+    skill_key: str,
     bonus: list[str] = None,
     base_adv: enums.AdvantageType = None,
     min_check: int = None,
@@ -271,17 +275,6 @@ def get_check_dice_for_statblock(
     """
     Resolves the check dice for the given skill, taking into account character settings and ieffects.
     """
-
-    # ==== ieffects ====
-    # todo
-    # sadv_effects = autoctx.target_active_effects(
-    #     mapper=lambda effect: effect.effects.save_adv, reducer=lambda saves: set().union(*saves), default=set()
-    # )
-    # sdis_effects = autoctx.target_active_effects(
-    #     mapper=lambda effect: effect.effects.save_dis, reducer=lambda saves: set().union(*saves), default=set()
-    # )
-    # sadv = stat in sadv_effects
-    # sdis = stat in sdis_effects
 
     # ==== options / ieffects ====
     # reliable talent, halfling luck
@@ -295,8 +288,22 @@ def get_check_dice_for_statblock(
     # ieffects
     cb = bonus or []
     if statblock_holder.combatant and autoctx.allow_target_ieffects:
-        cb.extend(
-            statblock_holder.combatant.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
+        combatant = statblock_holder.combatant
+        base_ability_key = constants.SKILL_MAP[skill_key]
+        # -cb
+        cb.extend(combatant.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[]))
+
+        # -cadv, -cdis
+        cadv_effects = combatant.active_effects(
+            mapper=lambda effect: effect.effects.check_adv, reducer=lambda checks: set().union(*checks), default=set()
+        )
+        cdis_effects = combatant.active_effects(
+            mapper=lambda effect: effect.effects.check_dis, reducer=lambda checks: set().union(*checks), default=set()
+        )
+
+        base_adv = reconcile_adv(
+            adv=base_adv == enums.AdvantageType.ADV or skill_key in cadv_effects or base_ability_key in cadv_effects,
+            dis=base_adv == enums.AdvantageType.DIS or skill_key in cdis_effects or base_ability_key in cdis_effects,
         )
 
     # build final dice

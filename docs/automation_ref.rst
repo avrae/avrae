@@ -373,6 +373,8 @@ PassiveEffects
         save_adv: AnnotatedString[];
         save_dis: AnnotatedString[];
         check_bonus: AnnotatedString;
+        check_adv: AnnotatedString[];
+        check_dis: AnnotatedString[];
     }
 
 Used to specify the passive effects granted by an initiative effect.
@@ -467,6 +469,20 @@ Used to specify the passive effects granted by an initiative effect.
     .. attribute:: check_bonus
 
         *optional* - A bonus that this effect grants to all of the combatant's skill checks.
+
+    .. attribute:: check_adv
+
+        *optional* - A list of skill names (e.g. ``sleightOfHand``, ``strength``) that the combatant should have
+        advantage on for ability checks for while this effect is active. If a base ability is given, the advantage
+        will apply to all skills based on that ability (e.g. ``strength`` gives advantage on ``athletics`` checks).
+        Use ``all`` as a stat name to specify all skills.
+
+    .. attribute:: check_dis
+
+        *optional* - A list of skill names (e.g. ``sleightOfHand``, ``strength``) that the combatant should have
+        disadvantage on for ability checks for while this effect is active. If a base ability is given, the disadvantage
+        will apply to all skills based on that ability (e.g. ``strength`` gives disadvantage on ``athletics`` checks).
+        Use ``all`` as a stat name to specify all skills.
 
 .. _attackinteraction:
 

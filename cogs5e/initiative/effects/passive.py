@@ -3,9 +3,9 @@ from typing import Callable, Iterable, List, Optional, Set, Tuple, Type, TypeVar
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
 from utils.argparser import ParsedArguments
-from utils.constants import STAT_ABBREVIATIONS
+from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.enums import AdvantageType
-from utils.functions import verbose_stat
+from utils.functions import camel_to_title, exactly_one, verbose_stat
 
 _OwnerT = TypeVar("_OwnerT")
 _DT = TypeVar("_DT")
@@ -102,11 +102,32 @@ def _str_save_dis(value: Set[str]):
     return f"Save Disadvantage: {saves}"
 
 
+def _str_check_adv(value: Set[str]):
+    if value.issuperset(STAT_NAMES):
+        return "Check Advantage: All"
+    saves = ", ".join(camel_to_title(s) for s in value)
+    return f"Check Advantage: {saves}"
+
+
+def _str_check_dis(value: Set[str]):
+    if value.issuperset(STAT_NAMES):
+        return "Check Disadvantage: All"
+    saves = ", ".join(camel_to_title(s) for s in value)
+    return f"Check Disadvantage: {saves}"
+
+
 # ---- main class ----
 class InitPassiveEffect:
     """
     Represents all the passive effects granted by an Initiative effect.
     If adding new passive effects, add a new classvar below.
+
+    Other places to touch:
+    - cogs5e.models.initiative.cog.effect (docs)
+    - cogs5e.models.automation.effects.ieffect
+    - docs.automation_ref#ieffect (docs)
+    - any consumers of the new passive effect
+    - the automation-common library: validation.models.PassiveEffects (otherwise the norm step of !a import eats keys)
     """
 
     __effect_attrs__ = set()
@@ -165,6 +186,18 @@ class InitPassiveEffect:
         serializer=lambda data: list(data),
     )
     check_bonus: str = _PassiveEffect(stringifier=_abstract_str_attr("Check Bonus"))
+    check_adv: Set[str] = _PassiveEffect(
+        default=set(),
+        stringifier=_str_check_adv,
+        deserializer=lambda data: set(data),
+        serializer=lambda data: list(data),
+    )
+    check_dis: Set[str] = _PassiveEffect(
+        default=set(),
+        stringifier=_str_check_dis,
+        deserializer=lambda data: set(data),
+        serializer=lambda data: list(data),
+    )
 
     def __init__(self, **kwargs):
         for attr in kwargs:
@@ -221,6 +254,8 @@ class InitPassiveEffect:
             save_adv=resolve_save_advs(args.get("sadv")),
             save_dis=resolve_save_advs(args.get("sdis")),
             check_bonus=args.join("cb", "+"),
+            check_adv=resolve_check_advs(args.get("cadv")),
+            check_dis=resolve_check_advs(args.get("cdis")),
         )
 
     # ==== stringification ====
@@ -266,4 +301,20 @@ def resolve_save_advs(values: List[str]) -> Set[str]:
         if stat_abbr not in STAT_ABBREVIATIONS:
             raise InvalidArgument(f"{arg} is not a valid stat")
         out.add(stat_abbr)
+    return out
+
+
+def resolve_check_advs(values: List[str]) -> Set[str]:
+    out = set()
+    for arg in values:
+        if arg is True or arg.lower() == "all" or arg == "True":
+            return set(SKILL_NAMES)
+        skill_options = [k for k in SKILL_NAMES if k.lower().startswith(arg)]
+        if not skill_options:
+            raise InvalidArgument(f"`{arg}` is not a valid skill")
+        elif len(skill_options) > 1:
+            raise InvalidArgument(
+                f"`{arg}` could be multiple skills: {', '.join(skill_options)}. Please use a more precise skill key."
+            )
+        out.add(skill_options[0])
     return out

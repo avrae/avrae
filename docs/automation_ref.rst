@@ -989,7 +989,8 @@ It must be inside a Target effect.
 
     .. attribute:: dc
 
-        *optional* - An IntExpression that details what DC to use (defaults to caster's spell DC).
+        *optional* - An IntExpression that specifies the check's DC. If neither ``dc`` nor ``contestAbility`` is given,
+        the check will not run either the ``fail`` or ``success`` nodes.
 
         Mutually exclusive with ``contestAbility``.
 

@@ -416,39 +416,23 @@ async def parse_draconic(
 # handler
 async def handle_alias_exception(ctx, err):
     e = err.original
-    location = f"when parsing expression {err.expression}"
-    locinfo = None
     if isinstance(e, AvraeException):
         return await ctx.channel.send(err)
-    elif isinstance(e, draconic.InvalidExpression):
-        try:
-            location = f"on line {e.node.lineno}, col {e.node.col_offset}"
-            locinfo = (e.node.lineno, e.node.col_offset)
-        except AttributeError:
-            pass
-    elif isinstance(e, draconic.DraconicSyntaxError):
-        location = f"on line {e.lineno}, col {e.offset}"
-        locinfo = (e.lineno, e.offset)
 
-    # make a pointer to the error so it looks nice
-    point_to_error = ""
-    if locinfo:
-        line, col = locinfo
-        the_line = err.expression.split("\n")[line - 1]
-        point_to_error = f"{the_line}\n{' ' * col}^\n"
+    if isinstance(e, draconic.DraconicException):
+        tb = draconic.utils.format_traceback(e)
+    else:
+        tb = traceback.format_exception_only(e)
 
-    if isinstance(e, draconic.AnnotatedException):
+    if isinstance(e, draconic.WrappedException):
         e = e.original
 
-    tb = "".join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))
     # send traceback to user
     if not isinstance(e, AliasException) or e.pm_user:
         with suppress(disnake.HTTPException):
             await ctx.author.send(
                 f"```py\n"
-                f"Error {location}:\n"
-                f"{point_to_error}"
-                f"{tb}\n"
+                f"{''.join(tb)}"
                 f"```"
                 f"This is an issue in a user-created command; do *not* report this on the official bug tracker."
             )

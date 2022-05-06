@@ -5,12 +5,45 @@ This page details the structure of Avrae's Automation system, the backbone behin
 
 Basic Structure
 ---------------
-An automation run is made up of a list of *effects*. See below for what each effect does.
+An automation run is made up of a list of *effects* (AKA *automation node*), each of which may have additional *effects*
+that it runs under certain conditions. This recursive structure is called the *automation tree*.
+
+**Glossary**
+
+.. data:: automation engine
+
+    The Automation Engine is the code responsible for reading the automation tree and executing it against the current
+    game state. It handles rolling the dice, checking against your targets' armor classes, modifying hit points, and
+    other game mechanics.
+
+.. data:: automation tree
+          automation
+
+    The automation tree (sometimes just called "automation") is the program that the Automation Engine runs. It's made
+    up of multiple nodes that all link together to make an attack, action, spell, or more.
+
+.. data:: effect
+          node
+
+    A single step of automation - usually, this is a D&D game mechanic like :ref:`rolling to hit<Attack>`,
+    :ref:`making a saving throw<Save>`, or :ref:`dealing damage<Damage>`, but this can also be used in more programmatic
+    ways to help set up other nodes.
+
+Runtime Variables
+-----------------
 
 All Automation runs provide the following variables:
 
-- ``caster`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The character, combatant, or monster who is running the automation.
-- ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`, :class:`str`, or None) A list of combatants targeted by this automation (i.e. the ``-t`` argument).
+- ``caster`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The character, combatant, or monster who is running the
+  automation.
+- ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`, :class:`str`, or None) A list of combatants
+  targeted by this automation (i.e. the ``-t`` argument).
+
+Additionally, runs triggered by an initiative effect (such as automation provided in a :ref:`ButtonInteraction`) provide
+the following variables:
+
+- ``ieffect`` (:class:`~aliasing.api.combat.SimpleEffect`) The initiative effect responsible for providing the
+  automation.
 
 Target
 ------
@@ -26,27 +59,29 @@ Target
 A Target effect should only show up as a top-level effect.
 It designates what creatures to affect.
 
-.. attribute:: target
+.. class:: Target
 
-    - ``"all"`` or ``"each"`` (actions only): Affects each of the given (by the ``-t`` argument) targets.
-    - ``int`` (actions only): Affects the Nth target (1-indexed).
-    - ``"self"``: Affects the caster, or the actor the triggering effect is on if run from an IEffect button.
-    - ``"parent"`` (IEffect buttons only): If the triggering effect has a parent effect, affects the actor the parent
-      effect is on.
-    - ``"children"`` (IEffect buttons only): If the triggering effect has any children effects, affects each actor a
-      child effect is on.
+    .. attribute:: target
 
-.. attribute:: effects
+        - ``"all"`` or ``"each"`` (actions only): Affects each of the given (by the ``-t`` argument) targets.
+        - ``int`` (actions only): Affects the Nth target (1-indexed).
+        - ``"self"``: Affects the caster, or the actor the triggering effect is on if run from an IEffect button.
+        - ``"parent"`` (IEffect buttons only): If the triggering effect has a parent effect, affects the actor the
+          parent effect is on.
+        - ``"children"`` (IEffect buttons only): If the triggering effect has any children effects, affects each actor a
+          child effect is on.
 
-    A list of effects that each targeted creature will be subject to.
+    .. attribute:: effects
 
-.. attribute:: sortBy
+        A list of effects that each targeted creature will be subject to.
 
-    *optional* - Whether to sort the target list. If not given, targets are processed in the order the ``-t`` arguments
-    are seen. This does not affect ``self`` targets.
+    .. attribute:: sortBy
 
-    - ``hp_asc``: Sorts the targets in order of remaining hit points ascending (lowest HP first, None last).
-    - ``hp_desc``: Sorts the targets in order of remaining hit points descending (highest HP first, None last).
+        *optional* - Whether to sort the target list. If not given, targets are processed in the order the ``-t``
+        arguments are seen. This does not affect ``self`` targets.
+
+        - ``hp_asc``: Sorts the targets in order of remaining hit points ascending (lowest HP first, None last).
+        - ``hp_desc``: Sorts the targets in order of remaining hit points descending (highest HP first, None last).
 
 **Variables**
 
@@ -56,6 +91,8 @@ It designates what creatures to affect.
   (0-indexed - first target = ``0``, second = ``1``, etc.). Self targets, nth-targets, and parent targets will always
   be ``0``.
 - ``targetNumber`` (:class:`int`) Same as ``targetIndex``, but 1-indexed (equivalent to ``targetIndex + 1``).
+
+.. _Attack:
 
 Attack
 ------
@@ -72,22 +109,24 @@ Attack
 An Attack effect makes an attack roll against a targeted creature.
 It must be inside a Target effect.
 
-.. attribute:: hit
+.. class:: Attack:
 
-     A list of effects to execute on a hit.
+    .. attribute:: hit
 
-.. attribute:: miss
+        A list of effects to execute on a hit.
 
-     A list of effects to execute on a miss.
+    .. attribute:: miss
 
-.. attribute:: attackBonus
+        A list of effects to execute on a miss.
 
-     *optional* - An IntExpression that details what attack bonus to use (defaults to caster's spell attack mod).
+    .. attribute:: attackBonus
 
-.. attribute:: adv
+        *optional* - An IntExpression that details what attack bonus to use (defaults to caster's spell attack mod).
 
-     *optional* - An IntExpression that details whether the attack has inherent advantage or not. ``0`` for flat, ``1``;
-     for Advantage, ``2`` for Elven Accuracy, ``-1`` for Disadvantage (Default is flat).
+    .. attribute:: adv
+
+        *optional* - An IntExpression that details whether the attack has inherent advantage or not. ``0`` for flat,
+        ``1`` for Advantage, ``2`` for Elven Accuracy, ``-1`` for Disadvantage (Default is flat).
 
 **Variables**
 
@@ -99,36 +138,46 @@ It must be inside a Target effect.
 - ``lastAttackHadAdvantage`` (:class:`int`) The advantage type of the last to-hit roll. ``0`` for flat, ``1`` for;
   Advantage, ``2`` for Elven Accuracy, ``-1`` for Disadvantage
 
+.. _Save:
+
 Save
 ----
 .. code-block:: typescript
 
     {
         type: "save";
-        stat: "str"|"dex"|"con"|"int"|"wis"|"cha";
+        stat: "str" | "dex" | "con" | "int" | "wis" | "cha";
         fail: Effect[];
         success: Effect[];
         dc?: IntExpression;
+        adv?: -1 | 0 | 1;
     }
 
 A Save effect forces a targeted creature to make a saving throw.
 It must be inside a Target effect.
 
-.. attribute:: stat
+.. class:: Save
 
-     The type of saving throw.
+    .. attribute:: stat
 
-.. attribute:: fail
+        The type of saving throw.
 
-     A list of effects to execute on a failed save.
+    .. attribute:: fail
 
-.. attribute:: success
+        A list of effects to execute on a failed save.
 
-     A list of effects to execute on a successful save.
+    .. attribute:: success
 
-.. attribute:: dc
+        A list of effects to execute on a successful save.
 
-     *optional* - An IntExpression that details what DC to use (defaults to caster's spell DC).
+    .. attribute:: dc
+
+        *optional* - An IntExpression that details what DC to use (defaults to caster's spell DC).
+
+    .. attribute:: adv
+
+        *optional, default 0* - Whether the saving throw should have advantage by default (``-1`` = disadvantage,
+        ``1`` = advantage, ``0`` = no advantage).
 
 **Variables**
 
@@ -139,6 +188,8 @@ It must be inside a Target effect.
   0 if no roll was made).
 - ``lastSaveAbility`` (:class:`str`) The title-case full name of the ability the save was made with (e.g.
   ``"Strength"``, ``"Wisdom"``, etc).
+
+.. _Damage:
 
 Damage
 ------
@@ -152,25 +203,31 @@ Damage
         cantripScale?: boolean;
     }
 
-Deals damage to a targeted creature. It must be inside a Target effect.
+Deals damage to or heals a targeted creature. It must be inside a Target effect.
 
-.. attribute:: damage
+.. note::
 
-     How much damage to deal. 
+    This node can also be used to heal a target; simply use negative damage to supply healing.
 
-.. attribute:: overheal
+.. class:: Damage
 
-    .. versionadded:: 1.4.1
+    .. attribute:: damage
 
-     *optional* - Whether this damage should allow a target to exceed its hit point maximum.
+        How much damage to deal.
 
-.. attribute:: higher
+    .. attribute:: overheal
 
-     *optional* - How much to add to the damage when a spell is cast at a certain level.
+        .. versionadded:: 1.4.1
 
-.. attribute:: cantripScale
+        *optional* - Whether this damage should allow a target to exceed its hit point maximum.
 
-     *optional* - Whether this roll should scale like a cantrip.
+    .. attribute:: higher
+
+        *optional* - How much to add to the damage when a spell is cast at a certain level.
+
+    .. attribute:: cantripScale
+
+        *optional* - Whether this roll should scale like a cantrip.
 
 **Variables**
 
@@ -189,17 +246,19 @@ TempHP
 
 Sets the target's THP. It must be inside a Target effect.
 
-.. attribute:: amount
+.. class:: TempHP
 
-     How much temp HP the target should have. 
+    .. attribute:: amount
 
-.. attribute:: higher
+        How much temp HP the target should have.
 
-     *optional* - How much to add to the THP when a spell is cast at a certain level.
+    .. attribute:: higher
 
-.. attribute:: cantripScale
+        *optional* - How much to add to the THP when a spell is cast at a certain level.
 
-     *optional* - Whether this roll should scale like a cantrip.
+    .. attribute:: cantripScale
+
+        *optional* - Whether this roll should scale like a cantrip.
 
 **Variables**
 
@@ -227,60 +286,68 @@ IEffect
 Adds an InitTracker Effect to a targeted creature, if the automation target is in combat.
 It must be inside a Target effect.
 
-.. attribute:: name
+.. note::
 
-    The name of the effect to add.
+    If the targeted creature is not in combat, this will display the effects of the initiative effect but not save
+    it on the creature.
 
-.. attribute:: duration
+.. class:: IEffect
 
-    *optional, default infinite* - The duration of the effect, in rounds of combat. If this is negative, creates an
-    effect with infinite duration.
+    .. attribute:: name
 
-.. attribute:: effects
+        The name of the effect to add.
 
-    *optional, default no effects* - The effects to add. See :ref:`passiveeffects`.
+    .. attribute:: duration
 
-.. attribute:: attacks
+        *optional, default infinite* - The duration of the effect, in rounds of combat. If this is negative, creates an
+        effect with infinite duration.
 
-    *optional, default no attacks* - The attacks granted by this effect. See :ref:`attackinteraction`.
+    .. attribute:: effects
 
-.. attribute:: buttons
+        *optional, default no effects* - The effects to add. See :ref:`passiveeffects`.
 
-    *optional, default no buttons* - The buttons granted by this effect. See :ref:`buttoninteraction`.
+    .. attribute:: attacks
 
-.. attribute:: end
+        *optional, default no attacks* - The attacks granted by this effect. See :ref:`attackinteraction`.
 
-    *optional, default false* - Whether the effect timer should tick on the end of the turn, rather than start.
+    .. attribute:: buttons
 
-.. attribute:: conc
+        *optional, default no buttons* - The buttons granted by this effect. See :ref:`buttoninteraction`.
 
-    *optional, default false* - Whether the effect requires concentration.
+    .. attribute:: end
 
-.. attribute:: desc
+        *optional, default false* - Whether the effect timer should tick on the end of the turn, rather than start.
 
-    *optional* - The description of the effect (displays on combatant's turn).
+    .. attribute:: conc
 
-.. attribute:: stacking
+        *optional, default false* - Whether the effect requires concentration.
 
-    *optional, default false* - If true and another effect with the same name is found on the target, instead of
-    overwriting, add a child effect with name ``{name} x{count}`` and no description, duration, concentration,
-    attacks, or buttons.
+    .. attribute:: desc
 
-.. attribute:: save_as
+        *optional* - The description of the effect (displays on combatant's turn).
 
-    *optional, default None* - If supplied, saves an :class:`IEffectMetaVar` to the automation runtime, which can be
-    used in another IEffect's ``parent`` key to set its parent to this effect. Must be a valid identifier.
+    .. attribute:: stacking
 
-.. attribute:: parent
+        *optional, default false* - If true and another effect with the same name is found on the target, instead of
+        overwriting, add a child effect with name ``{name} x{count}`` and no description, duration, concentration,
+        attacks, or buttons.
 
-    *optional, default None* - If supplied, sets the created effect's parent to the given effect. This must be the
-    name of an existing :class:`IEffectMetaVar`.
+    .. attribute:: save_as
 
-    If ``parent`` is supplied but the parent effect does not exist, will not set a parent.
+        *optional, default None* - If supplied, saves an :class:`IEffectMetaVar` to the automation runtime, which can be
+        used in another IEffect's ``parent`` key to set its parent to this effect. Must be a valid identifier.
 
-    If ``conc`` is true, the given parent effect will take priority over the concentration effect.
+    .. attribute:: parent
 
-    If ``stacking`` is true and a valid stack parent exists, the stack parent will take priority over the given parent.
+        *optional, default None* - If supplied, sets the created effect's parent to the given effect. This must be the
+        name of an existing :class:`IEffectMetaVar`.
+
+        If ``parent`` is supplied but the parent effect does not exist, will not set a parent.
+
+        If ``conc`` is true, the given parent effect will take priority over the concentration effect.
+
+        If ``stacking`` is true and a valid stack parent exists, the stack parent will take priority over the given
+        parent.
 
 **Variables**
 
@@ -312,98 +379,116 @@ PassiveEffects
         save_adv: AnnotatedString[];
         save_dis: AnnotatedString[];
         check_bonus: AnnotatedString;
+        check_adv: AnnotatedString[];
+        check_dis: AnnotatedString[];
     }
 
 Used to specify the passive effects granted by an initiative effect.
 
-.. attribute:: attack_advantage
+.. class:: PassiveEffects
 
-    *optional, default no advantage* - Whether this effect gives the combatant advantage on all attacks.
-    -1 for dis, 1 for adv, 2 for elven accuracy.
+    .. attribute:: attack_advantage
 
-.. attribute:: to_hit_bonus
+        *optional, default no advantage* - Whether this effect gives the combatant advantage on all attacks.
+        -1 for dis, 1 for adv, 2 for elven accuracy.
 
-    *optional* - A bonus that this effect grants to all of the combatant's to-hit rolls.
+    .. attribute:: to_hit_bonus
 
-.. attribute:: damage_bonus
+        *optional* - A bonus that this effect grants to all of the combatant's to-hit rolls.
 
-    *optional* - A bonus that this effect grants to all of the combatant's damage rolls.
+    .. attribute:: damage_bonus
 
-.. attribute:: magical_damage
+        *optional* - A bonus that this effect grants to all of the combatant's damage rolls.
 
-    *optional, default false* - Whether this effect makes all of the combatant's attacks do magical damage.
-    0 for false, anything else for true.
+    .. attribute:: magical_damage
 
-.. attribute:: silvered_damage
+        *optional, default false* - Whether this effect makes all of the combatant's attacks do magical damage.
+        0 for false, anything else for true.
 
-    *optional, default false* - Whether this effect makes all of the combatant's attacks do silvered damage.
-    0 for false, anything else for true.
+    .. attribute:: silvered_damage
 
-.. attribute:: resistances
+        *optional, default false* - Whether this effect makes all of the combatant's attacks do silvered damage.
+        0 for false, anything else for true.
 
-    *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the combatant
-    should be resistant to while this effect is active.
+    .. attribute:: resistances
 
-.. attribute:: immunities
+        *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the
+        combatant should be resistant to while this effect is active.
 
-    *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the combatant
-    should be immune to while this effect is active.
+    .. attribute:: immunities
 
-.. attribute:: vulnerabilities
+        *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the
+        combatant should be immune to while this effect is active.
 
-    *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the combatant
-    should be vulnerable to while this effect is active.
+    .. attribute:: vulnerabilities
 
-.. attribute:: ignored_resistances
+        *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the
+        combatant should be vulnerable to while this effect is active.
 
-    *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the combatant
-    should *not* be resistant, immune, or vulnerable to while this effect is active.
+    .. attribute:: ignored_resistances
 
-.. attribute:: ac_value
+        *optional* - A list of damage types and optionally modifiers (e.g. "fire", "nonmagical slashing") that the
+        combatant should *not* be resistant, immune, or vulnerable to while this effect is active.
 
-    *optional* - A value to set the combatant's armor class to while this effect is active.
+    .. attribute:: ac_value
 
-    .. note::
-        If both ``ac_value`` and ``ac_bonus`` are specified, the resulting value will be equal to
-        ``ac_value + ac_bonus``.
+        *optional* - A value to set the combatant's armor class to while this effect is active.
 
-        If multiple effects specify ``ac_value``, the highest value will be used.
+        .. note::
+            If both ``ac_value`` and ``ac_bonus`` are specified, the resulting value will be equal to
+            ``ac_value + ac_bonus``.
 
-.. attribute:: ac_bonus
+            If multiple effects specify ``ac_value``, the highest value will be used.
 
-    *optional* - A bonus added to the combatant's armor class while this effect is active.
+    .. attribute:: ac_bonus
 
-.. attribute:: max_hp_value
+        *optional* - A bonus added to the combatant's armor class while this effect is active.
 
-    *optional* - A value to set the combatant's maximum hit points to while this effect is active.
+    .. attribute:: max_hp_value
 
-    .. note::
-        If both ``max_hp_value`` and ``max_hp_bonus`` are specified, the resulting value will be equal to
-        ``max_hp_value + max_hp_bonus``.
+        *optional* - A value to set the combatant's maximum hit points to while this effect is active.
 
-        If multiple effects specify ``max_hp_value``, the highest value will be used.
+        .. note::
+            If both ``max_hp_value`` and ``max_hp_bonus`` are specified, the resulting value will be equal to
+            ``max_hp_value + max_hp_bonus``.
 
-.. attribute:: max_hp_bonus
+            If multiple effects specify ``max_hp_value``, the highest value will be used.
 
-    *optional* - A bonus added to the combatant's maximum hit points while this effect is active.
+    .. attribute:: max_hp_bonus
 
-.. attribute:: save_bonus
+        *optional* - A bonus added to the combatant's maximum hit points while this effect is active.
 
-    *optional* - A bonus that this effect grants to all of the combatant's saving throws.
+    .. attribute:: save_bonus
 
-.. attribute:: save_adv
+        *optional* - A bonus that this effect grants to all of the combatant's saving throws.
 
-    *optional* - A list of stat names (e.g. ``strength``) that the combatant should have advantage on for their
-    respective saving throws while this effect is active. Use ``all`` as a stat name to specify all stats.
+    .. attribute:: save_adv
 
-.. attribute:: save_dis
+        *optional* - A list of stat names (e.g. ``strength``) that the combatant should have advantage on for their
+        respective saving throws while this effect is active. Use ``all`` as a stat name to specify all stats.
 
-    *optional* - A list of stat names (e.g. ``strength``) that the combatant should have disadvantage on for their
-    respective saving throws while this effect is active. Use ``all`` as a stat name to specify all stats.
+    .. attribute:: save_dis
 
-.. attribute:: check_bonus
+        *optional* - A list of stat names (e.g. ``strength``) that the combatant should have disadvantage on for their
+        respective saving throws while this effect is active. Use ``all`` as a stat name to specify all stats.
 
-    *optional* - A bonus that this effect grants to all of the combatant's skill checks.
+    .. attribute:: check_bonus
+
+        *optional* - A bonus that this effect grants to all of the combatant's skill checks.
+
+    .. attribute:: check_adv
+
+        *optional* - A list of skill names (e.g. ``sleightOfHand``, ``strength``) that the combatant should have
+        advantage on for ability checks for while this effect is active. If a base ability is given, the advantage
+        will apply to all skills based on that ability (e.g. ``strength`` gives advantage on ``athletics`` checks).
+        Use ``all`` as a stat name to specify all skills.
+
+    .. attribute:: check_dis
+
+        *optional* - A list of skill names (e.g. ``sleightOfHand``, ``strength``) that the combatant should have
+        disadvantage on for ability checks for while this effect is active. If a base ability is given, the disadvantage
+        will apply to all skills based on that ability (e.g. ``strength`` gives disadvantage on ``athletics`` checks).
+        Use ``all`` as a stat name to specify all skills.
 
 .. _attackinteraction:
 
@@ -414,7 +499,7 @@ AttackInteraction
 
     {
         attack: Attack;
-        defaultDc?: IntExpression;
+        defaultDC?: IntExpression;
         defaultAttackBonus?: IntExpression;
         defaultCastingMod?: IntExpression;
     }
@@ -422,41 +507,43 @@ AttackInteraction
 Used to specify an attack granted by an initiative effect: some automation that appears in the combatant's
 ``!action list`` and can be run with a command.
 
-.. attribute:: attack
+.. class:: AttackInteraction
 
-    The Attack model is any valid individual entity as exported by the attack editor on the Avrae Dashboard:
+    .. attribute:: attack
 
-    .. code-block:: typescript
+        The Attack model is any valid individual entity as exported by the attack editor on the Avrae Dashboard:
 
-        {
-            _v: 2;
-            name: string;
-            automation: Effect[];
-            verb?: string;
-            proper?: boolean;
-            criton?: number;
-            phrase?: string;
-            thumb?: string;
-            extra_crit_damage?: string;
-        }
+        .. code-block:: typescript
 
-.. attribute:: defaultDc
+            {
+                _v: 2;
+                name: string;
+                automation: Effect[];
+                verb?: string;
+                proper?: boolean;
+                criton?: number;
+                phrase?: string;
+                thumb?: string;
+                extra_crit_damage?: string;
+            }
 
-    *optional* - The default saving throw DC to use when running the automation. If not provided, defaults to the
-    targeted combatant's default spellcasting DC (or any DC specified in the automation). Use this if the effect's
-    DC depends on the original caster's DC, rather than the target's DC.
+    .. attribute:: defaultDC
 
-.. attribute:: defaultAttackBonus
+        *optional* - The default saving throw DC to use when running the automation. If not provided, defaults to the
+        targeted combatant's default spellcasting DC (or any DC specified in the automation). Use this if the effect's
+        DC depends on the original caster's DC, rather than the target's DC.
 
-    *optional* - The default attack bonus to use when running the automation. If not provided, defaults to the targeted
-    combatant's default attack bonus (or any attack bonus specified in the automation). Use this if the effect's
-    attack bonus depends on the original caster's attack bonus, rather than the target's attack bonus.
+    .. attribute:: defaultAttackBonus
 
-.. attribute:: defaultCastingMod
+        *optional* - The default attack bonus to use when running the automation. If not provided, defaults to the
+        targeted combatant's default attack bonus (or any attack bonus specified in the automation). Use this if the
+        effect's attack bonus depends on the original caster's attack bonus, rather than the target's attack bonus.
 
-    *optional* - The default spellcasting modifier to use when running the automation. If not provided, defaults to the
-    targeted combatant's default spellcasting modifier. Use this if the effect's spellcasting modifier depends on the
-    original caster's spellcasting modifier, rather than the target's spellcasting modifier.
+    .. attribute:: defaultCastingMod
+
+        *optional* - The default spellcasting modifier to use when running the automation. If not provided, defaults to
+        the targeted combatant's default spellcasting modifier. Use this if the effect's spellcasting modifier depends
+        on the original caster's spellcasting modifier, rather than the target's spellcasting modifier.
 
 .. _buttoninteraction:
 
@@ -477,40 +564,50 @@ ButtonInteraction
 
 Used to specify a button that will appear on the targeted combatant's turn and execute some automation when pressed.
 
-.. attribute:: automation
+.. note::
 
-    The automation to run when this button is pressed.
+    Any initiative effects applying an offensive effect to the caster will not be considered when a ButtonInteraction
+    is run, to prevent scenarios where an effect granting a damage bonus to the caster increases the damage done by
+    a damage over time effect and other similar scenarios.
 
-.. attribute:: label
+    You may think of this as a ButtonInteraction's caster being a temporary actor without any active initiative effects.
 
-    The label displayed on the button.
+.. class:: ButtonInteraction
 
-.. attribute:: verb
+    .. attribute:: automation
 
-    *optional, default "uses {label}"* - The verb to use for the displayed output when the button is pressed (e.g. "is
-    on fire" would display "NAME is on fire!").
+        The automation to run when this button is pressed.
 
-.. attribute:: style
+    .. attribute:: label
 
-    *optional, default blurple* - The color of the button (1 = blurple, 2 = grey, 3 = green, 4 = red).
+        The label displayed on the button.
 
-.. attribute:: defaultDC
+    .. attribute:: verb
 
-    *optional* - The default saving throw DC to use when running the automation. If not provided, defaults to the
-    targeted combatant's default spellcasting DC (or any DC specified in the automation). Use this if the effect's
-    DC depends on the original caster's DC, rather than the target's DC.
+        *optional, default "uses {label}"* - The verb to use for the displayed output when the button is pressed (e.g.
+        "is on fire" would display "NAME is on fire!").
 
-.. attribute:: defaultAttackBonus
+    .. attribute:: style
 
-    *optional* - The default attack bonus to use when running the automation. If not provided, defaults to the targeted
-    combatant's default attack bonus (or any attack bonus specified in the automation). Use this if the effect's
-    attack bonus depends on the original caster's attack bonus, rather than the target's attack bonus.
+        *optional, default blurple* - The color of the button (1 = blurple, 2 = grey, 3 = green, 4 = red).
 
-.. attribute:: defaultCastingMod
+    .. attribute:: defaultDC
 
-    *optional* - The default spellcasting modifier to use when running the automation. If not provided, defaults to the
-    targeted combatant's default spellcasting modifier. Use this if the effect's spellcasting modifier depends on the
-    original caster's spellcasting modifier, rather than the target's spellcasting modifier.
+        *optional* - The default saving throw DC to use when running the automation. If not provided, defaults to the
+        targeted combatant's default spellcasting DC (or any DC specified in the automation). Use this if the effect's
+        DC depends on the original caster's DC, rather than the target's DC.
+
+    .. attribute:: defaultAttackBonus
+
+        *optional* - The default attack bonus to use when running the automation. If not provided, defaults to the
+        targeted combatant's default attack bonus (or any attack bonus specified in the automation). Use this if the
+        effect's attack bonus depends on the original caster's attack bonus, rather than the target's attack bonus.
+
+    .. attribute:: defaultCastingMod
+
+        *optional* - The default spellcasting modifier to use when running the automation. If not provided, defaults to
+        the targeted combatant's default spellcasting modifier. Use this if the effect's spellcasting modifier depends
+        on the original caster's spellcasting modifier, rather than the target's spellcasting modifier.
 
 Remove IEffect
 --------------
@@ -528,14 +625,16 @@ Removes the initiative effect that triggered this automation.
 Only works when run in execution triggered by an initiative effect, such as a ButtonInteraction
 (see :ref:`buttoninteraction`).
 
-.. attribute:: removeParent
+.. class:: RemoveIEffect
 
-    *optional, default null* - If the removed effect has a parent, whether to remove the parent.
+    .. attribute:: removeParent
 
-    - ``null`` (default) - Do not remove the parent effect.
-    - ``"always"`` - If the removed effect has a parent, remove it too.
-    - ``"if_no_children"`` - If the removed effect has a parent and its only remaining child was the removed effect,
-      remove it too.
+        *optional, default null* - If the removed effect has a parent, whether to remove the parent.
+
+        - ``null`` (default) - Do not remove the parent effect.
+        - ``"always"`` - If the removed effect has a parent, remove it too.
+        - ``"if_no_children"`` - If the removed effect has a parent and its only remaining child was the removed effect,
+          remove it too.
 
 **Variables**
 
@@ -557,25 +656,28 @@ Roll
 Rolls some dice and saves the result in a variable. Displays the roll and its name in a Meta field, unless
 ``hidden`` is ``true``.
 
-.. attribute:: dice
+.. class:: Roll
 
-     An AnnotatedString detailing what dice to roll.
+    .. attribute:: dice
 
-.. attribute:: name
+        An AnnotatedString detailing what dice to roll.
 
-     The variable name to save the result as.
+    .. attribute:: name
 
-.. attribute:: higher
+        The variable name to save the result as.
 
-     *optional* - How much to add to the roll when a spell is cast at a certain level.
+    .. attribute:: higher
 
-.. attribute:: cantripScale
+        *optional* - How much to add to the roll when a spell is cast at a certain level.
 
-     *optional* - Whether this roll should scale like a cantrip.
+    .. attribute:: cantripScale
 
-.. attribute:: hidden
+        *optional* - Whether this roll should scale like a cantrip.
 
-     *optional* - If ``true``, won't display the roll in the Meta field, or apply any bonuses from the ``-d`` argument.
+    .. attribute:: hidden
+
+        *optional* - If ``true``, won't display the roll in the Meta field, or apply any bonuses from the ``-d``
+        argument.
 
 **Variables**
 
@@ -595,12 +697,14 @@ Text
 
 Outputs a short amount of text in the resulting embed.
 
-.. attribute:: text
+.. class:: Text
 
-    Either:
+    .. attribute:: text
 
-    - An AnnotatedString (the text to display).
-    - An AbilityReference (see :ref:`AbilityReference`). Displays the ability's description in whole.
+        Either:
+
+        - An AnnotatedString (the text to display).
+        - An AbilityReference (see :ref:`AbilityReference`). Displays the ability's description in whole.
 
 Set Variable
 ------------
@@ -618,24 +722,26 @@ Set Variable
 
 Saves the result of an ``IntExpression`` to a variable without displaying anything.
 
-.. attribute:: name
+.. class:: SetVariable
 
-     The name of the variable to save.
+    .. attribute:: name
 
-.. attribute:: value
+        The name of the variable to save.
 
-     The value to set the variable to.
+    .. attribute:: value
 
-.. attribute:: higher
+        The value to set the variable to.
 
-     *optional* - What to set the variable to instead when a spell is cast at a higher level.
+    .. attribute:: higher
 
-.. attribute:: onError
+        *optional* - What to set the variable to instead when a spell is cast at a higher level.
 
-     *optional* - If provided, what to set the variable to if the normal value would throw an error.
+    .. attribute:: onError
 
-Condition
----------
+        *optional* - If provided, what to set the variable to if the normal value would throw an error.
+
+Condition (Branch)
+------------------
 .. versionadded:: 2.7.0
 
 .. code-block:: typescript
@@ -648,29 +754,31 @@ Condition
         errorBehaviour?: "true" | "false" | "both" | "neither" | "raise";
     }
 
-Run certain effects if a special condition is met, or other effects otherwise.
+Run certain effects if a certain condition is met, or other effects otherwise. AKA "branch" or "if-else".
 
-.. attribute:: condition
+.. class:: Condition
 
-     The condition to check.
+    .. attribute:: condition
 
-.. attribute:: onTrue
+        The condition to check.
 
-     The effects to run if ``condition`` is ``True`` or any non-zero value.
+    .. attribute:: onTrue
 
-.. attribute:: onFalse
+        The effects to run if ``condition`` is ``True`` or any non-zero value.
 
-     The effects to run if ``condition`` is ``False`` or ``0``.
+    .. attribute:: onFalse
 
-.. attribute:: errorBehaviour
+        The effects to run if ``condition`` is ``False`` or ``0``.
 
-     How to behave if the condition raises an error:
+    .. attribute:: errorBehaviour
 
-    - ``"true"``: Run the ``onTrue`` effects.
-    - ``"false"``: Run the ``onFalse`` effects. (*default*)
-    - ``"both"``: Run both the ``onTrue`` and ``onFalse`` effects, in that order.
-    - ``"neither"``: Skip this effect.
-    - ``"raise"``: Raise the error and halt execution.
+        How to behave if the condition raises an error:
+
+        - ``"true"``: Run the ``onTrue`` effects.
+        - ``"false"``: Run the ``onFalse`` effects. (*default*)
+        - ``"both"``: Run both the ``onTrue`` and ``onFalse`` effects, in that order.
+        - ``"neither"``: Skip this effect.
+        - ``"raise"``: Raise the error and halt execution.
 
 Use Counter
 -----------
@@ -691,33 +799,35 @@ Uses a number of charges of the given counter, and displays the remaining amount
 .. note::
     Regardless of the current target, this effect will always use the *caster's* counter/spell slots!
 
-.. attribute:: counter
+.. class:: UseCounter
 
-    The name of the counter to use (case-sensitive, full match only), or a reference to a spell slot
-    (see :ref:`SpellSlotReference`).
+    .. attribute:: counter
 
-.. attribute:: amount
+        The name of the counter to use (case-sensitive, full match only), or a reference to a spell slot
+        (see :ref:`SpellSlotReference`).
 
-     The number of charges to use. If negative, will add charges instead of using them.
+    .. attribute:: amount
 
-.. attribute:: allowOverflow
+        The number of charges to use. If negative, will add charges instead of using them.
 
-     *optional, default False* - If False, attempting to overflow/underflow a counter (i.e. use more charges than
-     available or add charges exceeding max) will error instead of clipping to bounds.
+    .. attribute:: allowOverflow
 
-.. attribute:: errorBehaviour
+        *optional, default False* - If False, attempting to overflow/underflow a counter (i.e. use more charges than
+        available or add charges exceeding max) will error instead of clipping to bounds.
 
-     *optional, default "warn"* - How to behave if modifying the counter raises an error:
+    .. attribute:: errorBehaviour
 
-    - ``null``: All errors are silently consumed.
-    - ``"warn"``: Automation will continue to run, and any errors will appear in the output. (*default*)
-    - ``"raise"``: Raise the error and halt execution.
+        *optional, default "warn"* - How to behave if modifying the counter raises an error:
 
-    Some, but not all, possible error conditions are:
+        - ``null``: All errors are silently consumed.
+        - ``"warn"``: Automation will continue to run, and any errors will appear in the output. (*default*)
+        - ``"raise"``: Raise the error and halt execution.
 
-    - The target does not have counters (e.g. they are a monster)
-    - The counter does not exist
-    - ``allowOverflow`` is false and the new value is out of bounds
+        Some, but not all, possible error conditions are:
+
+        - The target does not have counters (e.g. they are a monster)
+        - The counter does not exist
+        - ``allowOverflow`` is false and the new value is out of bounds
 
 **Variables**
 
@@ -738,9 +848,11 @@ SpellSlotReference
         slot: number | IntExpression;
     }
 
-.. attribute:: slot
+.. class:: SpellSlotReference
 
-    The level of the spell slot to reference (``[1..9]``).
+    .. attribute:: slot
+
+        The level of the spell slot to reference (``[1..9]``).
 
 .. _AbilityReference:
 
@@ -766,13 +878,15 @@ ability instead. A list of valid abilities can be retrieved from the API at ``/g
     - Choosing ``Breath Weapon (Gold)`` may discover a counter for a breath weapon of a different color
     - Choosing ``Sorcery Points (Sorcerer)`` may discover a counter granted by the Metamagic Adept feat
 
-.. attribute:: id
+.. class:: AbilityReference
 
-    The ID of the ability referenced.
+    .. attribute:: id
 
-.. attribute:: typeId
+        The ID of the ability referenced.
 
-    The DDB entity type ID of the ability referenced.
+    .. attribute:: typeId
+
+        The DDB entity type ID of the ability referenced.
 
 Cast Spell
 ----------
@@ -794,32 +908,147 @@ slot to cast the spell. Can only be used at the root of automation. Cannot be us
 
 This is usually used in features that cast spells using alternate resources (i.e. Use Counter, Cast Spell).
 
-.. attribute:: id
+.. class:: CastSpell
 
-    The DDB entity id of the spell to cast. Use the ``/gamedata/spells`` API endpoint to retrieve a list of valid IDs.
+    .. attribute:: id
 
-.. attribute:: level
+        The DDB entity id of the spell to cast. Use the Automation Editor to select a spell or the
+        ``/gamedata/spells`` API endpoint to retrieve a list of valid spell IDs.
 
-    *optional* - The (slot) level to cast the spell at.
+    .. attribute:: level
 
-.. attribute:: dc
+        *optional* - The (slot) level to cast the spell at.
 
-    *optional* - The saving throw DC to use when casting the spell. If not provided, defaults to the caster's default
-    spellcasting DC (or any DC specified in the spell automation).
+    .. attribute:: dc
 
-.. attribute:: attackBonus
+        *optional* - The saving throw DC to use when casting the spell. If not provided, defaults to the caster's
+        default spellcasting DC (or any DC specified in the spell automation).
 
-    *optional* - The spell attack bonus to use when casting the spell. If not provided, defaults to the caster's
-    default spell attack bonus (or any attack bonus specified in the spell automation).
+    .. attribute:: attackBonus
 
-.. attribute:: castingMod
+        *optional* - The spell attack bonus to use when casting the spell. If not provided, defaults to the caster's
+        default spell attack bonus (or any attack bonus specified in the spell automation).
 
-    *optional* - The spellcasting modifier to use when casting the spell. If not provided, defaults to the caster's
-    default spellcasting modifier.
+    .. attribute:: castingMod
+
+        *optional* - The spellcasting modifier to use when casting the spell. If not provided, defaults to the caster's
+        default spellcasting modifier.
 
 **Variables**
 
 No variables are exposed.
+
+Ability Check
+-------------
+.. versionadded:: 3.6.0
+
+.. code-block:: typescript
+
+    {
+        type: "check";
+        ability: string | string[];
+        contestAbility?: string | string[];
+        dc?: IntExpression;
+        success?: Effect[];
+        fail?: Effect[];
+        contestTie?: "fail" | "success" | "neither";
+        adv?: -1 | 0 | 1;
+    }
+
+An Ability Check effect forces a targeted creature to make an ability check, optionally as a contest against the caster.
+It must be inside a Target effect.
+
+.. class:: Check
+
+    .. attribute:: ability
+
+        The ability to make a check for. Must be one of or a list of the following:
+
+        .. code-block:: text
+
+            "acrobatics"
+            "animalHandling"
+            "arcana"
+            "athletics"
+            "deception"
+            "history"
+            "initiative"
+            "insight"
+            "intimidation"
+            "investigation"
+            "medicine"
+            "nature"
+            "perception"
+            "performance"
+            "persuasion"
+            "religion"
+            "sleightOfHand"
+            "stealth"
+            "survival"
+            "strength"
+            "dexterity"
+            "constitution"
+            "intelligence"
+            "wisdom"
+            "charisma"
+
+        If multiple skills are specified, uses the highest modifier of all the specified skills.
+
+    .. attribute:: contestAbility
+
+        *optional* - Which ability of the caster's to make a contest against.
+        Must be one of or a list of the valid skills listed above.
+        If multiple skills are specified, uses the highest modifier of all the specified skills.
+
+        Mutually exclusive with ``dc``.
+
+    .. attribute:: dc
+
+        *optional* - An IntExpression that specifies the check's DC. If neither ``dc`` nor ``contestAbility`` is given,
+        the check will not run either the ``fail`` or ``success`` nodes.
+
+        Mutually exclusive with ``contestAbility``.
+
+    .. attribute:: success
+
+        *optional* - A list of effects to execute on a successful check or if the **target** wins the contest.
+        Requires the *contestAbility* or *dc* attribute to be set.
+
+    .. attribute:: fail
+
+        *optional* - A list of effects to execute on a failed check or if the **target** loses the contest.
+        Requires the *contestAbility* or *dc* attribute to be set.
+
+    .. attribute:: contestTie
+
+        *optional, default success* - Which list of effects to run if the ability contest results in a tie.
+
+    .. attribute:: adv
+
+        *optional, default 0* - Whether the check should have advantage by default (``-1`` = disadvantage,
+        ``1`` = advantage, ``0`` = no advantage).
+
+**Variables**
+
+- ``lastCheckRollTotal`` (:class:`int`) The result of the last check roll (0 if no roll was made).
+- ``lastCheckNaturalRoll`` (:class:`int`) The natural roll of the last check roll (e.g. ``10`` in
+  ``1d20 (10) + 5 = 15``; 0 if no roll was made).
+- ``lastCheckAbility`` (:class:`str`) The title-case full name of the rolled skill (e.g. ``"Animal Handling"``,
+  ``"Arcana"``).
+- ``lastCheckDidPass`` (:class:`bool` or ``None``) If a DC was given, whether the target succeeded the check.
+  If a contest was specified, whether the target won the contest.
+  ``None`` if no or contest given.
+- ``lastCheckDC`` (:class:`int` or ``None``) If a DC was given, the DC of the last save roll. ``None`` if no DC given.
+
+*Contest Variables*
+
+- ``lastContestRollTotal`` (:class:`int` or ``None``) The result of the caster's contest roll; ``None`` if no contest
+  was made.
+- ``lastContestNaturalRoll`` (:class:`int` or ``None``) The natural roll of the caster's contest roll (e.g. ``10`` in
+  ``1d20 (10) + 5 = 15``; ``None`` if no contest was made).
+- ``lastContestAbility`` (:class:`str` or ``None``) The title-case full name of the skill the caster rolled
+  (e.g. ``"Animal Handling"``, ``"Arcana"``). ``None`` if no contest was made.
+- ``lastContestDidTie`` (:class:`bool`) Whether a ability contest resulted in a tie.
 
 AnnotatedString
 ---------------

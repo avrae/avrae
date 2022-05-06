@@ -559,3 +559,163 @@ async def test_usecounter_build_str(counter, amount):
     result = usecounter.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
     log.info(f"UseCounter str: ({counter=!r}, {amount=!r}) -> {result}")
     assert result
+
+
+# ==== Check ====
+async def import_check_actions(avrae, dhttp):
+    avrae.message(
+        textwrap.dedent(
+            """
+            !a import {
+              "_v": 2,
+              "name": "Check Test",
+              "automation": [
+                {
+                  "type": "target",
+                  "target": "each",
+                  "effects": [
+                    {
+                      "type": "check",
+                      "ability": [
+                        "arcana",
+                        "dexterity",
+                        "animalHandling"
+                      ],
+                      "dc": 15,
+                      "success": [
+                        {
+                          "type": "text",
+                          "text": "yay you passed"
+                        }
+                      ],
+                      "fail": [
+                        {
+                          "type": "text",
+                          "text": "you failed :("
+                        }
+                      ]
+                    },
+                    {
+                      "type": "check",
+                      "ability": "arcana"
+                    },
+                    {
+                      "type": "text",
+                      "text": "after arcana"
+                    }
+                  ]
+                }
+              ]
+            }
+            """
+        ).strip()
+    )
+    avrae.message(
+        textwrap.dedent(
+            """
+            !a import {
+              "_v": 2,
+              "name": "Contest Check Test",
+              "automation": [
+                {
+                  "type": "target",
+                  "target": "each",
+                  "effects": [
+                    {
+                      "type": "check",
+                      "ability": [
+                        "arcana",
+                        "dexterity",
+                        "animalHandling"
+                      ],
+                      "contestAbility": [
+                        "athletics",
+                        "acrobatics"
+                      ],
+                      "success": [
+                        {
+                          "type": "text",
+                          "text": "the target wins"
+                        }
+                      ],
+                      "fail": [
+                        {
+                          "type": "text",
+                          "text": "the caster wins"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+            """
+        ).strip()
+    )
+    await dhttp.drain()
+
+
+async def test_check_e2e(character, avrae, dhttp):
+    await import_check_actions(avrae, dhttp)
+    await start_init(avrae, dhttp)
+    avrae.message("!init join")
+    await dhttp.drain()
+
+    avrae.message(f'!a "Check Test" -t "{character.name}"')
+    await dhttp.drain()
+
+    avrae.message(f'!a "Contest Check Test" -t "{character.name}"')
+    await dhttp.drain()
+
+    await end_init(avrae, dhttp)
+
+
+async def test_check_deserialize():
+    data = {"type": "check", "ability": "arcana"}
+    result = automation.Check.from_data(data)
+    assert result
+    assert result.ability_list == ["arcana"]
+    assert result.contest_ability_list is None
+    assert result.dc is None
+    assert result.contest_tie_behaviour is None
+
+    data = {"type": "check", "ability": ["arcana", "acrobatics"]}
+    result = automation.Check.from_data(data)
+    assert result
+    assert result.ability_list == ["arcana", "acrobatics"]
+
+    data = {"type": "check", "ability": ["arcana", "acrobatics"], "dc": "15"}
+    result = automation.Check.from_data(data)
+    assert result
+    assert result.dc == "15"
+
+    data = {"type": "check", "ability": ["arcana", "acrobatics"], "contestAbility": "athletics"}
+    result = automation.Check.from_data(data)
+    assert result
+    assert result.contest_ability_list == ["athletics"]
+
+
+async def test_check_serialize():
+    result = automation.Check("acrobatics").to_dict()
+    assert json.dumps(result)  # result should be JSON-encodable
+
+    result = automation.Check(["acrobatics", "arcana"]).to_dict()
+    assert json.dumps(result)
+
+
+async def test_check_build_str():
+    check = automation.Check(ability="arcana")
+    result = check.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
+    assert result == "Arcana Check"
+
+    check = automation.Check(ability=["arcana", "acrobatics"])
+    result = check.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
+    assert result == "Arcana or Acrobatics Check"
+
+    check = automation.Check(ability="arcana", dc="15")
+    result = check.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
+    assert result == "DC 15 Arcana Check"
+
+    check = automation.Check(ability="arcana", contestAbility="arcana")
+    result = check.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
+    assert result == "Arcana Check vs. caster's Arcana Check"

@@ -16,6 +16,7 @@ from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils import constants, enums
 
 log = logging.getLogger(__name__)
+sentinel = object()
 
 
 def list_get(index, default, l):
@@ -500,3 +501,13 @@ def maybe_http_url(url: str):
     """Returns a url if one found, otherwise blank string."""
     # Mainly used for embed.set_thumbnail(url=url)
     return url if "http" in url else ""
+
+
+def exactly_one(iterable):
+    """If the iterable yields exactly one element, return it; otherwise return None"""
+    # I got nerdsniped and compared this to checking len(list(iterable)) == 1 instead, and this is only 70ns faster
+    # but it's much more memory efficient if the iterator is large so, cool, I guess
+    retval = next(iterable, None)
+    if next(iterable, sentinel) is sentinel:
+        return retval
+    return None

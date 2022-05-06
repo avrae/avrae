@@ -6,7 +6,7 @@ import cogs5e.initiative as init
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.base import Skill
-from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS
+from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.functions import a_or_an, camel_to_title, maybe_http_url, verbose_stat
 
 
@@ -41,11 +41,13 @@ def run_check(skill_key, caster, args, embed):
     skill = caster.skills[skill_key]
     skill_name = camel_to_title(skill_key)
     mod = skill.value
+    base_ability_key = SKILL_MAP[skill_key]
 
     # str/dex/con/int/wis/cha
     if any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
         base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
-        mod = mod - caster.stats.get_mod(SKILL_MAP[skill_key]) + caster.stats.get_mod(base)
+        mod = mod - caster.stats.get_mod(base_ability_key) + caster.stats.get_mod(base)
+        base_ability_key = STAT_NAMES[STAT_ABBREVIATIONS.index(base)]
         skill_name = f"{verbose_stat(base)} ({skill_name})"
 
     # -title
@@ -56,9 +58,21 @@ def run_check(skill_key, caster, args, embed):
     else:
         embed.title = f"{caster.get_title_name()} makes {a_or_an(skill_name)} check!"
 
-    # ieffect -cb
+    # ieffect handling
     if isinstance(caster, init.Combatant):
+        # -cb
         args["b"] = args.get("b") + caster.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
+        # -cadv/cdis
+        cadv_effects = caster.active_effects(
+            mapper=lambda effect: effect.effects.check_adv, reducer=lambda checks: set().union(*checks), default=set()
+        )
+        cdis_effects = caster.active_effects(
+            mapper=lambda effect: effect.effects.check_dis, reducer=lambda checks: set().union(*checks), default=set()
+        )
+        if skill_key in cadv_effects or base_ability_key in cadv_effects:
+            args["adv"] = True
+        if skill_key in cdis_effects or base_ability_key in cdis_effects:
+            args["dis"] = True
 
     result = _run_common(skill, args, embed, mod_override=mod)
     return CheckResult(rolls=result.rolls, skill=skill, skill_name=skill_name, skill_roll_result=result)

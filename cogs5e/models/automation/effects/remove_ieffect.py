@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from . import Effect
 from ..errors import AutomationException
+from ..results import RemoveIEffectResult
 
 if TYPE_CHECKING:
     from . import AutomationContext
@@ -29,8 +30,11 @@ class RemoveIEffect(Effect):
         autoctx.meta_queue(f"**Removed Effect**: {autoctx.ieffect.name}")
 
         # remove parent, if applicable
+        removed_parent = None
         if self.remove_parent is not None and (parent_effect := autoctx.ieffect.get_parent_effect()) is not None:
-            self.run_remove_parent(autoctx, parent_effect)
+            removed_parent = self.run_remove_parent(autoctx, parent_effect)
+
+        return RemoveIEffectResult(removed_effect=autoctx.ieffect, removed_parent=removed_parent)
 
     def run_remove_parent(self, autoctx: "AutomationContext", parent_effect: "InitiativeEffect"):
         do_remove = self.remove_parent == "always" or (
@@ -39,6 +43,7 @@ class RemoveIEffect(Effect):
         if do_remove:
             parent_effect.remove()
             autoctx.meta_queue(f"**Removed Effect**: {parent_effect.name}")
+            return parent_effect
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

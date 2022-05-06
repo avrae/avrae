@@ -18,12 +18,14 @@ __all__ = (
     "DamageResult",
     "TempHPResult",
     "IEffectResult",
+    "RemoveIEffectResult",
     "RollResult",
     "TextResult",
     "SetVariableResult",
     "ConditionResult",
     "UseCounterResult",
     "CastSpellResult",
+    "CheckResult",
 )
 
 
@@ -113,6 +115,12 @@ class IEffectResult(EffectResult):
 
 
 @dataclass(frozen=True)
+class RemoveIEffectResult(EffectResult):
+    removed_effect: "InitiativeEffect"
+    removed_parent: Optional["InitiativeEffect"]
+
+
+@dataclass(frozen=True)
 class RollResult(EffectResult):
     result: int
     roll: d20.RollResult
@@ -153,3 +161,14 @@ class CastSpellResult(EffectResult):
     success: bool
     spell: Optional["Spell"] = None
     children: List[EffectResult] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class CheckResult(EffectResult):
+    skill_name: str
+    check_roll: Optional[d20.RollResult]  # None if target is simple or automatic fail/pass
+    dc: Optional[int]
+    contest_roll: Optional[d20.RollResult]
+    contest_skill_name: Optional[str]
+    did_succeed: Optional[bool]
+    children: List[EffectResult]

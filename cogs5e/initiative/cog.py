@@ -1000,11 +1000,13 @@ class InitTracker(commands.Cog):
         `-immune <damage type>` - Gives the combatant immunity to the given damage type.
         `-vuln <damage type>` - Gives the combatant vulnerability to the given damage type.
         `-neutral <damage type>` - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
+        __Checks/Saves__
+        `-sb <save bonus>` - Adds a bonus to all saving throws.
+        `-sadv/sdis <ability>` - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
+        `-cb <check bonus>` - Adds a bonus to all ability checks.
+        `-cadv/cdis <ability>` - Gives advantage/disadvantage on ability checks for the provided ability, or "all" for all checks. If a base ability is passed, affects all skills based on that ability.
         __General__
         `-ac <ac>` - modifies ac temporarily; adds if starts with +/- or sets otherwise.
-        `-sb <save bonus>` - Adds a bonus to all saving throws.
-        `-cb <check bonus>` - Adds a bonus to all ability checks.
-        `-sadv/sdis <ability>` - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
         `-maxhp <hp>` - modifies maximum hp temporarily; adds if starts with +/- or sets otherwise.
         `-desc <description>` - Adds a description of the effect.
         """  # noqa: E501

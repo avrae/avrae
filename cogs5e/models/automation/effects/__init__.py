@@ -19,6 +19,7 @@ __all__ = (
     "Condition",
     "UseCounter",
     "CastSpell",
+    "Check",
 )
 
 log = logging.getLogger(__name__)
@@ -115,6 +116,7 @@ from . import (
     usecounter,
     variable,
     castspell,
+    check,
 )
 
 Target = target.Target
@@ -131,6 +133,7 @@ SetVariable = variable.SetVariable
 Condition = condition.Condition
 UseCounter = usecounter.UseCounter
 CastSpell = castspell.CastSpell
+Check = check.Check
 
 EFFECT_MAP = {
     "target": Target,
@@ -147,4 +150,5 @@ EFFECT_MAP = {
     "condition": Condition,
     "counter": UseCounter,
     "spell": CastSpell,
+    "check": Check,
 }

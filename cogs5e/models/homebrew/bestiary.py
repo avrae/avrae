@@ -441,8 +441,9 @@ def parse_critterdb_traits(data, key):
                             List[automation_common.validation.models.AttackModel], attack_yaml, type_name="AttackList"
                         )
                     except pydantic.ValidationError as e:
+                        err_fmt = automation_common.validation.utils.format_validation_error(e)
                         raise ExternalImportError(
-                            f"An automation YAML for {data['name']} contained an invalid attack: ```py\n{e!s}\n```"
+                            f"An automation YAML for {data['name']} contained an invalid attack: ```py\n{err_fmt}\n```"
                         )
 
                     attacks.extend(Attack.from_dict(a.dict()) for a in normalized_obj)

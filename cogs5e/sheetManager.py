@@ -176,7 +176,8 @@ class SheetManager(commands.Cog):
                 List[automation_common.validation.models.AttackModel], attack_json, type_name="AttackList"
             )
         except pydantic.ValidationError as e:
-            return await ctx.send(f"This is not a valid attack: ```py\n{e!s}\n```")
+            err_fmt = automation_common.validation.utils.format_validation_error(e)
+            return await ctx.send(f"This is not a valid attack: ```py\n{err_fmt}\n```")
 
         attacks = AttackList.from_dict([atk.dict() for atk in normalized_obj])
 

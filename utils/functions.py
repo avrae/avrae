@@ -10,7 +10,7 @@ import re
 from itertools import zip_longest
 
 import discord
-from fuzzywuzzy import fuzz, process
+from rapidfuzz import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils import constants, enums

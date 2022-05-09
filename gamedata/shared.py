@@ -18,6 +18,7 @@ class Sourced(abc.ABC):
         page: int = None,
         url: str = None,
         is_free: bool = False,
+        is_legacy: bool = False,
         entitlement_entity_type: str = None,
         entitlement_entity_id: int = None,
     ):
@@ -28,6 +29,7 @@ class Sourced(abc.ABC):
         :param page: The page number from that source this entity can be found on.
         :param url: The URL that this entity can be found at.
         :param is_free: Whether or not this entity requires a purchase to view.
+        :param is_legacy: Whether this entity is a legacy entity.
         :param entitlement_entity_type: If this entity's access is controlled by access to another entity, the type of that entuty.
         :param entitlement_entity_id: The entity ID of the entitlement entity.
         """
@@ -37,6 +39,7 @@ class Sourced(abc.ABC):
         self.page = page
         self._url = url
         self.is_free = is_free or homebrew
+        self.is_legacy = is_legacy
         self.entitlement_entity_type = entitlement_entity_type or self.entity_type
         self.entitlement_entity_id = entitlement_entity_id or entity_id
 
@@ -108,6 +111,7 @@ class LimitedUse(Sourced):
             page=parent.page,
             source=parent.source,
             is_free=parent.is_free,
+            is_legacy=parent.is_legacy,
             url=parent.raw_url,
             entitlement_entity_id=parent.entitlement_entity_id,
             entitlement_entity_type=parent.entitlement_entity_type,

@@ -122,7 +122,8 @@ async def handle_required_license(ctx, err):
 def get_homebrew_formatted_name(named):
     if named.homebrew:
         return f"{named.name} ({HOMEBREW_EMOJI} {named.source})"
-    return f"{named.name} ({named.source})"
+    entity_source = named.source if not named.is_legacy else f"{named.source}; *legacy*"
+    return f"{named.name} ({entity_source})"
 
 
 def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_overwrite=False):
@@ -158,6 +159,10 @@ def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_o
         text_pieces = text_pieces or ["Critical Role content."]
     elif book.is_noncore:
         text_pieces = text_pieces or ["Noncore content."]
+
+    # add legacy badge
+    if sourced.is_legacy:
+        text_pieces.append("Legacy content.")
 
     # do the writing
     text = " | ".join(text_pieces) or embed.Empty

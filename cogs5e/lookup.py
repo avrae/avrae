@@ -680,9 +680,10 @@ class Lookup(commands.Cog):
             the_entity, the_etype = e
             if the_entity.homebrew:
                 return f"{the_entity.name} ({HOMEBREW_EMOJI} {the_entity.source})"
-            elif can_access(the_entity, available_ids[the_etype]):
-                return f"{the_entity.name} ({the_entity.source})"
-            return f"{the_entity.name} ({the_entity.source})\\*"
+            entity_source = the_entity.source if not the_entity.is_legacy else f"{the_entity.source}; *legacy*"
+            if can_access(the_entity, available_ids[the_etype]):
+                return f"{the_entity.name} ({entity_source})"
+            return f"{the_entity.name} ({entity_source})\\*"
 
         # get the object
         choices = []

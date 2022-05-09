@@ -1,4 +1,5 @@
 import logging
+import time
 
 import discord
 from discord.ext.commands import Context
@@ -19,6 +20,7 @@ class AvraeContext(Context):
         self._character = _sentinel
         self._combat = _sentinel
         self._server_settings = _sentinel
+        self._last_typing_start = 0
         # NLP metadata
         self.nlp_is_alias = False  # set in aliasing.helpers
         self.nlp_character = None  # set just below
@@ -71,6 +73,11 @@ class AvraeContext(Context):
 
     # ==== overrides ====
     async def trigger_typing(self):
+        # only trigger once every 10 seconds to prevent API spam if multiple methods want to type
+        now = time.time()
+        if now - self._last_typing_start < 10:
+            return
+        self._last_typing_start = now
         try:
             await super().trigger_typing()
         except discord.HTTPException as e:

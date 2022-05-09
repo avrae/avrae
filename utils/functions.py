@@ -478,13 +478,13 @@ async def get_guild_member(guild, member_id):
     return None
 
 
-def reconcile_adv(adv=False, dis=False, ea=False) -> enums.AdvantageType:
+def reconcile_adv(adv=False, dis=False, eadv=False) -> enums.AdvantageType:
     """
     Reconciles sets of advantage passed in
 
     :param adv: Combined advantage
     :param dis: Combined disadvantage
-    :param ea:  Combined elven accuracy
+    :param eadv:  Combined elven accuracy
     :return: The combined advantage result
     """
     result = 0
@@ -492,7 +492,7 @@ def reconcile_adv(adv=False, dis=False, ea=False) -> enums.AdvantageType:
         result += 1
     if dis:
         result += -1
-    if ea and not dis:
+    if eadv and not dis:
         return enums.AdvantageType.ELVEN
     return enums.AdvantageType(result)
 

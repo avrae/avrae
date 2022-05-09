@@ -385,7 +385,7 @@ class CollectableManagementGroup(commands.Group):
                 if binding["name"] == old_name:
                     choices.append((f"{old_name} ({the_collection.name})", (subscription_doc, the_collection)))
 
-        old_obj, collection = await get_selection(ctx, choices)
+        old_obj, collection = await get_selection(ctx, choices, key=lambda pair: pair[0])
 
         if isinstance(old_obj, self.personal_cls):
             if await self.personal_cls.get_named(new_name, ctx):

@@ -692,7 +692,7 @@ class Lookup(commands.Cog):
                 choices.append((entity, entity_entitlement_type))  # entity, entity type
 
         result, metadata = await search_and_select(
-            ctx, choices, query, lambda e: e[0].name, pm=pm, return_metadata=True, selectkey=selectkey
+            ctx, choices, query, lambda e: e[0].name, pm=pm, selectkey=selectkey, return_metadata=True
         )
 
         # get the entity

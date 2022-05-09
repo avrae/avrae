@@ -190,7 +190,7 @@ class CharGenerator(commands.Cog):
         embed = EmbedWithAuthor(ctx)
         race_names = await search_and_select(ctx, compendium.names, race, lambda e: e["race"])
         if option is None:
-            table = await get_selection(ctx, [(t["name"], t) for t in race_names["tables"]])
+            table = await get_selection(ctx, race_names["tables"], key=lambda t: t["name"])
         else:
             table = await search_and_select(ctx, race_names["tables"], option, lambda e: e["name"])
         embed.title = f"{table['name']} {race_names['race']} Name"

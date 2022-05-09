@@ -7,9 +7,12 @@ import asyncio
 import logging
 import random
 import re
+from contextlib import suppress
 from itertools import zip_longest
+from typing import Callable, TypeVar
 
 import discord
+import disnake
 from rapidfuzz import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
@@ -40,14 +43,18 @@ def get_positivity(string):
 
 
 # ==== search / select menus ====
-def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=False):
+_HaystackT = TypeVar("_HaystackT")
+
+
+def search(
+    list_to_search: list[_HaystackT], value: str, key: Callable[[_HaystackT], str], cutoff=5, strict=False
+) -> tuple[_HaystackT | list[_HaystackT], bool]:
     """Fuzzy searches a list for an object
     result can be either an object or list of objects
     :param list_to_search: The list to search.
     :param value: The value to search for.
     :param key: A function defining what to search for.
     :param cutoff: The scorer cutoff value for fuzzy searching.
-    :param return_key: Whether to return the key of the object that matched or the object itself.
     :param strict: If True, will only search for exact matches.
     :returns: A two-tuple (result, strict)"""
     # there is nothing to search
@@ -82,34 +89,26 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
         results = exact_matches
 
     if len(results) > 1:
-        if return_key:
-            return [key(r) for r in results], False
-        else:
-            return results, False
+        return results, False
     elif not results:
         return [], False
     else:
-        if return_key:
-            return key(results[0]), True
-        else:
-            return results[0], True
+        return results[0], True
 
 
 async def search_and_select(
     ctx,
-    list_to_search: list,
-    query,
-    key,
+    list_to_search: list[_HaystackT],
+    query: str,
+    key: Callable[[_HaystackT], str],
     cutoff=5,
-    return_key=False,
     pm=False,
     message=None,
     list_filter=None,
     selectkey=None,
-    search_func=search,
     return_metadata=False,
     strip_query_quotes=True,
-):
+) -> _HaystackT:
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
     Guaranteed to return a result - raises if there is no result.
@@ -119,33 +118,24 @@ async def search_and_select(
     :param query: The value to search for.
     :param key: How to search - compares key(obj) to value
     :param cutoff: The cutoff percentage of fuzzy searches.
-    :param return_key: Whether to return key(match) or match.
     :param pm: Whether to PM the user the select prompt.
     :param message: A message to add to the select prompt.
     :param list_filter: A filter to filter the list to search by.
     :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
-    :param search_func: The function to use to search.
     :param return_metadata: Whether to return a metadata object {num_options, chosen_index}.
     :param strip_query_quotes: Whether to strip quotes from the query.
     """
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))
 
-    if search_func is None:
-        search_func = search
-
     if strip_query_quotes:
         query = query.strip("\"'")
 
-    if asyncio.iscoroutinefunction(search_func):
-        result = await search_func(list_to_search, query, key, cutoff, return_key)
-    else:
-        result = search_func(list_to_search, query, key, cutoff, return_key)
+    result = search(list_to_search, query, key, cutoff)
 
     if result is None:
         raise NoSelectionElements("No matches found.")
-    strict = result[1]
-    results = result[0]
+    results, strict = result
 
     if strict:
         result = results
@@ -158,13 +148,7 @@ async def search_and_select(
         if len(results) == 1 and confidence > 75:
             result = first_result
         else:
-            if selectkey:
-                options = [(selectkey(r), r) for r in results]
-            elif return_key:
-                options = [(r, r) for r in results]
-            else:
-                options = [(key(r), r) for r in results]
-            result = await get_selection(ctx, options, pm=pm, message=message, force_select=True)
+            result = await get_selection(ctx, results, key=selectkey or key, pm=pm, message=message, force_select=True)
     if not return_metadata:
         return result
     metadata = {"num_options": 1 if strict else len(results), "chosen_index": 0 if strict else results.index(result)}
@@ -176,8 +160,16 @@ def paginate(iterable, n, fillvalue=None):
     return [i for i in zip_longest(*args, fillvalue=fillvalue) if i is not None]
 
 
-async def get_selection(ctx, choices, delete=True, pm=False, message=None, force_select=False):
-    """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
+async def get_selection(
+    ctx,
+    choices: list[_HaystackT],
+    key: Callable[[_HaystackT], str],
+    delete=True,
+    pm=False,
+    message=None,
+    force_select=False,
+):
+    """Returns the selected choice, or raises an error.
     If delete is True, will delete the selection message and the response.
     If length of choices is 1, will return the only choice unless force_select is True.
 
@@ -186,12 +178,12 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
     if len(choices) == 0:
         raise NoSelectionElements()
     elif len(choices) == 1 and not force_select:
-        return choices[0][1]
+        return choices[0]
 
     page = 0
     pages = paginate(choices, 10)
     m = None
-    selectMsg = None
+    select_msg = None
 
     def chk(msg):
         valid = [str(v) for v in range(1, len(choices) + 1)] + ["c", "n", "p"]
@@ -199,26 +191,23 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
 
     for n in range(200):
         _choices = pages[page]
-        names = [o[0] for o in _choices if o]
+        names = [key(o) for o in _choices]
         embed = discord.Embed()
         embed.title = "Multiple Matches Found"
-        selectStr = 'Which one were you looking for? (Type the number or "c" to cancel)\n'
+        select_str = 'Which one were you looking for? (Type the number or "c" to cancel)\n'
         if len(pages) > 1:
-            selectStr += "`n` to go to the next page, or `p` for previous\n"
+            select_str += "`n` to go to the next page, or `p` for previous\n"
             embed.set_footer(text=f"Page {page + 1}/{len(pages)}")
         for i, r in enumerate(names):
-            selectStr += f"**[{i + 1 + page * 10}]** - {r}\n"
-        embed.description = selectStr
+            select_str += f"**[{i + 1 + page * 10}]** - {r}\n"
+        embed.description = select_str
         embed.colour = random.randint(0, 0xFFFFFF)
         if message:
             embed.add_field(name="Note", value=message, inline=False)
-        if selectMsg:
-            try:
-                await selectMsg.delete()
-            except:
-                pass
+        if select_msg:
+            await try_delete(select_msg)
         if not pm:
-            selectMsg = await ctx.channel.send(embed=embed)
+            select_msg = await ctx.channel.send(embed=embed)
         else:
             embed.add_field(
                 name="Instructions",
@@ -226,7 +215,7 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
                 "you to hide the monster name.",
                 inline=False,
             )
-            selectMsg = await ctx.author.send(embed=embed)
+            select_msg = await ctx.author.send(embed=embed)
 
         try:
             m = await ctx.bot.wait_for("message", timeout=30, check=chk)
@@ -249,14 +238,12 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
             break
 
     if delete and not pm:
-        try:
-            await selectMsg.delete()
+        with suppress(disnake.HTTPException):
+            await select_msg.delete()
             await m.delete()
-        except:
-            pass
     if m is None or m.content.lower() == "c":
         raise SelectionCancelled()
-    return choices[int(m.content) - 1][1]
+    return choices[int(m.content) - 1]
 
 
 async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity):

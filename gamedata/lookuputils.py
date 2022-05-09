@@ -245,14 +245,13 @@ async def add_training_data(mdb, lookup_type, query, result_name, metadata=None,
 
 
 async def search_entities(
-    ctx: "AvraeContext", entities: Dict[str, List["_SourcedT"]], query: str, query_type: str = None, pm=False
+    ctx: "AvraeContext", entities: Dict[str, List["_SourcedT"]], query: str, query_type: str = None, **kwargs
 ) -> "_SourcedT":
     """
     :param ctx: The context to search in.
     :param entities: A dict mapping entitlements entity types to the entities themselves.
     :param query: The name of the entity to search for.
     :param query_type: The type of the object being queried for (default entity type if only one dict key)
-    :param pm: Whether to PM the user the select prompt.
     :raises: RequiresLicense if an entity that requires a license is selected
     """
     # sanity checks
@@ -274,10 +273,10 @@ async def search_entities(
         list(itertools.chain.from_iterable(entities.values())),
         query,
         lambda e: e.name,
-        pm=pm,
         selectkey=_create_selectkey(available_ids),
         selector=_create_selector(available_ids),
         return_metadata=True,
+        **kwargs,
     )
 
     entity: "Sourced" = result
@@ -346,7 +345,7 @@ async def get_monster_choices(ctx, homebrew=True):
 
 
 # ---- spell stuff ----
-async def select_spell_full(ctx, name, *args, extra_choices=None, **kwargs):
+async def select_spell_full(ctx, name, extra_choices=None, **kwargs):
     """
     Gets a Spell from the compendium and active tome(s).
 

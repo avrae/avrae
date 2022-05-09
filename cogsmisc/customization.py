@@ -48,7 +48,7 @@ STAT_VAR_NAMES = (
     )
 )
 
-SPECIAL_ARGS = {"crit", "nocrit", "hit", "miss", "ea", "adv", "dis", "pass", "fail", "noconc", "max", "magical"}
+SPECIAL_ARGS = {"crit", "nocrit", "hit", "miss", "eadv", "adv", "dis", "pass", "fail", "noconc", "max", "magical"}
 
 # Don't use any iterables with a string as only element. It will add all the chars instead of the string
 SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES, SAVE_NAMES)

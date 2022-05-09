@@ -49,14 +49,14 @@ def test_argparse():
     args = argparse("""adv dis adv""")
     assert args.adv() == AdvantageType.NONE
 
-    args = argparse("""adv dis ea""")
-    assert args.adv(ea=True) == AdvantageType.NONE
+    args = argparse("""adv dis eadv""")
+    assert args.adv(eadv=True) == AdvantageType.NONE
 
-    args = argparse("""ea""")
-    assert args.adv(ea=True) == AdvantageType.ELVEN
+    args = argparse("""eadv""")
+    assert args.adv(eadv=True) == AdvantageType.ELVEN
 
-    args = argparse("""adv ea""")
-    assert args.adv(ea=True) == AdvantageType.ELVEN
+    args = argparse("""adv eadv""")
+    assert args.adv(eadv=True) == AdvantageType.ELVEN
 
 
 def test_argparse_adv():
@@ -85,35 +85,35 @@ def test_argparse_adv():
     """
     args = argparse("")
     assert args.adv() == AdvantageType.NONE
-    assert args.adv(ea=True) == AdvantageType.NONE
+    assert args.adv(eadv=True) == AdvantageType.NONE
 
-    args = argparse("ea")
+    args = argparse("eadv")
     assert args.adv() == AdvantageType.NONE
-    assert args.adv(ea=True) == AdvantageType.ELVEN
+    assert args.adv(eadv=True) == AdvantageType.ELVEN
 
     args = argparse("dis")
     assert args.adv() == AdvantageType.DIS
-    assert args.adv(ea=True) == AdvantageType.DIS
+    assert args.adv(eadv=True) == AdvantageType.DIS
 
-    args = argparse("dis ea")
+    args = argparse("dis eadv")
     assert args.adv() == AdvantageType.DIS
-    assert args.adv(ea=True) == AdvantageType.NONE
+    assert args.adv(eadv=True) == AdvantageType.NONE
 
     args = argparse("adv")
     assert args.adv() == AdvantageType.ADV
-    assert args.adv(ea=True) == AdvantageType.ADV
+    assert args.adv(eadv=True) == AdvantageType.ADV
 
-    args = argparse("adv ea")
+    args = argparse("adv eadv")
     assert args.adv() == AdvantageType.ADV
-    assert args.adv(ea=True) == AdvantageType.ELVEN
+    assert args.adv(eadv=True) == AdvantageType.ELVEN
 
     args = argparse("adv dis")
     assert args.adv() == AdvantageType.NONE
-    assert args.adv(ea=True) == AdvantageType.NONE
+    assert args.adv(eadv=True) == AdvantageType.NONE
 
-    args = argparse("adv dis ea")
+    args = argparse("adv dis eadv")
     assert args.adv() == AdvantageType.NONE
-    assert args.adv(ea=True) == AdvantageType.NONE
+    assert args.adv(eadv=True) == AdvantageType.NONE
 
 
 def test_argparse_custom_adv():
@@ -133,10 +133,10 @@ def test_argparse_custom_adv():
     assert args.adv(custom=custom_dis) == AdvantageType.DIS
     assert args.adv() == AdvantageType.NONE
 
-    custom_ea = {"ea": "custom_ea"}
+    custom_ea = {"eadv": "custom_ea"}
     args = argparse("custom_ea")
 
-    assert args.adv(ea=True, custom=custom_ea) == AdvantageType.ELVEN
+    assert args.adv(eadv=True, custom=custom_ea) == AdvantageType.ELVEN
     assert args.adv() == AdvantageType.NONE
 
 

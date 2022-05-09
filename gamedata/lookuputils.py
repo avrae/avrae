@@ -5,32 +5,36 @@ Created on Jan 13, 2017
 """
 import itertools
 import logging
+from typing import Dict, List, TYPE_CHECKING, TypeVar
 
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import NoActiveBrew
+from cogs5e.models.errors import NoActiveBrew, RequiresLicense
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
 from utils.constants import HOMEBREW_EMOJI, HOMEBREW_ICON
-from utils.functions import search_and_select
+from utils.functions import get_selection, search_and_select
+from utils.settings.guild import LegacyPreference
 from .compendium import compendium
 
+if TYPE_CHECKING:
+    from utils.context import AvraeContext
+    from gamedata.shared import Sourced
+
+    _SourcedT = TypeVar("_SourcedT", bound=Sourced, covariant=True)
 
 log = logging.getLogger(__name__)
 
 
 # ==== entitlement search helpers ====
-async def available(ctx, entities, entity_type, user_id=None):
+async def available(ctx, entities: List["_SourcedT"], entity_type: str, user_id: int = None) -> List["_SourcedT"]:
     """
     Returns the subset of entities available to the given user in this context.
 
     :param ctx: The Discord Context.
     :param entities: The compendium list of all available entities.
-    :type entities: list[gamedata.shared.Sourced]
     :param entity_type: The entity type to get entitlements data for.
-    :type entity_type: str
     :param user_id: The Discord user ID of the user (optional - if not passed, assumes ctx.author)
-    :type user_id: int
     :returns: the list of accessible entities
     """
     if user_id is None:
@@ -42,7 +46,7 @@ async def available(ctx, entities, entity_type, user_id=None):
     return [e for e in entities if e.is_free or e.entitlement_entity_id in available_ids]
 
 
-def can_access(entity, available_ids=None):
+def can_access(entity: "Sourced", available_ids: set[int] = None) -> bool:
     return (
         entity.is_free or available_ids is not None and entity.entitlement_entity_id in available_ids or entity.homebrew
     )
@@ -52,7 +56,7 @@ async def handle_required_license(ctx, err):
     """
     Logs a unlicensed search and displays a prompt.
 
-    :type ctx: discord.ext.commands.Context
+    :type ctx: utils.context.AvraeContext
     :type err: cogs5e.models.errors.RequiresLicense
     """
     result = err.entity
@@ -119,22 +123,24 @@ async def handle_required_license(ctx, err):
 
 
 # ---- helpers ----
-def get_homebrew_formatted_name(named):
+def get_homebrew_formatted_name(named: "Sourced") -> str:
     if named.homebrew:
         return f"{named.name} ({HOMEBREW_EMOJI} {named.source})"
     entity_source = named.source if not named.is_legacy else f"{named.source}; *legacy*"
     return f"{named.name} ({entity_source})"
 
 
-def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_overwrite=False):
+def handle_source_footer(
+    embed, sourced: "Sourced", text: str = None, add_source_str: bool = True, allow_overwrite: bool = False
+):
     """
     Handles adding the relevant source icon and source str to the embed's footer.
 
     :param embed: The embed to operate on.
     :param sourced: The source to pull data from.
-    :param str text: Any text prepending the source str.
-    :param bool add_source_str: Whether or not to add the source str (e.g. "PHB 168")
-    :param bool allow_overwrite: Whether or not to allow overwriting an existing footer text.
+    :param text: Any text prepending the source str.
+    :param add_source_str: Whether or not to add the source str (e.g. "PHB 168")
+    :param allow_overwrite: Whether or not to allow overwriting an existing footer text.
     """
     text_pieces = []
     icon_url = embed.Empty
@@ -187,6 +193,118 @@ def source_slug(source):
     if book is None:
         return None
     return book.slug
+
+
+# ==== search ====
+def _create_selector(available_ids: dict[str, set[int]]):
+    async def legacy_entity_selector(ctx: "AvraeContext", choices: List["Sourced"], *args, **kwargs) -> "Sourced":
+        """Given a choice between only a legacy and non-legacy entity, respect the server's legacy preferences."""
+        # if the choices aren't between 2 entities or it's in PMs, defer
+        if len(choices) != 2 or ctx.guild is None:
+            return await get_selection(ctx, choices, *args, **kwargs)
+
+        # if it's not actually a choice between a legacy and non-legacy entity, defer
+        a, b = choices
+        if a.is_legacy == b.is_legacy:
+            return await get_selection(ctx, choices, *args, **kwargs)
+
+        legacy: "Sourced" = a if a.is_legacy else b
+        latest: "Sourced" = a if not a.is_legacy else b
+
+        guild_settings = await ctx.get_server_settings()
+        # if the guild setting is to ask, defer
+        if guild_settings.legacy_preference == LegacyPreference.ASK:
+            return await get_selection(ctx, choices, *args, **kwargs)
+        # if the user has access to the preferred entity, return it
+        if guild_settings.legacy_preference == LegacyPreference.LATEST and can_access(
+            latest, available_ids[latest.entitlement_entity_type]
+        ):
+            return latest
+        elif guild_settings.legacy_preference == LegacyPreference.LEGACY and can_access(
+            legacy, available_ids[legacy.entitlement_entity_type]
+        ):
+            return legacy
+        # otherwise defer to asking
+        return await get_selection(ctx, choices, *args, **kwargs)
+
+    return legacy_entity_selector
+
+
+def _create_selectkey(available_ids: dict[str, set[int]]):
+    def selectkey(e: "Sourced"):
+        if e.homebrew:
+            return f"{e.name} ({HOMEBREW_EMOJI} {e.source})"
+        entity_source = e.source if not e.is_legacy else f"{e.source}; *legacy*"
+        if can_access(e, available_ids[e.entitlement_entity_type]):
+            return f"{e.name} ({entity_source})"
+        return f"{e.name} ({entity_source})\\*"
+
+    return selectkey
+
+
+async def add_training_data(mdb, lookup_type, query, result_name, metadata=None, srd=True, could_view=True):
+    data = {"type": lookup_type, "query": query, "result": result_name, "srd": srd, "could_view": could_view}
+    if metadata:
+        data["given_options"] = metadata.get("num_options", 1)
+        data["chosen_index"] = metadata.get("chosen_index", 0)
+        data["homebrew"] = metadata.get("homebrew", False)
+    await mdb.nn_training.insert_one(data)
+
+
+async def search_entities(
+    ctx: "AvraeContext", entities: Dict[str, List["_SourcedT"]], query: str, query_type: str = None, pm=False
+) -> "_SourcedT":
+    """
+    :param ctx: The context to search in.
+    :param entities: A dict mapping entitlements entity types to the entities themselves.
+    :param query: The name of the entity to search for.
+    :param query_type: The type of the object being queried for (default entity type if only one dict key)
+    :param pm: Whether to PM the user the select prompt.
+    :raises: RequiresLicense if an entity that requires a license is selected
+    """
+    # sanity checks
+    if len(entities) == 0:
+        raise ValueError("At least 1 entity type must be passed in")
+    if query_type is None and len(entities) != 1:
+        raise ValueError("Query type must be passed for multiple entity types")
+    elif query_type is None:
+        query_type = list(entities.keys())[0]
+
+    # this may take a while, so type
+    await ctx.trigger_typing()
+
+    # get licensed objects, mapped by entity type
+    available_ids = {k: await ctx.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k) for k in entities}
+
+    result, metadata = await search_and_select(
+        ctx,
+        list(itertools.chain.from_iterable(entities.values())),
+        query,
+        lambda e: e.name,
+        pm=pm,
+        selectkey=_create_selectkey(available_ids),
+        selector=_create_selector(available_ids),
+        return_metadata=True,
+    )
+
+    entity: "Sourced" = result
+    entity_entitlement_type = entity.entitlement_entity_type
+
+    # log the query
+    await add_training_data(
+        ctx.bot.mdb,
+        query_type,
+        query,
+        entity.name,
+        metadata=metadata,
+        srd=entity.is_free,
+        could_view=can_access(entity, available_ids[entity_entitlement_type]),
+    )
+
+    # display error if not srd
+    if not can_access(entity, available_ids[entity_entitlement_type]):
+        raise RequiresLicense(entity, available_ids[entity_entitlement_type] is not None)
+    return entity
 
 
 # ---- monster stuff ----

@@ -10,7 +10,7 @@ class CombatantGroup(Combatant):
 
     def __init__(self, ctx, combat, id, combatants, name, init, index=None, **_):
         super().__init__(
-            ctx, combat, id, name=name, controller_id=str(ctx.author.id), private=False, init=init, index=index
+            ctx, combat, id, name=name, controller_id=ctx.author.id, private=False, init=init, index=index
         )
         self._combatants = combatants
 

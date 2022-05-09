@@ -24,6 +24,7 @@ class Attack:
         self.thumb = thumb
         self.extra_crit_damage = extra_crit_damage
 
+    # ==== ser / deser ====
     @classmethod
     def from_dict(cls, d):
         if "attackBonus" in d:
@@ -61,7 +62,7 @@ class Attack:
                 base[optattr] = val
         return base
 
-    # ---------- main funcs ----------
+    # ==== main ====
     @classmethod
     def new(
         cls,
@@ -110,6 +111,10 @@ class Attack:
 
     def __str__(self):
         return f"**{self.name}**: {str(self.automation)}"
+
+    # ==== helpers ====
+    # for custom behaviour defined by wrappers, passed to the automation context when run
+    __run_automation_kwargs__ = {}
 
 
 class AttackList:

@@ -1,5 +1,6 @@
 from . import Effect
 from .. import utils
+from ..errors import TargetException
 from ..results import TargetResult
 from ..runtime import AutomationTarget
 
@@ -26,39 +27,106 @@ class Target(Effect):
 
     def run(self, autoctx):
         super().run(autoctx)
+
         # WEB-038 (.io #121) - this will semantically work correctly, but will make the display really weird
         previous_target = autoctx.target
+        targets = autoctx.targets
 
-        if self.sort_by == "hp_asc":
-            targets = sorted(autoctx.targets, key=lambda t: utils.target_hp_or_default(t, float("inf")))
-        elif self.sort_by == "hp_desc":
-            targets = sorted(autoctx.targets, key=lambda t: utils.target_hp_or_default(t, float("-inf")), reverse=True)
-        else:
-            targets = autoctx.targets
+        match self.target:
+            case "all" | "each":
+                result_pairs = self.run_all_target(autoctx, targets)
+            case "self":
+                result_pairs = self.run_self_target(autoctx)
+            case "parent":
+                result_pairs = self.run_parent_target(autoctx)
+            case "children":
+                result_pairs = self.run_children_target(autoctx)
+            case int(idx1):
+                result_pairs = self.run_indexed_target(autoctx, targets, idx1 - 1)
+            case _:
+                raise TargetException(f"Invalid target supplied: {self.target!r}")
 
-        if self.target in ("all", "each"):
-            result_pairs = []
-            for idx, target in enumerate(targets):
-                result_pairs.extend(self.run_target(autoctx, target, idx))
-        elif self.target == "self":
-            target = autoctx.caster
-            result_pairs = self.run_target(autoctx, target, 0)
-        else:
-            try:
-                target = targets[self.target - 1]
-            except IndexError:
-                return TargetResult()
-            result_pairs = self.run_target(autoctx, target, 0)
+        # in case we had no valid targets, we should still run everything once against no target to display Meta
+        if not result_pairs:
+            result_pairs = self.run_one_target(autoctx, target=None, target_index=0)
 
+        # restore the previous target
         autoctx.target = previous_target
         autoctx.metavars["target"] = utils.maybe_alias_statblock(previous_target)  # #1335
 
         final_targets, results = zip(*result_pairs)  # convenient unzipping :D
         return TargetResult(final_targets, results)
 
-    def run_target(self, autoctx, target, target_index):
+    # ==== target type impls ====
+    def run_self_target(self, autoctx):
+        return self.run_one_target(autoctx, target=autoctx.caster, target_index=0)
+
+    # --- action target types ---
+    def run_all_target(self, autoctx, targets):
+        if autoctx.ieffect is not None:
+            raise TargetException("You can only use the `self`, `parent`, or `children` target on an IEffect button.")
+
         result_pairs = []
-        autoctx.target = AutomationTarget(target)
+        for idx, target in enumerate(self.sorted_targets(targets)):
+            result_pairs.extend(self.run_one_target(autoctx, target, idx))
+
+        return result_pairs
+
+    def run_indexed_target(self, autoctx, targets, idx):
+        if autoctx.ieffect is not None:
+            raise TargetException("You can only use the `self`, `parent`, or `children` target on an IEffect button.")
+
+        targets = self.sorted_targets(targets)
+        try:
+            target = targets[idx]
+        except IndexError:
+            return []
+
+        return self.run_one_target(autoctx, target, 0)
+
+    # --- button target types ---
+    def run_parent_target(self, autoctx):
+        if autoctx.ieffect is None:
+            raise TargetException("You can only use the `self`, `each`, or numbered targets on an action.")
+
+        parent_effect = autoctx.ieffect.get_parent_effect()
+        if parent_effect is None:
+            return []
+        target = parent_effect.combatant
+        if target is None:
+            return []
+
+        return self.run_one_target(autoctx, target, 0)
+
+    def run_children_target(self, autoctx):
+        if autoctx.ieffect is None:
+            raise TargetException("You can only use the `self`, `each`, or numbered targets on an action.")
+
+        # build target list
+        targets = []
+        for idx, child_effect in enumerate(autoctx.ieffect.get_children_effects()):
+            target = child_effect.combatant
+            if target is None:
+                continue
+            if target not in targets:
+                targets.append(target)
+
+        result_pairs = []
+        for idx, target in enumerate(self.sorted_targets(targets)):
+            result_pairs.extend(self.run_one_target(autoctx, target, idx))
+        return result_pairs
+
+    # ==== helpers ====
+    def sorted_targets(self, targets):
+        if self.sort_by == "hp_asc":
+            return sorted(targets, key=lambda t: utils.target_hp_or_default(t, float("inf")))
+        elif self.sort_by == "hp_desc":
+            return sorted(targets, key=lambda t: utils.target_hp_or_default(t, float("-inf")), reverse=True)
+        return targets
+
+    def run_one_target(self, autoctx, target, target_index):
+        result_pairs = []
+        autoctx.target = AutomationTarget(autoctx, target)
         autoctx.metavars["target"] = utils.maybe_alias_statblock(target)  # #1335
         autoctx.metavars["targetIndex"] = target_index  # #1711
         autoctx.metavars["targetNumber"] = target_index + 1

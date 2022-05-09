@@ -13,9 +13,10 @@ import discord
 from fuzzywuzzy import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
-from utils import constants
+from utils import constants, enums
 
 log = logging.getLogger(__name__)
+sentinel = object()
 
 
 def list_get(index, default, l):
@@ -365,12 +366,12 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=("\n\n", "\n", ". ", ", ", " 
     return chunks
 
 
-def smart_trim(text, max_len=1024):
+def smart_trim(text, max_len=1024, dots="[...]"):
     """Uses chunk_text to return a trimmed str."""
-    chunks = chunk_text(text, max_len - 5)
+    chunks = chunk_text(text, max_len - len(dots))
     out = chunks[0].strip()
     if len(chunks) > 1:
-        return f"{chunks[0]}[...]"
+        return f"{chunks[0]}{dots}"
     return out
 
 
@@ -408,28 +409,6 @@ def maybe_mod(val: str, base=0):
     except (ValueError, TypeError):
         return base
     return base
-
-
-def combine_maybe_mods(vals: list, base=0):
-    """
-    Takes a list of arguments, which are strings that may start with + or -, and combines them to calculate a value.
-    If *val* starts with + or -, add it to sums. Otherwise, add it to sets.
-    Give back the maximum set or base + sum of sums
-    """
-    sums = []
-    sets = []
-    # This is done to handle GenericCombatants who might not have an hp/ac/etc
-    base = base or 0
-
-    for val in vals:
-        try:
-            if val.startswith(("+", "-")):
-                sums.append(int(val))
-            else:
-                sets.append(int(val))
-        except (ValueError, TypeError):
-            continue
-    return (max(sets) if sets else base) + sum(sums)
 
 
 # ==== user stuff ====
@@ -499,14 +478,13 @@ async def get_guild_member(guild, member_id):
     return None
 
 
-def reconcile_adv(adv=False, dis=False, ea=False):
+def reconcile_adv(adv=False, dis=False, ea=False) -> enums.AdvantageType:
     """
     Reconciles sets of advantage passed in
 
     :param adv: Combined advantage
     :param dis: Combined disadvantage
     :param ea:  Combined elven accuracy
-    :rtype: int
     :return: The combined advantage result
     """
     result = 0
@@ -515,11 +493,21 @@ def reconcile_adv(adv=False, dis=False, ea=False):
     if dis:
         result += -1
     if ea and not dis:
-        return 2
-    return result
+        return enums.AdvantageType.ELVEN
+    return enums.AdvantageType(result)
 
 
 def maybe_http_url(url: str):
     """Returns a url if one found, otherwise blank string."""
     # Mainly used for embed.set_thumbnail(url=url)
     return url if "http" in url else ""
+
+
+def exactly_one(iterable):
+    """If the iterable yields exactly one element, return it; otherwise return None"""
+    # I got nerdsniped and compared this to checking len(list(iterable)) == 1 instead, and this is only 70ns faster
+    # but it's much more memory efficient if the iterator is large so, cool, I guess
+    retval = next(iterable, None)
+    if next(iterable, sentinel) is sentinel:
+        return retval
+    return None

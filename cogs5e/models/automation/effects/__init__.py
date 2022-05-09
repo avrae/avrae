@@ -1,6 +1,7 @@
 import logging
 
 from ..errors import AutomationException, StopExecution
+from ..runtime import AutomationContext
 
 __all__ = (
     "Effect",
@@ -9,13 +10,16 @@ __all__ = (
     "Save",
     "Damage",
     "TempHP",
+    "LegacyIEffect",
     "IEffect",
+    "RemoveIEffect",
     "Roll",
     "Text",
     "SetVariable",
     "Condition",
     "UseCounter",
     "CastSpell",
+    "Check",
 )
 
 log = logging.getLogger(__name__)
@@ -59,15 +63,18 @@ class Effect:
         return cls(**data)
 
     def to_dict(self):
-        meta = Effect.serialize(self.meta or [])
-        return {"type": self.type, "meta": meta}
+        if self.meta:
+            meta = Effect.serialize(self.meta)
+            return {"type": self.type, "meta": meta}
+        else:
+            return {"type": self.type}
 
-    async def preflight(self, autoctx):
+    async def preflight(self, autoctx: AutomationContext):
         """Runs exactly once (in a DFS manner) before any effects are executed. Do any async stuff here."""
         for child in self.children:
             await child.preflight(autoctx)
 
-    def run(self, autoctx):
+    def run(self, autoctx: AutomationContext):
         log.debug(f"Running {self.type}")
         if self.meta:
             for metaeffect in self.meta:
@@ -95,20 +102,38 @@ class Effect:
         return self.meta
 
 
-from . import attack, condition, damage, ieffect, roll, save, target, temphp, text, usecounter, variable, castspell
+from . import (
+    attack,
+    condition,
+    damage,
+    ieffect,
+    remove_ieffect,
+    roll,
+    save,
+    target,
+    temphp,
+    text,
+    usecounter,
+    variable,
+    castspell,
+    check,
+)
 
 Target = target.Target
 Attack = attack.Attack
 Save = save.Save
 Damage = damage.Damage
 TempHP = temphp.TempHP
+LegacyIEffect = ieffect.LegacyIEffect
 IEffect = ieffect.IEffect
+RemoveIEffect = remove_ieffect.RemoveIEffect
 Roll = roll.Roll
 Text = text.Text
 SetVariable = variable.SetVariable
 Condition = condition.Condition
 UseCounter = usecounter.UseCounter
 CastSpell = castspell.CastSpell
+Check = check.Check
 
 EFFECT_MAP = {
     "target": Target,
@@ -116,11 +141,14 @@ EFFECT_MAP = {
     "save": Save,
     "damage": Damage,
     "temphp": TempHP,
-    "ieffect": IEffect,
+    "ieffect": LegacyIEffect,
+    "ieffect2": IEffect,
+    "remove_ieffect": RemoveIEffect,
     "roll": Roll,
     "text": Text,
     "variable": SetVariable,
     "condition": Condition,
     "counter": UseCounter,
     "spell": CastSpell,
+    "check": Check,
 }

@@ -1,6 +1,7 @@
 import d20
 
 from cogs5e.models.errors import InvalidSaveType
+from utils import enums
 from utils.functions import maybe_mod, reconcile_adv, verbose_stat
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
@@ -9,18 +10,21 @@ from ..utils import stringify_intexpr
 
 
 class Save(Effect):
-    def __init__(self, stat: str, fail: list, success: list, dc: str = None, **kwargs):
+    def __init__(self, stat: str, fail: list, success: list, dc: str = None, adv: enums.AdvantageType = None, **kwargs):
         super().__init__("save", **kwargs)
         self.stat = stat
         self.fail = fail
         self.success = success
         self.dc = dc
+        self.adv = adv
 
     @classmethod
     def from_data(cls, data):
         data["fail"] = Effect.deserialize(data["fail"])
         data["success"] = Effect.deserialize(data["success"])
-        return super(Save, cls).from_data(data)
+        if data.get("adv") is not None:
+            data["adv"] = enums.AdvantageType(data["adv"])
+        return super().from_data(data)
 
     def to_dict(self):
         out = super().to_dict()
@@ -29,6 +33,8 @@ class Save(Effect):
         out.update({"stat": self.stat, "fail": fail, "success": success})
         if self.dc is not None:
             out["dc"] = self.dc
+        if self.adv is not None:
+            out["adv"] = self.adv.value
         return out
 
     def run(self, autoctx):
@@ -78,18 +84,21 @@ class Save(Effect):
             raise InvalidSaveType()
 
         # ==== ieffects ====
-        if autoctx.target.combatant:
-            # Combine args/ieffect advantages - adv/dis (#1552)
-            sadv_effects = autoctx.target.combatant.active_effects("sadv")
-            sdis_effects = autoctx.target.combatant.active_effects("sdis")
-            sadv = "all" in sadv_effects or stat in sadv_effects
-            sdis = "all" in sdis_effects or stat in sdis_effects
-            adv = reconcile_adv(
-                adv=autoctx.args.last("sadv", type_=bool, ephem=True) or sadv,
-                dis=autoctx.args.last("sdis", type_=bool, ephem=True) or sdis,
-            )
-        else:
-            adv = autoctx.args.adv(custom={"adv": "sadv", "dis": "sdis"})
+        # Combine args/ieffect advantages - adv/dis (#1552)
+        sadv_effects = autoctx.target_active_effects(
+            mapper=lambda effect: effect.effects.save_adv, reducer=lambda saves: set().union(*saves), default=set()
+        )
+        sdis_effects = autoctx.target_active_effects(
+            mapper=lambda effect: effect.effects.save_dis, reducer=lambda saves: set().union(*saves), default=set()
+        )
+        sadv = stat in sadv_effects
+        sdis = stat in sdis_effects
+
+        # ==== adv ====
+        adv = reconcile_adv(
+            adv=autoctx.args.last("sadv", type_=bool, ephem=True) or sadv or self.adv == enums.AdvantageType.ADV,
+            dis=autoctx.args.last("sdis", type_=bool, ephem=True) or sdis or self.adv == enums.AdvantageType.DIS,
+        )
 
         # ==== execution ====
         save_roll = None

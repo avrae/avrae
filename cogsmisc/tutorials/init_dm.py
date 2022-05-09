@@ -554,7 +554,7 @@ async def add_orkira(ctx, combat):
         ctx=ctx,
         combat=combat,
         name="Orkira Illdrex",
-        controller_id=str(ctx.author.id),
+        controller_id=ctx.author.id,
         init=1,
         private=False,
         hp=50,

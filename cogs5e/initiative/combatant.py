@@ -1,7 +1,9 @@
+import itertools
+from typing import Callable, List, Optional, TYPE_CHECKING, TypeVar
+
 import discord
 
 import cogs5e.models.character
-from cogs5e.models.errors import NoCharacter
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistance, Resistances
@@ -9,11 +11,17 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
-from utils.functions import combine_maybe_mods, get_guild_member, search_and_select
-from .effect import Effect
-from .errors import CombatException, RequiresContext
+from utils.functions import get_guild_member, search_and_select
+from .effects import InitiativeEffect
+from .errors import RequiresContext
 from .types import BaseCombatant, CombatantType
 from .utils import create_combatant_id
+
+if TYPE_CHECKING:
+    from .group import CombatantGroup
+
+_IntermediateT = TypeVar("_IntermediateT")
+T = TypeVar("T")
 
 
 class Combatant(BaseCombatant, StatBlock):
@@ -27,12 +35,12 @@ class Combatant(BaseCombatant, StatBlock):
         combat,
         id: str,
         name: str,
-        controller_id: str,
+        controller_id: int,
         private: bool,
         init: int,
         index: int = None,
         notes: str = None,
-        effects: list = None,
+        effects: List[InitiativeEffect] = None,
         group_id: str = None,
         # statblock info
         stats: BaseStats = None,
@@ -70,11 +78,11 @@ class Combatant(BaseCombatant, StatBlock):
         self.combat = combat
         self.id = id
 
-        self._controller = controller_id
-        self._init = init
-        self._private = private
+        self.controller_id = int(controller_id)
+        self.init = init
+        self.is_private = private
         self._index = index  # combat write only; position in combat
-        self._notes = notes
+        self.notes = notes
         self._effects = effects
         self._group_id = group_id
 
@@ -84,7 +92,7 @@ class Combatant(BaseCombatant, StatBlock):
     def new(
         cls,
         name: str,
-        controller_id: str,
+        controller_id: int,
         init: int,
         init_skill: Skill,
         max_hp: int,
@@ -121,14 +129,14 @@ class Combatant(BaseCombatant, StatBlock):
         del raw["type"]
         effects = raw.pop("effects")
         inst = cls(ctx, combat, **raw)
-        inst._effects = [Effect.from_dict(e, combat, inst) for e in effects]
+        inst._effects = [InitiativeEffect.from_dict(e, combat, inst) for e in effects]
         return inst
 
     def to_dict(self):
         d = super().to_dict()
         d.update(
             {
-                "controller_id": self.controller,
+                "controller_id": self.controller_id,
                 "init": self.init,
                 "private": self.is_private,
                 "index": self.index,
@@ -150,30 +158,15 @@ class Combatant(BaseCombatant, StatBlock):
         self._name = new_name
 
     @property
-    def controller(self):
-        return self._controller
-
-    @controller.setter
-    def controller(self, new_controller_id):
-        self._controller = new_controller_id
-
-    @property
-    def init(self):
-        return self._init
-
-    @init.setter
-    def init(self, new_init):
-        self._init = new_init
-
-    @property
-    def init_skill(self):
+    def init_skill(self) -> Skill:
         return self.skills.initiative
 
     @property
-    def max_hp(self):
-        _maxhp = self._max_hp
-        _maxhp = combine_maybe_mods(self.active_effects("maxhp"), base=_maxhp)
-        return _maxhp
+    def max_hp(self) -> int:
+        base_hp = self._max_hp or 0
+        base_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_value, reducer=max, default=0)
+        bonus_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_bonus, reducer=sum, default=0)
+        return max(base_hp, base_effect_hp) + bonus_effect_hp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):
@@ -182,14 +175,14 @@ class Combatant(BaseCombatant, StatBlock):
             self._hp = new_max_hp
 
     @property
-    def hp(self):
+    def hp(self) -> Optional[int]:
         return self._hp
 
     @hp.setter
     def hp(self, new_hp):
         self._hp = new_hp
 
-    def hp_str(self, private=False):
+    def hp_str(self, private=False) -> str:
         """Returns a string representation of the combatant's HP."""
         out = ""
         if not self.is_private or private:
@@ -217,28 +210,55 @@ class Combatant(BaseCombatant, StatBlock):
         return out
 
     @property
-    def ac(self):
-        _ac = self._ac
-        _ac = combine_maybe_mods(self.active_effects("ac"), base=_ac)
-        return _ac
+    def ac(self) -> int:
+        base_ac = self._ac or 0
+        base_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_value, reducer=max, default=0)
+        bonus_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_bonus, reducer=sum, default=0)
+        return max(base_effect_ac, base_ac) + bonus_effect_ac
 
     @ac.setter
     def ac(self, new_ac):
         self._ac = new_ac
 
     @property
-    def is_private(self):
-        return self._private
-
-    @is_private.setter
-    def is_private(self, new_privacy):
-        self._private = new_privacy
+    def base_ac(self) -> Optional[int]:
+        """The base AC, unaffected by any passive effects."""
+        return self._ac
 
     @property
-    def resistances(self):
+    def resistances(self) -> Resistances:
         out = self._resistances.copy()
-        out.update(Resistances.from_dict({k: self.active_effects(k) for k in RESIST_TYPES}), overwrite=False)
+        out.update(
+            Resistances(
+                resist=self.active_effects(
+                    mapper=lambda effect: effect.effects.resistances,
+                    reducer=lambda resists: list(itertools.chain(*resists)),
+                    default=[],
+                ),
+                immune=self.active_effects(
+                    mapper=lambda effect: effect.effects.immunities,
+                    reducer=lambda resists: list(itertools.chain(*resists)),
+                    default=[],
+                ),
+                vuln=self.active_effects(
+                    mapper=lambda effect: effect.effects.vulnerabilities,
+                    reducer=lambda resists: list(itertools.chain(*resists)),
+                    default=[],
+                ),
+                neutral=self.active_effects(
+                    mapper=lambda effect: effect.effects.ignored_resistances,
+                    reducer=lambda resists: list(itertools.chain(*resists)),
+                    default=[],
+                ),
+            ),
+            overwrite=False,
+        )
         return out
+
+    @property
+    def base_resistances(self) -> Resistances:
+        """The base resistances, unaffected by any passive effects."""
+        return self._resistances
 
     def set_resist(self, damage_type: str, resist_type: str):
         if resist_type not in RESIST_TYPES:
@@ -256,14 +276,21 @@ class Combatant(BaseCombatant, StatBlock):
             self._resistances[resist_type].append(resistance)
 
     @property
-    def attacks(self):
+    def attacks(self) -> AttackList:
         if "attacks" not in self._cache:
             # attacks granted by effects are cached so that the same object is referenced in initTracker (#950)
-            self._cache["attacks"] = self._attacks + AttackList.from_dict(self.active_effects("attack"))
+            effect_attacks = self.active_effects(
+                mapper=lambda effect: [i.attack for i in effect.attacks],
+                reducer=lambda attacks: AttackList(list(itertools.chain(*attacks))),
+            )
+            if effect_attacks is not None:
+                self._cache["attacks"] = self._attacks + effect_attacks
+            else:
+                self._cache["attacks"] = self._attacks
         return self._cache["attacks"]
 
     @property
-    def index(self):
+    def index(self) -> int:
         """The combatant's index in the Combat combatant array. If the combatant is in a group, the group's index."""
         if self._group_id:
             return self.get_group().index
@@ -274,15 +301,7 @@ class Combatant(BaseCombatant, StatBlock):
         self._index = new_index
 
     @property
-    def notes(self):
-        return self._notes
-
-    @notes.setter
-    def notes(self, new_notes):
-        self._notes = new_notes
-
-    @property
-    def group(self):
+    def group(self) -> Optional[str]:
         return self._group_id
 
     @group.setter
@@ -290,10 +309,14 @@ class Combatant(BaseCombatant, StatBlock):
         self._group_id = value
 
     @property
-    def _effect_id_map(self):
-        return {e.id: e for e in self._effects}
+    def _effect_id_map(self) -> dict[str, InitiativeEffect]:
+        if "effect_id_map" in self._cache:
+            return self._cache["effect_id_map"]
+        effect_id_map = {e.id: e for e in self._effects}
+        self._cache["effect_id_map"] = effect_id_map
+        return effect_id_map
 
-    def set_group(self, group_name):
+    def set_group(self, group_name: Optional[str]) -> Optional["CombatantGroup"]:
         current = self.combat.current_combatant
         was_current = current is not None and (
             self is current or (current.type == CombatantType.GROUP and self in current and len(current) == 1)
@@ -313,11 +336,11 @@ class Combatant(BaseCombatant, StatBlock):
                 self.combat.goto_turn(self, True)
             return c_group
 
-    def get_group(self):
+    def get_group(self) -> Optional["CombatantGroup"]:
         return self.combat.get_group(self._group_id) if self._group_id else None
 
     # effects
-    def add_effect(self, effect):
+    def add_effect(self, effect: InitiativeEffect):
         # handle name conflict
         if self.get_effect(effect.name, True):
             self.get_effect(effect.name).remove()
@@ -333,29 +356,28 @@ class Combatant(BaseCombatant, StatBlock):
         self._effects.append(effect)
         return {"conc_conflict": conc_conflict}
 
-    def get_effects(self):
+    def get_effects(self) -> list[InitiativeEffect]:
         return self._effects
 
-    def effect_by_id(self, effect_id):
+    def effect_by_id(self, effect_id: str) -> Optional[InitiativeEffect]:
         return self._effect_id_map.get(effect_id)
 
-    def get_effect(self, name, strict=True):
+    def get_effect(self, name: str, strict=True) -> Optional[InitiativeEffect]:
         if strict:
             return next((c for c in self.get_effects() if c.name == name), None)
         else:
             return next((c for c in self.get_effects() if name.lower() in c.name.lower()), None)
 
-    async def select_effect(self, name):
+    async def select_effect(self, name: str) -> Optional[InitiativeEffect]:
         """
         Opens a prompt for a user to select the effect they were searching for.
 
-        :rtype: Effect
         :param name: The name of the effect to search for.
         :return: The selected Effect, or None if the search failed.
         """
         return await search_and_select(self.ctx, self.get_effects(), name, lambda e: e.name)
 
-    def remove_effect(self, effect):
+    def remove_effect(self, effect: InitiativeEffect):
         try:
             self._effects.remove(effect)
         except ValueError:
@@ -365,7 +387,7 @@ class Combatant(BaseCombatant, StatBlock):
         # invalidate cache
         self._invalidate_effect_cache()
 
-    def remove_all_effects(self, _filter=None):
+    def remove_all_effects(self, _filter: Callable[[InitiativeEffect], bool] = None) -> list[InitiativeEffect]:
         if _filter is None:
             to_remove = self._effects.copy()
         else:
@@ -374,42 +396,42 @@ class Combatant(BaseCombatant, StatBlock):
             e.remove()
         return to_remove
 
-    def active_effects(self, key=None):
-        if "parsed_effects" not in self._cache:
-            parsed_effects = {}
-            for effect in self.get_effects():
-                for k, v in effect.effect.items():
-                    if k not in parsed_effects:
-                        parsed_effects[k] = []
-                    if not isinstance(v, list):
-                        parsed_effects[k].append(v)
-                    else:
-                        parsed_effects[k].extend(v)
-            self._cache["parsed_effects"] = parsed_effects
-        if key:
-            return self._cache["parsed_effects"].get(key, [])
-        return self._cache["parsed_effects"]
+    def active_effects(
+        self,
+        mapper: Callable[[InitiativeEffect], _IntermediateT],
+        reducer: Callable[[List[_IntermediateT]], T] = lambda mapped: mapped,
+        default: T = None,
+    ) -> T:
+        """
+        Map/Reduce operation over each effect on the combatant to reduce everything down to a single value.
+        If the mapper returns a falsy value, the value will not be passed to the reducer.
+        If there are no elements to reduce, returns *default*.
+        """
+        values = [value for effect in self.get_effects() if (value := mapper(effect))]
+        if values:
+            return reducer(values)
+        return default
 
     def _invalidate_effect_cache(self):
-        if "parsed_effects" in self._cache:
-            del self._cache["parsed_effects"]
         if "attacks" in self._cache:
             del self._cache["attacks"]
+        if "effect_id_map" in self._cache:
+            del self._cache["effect_id_map"]
 
-    def is_concentrating(self):
+    def is_concentrating(self) -> bool:
         return any(e.concentration for e in self.get_effects())
 
     # controller stuff
-    def controller_mention(self):
-        return f"<@{self.controller}>"
+    def controller_mention(self) -> str:
+        return f"<@{self.controller_id}>"
 
     async def message_controller(self, ctx, *args, **kwargs):
         """Sends a message to the combatant's controller."""
         if ctx.guild is None:
             raise RequiresContext("message_controller requires a guild context.")
-        if int(self.controller) == ctx.bot.user.id:  # don't message self
+        if self.controller_id == ctx.bot.user.id:  # don't message self
             return
-        member = await get_guild_member(ctx.guild, int(self.controller))
+        member = await get_guild_member(ctx.guild, self.controller_id)
         if member is None:  # member is not in the guild, oh well
             return
         try:
@@ -418,7 +440,7 @@ class Combatant(BaseCombatant, StatBlock):
             pass
 
     # hooks
-    def on_turn(self, num_turns=1):
+    def on_turn(self, num_turns: int = 1):
         """
         A method called at the start of each of the combatant's turns.
         :param num_turns: The number of turns that just passed.
@@ -427,7 +449,7 @@ class Combatant(BaseCombatant, StatBlock):
         for e in self.get_effects().copy():
             e.on_turn(num_turns)
 
-    def on_turn_end(self, num_turns=1):
+    def on_turn_end(self, num_turns: int = 1):
         """A method called at the end of each of the combatant's turns."""
         for e in self.get_effects().copy():
             e.on_turn_end(num_turns)
@@ -439,7 +461,7 @@ class Combatant(BaseCombatant, StatBlock):
         pass
 
     # stringification
-    def get_summary(self, private=False, no_notes=False):
+    def get_summary(self, private=False, no_notes=False) -> str:
         """
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
@@ -450,7 +472,7 @@ class Combatant(BaseCombatant, StatBlock):
         else:
             return f"{self.init:>2}: {self.name} {hp_str}"
 
-    def get_status(self, private=False):
+    def get_status(self, private=False) -> str:
         """
         Gets the start-of-turn status of a combatant.
         :param private: Whether to return the full revealed stats or not.
@@ -463,10 +485,10 @@ class Combatant(BaseCombatant, StatBlock):
         effects = self._get_long_effects()
         return f"{name} {hp_ac} {resists}{notes}\n{effects}".strip()
 
-    def _get_long_effects(self):
+    def _get_long_effects(self) -> str:
         return "\n".join(f"* {str(e)}" for e in self.get_effects())
 
-    def _get_effects_and_notes(self):
+    def _get_effects_and_notes(self) -> str:
         out = []
         if (self._ac is not None or self.ac) and not self.is_private:
             out.append(f"AC {self.ac}")
@@ -478,13 +500,13 @@ class Combatant(BaseCombatant, StatBlock):
             return f"({', '.join(out)})"
         return ""
 
-    def _get_hp_and_ac(self, private: bool = False):
+    def _get_hp_and_ac(self, private: bool = False) -> str:
         out = [self.hp_str(private)]
         if (self._ac is not None or self.ac) and (not self.is_private or private):
             out.append(f"(AC {self.ac})")
         return " ".join(out)
 
-    def _get_resist_string(self, private: bool = False):
+    def _get_resist_string(self, private: bool = False) -> str:
         resist_str = ""
         if not self.is_private or private:
             if len(self.resistances.resist) > 0:
@@ -501,7 +523,7 @@ class Combatant(BaseCombatant, StatBlock):
         return f"{self.name}: {self.hp_str()}".strip()
 
     def __hash__(self):
-        return hash(f"{self.combat.channel}.{self.name}")
+        return hash(f"{self.combat.channel_id}.{self.name}")
 
 
 class MonsterCombatant(Combatant):
@@ -515,12 +537,12 @@ class MonsterCombatant(Combatant):
         combat,
         id: str,
         name: str,
-        controller_id: str,
+        controller_id: int,
         private: bool,
         init: int,
         index: int = None,
         notes: str = None,
-        effects: list = None,
+        effects: List[InitiativeEffect] = None,
         group_id: str = None,
         # statblock info
         stats: BaseStats = None,
@@ -535,12 +557,12 @@ class MonsterCombatant(Combatant):
         hp: int = None,
         temp_hp: int = 0,
         # monster specific
-        monster_name=None,
-        monster_id=None,
-        creature_type=None,
+        monster_name: str = None,
+        monster_id: int = None,
+        creature_type: str = None,
         **_,
     ):
-        super(MonsterCombatant, self).__init__(
+        super().__init__(
             ctx,
             combat,
             id,
@@ -623,11 +645,11 @@ class MonsterCombatant(Combatant):
 
     # members
     @property
-    def monster_name(self):
+    def monster_name(self) -> str:
         return self._monster_name
 
     @property
-    def monster_id(self):
+    def monster_id(self) -> Optional[int]:
         return self._monster_id
 
 
@@ -641,12 +663,12 @@ class PlayerCombatant(Combatant):
         combat,
         id: str,
         name: str,
-        controller_id: str,
+        controller_id: int,
         private: bool,
         init: int,
         index: int = None,
         notes: str = None,
-        effects: list = None,
+        effects: List[InitiativeEffect] = None,
         group_id: str = None,
         # statblock info
         attacks: AttackList = None,
@@ -654,8 +676,8 @@ class PlayerCombatant(Combatant):
         ac: int = None,
         max_hp: int = None,
         # character specific
-        character_id=None,
-        character_owner=None,
+        character_id: str = None,
+        character_owner: str = None,
         **_,
     ):
         # note that the player combatant doesn't initialize the statblock
@@ -752,34 +774,35 @@ class PlayerCombatant(Combatant):
 
     # ==== members ====
     @property
-    def character(self):
+    def character(self) -> cogs5e.models.character.Character:
         return self._character
 
     @property
-    def init_skill(self):
+    def init_skill(self) -> Skill:
         return self.character.skills.initiative
 
     @property
-    def stats(self):
+    def stats(self) -> BaseStats:
         return self.character.stats
 
     @property
-    def levels(self):
+    def levels(self) -> Levels:
         return self.character.levels
 
     @property
-    def skills(self):
+    def skills(self) -> Skills:
         return self.character.skills
 
     @property
-    def saves(self):
+    def saves(self) -> Saves:
         return self.character.saves
 
     @property
-    def ac(self):
-        _ac = self._ac or self.character.ac
-        _ac = combine_maybe_mods(self.active_effects("ac"), base=_ac)
-        return _ac
+    def ac(self) -> int:
+        base_ac = self.base_ac
+        base_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_value, reducer=max, default=0)
+        bonus_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_bonus, reducer=sum, default=0)
+        return max(base_effect_ac, base_ac) + bonus_effect_ac
 
     @ac.setter
     def ac(self, new_ac):
@@ -789,21 +812,26 @@ class PlayerCombatant(Combatant):
         self._ac = new_ac
 
     @property
-    def spellbook(self):
+    def base_ac(self) -> int:
+        return self._ac or self.character.ac
+
+    @property
+    def spellbook(self) -> Spellbook:
         return self.character.spellbook
 
     @property
-    def max_hp(self):
-        _maxhp = self._max_hp or self.character.max_hp
-        _maxhp = combine_maybe_mods(self.active_effects("maxhp"), base=_maxhp)
-        return _maxhp
+    def max_hp(self) -> int:
+        base_hp = self._max_hp or self.character.max_hp
+        base_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_value, reducer=max, default=0)
+        bonus_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_bonus, reducer=sum, default=0)
+        return max(base_hp, base_effect_hp) + bonus_effect_hp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):
         self._max_hp = new_max_hp
 
     @property
-    def hp(self):
+    def hp(self) -> int:
         return self.character.hp
 
     @hp.setter
@@ -817,7 +845,7 @@ class PlayerCombatant(Combatant):
         return self.character.reset_hp()
 
     @property
-    def temp_hp(self):
+    def temp_hp(self) -> int:
         return self.character.temp_hp
 
     @temp_hp.setter
@@ -825,7 +853,7 @@ class PlayerCombatant(Combatant):
         self.character.temp_hp = new_hp
 
     @property
-    def attacks(self):
+    def attacks(self) -> AttackList:
         return super().attacks + self.character.attacks
 
     def get_scope_locals(self):

@@ -137,7 +137,7 @@ COIN_TYPES = {
     },
 }
 
-# ---- emojis, icons, other discord things ----
+# ==== emojis, icons, other discord things ====
 DDB_LOGO_EMOJI = "<:beyond:783780183559372890>"
 DDB_LOGO_ICON = "https://cdn.discordapp.com/emojis/783780183559372890.png?v=1"
 EMPTY_BUBBLE = "\u3007"
@@ -148,3 +148,7 @@ FILLED_BUBBLE_ALT = "\u25a3"
 # homebrew
 HOMEBREW_EMOJI = "<:homebrew:783780183525818418>"
 HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
+
+# ==== Discord component custom id prefixes ====
+# any string, up to 100 characters long
+B_INIT_EFFECT = "ieb:"  # ieb:<combatant_id>:<effect_id>:<interaction_id>

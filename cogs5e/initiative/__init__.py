@@ -1,6 +1,6 @@
-from .combat import Combat
+from .combat import Combat, CombatOptions
 from .combatant import Combatant, MonsterCombatant, PlayerCombatant
-from .effect import Effect
+from .effects import InitiativeEffect
 from .errors import *
 from .group import CombatantGroup
 from .types import CombatantType

@@ -1,10 +1,13 @@
+import copy
 import json
 import logging
 import textwrap
 
+import disnake
 import pytest
 
 from aliasing.evaluators import AutomationEvaluator
+from cogs5e.initiative.utils import combatant_interaction_components
 from cogs5e.models import automation
 from cogs5e.models.sheet.statblock import StatBlock
 from gamedata.compendium import compendium
@@ -66,7 +69,7 @@ async def test_save_strs(dc):
 
 # ==== IEffect ====
 @pytest.mark.usefixtures("character", "init_fixture")
-class TestIEffect:
+class TestLegacyIEffect:
     async def test_ieffect_setup(self, avrae, dhttp):
         await start_init(avrae, dhttp)
         avrae.message("!init join")
@@ -82,7 +85,7 @@ class TestIEffect:
             "desc": "I'm just really sleepy",
             "stacking": True,
         }
-        result = automation.IEffect.from_data(data)
+        result = automation.LegacyIEffect.from_data(data)
         assert result
         assert result.name == "Sleepy"
         assert result.duration == 5
@@ -92,7 +95,7 @@ class TestIEffect:
         assert result.desc == "I'm just really sleepy"
 
     async def test_serialize(self):
-        result = automation.IEffect("Sleepy", 5, "-ac -1").to_dict()
+        result = automation.LegacyIEffect("Sleepy", 5, "-ac -1").to_dict()
         assert json.dumps(result)
 
     async def test_stacking_e2e(self, character, avrae, dhttp):
@@ -135,6 +138,190 @@ class TestIEffect:
         combatant = combat.get_combatant(char.name, strict=True)
         assert combatant.get_effect("Sleepy", strict=True)
         assert combatant.get_effect("Sleepy x2", strict=True)
+
+    async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
+        await end_init(avrae, dhttp)
+
+
+@pytest.mark.usefixtures("character", "init_fixture")
+class TestIEffect:
+    dict_data = {
+        "type": "ieffect2",
+        "name": "Burning",
+        "effects": {"save_dis": ["all"], "damage_bonus": "1 [fire]"},
+        "attacks": [
+            {
+                "attack": {
+                    "name": "Burning Hand (not the spell)",
+                    "_v": 2,
+                    "automation": [
+                        {"type": "target", "target": "each", "effects": [{"type": "damage", "damage": "1d8[fire]"}]}
+                    ],
+                }
+            }
+        ],
+        "buttons": [
+            {
+                "label": "Take Fire Damage",
+                "verb": "is burning",
+                "style": 4,
+                "automation": [
+                    {"type": "target", "target": "self", "effects": [{"type": "damage", "damage": "1d6[fire]"}]}
+                ],
+            },
+            {
+                "label": "Douse",
+                "verb": "puts themself out",
+                "automation": [{"type": "text", "text": "ok still no remove effect yet lol"}],
+            },
+        ],
+    }
+
+    attack_data = textwrap.dedent(
+        """
+        name: New Button Test
+        _v: 2
+        automation:
+          - type: target
+            target: self
+            effects:
+              - type: ieffect2
+                name: Prone
+                buttons:
+                  - label: Stand Up
+                    verb: stands up
+                    style: 3
+                    automation:
+                      - type: text
+                        text: ok I haven't implemented removing effects yet lol
+              - type: ieffect2
+                name: Burning
+                effects:
+                  save_dis: [ all ]
+                  damage_bonus: 1 [fire]
+                attacks:
+                  - attack:
+                      name: Burning Hand (not the spell)
+                      _v: 2
+                      automation:
+                        - type: target
+                          target: each
+                          effects:
+                            - type: damage
+                              damage: 1d8[fire]
+                buttons:
+                  - label: Take Fire Damage
+                    verb: is burning
+                    style: 4
+                    automation:
+                      - type: target
+                        target: self
+                        effects:
+                          - type: damage
+                            damage: 1d6[fire]
+                  - label: Douse
+                    verb: puts themself out
+                    automation:
+                      - type: text
+                        text: ok still no remove effect yet lol
+              - type: ieffect2
+                name: Parent Test
+                save_as: parent_test
+                buttons:
+                  - label: ping children
+                    verb: lists all the child effects
+                    automation:
+                      - type: target
+                        target: children
+                        effects:
+                          - type: text
+                            text: "{target.name} has a child effect"
+          - type: target
+            target: each
+            effects:
+              - type: ieffect2
+                name: Child Effect
+                parent: parent_test
+                buttons:
+                  - label: ping parent
+                    automation:
+                      - type: target
+                        target: parent
+                        effects:
+                          - type: text
+                            text: "{target.name} has the parent effect"
+        """
+    ).strip()
+
+    async def test_ieffect_setup(self, avrae, dhttp):
+        await start_init(avrae, dhttp)
+        avrae.message("!init join")
+        await dhttp.drain()
+
+    async def test_deserialize(self):
+        result = automation.IEffect.from_data(copy.deepcopy(self.dict_data))
+        assert result
+        assert result.name == "Burning"
+        assert result.duration is None
+        assert result.effects.data == {"save_dis": ["all"], "damage_bonus": "1 [fire]"}
+        assert len(result.attacks) == 1
+        assert result.attacks[0].attack.name == "Burning Hand (not the spell)"
+        assert len(result.buttons) == 2
+        assert result.buttons[0].label == "Take Fire Damage"
+        assert result.buttons[1].label == "Douse"
+        assert result.end_on_turn_end is False
+        assert result.concentration is False
+        assert result.desc is None
+        assert not result.stacking
+        assert result.save_as is None
+        assert result.parent is None
+
+    async def test_serialize(self):
+        effect = automation.IEffect.from_data(copy.deepcopy(self.dict_data))
+        serialized1 = effect.to_dict()
+        # since serialization adds some attrs that are optional, we re-deserialize and serialize again to test
+        # consistency
+        deserialized2 = automation.IEffect.from_data(copy.deepcopy(serialized1))
+        serialized2 = deserialized2.to_dict()
+        assert serialized1 == serialized2
+
+    async def test_buttons_e2e(self, character, avrae, dhttp):
+        avrae.message(f"!a import {self.attack_data}")
+        await dhttp.drain()
+
+        avrae.message(f'!a "New Button Test" -t "{character.name}"')
+        await dhttp.drain()
+
+        char = await active_character(avrae)
+        combat = await active_combat(avrae)
+        combatant = combat.get_combatant(char.name, strict=True)
+
+        # make sure it added all the effects
+        assert combatant.get_effect("Prone", strict=True)
+        assert combatant.get_effect("Burning", strict=True)
+        assert combatant.get_effect("Parent Test", strict=True)
+        assert combatant.get_effect("Child Effect", strict=True)
+
+        # check the list of available buttons - should be Stand Up, Take Fire Damage, Douse, ping children, ping parent
+        buttons = combatant_interaction_components(combatant)
+        assert len(buttons) == 5
+        assert [b.label for b in buttons] == ["Stand Up", "Take Fire Damage", "Douse", "ping children", "ping parent"]
+        assert [b.style for b in buttons] == [
+            disnake.ButtonStyle.success,
+            disnake.ButtonStyle.danger,
+            disnake.ButtonStyle.primary,
+            disnake.ButtonStyle.primary,
+            disnake.ButtonStyle.primary,
+        ]
+
+        # ieb:<combatant_id>:<effect_id>:<button_id>
+        assert all(b.custom_id.startswith(f"ieb:{combatant.id}:") for b in buttons)
+
+        # check parenting
+        child = combatant.get_effect("Child Effect", strict=True)
+        parent = combatant.get_effect("Parent Test", strict=True)
+        assert child.get_parent_effect() is parent
+        assert next(parent.get_children_effects()) is child
 
     async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
         await end_init(avrae, dhttp)
@@ -372,3 +559,163 @@ async def test_usecounter_build_str(counter, amount):
     result = usecounter.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
     log.info(f"UseCounter str: ({counter=!r}, {amount=!r}) -> {result}")
     assert result
+
+
+# ==== Check ====
+async def import_check_actions(avrae, dhttp):
+    avrae.message(
+        textwrap.dedent(
+            """
+            !a import {
+              "_v": 2,
+              "name": "Check Test",
+              "automation": [
+                {
+                  "type": "target",
+                  "target": "each",
+                  "effects": [
+                    {
+                      "type": "check",
+                      "ability": [
+                        "arcana",
+                        "dexterity",
+                        "animalHandling"
+                      ],
+                      "dc": 15,
+                      "success": [
+                        {
+                          "type": "text",
+                          "text": "yay you passed"
+                        }
+                      ],
+                      "fail": [
+                        {
+                          "type": "text",
+                          "text": "you failed :("
+                        }
+                      ]
+                    },
+                    {
+                      "type": "check",
+                      "ability": "arcana"
+                    },
+                    {
+                      "type": "text",
+                      "text": "after arcana"
+                    }
+                  ]
+                }
+              ]
+            }
+            """
+        ).strip()
+    )
+    avrae.message(
+        textwrap.dedent(
+            """
+            !a import {
+              "_v": 2,
+              "name": "Contest Check Test",
+              "automation": [
+                {
+                  "type": "target",
+                  "target": "each",
+                  "effects": [
+                    {
+                      "type": "check",
+                      "ability": [
+                        "arcana",
+                        "dexterity",
+                        "animalHandling"
+                      ],
+                      "contestAbility": [
+                        "athletics",
+                        "acrobatics"
+                      ],
+                      "success": [
+                        {
+                          "type": "text",
+                          "text": "the target wins"
+                        }
+                      ],
+                      "fail": [
+                        {
+                          "type": "text",
+                          "text": "the caster wins"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+            """
+        ).strip()
+    )
+    await dhttp.drain()
+
+
+async def test_check_e2e(character, avrae, dhttp):
+    await import_check_actions(avrae, dhttp)
+    await start_init(avrae, dhttp)
+    avrae.message("!init join")
+    await dhttp.drain()
+
+    avrae.message(f'!a "Check Test" -t "{character.name}"')
+    await dhttp.drain()
+
+    avrae.message(f'!a "Contest Check Test" -t "{character.name}"')
+    await dhttp.drain()
+
+    await end_init(avrae, dhttp)
+
+
+async def test_check_deserialize():
+    data = {"type": "check", "ability": "arcana"}
+    result = automation.Check.from_data(data)
+    assert result
+    assert result.ability_list == ["arcana"]
+    assert result.contest_ability_list is None
+    assert result.dc is None
+    assert result.contest_tie_behaviour is None
+
+    data = {"type": "check", "ability": ["arcana", "acrobatics"]}
+    result = automation.Check.from_data(data)
+    assert result
+    assert result.ability_list == ["arcana", "acrobatics"]
+
+    data = {"type": "check", "ability": ["arcana", "acrobatics"], "dc": "15"}
+    result = automation.Check.from_data(data)
+    assert result
+    assert result.dc == "15"
+
+    data = {"type": "check", "ability": ["arcana", "acrobatics"], "contestAbility": "athletics"}
+    result = automation.Check.from_data(data)
+    assert result
+    assert result.contest_ability_list == ["athletics"]
+
+
+async def test_check_serialize():
+    result = automation.Check("acrobatics").to_dict()
+    assert json.dumps(result)  # result should be JSON-encodable
+
+    result = automation.Check(["acrobatics", "arcana"]).to_dict()
+    assert json.dumps(result)
+
+
+async def test_check_build_str():
+    check = automation.Check(ability="arcana")
+    result = check.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
+    assert result == "Arcana Check"
+
+    check = automation.Check(ability=["arcana", "acrobatics"])
+    result = check.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
+    assert result == "Arcana or Acrobatics Check"
+
+    check = automation.Check(ability="arcana", dc="15")
+    result = check.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
+    assert result == "DC 15 Arcana Check"
+
+    check = automation.Check(ability="arcana", contestAbility="arcana")
+    result = check.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
+    assert result == "Arcana Check vs. caster's Arcana Check"

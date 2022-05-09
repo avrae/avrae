@@ -1,10 +1,19 @@
+from typing import Optional, TYPE_CHECKING, Union
+
 import aliasing.api.statblock
 import aliasing.evaluators
+from utils.enums import CritDamageType
 from utils.functions import get_guild_member
 from .effects import *
 from .errors import *
 from .results import *
 from .runtime import *
+
+if TYPE_CHECKING:
+    from cogs5e.models.sheet.statblock import StatBlock
+    from utils.argparser import ParsedArguments
+    from cogs5e.initiative import Combat, InitiativeEffect
+    from gamedata.spell import Spell
 
 
 class Automation:
@@ -14,8 +23,8 @@ class Automation:
     @classmethod
     def from_data(cls, data: list):
         if data is not None:
-            effects = Effect.deserialize(data)
-            return cls(effects)
+            automation_effects = Effect.deserialize(data)
+            return cls(automation_effects)
         return None
 
     def to_dict(self):
@@ -25,20 +34,21 @@ class Automation:
         self,
         ctx,
         embed,
-        caster,
-        targets,
-        args,
-        combat=None,
-        spell=None,
-        conc_effect=None,
-        ab_override=None,
-        dc_override=None,
-        spell_override=None,
-        title=None,
-        before=None,
-        after=None,
-        crit_type=None,
-    ):
+        caster: "StatBlock",
+        targets: list[Union[str, "StatBlock"]],
+        args: "ParsedArguments",
+        combat: Optional["Combat"] = None,
+        spell: Optional["Spell"] = None,
+        conc_effect: Optional["InitiativeEffect"] = None,
+        ab_override: Optional[int] = None,
+        dc_override: Optional[int] = None,
+        spell_override: Optional[int] = None,
+        title: Optional[str] = None,
+        crit_type: CritDamageType = None,
+        ieffect: Optional["InitiativeEffect"] = None,
+        allow_caster_ieffects: bool = True,
+        allow_target_ieffects: bool = True,
+    ) -> AutomationResult:
         """
         Runs automation.
 
@@ -47,35 +57,25 @@ class Automation:
         :param embed: The embed to add automation fields to.
         :type embed: discord.Embed
         :param caster: The StatBlock casting this automation.
-        :type caster: cogs5e.models.sheet.statblock.StatBlock
         :param targets: A list of str or StatBlock or None hit by this automation.
-        :type targets: list of str or list of cogs5e.models.sheet.statblock.StatBlock
         :param args: ParsedArguments.
-        :type args: utils.argparser.ParsedArguments
         :param combat: The combat this automation is being run in.
-        :type combat: cogs5e.models.initiative.Combat
         :param spell: The spell being cast that is running this automation.
-        :type spell: cogs5e.models.spell.Spell
         :param conc_effect: The initiative effect that is used to track concentration caused by running this.
-        :type conc_effect: cogs5e.models.initiative.Effect
         :param ab_override: Forces a default attack bonus.
-        :type ab_override: int
         :param dc_override: Forces a default DC.
-        :type dc_override: int
         :param spell_override: Forces a default spell modifier.
-        :type spell_override: int
-        :param title: The title of the action.
-        :type title: str
-        :param before: A function, taking in the AutomationContext, to run before automation runs.
-        :type before: function
-        :param after: A function, taking in the AutomationContext, to run after automation runs.
-        :type after: function
+        :param title: The title of the action, used when sending private messages after execution.
         :param crit_type: The method of adding critical damage
-        :type crit_type: utils.enums.CritDamageType
-        :rtype: AutomationResult
+        :param ieffect: If the automation is running as an effect of an InitiativeEffect, the InitiativeEffect that has
+                        the interaction that triggered this run (used for the Remove IEffect automation effect).
+        :param allow_caster_ieffects: Whether effects granted by ieffects on the caster (usually offensive like
+                                      -d, adv, magical, etc) are considered during execution.
+        :param allow_target_ieffects: Whether effects granted by ieffects on a target (usually defensive like
+                                      -sb, sadv, -ac, -resist, etc) are considered during execution.
         """
         if not targets:
-            targets = [None]  # outputs a single iteration of effects in a generic meta field
+            targets = []
         autoctx = AutomationContext(
             ctx,
             embed,
@@ -83,27 +83,24 @@ class Automation:
             targets,
             args,
             combat,
-            spell,
-            conc_effect,
-            ab_override,
-            dc_override,
-            spell_override,
+            spell=spell,
+            conc_effect=conc_effect,
+            ab_override=ab_override,
+            dc_override=dc_override,
+            spell_override=spell_override,
             crit_type=crit_type,
+            ieffect=ieffect,
+            allow_caster_ieffects=allow_caster_ieffects,
+            allow_target_ieffects=allow_target_ieffects,
         )
 
-        results = []
-
-        if before is not None:
-            before(autoctx)
+        automation_results = []
 
         for effect in self.effects:
             await effect.preflight(autoctx)
 
         for effect in self.effects:
-            results.append(effect.run(autoctx))
-
-        if after is not None:
-            after(autoctx)
+            automation_results.append(effect.run(autoctx))
 
         autoctx.build_embed()
         for user, msgs in autoctx.pm_queue.items():
@@ -117,7 +114,7 @@ class Automation:
                 pass
 
         return AutomationResult(
-            children=results, is_spell=spell is not None, caster_needs_commit=autoctx.caster_needs_commit
+            children=automation_results, is_spell=autoctx.is_spell, caster_needs_commit=autoctx.caster_needs_commit
         )
 
     def build_str(self, caster):

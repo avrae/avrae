@@ -37,13 +37,12 @@ class Roll(Effect):
         mi = autoctx.args.last("mi", None, int)
 
         # add on combatant damage effects (#224)
-        if autoctx.combatant:
-            effect_d = "+".join(autoctx.combatant.active_effects("d"))
-            if effect_d:
-                if d:
-                    d = f"{d}+{effect_d}"
-                else:
-                    d = effect_d
+        effect_d = autoctx.caster_active_effects(mapper=lambda effect: effect.effects.damage_bonus, reducer="+".join)
+        if effect_d:
+            if d:
+                d = f"{d}+{effect_d}"
+            else:
+                d = effect_d
 
         dice_ast = copy.copy(d20.parse(autoctx.parse_annostr(self.dice)))
         dice_ast = utils.upcast_scaled_dice(self, autoctx, dice_ast)

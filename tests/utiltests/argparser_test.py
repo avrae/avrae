@@ -2,6 +2,7 @@ import pytest
 from discord.ext.commands import ExpectedClosingQuoteError
 
 from utils.argparser import argparse, argquote, argsplit
+from utils.enums import AdvantageType
 
 
 def test_argsplit():
@@ -43,19 +44,19 @@ def test_argparse():
     assert args.last("notin", default=5) == 5
 
     args = argparse("""adv""")
-    assert args.adv() == 1
+    assert args.adv() == AdvantageType.ADV
 
     args = argparse("""adv dis adv""")
-    assert args.adv() == 0
+    assert args.adv() == AdvantageType.NONE
 
     args = argparse("""adv dis ea""")
-    assert args.adv(ea=True) == 0
+    assert args.adv(ea=True) == AdvantageType.NONE
 
     args = argparse("""ea""")
-    assert args.adv(ea=True) == 2
+    assert args.adv(ea=True) == AdvantageType.ELVEN
 
     args = argparse("""adv ea""")
-    assert args.adv(ea=True) == 2
+    assert args.adv(ea=True) == AdvantageType.ELVEN
 
 
 def test_argparse_adv():
@@ -83,36 +84,36 @@ def test_argparse_adv():
 
     """
     args = argparse("")
-    assert args.adv() == 0
-    assert args.adv(ea=True) == 0
+    assert args.adv() == AdvantageType.NONE
+    assert args.adv(ea=True) == AdvantageType.NONE
 
     args = argparse("ea")
-    assert args.adv() == 0
-    assert args.adv(ea=True) == 2
+    assert args.adv() == AdvantageType.NONE
+    assert args.adv(ea=True) == AdvantageType.ELVEN
 
     args = argparse("dis")
-    assert args.adv() == -1
-    assert args.adv(ea=True) == -1
+    assert args.adv() == AdvantageType.DIS
+    assert args.adv(ea=True) == AdvantageType.DIS
 
     args = argparse("dis ea")
-    assert args.adv() == -1
-    assert args.adv(ea=True) == 0
+    assert args.adv() == AdvantageType.DIS
+    assert args.adv(ea=True) == AdvantageType.NONE
 
     args = argparse("adv")
-    assert args.adv() == 1
-    assert args.adv(ea=True) == 1
+    assert args.adv() == AdvantageType.ADV
+    assert args.adv(ea=True) == AdvantageType.ADV
 
     args = argparse("adv ea")
-    assert args.adv() == 1
-    assert args.adv(ea=True) == 2
+    assert args.adv() == AdvantageType.ADV
+    assert args.adv(ea=True) == AdvantageType.ELVEN
 
     args = argparse("adv dis")
-    assert args.adv() == 0
-    assert args.adv(ea=True) == 0
+    assert args.adv() == AdvantageType.NONE
+    assert args.adv(ea=True) == AdvantageType.NONE
 
     args = argparse("adv dis ea")
-    assert args.adv() == 0
-    assert args.adv(ea=True) == 0
+    assert args.adv() == AdvantageType.NONE
+    assert args.adv(ea=True) == AdvantageType.NONE
 
 
 def test_argparse_custom_adv():
@@ -121,22 +122,22 @@ def test_argparse_custom_adv():
         "adv": "custom_adv",
     }
 
-    assert args.adv(custom=custom_adv) == 1
-    assert args.adv() == 0
+    assert args.adv(custom=custom_adv) == AdvantageType.ADV
+    assert args.adv() == AdvantageType.NONE
 
     custom_dis = {"dis": "custom_dis"}
-    assert args.adv(custom=custom_dis) == 0
+    assert args.adv(custom=custom_dis) == AdvantageType.NONE
 
     args = argparse("custom_dis")
 
-    assert args.adv(custom=custom_dis) == -1
-    assert args.adv() == 0
+    assert args.adv(custom=custom_dis) == AdvantageType.DIS
+    assert args.adv() == AdvantageType.NONE
 
     custom_ea = {"ea": "custom_ea"}
     args = argparse("custom_ea")
 
-    assert args.adv(ea=True, custom=custom_ea) == 2
-    assert args.adv() == 0
+    assert args.adv(ea=True, custom=custom_ea) == AdvantageType.ELVEN
+    assert args.adv() == AdvantageType.NONE
 
 
 def test_argparse_ephem():

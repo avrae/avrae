@@ -164,7 +164,7 @@ class NLPRecorder:
         # enable recording in the combat's channel
         await self._update_channel_recording_until(
             guild_id=combat.ctx.guild.id,
-            channel_id=int(combat.channel),
+            channel_id=combat.channel_id,
             combat_id=combat.nlp_record_session_id,
             insert_if_not_exist=True,
         )
@@ -174,7 +174,7 @@ class NLPRecorder:
                 RecordedMessage.from_message(combat_id=combat.nlp_record_session_id, message=message)
                 for message in self.bot.cached_messages
                 if (
-                    message.channel.id == int(combat.channel)
+                    message.channel.id == combat.channel_id
                     and message.created_at > disnake.utils.utcnow() - datetime.timedelta(minutes=15)
                 )
             ][-25:]
@@ -205,7 +205,7 @@ class NLPRecorder:
         """
         # bump the recording time to equal the combat's expiration time
         await self._update_channel_recording_until(
-            guild_id=combat.ctx.guild.id, channel_id=int(combat.channel), combat_id=combat.nlp_record_session_id
+            guild_id=combat.ctx.guild.id, channel_id=combat.channel_id, combat_id=combat.nlp_record_session_id
         )
         # record a snapshot of the combat's human-readable and machine-readable state
         await self._record_event(RecordedCombatState.from_combat(combat))
@@ -217,7 +217,7 @@ class NLPRecorder:
         # set the channel recording expiration to 2 minutes to record a few messages after combat ends
         await self._update_channel_recording_until(
             guild_id=combat.ctx.guild.id,
-            channel_id=int(combat.channel),
+            channel_id=combat.channel_id,
             combat_id=combat.nlp_record_session_id,
             record_duration=120,
         )

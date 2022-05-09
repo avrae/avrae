@@ -1,57 +1,83 @@
-import aliasing.api
+from functools import cached_property
+from typing import List, Optional, TYPE_CHECKING, Union
+
+import aliasing.api.combat
 import aliasing.api.statblock
 import aliasing.evaluators
 import cogs5e.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
-from utils.enums import CritDamageType
-from .errors import AutomationEvaluationException, InvalidIntExpression
+from utils.enums import AdvantageType, CritDamageType
+from .errors import AutomationEvaluationException, AutomationException, InvalidIntExpression
 from .utils import maybe_alias_statblock
 
 __all__ = ("AutomationContext", "AutomationTarget")
+
+if TYPE_CHECKING:
+    import disnake
+    from cogs5e.models.sheet.statblock import StatBlock
+    from cogs5e.initiative import Combat, InitiativeEffect
+    from utils.argparser import ParsedArguments
+    from utils.context import AvraeContext
+    from gamedata import Spell
 
 
 class AutomationContext:
     def __init__(
         self,
-        ctx,
-        embed,
-        caster,
-        targets,
-        args,
-        combat,
-        spell=None,
-        conc_effect=None,
-        ab_override=None,
-        dc_override=None,
-        spell_override=None,
-        crit_type=CritDamageType.NORMAL,
+        ctx: Union["AvraeContext", "disnake.Interaction"],
+        embed: "disnake.Embed",
+        caster: "StatBlock",
+        targets: List[Optional[Union["StatBlock", str]]],
+        args: "ParsedArguments",
+        combat: Optional["Combat"],
+        spell: Optional["Spell"] = None,
+        conc_effect: Optional["InitiativeEffect"] = None,
+        ab_override: Optional[int] = None,
+        dc_override: Optional[int] = None,
+        spell_override: Optional[int] = None,
+        crit_type: CritDamageType = CritDamageType.NORMAL,
+        ieffect: Optional["InitiativeEffect"] = None,
+        allow_caster_ieffects: bool = True,
+        allow_target_ieffects: bool = True,
     ):
+        # runtime options
         self.ctx = ctx
         self.embed = embed
         self.caster = caster
         self.targets = targets
         self.args = args
         self.combat = combat
-
-        # spellcasting utils
-        self.spell = spell
-        self.ab_override = ab_override
-        self.dc_override = dc_override
-        self.spell_level_override = None  # used in Cast Spell effect
-        self.conc_effect = conc_effect
-
         self.crit_type = crit_type
 
+        # runtime internals
+        self.caster_needs_commit = False
+        self.evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster)
         self.metavars = {
             # caster, targets as default (#1335)
             "caster": aliasing.api.statblock.AliasStatBlock(caster),
             "targets": [maybe_alias_statblock(t) for t in targets],
         }
-        self.target = None
+
+        # spellcasting utils
+        self.spell = spell
+        self.ab_override = ab_override
+        self.dc_override = dc_override
+        if spell_override is not None:
+            self.evaluator.builtins["spell"] = spell_override
+        self.spell_level_override = None  # used in Cast Spell effect
+        self.conc_effect = conc_effect
+
+        # InitiativeEffect utils
+        self.ieffect = ieffect
+        if ieffect is not None:
+            self.metavars["ieffect"] = aliasing.api.combat.SimpleEffect(ieffect)
+        self.allow_caster_ieffects = allow_caster_ieffects
+        self.allow_target_ieffects = allow_target_ieffects
+
+        # node-specific behaviour
+        self.target: Optional[AutomationTarget] = None
         self.in_crit = False
         self.in_save = False
-
-        self.caster_needs_commit = False
 
         # embed text fields, in order
         self._meta_queue = []
@@ -64,17 +90,16 @@ class AutomationContext:
         self._field_queue = []
         self.pm_queue = {}
 
-        self.character = None
+        # type helpers
+        self.character: Optional[character_api.Character] = None
         if isinstance(caster, init.PlayerCombatant):
             self.character = caster.character
         elif isinstance(caster, character_api.Character):
-            self.character = caster
+            self.character: character_api.Character = caster  # type annotation to narrow type here
 
-        self.evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster, spell_override=spell_override)
-
-        self.combatant = None
+        self.combatant: Optional[init.Combatant] = None
         if isinstance(caster, init.Combatant):
-            self.combatant = caster
+            self.combatant: init.Combatant = caster  # type annotation to narrow type here
 
     # ===== embed builder =====
     def queue(self, text):
@@ -152,7 +177,7 @@ class AutomationContext:
             self.pm_queue[user] = []
         self.pm_queue[user].append(message)
 
-    # ===== utils =====
+    # ===== spell utils =====
     @property
     def is_spell(self):
         return self.spell is not None
@@ -163,6 +188,22 @@ class AutomationContext:
             default = default or self.spell.level
         return self.args.last("l", default, int)
 
+    # ===== init utils =====
+    def caster_active_effects(self, mapper, reducer=lambda mapped: mapped, default=None):
+        if not self.allow_caster_ieffects:
+            return default
+        if self.combatant is None:
+            return default
+        return self.combatant.active_effects(mapper, reducer, default)
+
+    def target_active_effects(self, mapper, reducer=lambda mapped: mapped, default=None):
+        if not self.allow_target_ieffects:
+            return default
+        if self.target.combatant is None:
+            return default
+        return self.target.combatant.active_effects(mapper, reducer, default)
+
+    # ===== scripting utils =====
     def parse_annostr(self, annostr, is_full_expression=False):
         """
         Parses an AnnotatedString.
@@ -170,6 +211,8 @@ class AutomationContext:
         :param str annostr: The string to parse.
         :param bool is_full_expression: Whether to evaluate the result rather than running interpolation.
         """
+        if not isinstance(annostr, str):
+            raise AutomationException(f"Expected an AnnotatedString, got {type(annostr).__name__}")
         if not is_full_expression:
             return self.evaluator.transformed_str(annostr, extra_names=self.metavars)
 
@@ -204,29 +247,47 @@ class AutomationContext:
 
 
 class AutomationTarget:
-    def __init__(self, target):
-        #: :type: :class:`~cogs5e.models.sheet.statblock.StatBlock`
+    def __init__(self, autoctx: AutomationContext, target: Optional[Union["StatBlock", str]]):
+        self.autoctx = autoctx
         self.target = target
         self.is_simple = isinstance(target, str) or target is None
 
     @property
-    def name(self):
+    def name(self) -> str:
         if isinstance(self.target, str):
             return self.target
         return self.target.name
 
+    # ==== defensive ieffect helpers ====
     @property
-    def ac(self):
+    def ac(self) -> Optional[int]:
+        if self.is_simple:
+            return None
+        if not self.autoctx.allow_target_ieffects and self.combatant is not None:
+            return self.combatant.base_ac
         return self.target.ac
 
-    def get_save_dice(self, save, adv=None, sb=None):
-        save_obj = self.target.saves.get(save)
+    def get_resists(self):
+        if not self.autoctx.allow_target_ieffects and self.combatant is not None:
+            return self.combatant.base_resistances
+        return self.target.resistances
+
+    def get_save_dice(self, save_skill: str, adv: AdvantageType = None, sb: list[str] = None) -> str:
+        """Gets the save roll's dice string for the current target in the automation context."""
+        if self.is_simple:
+            raise ValueError("Cannot get the save dice of a simple (string/null) target")
+        elif self.autoctx.target is not self:
+            raise ValueError("Cannot get save dice of target when it is not active in context")
+
+        save_obj = self.target.saves.get(save_skill)
 
         # combatant
-        if sb and self.combatant:
-            sb += self.combatant.active_effects("sb")
-        elif self.combatant:
-            sb = self.combatant.active_effects("sb")
+        combatant = self.combatant
+        if combatant and self.autoctx.allow_target_ieffects:
+            if sb:
+                sb.extend(combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[]))
+            else:
+                sb = combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
 
         # character-specific arguments (#1443)
         reroll = None
@@ -234,36 +295,35 @@ class AutomationTarget:
             reroll = self.character.options.reroll
 
         boolwise_adv = {-1: False, 0: None, 1: True}.get(adv)
-        saveroll = save_obj.d20(base_adv=boolwise_adv, reroll=reroll)
+        save_dice = save_obj.d20(base_adv=boolwise_adv, reroll=reroll)
 
         if sb:
-            saveroll = f"{saveroll}+{'+'.join(sb)}"
+            save_dice = f"{save_dice}+{'+'.join(sb)}"
 
-        return saveroll
+        return save_dice
 
-    def get_resists(self):
-        return self.target.resistances
-
-    def damage(self, autoctx, amount, allow_overheal=True):
+    # ==== helpers ====
+    def damage(self, autoctx: AutomationContext, amount: int, allow_overheal: bool = True):
         if not self.is_simple:
             result = self.target.modify_hp(-amount, overflow=allow_overheal)
             autoctx.footer_queue(f"{self.target.name}: {result}")
 
             if isinstance(self.target, init.Combatant):
                 if self.target.is_private:
-                    autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
+                    autoctx.add_pm(self.target.controller_id, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
 
                 if self.target.is_concentrating() and amount > 0:
                     autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
 
-    @property
-    def combatant(self):
+    # ==== target base class helpers ====
+    @cached_property
+    def combatant(self) -> Optional[init.Combatant]:
         if isinstance(self.target, init.Combatant):
             return self.target
         return None
 
-    @property
-    def character(self):
+    @cached_property
+    def character(self) -> Optional[character_api.Character]:
         if isinstance(self.target, init.PlayerCombatant):
             return self.target.character
         elif isinstance(self.target, character_api.Character):

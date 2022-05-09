@@ -1,5 +1,6 @@
 import d20
 
+from utils.enums import AdvantageType
 from utils.functions import reconcile_adv
 from . import Effect
 from ..errors import AutomationException, NoAttackBonus, TargetException
@@ -8,7 +9,7 @@ from ..utils import stringify_intexpr
 
 
 class Attack(Effect):
-    def __init__(self, hit: list, miss: list, attackBonus: str = None, adv: int = None, **kwargs):
+    def __init__(self, hit: list, miss: list, attackBonus: str = None, adv: str = None, **kwargs):
         super().__init__("attack", **kwargs)
         self.hit = hit
         self.miss = miss
@@ -64,36 +65,33 @@ class Attack(Effect):
                 criton = autoctx.character.options.crit_on
 
         # explicit advantage
+        explicit_adv = None
         if self.adv:
             try:
-                self.adv = autoctx.parse_intexpression(self.adv)
+                explicit_adv = autoctx.parse_intexpression(self.adv)
             except Exception:
                 raise AutomationException(f"{self.adv!r} cannot be interpreted as an advantage type.")
 
         # check for combatant IEffects
-        if autoctx.combatant:
-            # bonus (#224)
-            effect_b = "+".join(autoctx.combatant.active_effects("b"))
-            if effect_b and b:
-                b = f"{b}+{effect_b}"
-            elif effect_b:
-                b = effect_b
-            # Combine args/ieffect advantages - adv/dis (#1552)
-            adv = reconcile_adv(
-                adv=args.last("adv", type_=bool, ephem=True)
-                or autoctx.combatant.active_effects("adv")
-                or self.adv == 1,
-                dis=args.last("dis", type_=bool, ephem=True)
-                or autoctx.combatant.active_effects("dis")
-                or self.adv == -1,
-                ea=args.last("ea", type_=bool, ephem=True) or autoctx.combatant.active_effects("ea") or self.adv == 2,
-            )
-        else:
-            adv = reconcile_adv(
-                adv=args.last("adv", type_=bool, ephem=True) or self.adv == 1,
-                dis=args.last("dis", type_=bool, ephem=True) or self.adv == -1,
-                ea=args.last("ea", type_=bool, ephem=True) or self.adv == 2,
-            )
+        # bonus (#224)
+        effect_b = autoctx.caster_active_effects(mapper=lambda effect: effect.effects.to_hit_bonus, reducer="+".join)
+        if effect_b and b:
+            b = f"{b}+{effect_b}"
+        elif effect_b:
+            b = effect_b
+        # Combine args/ieffect advantages - adv/dis (#1552)
+        effect_advs = autoctx.caster_active_effects(mapper=lambda effect: effect.effects.attack_advantage, default=[])
+        adv = reconcile_adv(
+            adv=args.last("adv", type_=bool, ephem=True)
+            or any(eadv == AdvantageType.ADV for eadv in effect_advs)
+            or explicit_adv == AdvantageType.ADV,
+            dis=args.last("dis", type_=bool, ephem=True)
+            or any(eadv == AdvantageType.DIS for eadv in effect_advs)
+            or explicit_adv == AdvantageType.DIS,
+            ea=args.last("ea", type_=bool, ephem=True)
+            or any(eadv == AdvantageType.ELVEN for eadv in effect_advs)
+            or explicit_adv == AdvantageType.ELVEN,
+        )
 
         # ==== target options ====
         if autoctx.target.character:
@@ -144,11 +142,11 @@ class Attack(Effect):
 
             if force_roll:
                 formatted_d20 = f"{force_roll}"
-            elif adv == 1:
+            elif adv == AdvantageType.ADV:
                 formatted_d20 = f"2d20{reroll_str}kh1"
-            elif adv == 2:
+            elif adv == AdvantageType.ELVEN:
                 formatted_d20 = f"3d20{reroll_str}kh1"
-            elif adv == -1:
+            elif adv == AdvantageType.DIS:
                 formatted_d20 = f"2d20{reroll_str}kl1"
             else:
                 formatted_d20 = f"1d20{reroll_str}"
@@ -169,9 +167,10 @@ class Attack(Effect):
             d20_value = d20.utils.leftmost(to_hit_roll.expr).total
 
             # -ac #
-            target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
+            target_ac = autoctx.target.ac
+            target_has_ac = target_ac is not None
             if target_has_ac:
-                ac = ac or autoctx.target.ac
+                ac = ac or target_ac
 
             # assign hit values
             if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # natural crit
@@ -259,13 +258,16 @@ class Attack(Effect):
             attack_bonus = stringify_intexpr(evaluator, self.bonus)
 
         out = f"Attack: {attack_bonus:+} to hit"
-        match self.adv:
-            case 1:
-                out += ", with advantage"
-            case 2:
-                out += ", with Elven Accuracy"
-            case -1:
-                out += ", with disdvantage"
+
+        if self.adv:
+            match stringify_intexpr(evaluator, self.adv):
+                case AdvantageType.ADV:
+                    out += ", with advantage"
+                case AdvantageType.ELVEN:
+                    out += ", with Elven Accuracy"
+                case AdvantageType.DIS:
+                    out += ", with disdvantage"
+
         if self.hit:
             hit_out = self.build_child_str(self.hit, caster, evaluator)
             if hit_out:

@@ -90,6 +90,16 @@ To install the dependencies, run:
 (venv) $ pip install -r requirements.txt
 ```
 
+*Optional* - You can install the `avrae-automation-common` and `draconic` dependencies from your local filesystem
+rather than pip+git, to make working on depended libraries in parallel easier:
+
+```bash
+(venv) $ pip install /path/to/automation-common -e
+(venv) $ pip install /path/to/draconic -e
+```
+
+Any changes to the library will immediately be picked up in avrae without requiring a reinstall of the library.
+
 #### Environment Variables
 
 | Name                             | Description                                                                                                                                                                      | Used For                      | Set By (dev)         | Set By (prod)                     | Required?       |
@@ -101,7 +111,7 @@ To install the dependencies, run:
 | `NUM_CLUSTERS`                   | The number of clusters (ECS tasks) Avrae is running across. Defaults to 1.                                                                                                       | Cluster coordination          | N/A                  | Terraform                         | *prod only*     |
 | `NUM_SHARDS`                     | An explicit override for the number of shards to run across all shards. Defaults to dynamic value from Discord.                                                                  | Cluster coordination          | N/A                  | Terraform (nightly/stg)           | no              |
 | `RELOAD_INTERVAL`                | An interval to automatically reload gamedata at, in seconds. Defaults to 0. This should be set to 0.                                                                             | Loading gamedata              | N/A                  | N/A                               | no              |
-| `ECS_CONTAINER_METADATA_URI`     | <https://docs.aws.amazon.com/AmazonECS/latest/userguide/task-metadata-endpoint-v3-fargate.html>                                                                                    | Cluster coordination          | N/A                  | AWS Fargate                       | *prod only*     |
+| `ECS_CONTAINER_METADATA_URI`     | <https://docs.aws.amazon.com/AmazonECS/latest/userguide/task-metadata-endpoint-v3-fargate.html>                                                                                  | Cluster coordination          | N/A                  | AWS Fargate                       | *prod only*     |
 | `DISCORD_OWNER_USER_ID`          | The Discord user ID of the bot administrator.                                                                                                                                    | Admin command checks          | you                  | Terraform                         | **yes**         |
 | `MONSTER_TOKEN_ENDPOINT`         | The base URL that monster token paths defined in monster gamedata are relative to.                                                                                               | `!token`                      | N/A                  | Terraform                         | *prod only*     |
 | `DRACONIC_SIGNATURE_SECRET`      | The secret used to sign signatures in the Draconic API's `signature()` function. Defaults to `secret`.                                                                           | Aliasing                      | optional             | AWS Secrets Manager via Terraform | *prod only*     |

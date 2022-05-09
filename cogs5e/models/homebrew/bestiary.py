@@ -1,8 +1,11 @@
 import hashlib
 import logging
 import re
+from typing import List
 
 import aiohttp
+import automation_common
+import pydantic
 import yaml
 from markdownify import markdownify
 from math import floor
@@ -432,19 +435,18 @@ def parse_critterdb_traits(data, key):
                         raise ExternalImportError(f"Monster had an invalid automation YAML ({data['name']}: {name})")
                     if not isinstance(attack_yaml, list):
                         attack_yaml = [attack_yaml]
-                    for atk in attack_yaml:
-                        if isinstance(atk, dict):
-                            atk["name"] = atk_name = atk.get("name") or name
-                            try:
-                                attacks.append(Attack.from_dict(atk))
-                            except Exception:
-                                raise ExternalImportError(
-                                    f"An automation YAML contained an invalid attack ({data['name']}: {atk_name})"
-                                )
-                        else:
-                            raise ExternalImportError(
-                                f"An automation YAML contained an invalid attack ({data['name']}: {name})"
-                            )
+
+                    try:
+                        normalized_obj = pydantic.parse_obj_as(
+                            List[automation_common.validation.models.AttackModel], attack_yaml, type_name="AttackList"
+                        )
+                    except pydantic.ValidationError as e:
+                        err_fmt = automation_common.validation.utils.format_validation_error(e)
+                        raise ExternalImportError(
+                            f"An automation YAML for {data['name']} contained an invalid attack: ```py\n{err_fmt}\n```"
+                        )
+
+                    attacks.extend(Attack.from_dict(a.dict()) for a in normalized_obj)
                 # else: empty override, so skip this attack.
         elif raw_atks:
             for atk in raw_atks:

@@ -528,9 +528,4 @@ def get_initials(name: str) -> str:
         return name[:2].upper()
 
     # Multiple words, find initials
-    initials = ""
-    for word in split_name:
-        if word:
-            initials += word[0]
-
-    return initials
+    return "".join(word[0] for word in split_name if word)

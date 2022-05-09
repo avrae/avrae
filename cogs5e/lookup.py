@@ -290,7 +290,7 @@ class Lookup(commands.Cog):
             visible = False
             await try_delete(ctx.message)
 
-        choices = await lookuputils.get_monster_choices(ctx, filter_by_license=False)
+        choices = await lookuputils.get_monster_choices(ctx)
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=pm_lookup)
 
         embed_queue = [EmbedWithAuthor(ctx)]
@@ -431,7 +431,7 @@ class Lookup(commands.Cog):
         if hide_name:
             await try_delete(ctx.message)
 
-        choices = await lookuputils.get_monster_choices(ctx, filter_by_license=False)
+        choices = await lookuputils.get_monster_choices(ctx)
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
@@ -468,7 +468,7 @@ class Lookup(commands.Cog):
         if hide_name:
             await try_delete(ctx.message)
 
-        choices = await lookuputils.get_monster_choices(ctx, filter_by_license=False)
+        choices = await lookuputils.get_monster_choices(ctx)
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
@@ -508,7 +508,7 @@ class Lookup(commands.Cog):
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
-        choices = await lookuputils.get_spell_choices(ctx, filter_by_license=False)
+        choices = await lookuputils.get_spell_choices(ctx)
         spell = await lookuputils.search_entities(ctx, {"spell": choices}, name)
 
         embed = EmbedWithAuthor(ctx)
@@ -567,7 +567,7 @@ class Lookup(commands.Cog):
     @commands.command(name="item")
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
-        choices = await lookuputils.get_item_choices(ctx, filter_by_license=False)
+        choices = await lookuputils.get_item_choices(ctx)
         item = await lookuputils.search_entities(ctx, {"magic-item": choices}, name, query_type="item")
 
         embed = EmbedWithAuthor(ctx)

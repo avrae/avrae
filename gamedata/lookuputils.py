@@ -123,13 +123,6 @@ async def handle_required_license(ctx, err):
 
 
 # ---- helpers ----
-def get_homebrew_formatted_name(named: "Sourced") -> str:
-    if named.homebrew:
-        return f"{named.name} ({HOMEBREW_EMOJI} {named.source})"
-    entity_source = named.source if not named.is_legacy else f"{named.source}; *legacy*"
-    return f"{named.name} ({entity_source})"
-
-
 def handle_source_footer(
     embed, sourced: "Sourced", text: str = None, add_source_str: bool = True, allow_overwrite: bool = False
 ):
@@ -308,17 +301,7 @@ async def search_entities(
 
 
 # ---- monster stuff ----
-async def select_monster_full(
-    ctx,
-    name,
-    cutoff=5,
-    pm=False,
-    message=None,
-    list_filter=None,
-    return_metadata=False,
-    extra_choices=None,
-    selectkey=None,
-):
+async def select_monster_full(ctx, name, extra_choices=None, **kwargs):
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
@@ -328,38 +311,19 @@ async def select_monster_full(
     # #881
     if extra_choices:
         choices.extend(extra_choices)
-    if selectkey is None:
-        selectkey = get_homebrew_formatted_name
 
-    return await search_and_select(
-        ctx,
-        choices,
-        name,
-        lambda e: e.name,
-        cutoff,
-        pm,
-        message,
-        list_filter,
-        selectkey=selectkey,
-        return_metadata=return_metadata,
-    )
+    return await search_entities(ctx, {"monster": choices}, name, **kwargs)
 
 
-async def get_monster_choices(ctx, filter_by_license=True, homebrew=True):
+async def get_monster_choices(ctx, homebrew=True):
     """
     Gets a list of monsters in the current context for the user to choose from.
 
     :param ctx: The context.
-    :param filter_by_license: Whether to filter out entities the user cannot access.
     :param homebrew: Whether to include homebrew entities.
     """
-    if filter_by_license:
-        available_monsters = await available(ctx, compendium.monsters, "monster")
-    else:
-        available_monsters = compendium.monsters
-
     if not homebrew:
-        return available_monsters
+        return compendium.monsters
 
     # personal bestiary
     try:
@@ -372,7 +336,7 @@ async def get_monster_choices(ctx, filter_by_license=True, homebrew=True):
         bestiary_id = None
 
     # server bestiaries
-    choices = list(itertools.chain(available_monsters, custom_monsters))
+    choices = list(itertools.chain(compendium.monsters, custom_monsters))
     if ctx.guild:
         async for servbestiary in Bestiary.server_bestiaries(ctx):
             if servbestiary.id != bestiary_id:
@@ -386,7 +350,7 @@ async def select_spell_full(ctx, name, *args, extra_choices=None, **kwargs):
     """
     Gets a Spell from the compendium and active tome(s).
 
-    :rtype: :class:`~cogs5e.models.spell.Spell`
+    :rtype: :class:`gamedata.Spell`
     """
     choices = await get_spell_choices(ctx)
     await Stats.increase_stat(ctx, "spells_looked_up_life")
@@ -394,27 +358,19 @@ async def select_spell_full(ctx, name, *args, extra_choices=None, **kwargs):
     # #881
     if extra_choices:
         choices.extend(extra_choices)
-    if "selectkey" not in kwargs:
-        kwargs["selectkey"] = get_homebrew_formatted_name
 
-    return await search_and_select(ctx, choices, name, lambda e: e.name, *args, **kwargs)
+    return await search_entities(ctx, {"spell": choices}, name, **kwargs)
 
 
-async def get_spell_choices(ctx, filter_by_license=True, homebrew=True):
+async def get_spell_choices(ctx, homebrew=True):
     """
     Gets a list of spells in the current context for the user to choose from.
 
     :param ctx: The context.
-    :param filter_by_license: Whether to filter out entities the user cannot access.
     :param homebrew: Whether to include homebrew entities.
     """
-    if filter_by_license:
-        available_spells = await available(ctx, compendium.spells, "spell")
-    else:
-        available_spells = compendium.spells
-
     if not homebrew:
-        return available_spells
+        return compendium.spells
 
     # personal active tome
     try:
@@ -426,7 +382,7 @@ async def get_spell_choices(ctx, filter_by_license=True, homebrew=True):
         tome_id = None
 
     # server tomes
-    choices = list(itertools.chain(available_spells, custom_spells))
+    choices = list(itertools.chain(compendium.spells, custom_spells))
     if ctx.guild:
         async for servtome in Tome.server_active(ctx):
             if servtome.id != tome_id:
@@ -435,21 +391,15 @@ async def get_spell_choices(ctx, filter_by_license=True, homebrew=True):
 
 
 # ---- item stuff ----
-async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
+async def get_item_choices(ctx, homebrew=True):
     """
     Gets a list of items in the current context for the user to choose from.
 
     :param ctx: The context.
-    :param filter_by_license: Whether to filter out entities the user cannot access.
     :param homebrew: Whether to include homebrew entities.
     """
-    if filter_by_license:
-        available_items = await available(ctx, compendium.items, "magic-item")
-    else:
-        available_items = compendium.items
-
     if not homebrew:
-        return available_items
+        return compendium.items
 
     # personal pack
     try:
@@ -461,7 +411,7 @@ async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
         pack_id = None
 
     # server packs
-    choices = list(itertools.chain(available_items, custom_items))
+    choices = list(itertools.chain(compendium.items, custom_items))
     if ctx.guild:
         async for servpack in Pack.server_active(ctx):
             if servpack.id != pack_id:
@@ -470,7 +420,7 @@ async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
 
 
 # ---- race stuff ----
-async def get_race_choices(ctx, filter_by_license=True):
+async def available_races(ctx, filter_by_license=True):
     """
     Gets a list of races in the current context for the user to choose from.
 
@@ -478,25 +428,9 @@ async def get_race_choices(ctx, filter_by_license=True):
     :param filter_by_license: Whether to filter out entities the user cannot access.
     """
     if filter_by_license:
-        available_races = await available(ctx, compendium.races, "race")
-        available_races.extend(await available(ctx, compendium.subraces, "subrace"))
+        races = await available(ctx, compendium.races, "race")
+        races.extend(await available(ctx, compendium.subraces, "subrace"))
     else:
-        available_races = compendium.races + compendium.subraces
+        races = compendium.races + compendium.subraces
 
-    return available_races
-
-
-async def get_rfeat_choices(ctx, filter_by_license=True):
-    """
-    Gets a list of racefeats in the current context for the user to choose from.
-
-    :param ctx: The context.
-    :param filter_by_license: Whether to filter out entities the user cannot access.
-    """
-    if filter_by_license:
-        available_rfeats = await available(ctx, compendium.rfeats, "race")
-        available_rfeats.extend(await available(ctx, compendium.subrfeats, "subrace"))
-    else:
-        available_rfeats = compendium.rfeats + compendium.subrfeats
-
-    return available_rfeats
+    return races

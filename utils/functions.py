@@ -190,7 +190,8 @@ async def get_selection(
     if delete and not pm:
         with suppress(disnake.HTTPException):
             await select_msg.delete()
-            await m.delete()
+            if m is not None:
+                await m.delete()
     if m is None or m.content.lower() == "c":
         raise SelectionCancelled()
     return choices[int(m.content) - 1]

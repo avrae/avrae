@@ -510,3 +510,21 @@ def exactly_one(iterable):
     if next(iterable, sentinel) is sentinel:
         return retval
     return None
+
+
+split_regex = re.compile(r"\W+")
+
+
+def get_initials(name: str) -> str:
+    """
+    Returns the initials for a given string if its multiple words, otherwise returns the first two letters in uppercase.
+    """
+    # Mainly used for monster combatants in initiative
+    split_name = split_regex.split(name)
+
+    # Single word, return first two letters, uppercase
+    if len(split_name) == 1:
+        return name[:2].upper()
+
+    # Multiple words, find initials
+    return "".join(word[0] for word in split_name if word)

@@ -22,7 +22,7 @@ from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
 from utils.argparser import argparse
-from utils.functions import confirm, get_guild_member, search_and_select, try_delete
+from utils.functions import confirm, get_guild_member, search_and_select, try_delete, get_initials
 from . import (
     Combat,
     CombatOptions,
@@ -281,7 +281,7 @@ class InitTracker(commands.Cog):
         ac = args.last("ac", type_=int)
         n = args.last("n", 1)
         note = args.last("note")
-        name_template = args.last("name", monster.name[:2].upper() + "#")
+        name_template = args.last("name", get_initials(monster.name) + "#")
         init_skill = monster.skills.initiative
 
         combat = await ctx.get_combat()

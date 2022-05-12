@@ -405,8 +405,11 @@ class _PassiveEffectsWrapper:
         except ValueError as e:
             raise InvalidIntExpression("`attack_advantage` must be -1, 0, 1, or 2.") from e
 
-    def resolve_annotatedstring_list(self, autoctx, attr: str) -> list[str]:
-        """Given an attr, evaluates each element in data[attr] as an AnnotatedString."""
+    def resolve_annotatedstring_list(self, autoctx, attr: str, allow_falsy=False) -> list[str]:
+        """
+        Given an attr, evaluates each element in data[attr] as an AnnotatedString. If allow_falsy is false, filters out
+        empty strings from the resulting list.
+        """
         data = self.data.get(attr)
         if data is None:
             return []
@@ -414,13 +417,15 @@ class _PassiveEffectsWrapper:
             raise AutomationException(f"`{attr}` must be a list of AnnotatedString if supplied.")
         out = []
         for value in data:
-            out.append(autoctx.parse_annostr(value))
+            resolved = autoctx.parse_annostr(value)
+            if resolved or allow_falsy:
+                out.append(resolved)
         return out
 
     def resolve_resistances(self, autoctx, attr: str) -> list[Resistance]:
         """resistances: a list of AnnotatedString -> a list of Resistance"""
         data = self.resolve_annotatedstring_list(autoctx, attr)
-        return [Resistance.from_str(dt) for dt in data if dt]
+        return [Resistance.from_str(dt) for dt in data]
 
     def resolve_save_advs(self, autoctx, attr: str) -> set[str]:
         """save_adv: a list of AnnotatedString -> a set of str"""

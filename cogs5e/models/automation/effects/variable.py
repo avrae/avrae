@@ -26,7 +26,7 @@ class SetVariable(Effect):
         super().run(autoctx)
         level_value = self.value
         # handle upcast
-        if autoctx.is_spell and self.higher and autoctx.get_cast_level() != autoctx.spell.level:
+        if self.higher:
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
                 level_value = higher

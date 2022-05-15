@@ -3,6 +3,7 @@ from typing import List, Optional, TYPE_CHECKING
 
 import disnake
 
+import gamedata
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.attack import Attack, old_to_automation
 from utils.argparser import ParsedArguments
@@ -39,11 +40,15 @@ class AttackInteraction(InitEffectInteraction):
         override_default_dc: Optional[int] = None,
         override_default_attack_bonus: Optional[int] = None,
         override_default_casting_mod: Optional[int] = None,
+        granting_spell_id: Optional[int] = None,
+        granting_spell_cast_level: Optional[int] = None,
     ):
         self.inner_attack = attack
         self.override_default_dc = override_default_dc
         self.override_default_attack_bonus = override_default_attack_bonus
         self.override_default_casting_mod = override_default_casting_mod
+        self.granting_spell_id = granting_spell_id
+        self.granting_spell_cast_level = granting_spell_cast_level
 
     @classmethod
     def from_dict(cls, data):
@@ -52,6 +57,8 @@ class AttackInteraction(InitEffectInteraction):
             override_default_dc=data.get("override_default_dc"),
             override_default_attack_bonus=data.get("override_default_attack_bonus"),
             override_default_casting_mod=data.get("override_default_casting_mod"),
+            granting_spell_id=data.get("granting_spell_id"),
+            granting_spell_cast_level=data.get("granting_spell_cast_level"),
         )
 
     def to_dict(self):
@@ -60,6 +67,8 @@ class AttackInteraction(InitEffectInteraction):
             "override_default_dc": self.override_default_dc,
             "override_default_attack_bonus": self.override_default_attack_bonus,
             "override_default_casting_mod": self.override_default_casting_mod,
+            "granting_spell_id": self.granting_spell_id,
+            "granting_spell_cast_level": self.granting_spell_cast_level,
         }
 
     @property
@@ -71,10 +80,16 @@ class AttackInteraction(InitEffectInteraction):
         Not the most elegant solution ever, but oh well.
         """
         attack = Attack.copy(self.inner_attack)
+        if self.granting_spell_id is not None:
+            spell = gamedata.compendium.lookup_entity(gamedata.Spell.entity_type, self.granting_spell_id)
+        else:
+            spell = None
         attack.__run_automation_kwargs__ = dict(
             ab_override=self.override_default_attack_bonus,
             dc_override=self.override_default_dc,
             spell_override=self.override_default_casting_mod,
+            spell=spell,
+            spell_level_override=self.granting_spell_cast_level,
         )
         return attack
 
@@ -96,6 +111,8 @@ class ButtonInteraction(InitEffectInteraction):
         override_default_dc: Optional[int] = None,
         override_default_attack_bonus: Optional[int] = None,
         override_default_casting_mod: Optional[int] = None,
+        granting_spell_id: Optional[int] = None,
+        granting_spell_cast_level: Optional[int] = None,
     ):
         self.id = id
         self.automation = automation
@@ -105,6 +122,8 @@ class ButtonInteraction(InitEffectInteraction):
         self.override_default_dc = override_default_dc
         self.override_default_attack_bonus = override_default_attack_bonus
         self.override_default_casting_mod = override_default_casting_mod
+        self.granting_spell_id = granting_spell_id
+        self.granting_spell_cast_level = granting_spell_cast_level
 
     @classmethod
     def new(
@@ -117,6 +136,8 @@ class ButtonInteraction(InitEffectInteraction):
         override_default_dc: Optional[int] = None,
         override_default_attack_bonus: Optional[int] = None,
         override_default_casting_mod: Optional[int] = None,
+        granting_spell_id: Optional[int] = None,
+        granting_spell_cast_level: Optional[int] = None,
     ):
         return cls(
             id=create_button_interaction_id(),
@@ -127,6 +148,8 @@ class ButtonInteraction(InitEffectInteraction):
             override_default_dc=override_default_dc,
             override_default_attack_bonus=override_default_attack_bonus,
             override_default_casting_mod=override_default_casting_mod,
+            granting_spell_id=granting_spell_id,
+            granting_spell_cast_level=granting_spell_cast_level,
         )
 
     @classmethod
@@ -142,6 +165,8 @@ class ButtonInteraction(InitEffectInteraction):
             override_default_dc=data.get("override_default_dc"),
             override_default_attack_bonus=data.get("override_default_attack_bonus"),
             override_default_casting_mod=data.get("override_default_casting_mod"),
+            granting_spell_id=data.get("granting_spell_id"),
+            granting_spell_cast_level=data.get("granting_spell_cast_level"),
         )
 
     def to_dict(self):
@@ -154,6 +179,8 @@ class ButtonInteraction(InitEffectInteraction):
             "override_default_dc": self.override_default_dc,
             "override_default_attack_bonus": self.override_default_attack_bonus,
             "override_default_casting_mod": self.override_default_casting_mod,
+            "granting_spell_id": self.granting_spell_id,
+            "granting_spell_cast_level": self.granting_spell_cast_level,
         }
 
     def __str__(self):

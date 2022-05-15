@@ -482,6 +482,8 @@ class _AttackInteractionWrapper:
             override_default_dc=maybe_intexpression(autoctx, self.default_dc),
             override_default_attack_bonus=maybe_intexpression(autoctx, self.default_attack_bonus),
             override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
+            granting_spell_id=autoctx.spell.entity_id if autoctx.is_spell else None,
+            granting_spell_cast_level=autoctx.get_cast_level(),
         )
 
 
@@ -561,6 +563,8 @@ class _ButtonInteractionWrapper:
             override_default_dc=maybe_intexpression(autoctx, self.default_dc),
             override_default_attack_bonus=maybe_intexpression(autoctx, self.default_attack_bonus),
             override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
+            granting_spell_id=autoctx.spell.entity_id if autoctx.is_spell else None,
+            granting_spell_cast_level=autoctx.get_cast_level(),
         )
 
 

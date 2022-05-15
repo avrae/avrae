@@ -43,6 +43,7 @@ class Automation:
         ab_override: Optional[int] = None,
         dc_override: Optional[int] = None,
         spell_override: Optional[int] = None,
+        spell_level_override: Optional[int] = None,
         title: Optional[str] = None,
         crit_type: CritDamageType = None,
         ieffect: Optional["InitiativeEffect"] = None,
@@ -60,11 +61,12 @@ class Automation:
         :param targets: A list of str or StatBlock or None hit by this automation.
         :param args: ParsedArguments.
         :param combat: The combat this automation is being run in.
-        :param spell: The spell being cast that is running this automation.
+        :param spell: The spell responsible for granting the automation, either directly or through an InitiativeEffect.
         :param conc_effect: The initiative effect that is used to track concentration caused by running this.
         :param ab_override: Forces a default attack bonus.
         :param dc_override: Forces a default DC.
         :param spell_override: Forces a default spell modifier.
+        :param spell_level_override: Forces the default casting level of the spell.
         :param title: The title of the action, used when sending private messages after execution.
         :param crit_type: The method of adding critical damage
         :param ieffect: If the automation is running as an effect of an InitiativeEffect, the InitiativeEffect that has
@@ -88,6 +90,7 @@ class Automation:
             ab_override=ab_override,
             dc_override=dc_override,
             spell_override=spell_override,
+            spell_level_override=spell_level_override,
             crit_type=crit_type,
             ieffect=ieffect,
             allow_caster_ieffects=allow_caster_ieffects,

@@ -611,7 +611,7 @@ Used to specify a button that will appear on the targeted combatant's turn and e
 
 Remove IEffect
 --------------
-.. versionadded:: 3.6.0
+.. versionadded:: 4.0.0
 
 
 .. code-block:: typescript
@@ -942,7 +942,7 @@ No variables are exposed.
 
 Ability Check
 -------------
-.. versionadded:: 3.6.0
+.. versionadded:: 4.0.0
 
 .. code-block:: typescript
 

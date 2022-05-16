@@ -3,6 +3,7 @@ import textwrap
 import traceback
 import uuid
 from contextlib import suppress
+from typing import List
 
 import disnake
 import draconic
@@ -450,7 +451,7 @@ async def handle_alias_exception(ctx, err):
         )
 
 
-async def send_warnings(ctx, warns: list[evaluators.ScriptingWarning]):
+async def send_warnings(ctx, warns: List["evaluators.ScriptingWarning"]):
     if not warns:
         return
 

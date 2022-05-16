@@ -2,6 +2,7 @@ import asyncio
 
 import disnake
 
+import gamedata
 from cogs5e.utils import actionutils
 from utils.argparser import ParsedArguments
 from . import Combat, CombatNotFound, CombatantType, utils
@@ -65,6 +66,11 @@ class ButtonHandler:
         else:
             verb = f"uses {button_interaction.label}"
 
+        if button_interaction.granting_spell_id is not None:
+            spell = gamedata.compendium.lookup_entity(gamedata.Spell.entity_type, button_interaction.granting_spell_id)
+        else:
+            spell = None
+
         embed = disnake.Embed(color=combatant.get_color())
         embed.title = f"{combatant.get_title_name()} {verb}!"
         result = await actionutils.run_automation(
@@ -80,6 +86,8 @@ class ButtonHandler:
             ab_override=button_interaction.override_default_attack_bonus,
             dc_override=button_interaction.override_default_dc,
             spell_override=button_interaction.override_default_casting_mod,
+            spell=spell,
+            spell_level_override=button_interaction.granting_spell_cast_level,
         )
 
         # and send the result

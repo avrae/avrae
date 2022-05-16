@@ -57,6 +57,7 @@ class Monster(StatBlock, Sourced):
         mythic_actions: list = None,
         la_per_round=3,
         passiveperc: int = None,
+        hide_cr: bool = None,
         # augmented
         resistances: Resistances = None,
         attacks: AttackList = None,
@@ -109,6 +110,7 @@ class Monster(StatBlock, Sourced):
             page=kwargs.get("page"),
             url=kwargs.get("url"),
             is_free=kwargs.get("is_free"),
+            is_legacy=kwargs.get("is_legacy"),
         )
         StatBlock.__init__(
             self,
@@ -130,6 +132,7 @@ class Monster(StatBlock, Sourced):
         self.hitdice = hitdice
         self.speed = speed
         self.cr = cr
+        self.hide_cr = hide_cr
         self.xp = xp
         self.passive = passiveperc
         self.senses = senses
@@ -194,6 +197,7 @@ class Monster(StatBlock, Sourced):
             mythic_actions=mythic_actions,
             la_per_round=d["la_per_round"],
             passiveperc=d["passiveperc"],
+            hide_cr=d.get("hide_cr"),
             # augmented
             resistances=resistances,
             attacks=attacks,
@@ -208,6 +212,7 @@ class Monster(StatBlock, Sourced):
             page=d["page"],
             url=d["url"],
             is_free=d["isFree"],
+            is_legacy=d.get("isLegacy", False),
         )
 
     @classmethod
@@ -337,7 +342,9 @@ class Monster(StatBlock, Sourced):
             desc += f"**Languages:** {', '.join(self.languages)}\n"
         else:
             desc += "**Languages:** --\n"
-        desc += f"**CR:** {self.cr} ({self.xp} XP)"
+
+        if not self.hide_cr:
+            desc += f"**CR:** {self.cr} ({self.xp} XP)"
         return desc
 
     def get_title_name(self):

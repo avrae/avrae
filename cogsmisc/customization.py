@@ -48,7 +48,7 @@ STAT_VAR_NAMES = (
     )
 )
 
-SPECIAL_ARGS = {"crit", "nocrit", "hit", "miss", "ea", "adv", "dis", "pass", "fail", "noconc", "max", "magical"}
+SPECIAL_ARGS = {"crit", "nocrit", "hit", "miss", "eadv", "adv", "dis", "pass", "fail", "noconc", "max", "magical"}
 
 # Don't use any iterables with a string as only element. It will add all the chars instead of the string
 SPECIAL_ARGS.update(DAMAGE_TYPES, STAT_NAMES, STAT_ABBREVIATIONS, SKILL_NAMES, STAT_VAR_NAMES, SAVE_NAMES)
@@ -385,7 +385,8 @@ class CollectableManagementGroup(commands.Group):
                 if binding["name"] == old_name:
                     choices.append((f"{old_name} ({the_collection.name})", (subscription_doc, the_collection)))
 
-        old_obj, collection = await get_selection(ctx, choices)
+        result = await get_selection(ctx, choices, key=lambda pair: pair[0])
+        _, (old_obj, collection) = result
 
         if isinstance(old_obj, self.personal_cls):
             if await self.personal_cls.get_named(new_name, ctx):

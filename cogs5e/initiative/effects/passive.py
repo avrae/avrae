@@ -237,7 +237,7 @@ class InitPassiveEffect:
         ac_value, ac_bonus = resolve_value_or_bonus(args.get("ac"))
         max_hp_value, max_hp_bonus = resolve_value_or_bonus(args.get("maxhp"))
         return cls(
-            attack_advantage=AdvantageType(args.adv(ea=True)),
+            attack_advantage=AdvantageType(args.adv(eadv=True)),
             to_hit_bonus=args.join("b", "+"),
             damage_bonus=args.join("d", "+"),
             magical_damage="magical" in args,

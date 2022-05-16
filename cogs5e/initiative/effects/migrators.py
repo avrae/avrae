@@ -43,7 +43,7 @@ def jit_v1_to_v2(d: dict, combat: "Combat", combatant: "Combatant") -> Initiativ
         pass
 
     effects = InitPassiveEffect(
-        attack_advantage=AdvantageType(reconcile_adv(adv=data.get("adv"), dis=data.get("dis"), ea=data.get("ea"))),
+        attack_advantage=AdvantageType(reconcile_adv(adv=data.get("adv"), dis=data.get("dis"), eadv=data.get("eadv"))),
         to_hit_bonus=data.get("b"),
         damage_bonus=data.get("d"),
         magical_damage=bool(data.get("magical")),

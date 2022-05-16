@@ -121,13 +121,16 @@ class DiscordHTTPProxy(HTTPClient):
     async def request(self, route, *, files=None, header_bypass_delay=None, **kwargs):
         req = Request(route.method, route.url, kwargs.get("data") or kwargs.get("json"))
         log.info(str(req))
-        await self._request_check_queue.put(req)
 
         request_route = f"{req.method} {req.url.split(Route.BASE)[-1]}"
         try:
             endpoint = next(k for k in RESPONSES if fnmatchcase(request_route, k))
         except StopIteration:
             raise RuntimeError("Bot requested an endpoint we don't have a test for")
+
+        # ignore typing events
+        if not fnmatchcase(request_route, "POST /channels/*/typing"):
+            await self._request_check_queue.put(req)
 
         return RESPONSES[endpoint](req.data)
 
@@ -227,16 +230,6 @@ class DiscordHTTPProxy(HTTPClient):
 
         assert request.method == "DELETE"
         assert request.url.endswith(f"/channels/{channel}/pins/{MESSAGE_ID}")
-
-    async def receive_typing(self, dm=False):
-        """
-        Assert that the bot sends typing.
-        """
-        request = await self.get_request()
-        channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
-
-        assert request.method == "POST"
-        assert request.url.endswith(f"/channels/{channel}/typing")
 
     async def receive_reaction(self, emoji, dm=False):
         """

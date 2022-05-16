@@ -31,6 +31,7 @@ class Race(Sourced):
             page=d["page"],
             url=d["url"],
             is_free=d["isFree"],
+            is_legacy=d.get("isLegacy", False),
         )
         inst.traits = [RaceFeature.from_data(t, inst) for t in d["traits"]]
         return inst
@@ -63,6 +64,7 @@ class RaceFeature(LimitedUseGrantorMixin, DescribableMixin, Sourced):
             page=d["page"],
             source=d.get("source", source_race.source),
             is_free=d.get("isFree", source_race.is_free),
+            is_legacy=d.get("isLegacy", source_race.is_legacy),
             url=d.get("url", source_race.raw_url),
             entitlement_entity_id=d.get("entitlementEntityId", source_race.entity_id),
             entitlement_entity_type=d.get("entitlementEntityType", source_race.entity_type),
@@ -93,6 +95,7 @@ class RaceFeatureOption(LimitedUseGrantorMixin, Sourced):
             page=race_feature.page,
             source=race_feature.source,
             is_free=race_feature.is_free,
+            is_legacy=race_feature.is_legacy,
             url=race_feature.raw_url,
             entitlement_entity_id=race_feature.entitlement_entity_id,
             entitlement_entity_type=race_feature.entitlement_entity_type,

@@ -11,7 +11,7 @@ from utils.aldclient import discord_user_to_dict
 from utils.constants import STAT_ABBREVIATIONS
 from utils.enums import CritDamageType
 from utils.functions import natural_join
-from utils.settings.guild import InlineRollingType, ServerSettings, RandcharRule
+from utils.settings.guild import InlineRollingType, ServerSettings, RandcharRule, LegacyPreference
 from .menu import MenuBase
 
 _AvraeT = TypeVar("_AvraeT", bound=disnake.Client)
@@ -21,19 +21,6 @@ if TYPE_CHECKING:
     _AvraeT = Avrae
 
 TOO_MANY_ROLES_SENTINEL = "__special:too_many_roles"
-
-
-def get_over_under_desc(rules) -> str:
-    if not rules:
-        return "None"
-    out = []
-    for rule in rules:
-        out.append(f"{rule.amount} {'over' if rule.type == 'gt' else 'under'} {rule.value}")
-    return f"At least {', '.join(out)}"
-
-
-def stat_names_desc(stat_names: list) -> str:
-    return ", ".join(stat_names or [stat.upper() for stat in STAT_ABBREVIATIONS])
 
 
 class ServerSettingsMenuBase(MenuBase, abc.ABC):
@@ -103,7 +90,8 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             value=f"**DM Roles**: {dm_roles}\n"
             f"**Monsters Require DM**: {self.settings.lookup_dm_required}\n"
             f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
-            f"**Direct Message Results**: {self.settings.lookup_pm_result}",
+            f"**Direct Message Results**: {self.settings.lookup_pm_result}\n"
+            f"**Prefer Legacy Content**: {legacy_preference_desc(self.settings.legacy_preference)}",
             inline=False,
         )
         embed.add_field(name="Inline Rolling Settings", value=await self.get_inline_rolling_desc(), inline=False)
@@ -137,6 +125,13 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         return {"embed": embed}
 
 
+_LEGACY_PREFERENCE_SELECT_OPTIONS = [
+    disnake.SelectOption(label="No", value=str(LegacyPreference.LATEST.value)),
+    disnake.SelectOption(label="Yes", value=str(LegacyPreference.LEGACY.value)),
+    disnake.SelectOption(label="Always Ask", value=str(LegacyPreference.ASK.value)),
+]
+
+
 class _LookupSettingsUI(ServerSettingsMenuBase):
     select_dm_roles: disnake.ui.Select  # make the type checker happy
 
@@ -167,6 +162,12 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
     @disnake.ui.button(label="Toggle Direct Message Results", style=disnake.ButtonStyle.primary, row=1)
     async def toggle_pm_result(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.lookup_pm_result = not self.settings.lookup_pm_result
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.select(placeholder="Select Legacy Preference", options=_LEGACY_PREFERENCE_SELECT_OPTIONS, row=2)
+    async def legacy_preference_select(self, select: disnake.ui.Select, interaction: disnake.Interaction):
+        self.settings.legacy_preference = int(select.values[0])
         await self.commit_settings()
         await self.refresh_content(interaction)
 
@@ -282,6 +283,13 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
             f"*If this is enabled, the result of all lookups will be direct messaged to the user who looked "
             f"it up, rather than being printed to the channel.*",
             inline=False,
+        )
+        embed.add_field(
+            name="Prefer Legacy Content",
+            value=f"**{legacy_preference_desc(self.settings.legacy_preference)}**\n"
+            f"*If the only two options found in a content search are a legacy and non-legacy version of the same "
+            f"thing, whether to prefer the latest version, the legacy version, or always ask the user to select "
+            f"between the two.*",
         )
         return {"embed": embed}
 
@@ -703,13 +711,36 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
         return {"embed": embed}
 
 
-def crit_type_desc(mode):
-    return (
-        "Double Dice Amount (Default)"
-        if mode == CritDamageType.NORMAL
-        else "Add Max Dice Value"
-        if mode == CritDamageType.MAX_ADD
-        else "Double Total"
-        if mode == CritDamageType.DOUBLE_ALL
-        else "Double Dice Total"
-    )
+def get_over_under_desc(rules) -> str:
+    if not rules:
+        return "None"
+    out = []
+    for rule in rules:
+        out.append(f"{rule.amount} {'over' if rule.type == 'gt' else 'under'} {rule.value}")
+    return f"At least {', '.join(out)}"
+
+
+def stat_names_desc(stat_names: list) -> str:
+    return ", ".join(stat_names or [stat.upper() for stat in STAT_ABBREVIATIONS])
+
+
+def crit_type_desc(mode: CritDamageType) -> str:
+    match mode:
+        case CritDamageType.NORMAL:
+            return "Double Dice Amount (Default)"
+        case CritDamageType.MAX_ADD:
+            return "Add Max Dice Value"
+        case CritDamageType.DOUBLE_ALL:
+            return "Double Total"
+    # CritDamageType.DOUBLE_DICE
+    return "Double Dice Total"
+
+
+def legacy_preference_desc(leg_pref: LegacyPreference) -> str:
+    match leg_pref:
+        case LegacyPreference.LATEST:
+            return "No"
+        case LegacyPreference.LEGACY:
+            return "Yes"
+    # LegacyPreference.ASK
+    return "Always Ask"

@@ -36,6 +36,7 @@ class Item(DescribableMixin, Sourced):
             page=d["page"],
             url=d["url"],
             is_free=d["isFree"],
+            is_legacy=d.get("isLegacy", False),
         )
 
     @classmethod

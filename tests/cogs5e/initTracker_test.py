@@ -270,7 +270,7 @@ class TestInitiativeStatBlockCopying:
 standard_init_commands = [
     "!init begin",
     "!init madd kobold -n 3",
-    "!init madd mage"
+    "!init madd mage",
     # test round tracking
     "!init next",  # KO1
     "!init next",  # KO2

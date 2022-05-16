@@ -16,6 +16,12 @@ class InlineRollingType(enum.IntEnum):
     ENABLED = 2
 
 
+class LegacyPreference(enum.IntEnum):
+    LATEST = 1
+    LEGACY = 2
+    ASK = 3
+
+
 class RandcharRule(BaseModel):
     type: Literal["gt", "lt"]
     amount: int
@@ -32,6 +38,7 @@ class ServerSettings(SettingsBaseModel):
     show_campaign_cta: bool = True
     upenn_nlp_opt_in: bool = False
     crit_type: CritDamageType = CritDamageType.NORMAL
+    legacy_preference: LegacyPreference = LegacyPreference.LATEST
 
     randchar_dice: str = "4d6kh3"
     randchar_sets: int = 1

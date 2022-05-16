@@ -1,4 +1,5 @@
 import copy
+import textwrap
 import traceback
 import uuid
 from contextlib import suppress
@@ -382,6 +383,7 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
                 args[index] = argquote(arg)
     finally:
         await evaluator.run_commits()
+        await send_warnings(ctx, evaluator.warnings)
     return " ".join(args)
 
 
@@ -404,16 +406,18 @@ async def parse_draconic(
         evaluator.with_character(character)
     elif statblock is not None:
         evaluator.with_statblock(statblock)
+
     try:
         out = await evaluator.transformed_str_async(
             program, execution_scope=execution_scope, invoking_object=invoking_object
         )
     finally:
         await evaluator.run_commits()
+        await send_warnings(ctx, evaluator.warnings)
     return out
 
 
-# handler
+# ==== errors / warnings ====
 async def handle_alias_exception(ctx, err):
     e = err.original
     if isinstance(e, AvraeException):
@@ -446,6 +450,32 @@ async def handle_alias_exception(ctx, err):
         )
 
 
+async def send_warnings(ctx, warns: list[evaluators.ScriptingWarning]):
+    if not warns:
+        return
+
+    out = []
+
+    for warn in warns:
+        warn_msg = warn.msg
+        lineinfo = draconic.utils.LineInfo(
+            warn.node.lineno, warn.node.col_offset, warn.node.end_lineno, warn.node.end_col_offset
+        )
+        warn_loc = textwrap.indent(draconic.utils.format_exc_line_pointer(lineinfo, warn.expr), "  ")
+        out.append(f"{warn_msg} ```py\nLine {lineinfo.lineno}, col {lineinfo.col_offset}:\n{warn_loc}\n```")
+
+    # send warnings to user
+    warn_strs = "\n".join(out)
+    with suppress(disnake.HTTPException):
+        await ctx.author.send(
+            f"One or more aliases or snippets raised warnings:\n"
+            f"{warn_strs}"
+            f"This is an issue in a user-created command; please contact the author. Do *not* report this on the "
+            f"official bug tracker."
+        )
+
+
+# ==== entitlements ====
 async def workshop_entitlements_check(ctx, ws_obj):
     """
     :type ws_obj: aliasing.workshop.WorkshopCollectableObject

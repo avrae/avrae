@@ -88,7 +88,7 @@ class Attack(Effect):
             dis=args.last("dis", type_=bool, ephem=True)
             or any(eadv == AdvantageType.DIS for eadv in effect_advs)
             or explicit_adv == AdvantageType.DIS,
-            ea=args.last("ea", type_=bool, ephem=True)
+            eadv=args.last("eadv", type_=bool, ephem=True)
             or any(eadv == AdvantageType.ELVEN for eadv in effect_advs)
             or explicit_adv == AdvantageType.ELVEN,
         )

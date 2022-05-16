@@ -260,8 +260,7 @@ class AdminUtils(commands.Cog):
             return await ctx.send("that entity doesn't exist, use `!admin debug_entity` to find tid/eid")
         args = argparse(args)
         actions = compendium.lookup_actions_for_entity(tid, eid)
-        options = [(a.name, a) for a in actions]
-        g_action = await get_selection(ctx, options)
+        g_action = await get_selection(ctx, actions, key=lambda a: a.name)
         sheet_action = cogs5e.models.sheet.action.Action(
             name=g_action.name,
             uid=g_action.uid,

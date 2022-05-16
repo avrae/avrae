@@ -11,20 +11,11 @@ from discord.ext import commands
 import gamedata
 import ui
 import utils.settings
-from cogs5e.models import errors
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
 from cogsmisc.stats import Stats
+from gamedata import lookuputils
 from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
-from gamedata.lookuputils import (
-    HOMEBREW_EMOJI,
-    available,
-    can_access,
-    get_item_choices,
-    get_monster_choices,
-    get_spell_choices,
-    handle_source_footer,
-)
 from gamedata.race import RaceFeature
 from utils import checks, img
 from utils.argparser import argparse
@@ -95,7 +86,7 @@ class Lookup(commands.Cog):
                 options.extend(actiontype["items"])
 
         result, metadata = await search_and_select(ctx, options, name, lambda e: e["fullName"], return_metadata=True)
-        await self._add_training_data("reference", name, result["fullName"], metadata=metadata)
+        await lookuputils.add_training_data(self.bot.mdb, "reference", name, result["fullName"], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result["fullName"]
@@ -109,7 +100,7 @@ class Lookup(commands.Cog):
     @commands.command()
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
-        result: gamedata.Feat = await self._lookup_search3(ctx, {"feat": compendium.feats}, name)
+        result: gamedata.Feat = await lookuputils.search_entities(ctx, {"feat": compendium.feats}, name)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -117,14 +108,14 @@ class Lookup(commands.Cog):
         if result.prerequisite:
             embed.add_field(name="Prerequisite", value=result.prerequisite, inline=False)
         add_fields_from_long_text(embed, "Description", result.desc)
-        handle_source_footer(embed, result, "Feat")
+        lookuputils.handle_source_footer(embed, result, "Feat")
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== races / racefeats ====
     @commands.command()
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
-        result: RaceFeature = await self._lookup_search3(
+        result: RaceFeature = await lookuputils.search_entities(
             ctx, {"race": compendium.rfeats, "subrace": compendium.subrfeats}, name, "racefeat"
         )
 
@@ -132,14 +123,14 @@ class Lookup(commands.Cog):
         embed.title = result.name
         embed.url = result.url
         set_maybe_long_desc(embed, result.text)
-        handle_source_footer(embed, result, "Race Feature")
+        lookuputils.handle_source_footer(embed, result, "Race Feature")
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        result: gamedata.Race = await self._lookup_search3(
+        result: gamedata.Race = await lookuputils.search_entities(
             ctx, {"race": compendium.races, "subrace": compendium.subraces}, name, "race"
         )
 
@@ -150,14 +141,14 @@ class Lookup(commands.Cog):
         embed.add_field(name="Size", value=result.size)
         for t in result.traits:
             add_fields_from_long_text(embed, t.name, t.text)
-        handle_source_footer(embed, result, "Race")
+        lookuputils.handle_source_footer(embed, result, "Race")
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== classes / classfeats ====
     @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        result: ClassFeature = await self._lookup_search3(
+        result: ClassFeature = await lookuputils.search_entities(
             ctx, {"class": compendium.cfeats, "class-feature": compendium.optional_cfeats}, name, query_type="classfeat"
         )
 
@@ -165,7 +156,7 @@ class Lookup(commands.Cog):
         embed.title = result.name
         embed.url = result.url
         set_maybe_long_desc(embed, result.text)
-        handle_source_footer(embed, result, "Class Feature")
+        lookuputils.handle_source_footer(embed, result, "Class Feature")
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
@@ -175,7 +166,7 @@ class Lookup(commands.Cog):
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        result: gamedata.Class = await self._lookup_search3(ctx, {"class": compendium.classes}, name)
+        result: gamedata.Class = await lookuputils.search_entities(ctx, {"class": compendium.classes}, name)
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -196,7 +187,7 @@ class Lookup(commands.Cog):
                 level_features_str += f"`{i + 1}` {l}\n"
             embed.description = level_features_str
 
-            available_ocfs = await available(ctx, result.optional_features, entity_type="class-feature")
+            available_ocfs = await lookuputils.available(ctx, result.optional_features, entity_type="class-feature")
             if available_ocfs:
                 ocf_names = ", ".join(ocf.name for ocf in available_ocfs)
                 embed.add_field(name="Optional Class Features", value=ocf_names, inline=False)
@@ -204,7 +195,7 @@ class Lookup(commands.Cog):
             embed.add_field(name="Starting Proficiencies", value=result.proficiencies, inline=False)
             embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
 
-            handle_source_footer(
+            lookuputils.handle_source_footer(
                 embed, result, f"Use {ctx.prefix}classfeat to look up a feature.", add_source_str=False
             )
         else:
@@ -219,7 +210,7 @@ class Lookup(commands.Cog):
             for f in level_features:
                 embed.add_field(name=f.name, value=trim_str(f.text, 1024), inline=False)
 
-            handle_source_footer(
+            lookuputils.handle_source_footer(
                 embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.", add_source_str=False
             )
 
@@ -228,7 +219,7 @@ class Lookup(commands.Cog):
     @commands.command()
     async def subclass(self, ctx, *, name: str):
         """Looks up a subclass."""
-        result: gamedata.Subclass = await self._lookup_search3(
+        result: gamedata.Subclass = await lookuputils.search_entities(
             ctx, {"class": compendium.subclasses}, name, query_type="subclass"
         )
 
@@ -242,7 +233,7 @@ class Lookup(commands.Cog):
                 text = smart_trim(feature.text, 1024)
                 embed.add_field(name=feature.name, value=text, inline=False)
 
-        handle_source_footer(
+        lookuputils.handle_source_footer(
             embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off", add_source_str=True
         )
 
@@ -252,12 +243,14 @@ class Lookup(commands.Cog):
     @commands.command()
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
-        result: gamedata.Background = await self._lookup_search3(ctx, {"background": compendium.backgrounds}, name)
+        result: gamedata.Background = await lookuputils.search_entities(
+            ctx, {"background": compendium.backgrounds}, name
+        )
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
         embed.title = result.name
-        handle_source_footer(embed, result, "Background")
+        lookuputils.handle_source_footer(embed, result, "Background")
 
         for trait in result.traits:
             text = trim_str(trait.text, 1024)
@@ -297,8 +290,8 @@ class Lookup(commands.Cog):
             visible = False
             await try_delete(ctx.message)
 
-        choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {"monster": choices}, name, pm=pm_lookup)
+        choices = await lookuputils.get_monster_choices(ctx)
+        monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=pm_lookup)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -416,7 +409,7 @@ class Lookup(commands.Cog):
             if monster.legactions:
                 embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster.legactions)))
 
-        handle_source_footer(embed_queue[-1], monster, "Creature")
+        lookuputils.handle_source_footer(embed_queue[-1], monster, "Creature")
 
         embed_queue[0].set_thumbnail(url=monster.get_image_url())
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
@@ -438,8 +431,8 @@ class Lookup(commands.Cog):
         if hide_name:
             await try_delete(ctx.message)
 
-        choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {"monster": choices}, name, pm=hide_name)
+        choices = await lookuputils.get_monster_choices(ctx)
+        monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
         url = monster.get_image_url()
@@ -475,8 +468,8 @@ class Lookup(commands.Cog):
         if hide_name:
             await try_delete(ctx.message)
 
-        choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {"monster": choices}, name, pm=hide_name)
+        choices = await lookuputils.get_monster_choices(ctx)
+        monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
         # select border
@@ -515,8 +508,8 @@ class Lookup(commands.Cog):
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
-        choices = await get_spell_choices(ctx, filter_by_license=False)
-        spell = await self._lookup_search3(ctx, {"spell": choices}, name)
+        choices = await lookuputils.get_spell_choices(ctx)
+        spell = await lookuputils.search_entities(ctx, {"spell": choices}, name)
 
         embed = EmbedWithAuthor(ctx)
         embed.url = spell.url
@@ -561,7 +554,7 @@ class Lookup(commands.Cog):
         if higher_levels:
             add_fields_from_long_text(embed_queue[-1], "At Higher Levels", higher_levels)
 
-        handle_source_footer(embed_queue[-1], spell, "Spell")
+        lookuputils.handle_source_footer(embed_queue[-1], spell, "Spell")
         if spell.image:
             embed_queue[0].set_thumbnail(url=spell.image)
 
@@ -574,8 +567,8 @@ class Lookup(commands.Cog):
     @commands.command(name="item")
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
-        choices = await get_item_choices(ctx, filter_by_license=False)
-        item = await self._lookup_search3(ctx, {"magic-item": choices}, name, query_type="item")
+        choices = await lookuputils.get_item_choices(ctx)
+        item = await lookuputils.search_entities(ctx, {"magic-item": choices}, name, query_type="item")
 
         embed = EmbedWithAuthor(ctx)
 
@@ -595,7 +588,7 @@ class Lookup(commands.Cog):
         if item.image:
             embed.set_thumbnail(url=item.image)
 
-        handle_source_footer(embed, item, "Item")
+        lookuputils.handle_source_footer(embed, item, "Item")
 
         await Stats.increase_stat(ctx, "items_looked_up_life")
         await (await self._get_destination(ctx)).send(embed=embed)
@@ -635,82 +628,12 @@ class Lookup(commands.Cog):
             await ctx.send(f"No settings found. Try using `{ctx.prefix}lookup_settings` to open an interactive menu.")
 
     # ==== helpers ====
-    async def _add_training_data(self, lookup_type, query, result_name, metadata=None, srd=True, could_view=True):
-        data = {"type": lookup_type, "query": query, "result": result_name, "srd": srd, "could_view": could_view}
-        if metadata:
-            data["given_options"] = metadata.get("num_options", 1)
-            data["chosen_index"] = metadata.get("chosen_index", 0)
-            data["homebrew"] = metadata.get("homebrew", False)
-        await self.bot.mdb.nn_training.insert_one(data)
-
     @staticmethod
     async def _get_destination(ctx):
         guild_settings = await ctx.get_server_settings()
         if guild_settings is None:
             return ctx
         return ctx.author if guild_settings.lookup_pm_result else ctx
-
-    async def _lookup_search3(self, ctx, entities, query, query_type=None, pm=False):
-        """
-        :type ctx: discord.ext.commands.Context
-        :param entities: A dict mapping entitlements entity types to the entities themselves.
-        :type entities: dict[str, list[T]]
-        :type query: str
-        :param str query_type: The type of the object being queried for (default entity type if only one dict key)
-        :param pm: Whether to PM the user the select prompt.
-        :rtype: T
-        :raises: RequiresLicense if an entity that requires a license is selected
-        """
-        # sanity checks
-        if len(entities) == 0:
-            raise ValueError("At least 1 entity type must be passed in")
-        if query_type is None and len(entities) != 1:
-            raise ValueError("Query type must be passed for multiple entity types")
-        elif query_type is None:
-            query_type = list(entities.keys())[0]
-
-        # this may take a while, so type
-        await ctx.trigger_typing()
-
-        # get licensed objects, mapped by entity type
-        available_ids = {k: await self.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k) for k in entities}
-
-        # the selection display key
-        def selectkey(e):
-            the_entity, the_etype = e
-            if the_entity.homebrew:
-                return f"{the_entity.name} ({HOMEBREW_EMOJI} {the_entity.source})"
-            elif can_access(the_entity, available_ids[the_etype]):
-                return f"{the_entity.name} ({the_entity.source})"
-            return f"{the_entity.name} ({the_entity.source})\\*"
-
-        # get the object
-        choices = []
-        for entity_entitlement_type, es in entities.items():
-            for entity in es:
-                choices.append((entity, entity_entitlement_type))  # entity, entity type
-
-        result, metadata = await search_and_select(
-            ctx, choices, query, lambda e: e[0].name, pm=pm, return_metadata=True, selectkey=selectkey
-        )
-
-        # get the entity
-        entity, entity_entitlement_type = result
-
-        # log the query
-        await self._add_training_data(
-            query_type,
-            query,
-            entity.name,
-            metadata=metadata,
-            srd=entity.is_free,
-            could_view=can_access(entity, available_ids[entity_entitlement_type]),
-        )
-
-        # display error if not srd
-        if not can_access(entity, available_ids[entity_entitlement_type]):
-            raise errors.RequiresLicense(entity, available_ids[entity_entitlement_type] is not None)
-        return entity
 
     # ==== listeners ====
     @commands.Cog.listener()

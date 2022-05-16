@@ -35,6 +35,7 @@ class AutomationContext:
         ab_override: Optional[int] = None,
         dc_override: Optional[int] = None,
         spell_override: Optional[int] = None,
+        spell_level_override: Optional[int] = None,
         crit_type: CritDamageType = CritDamageType.NORMAL,
         ieffect: Optional["InitiativeEffect"] = None,
         allow_caster_ieffects: bool = True,
@@ -64,7 +65,7 @@ class AutomationContext:
         self.dc_override = dc_override
         if spell_override is not None:
             self.evaluator.builtins["spell"] = spell_override
-        self.spell_level_override = None  # used in Cast Spell effect
+        self.spell_level_override = spell_level_override  # used in Cast Spell effect
         self.conc_effect = conc_effect
 
         # InitiativeEffect utils
@@ -183,6 +184,9 @@ class AutomationContext:
         return self.spell is not None
 
     def get_cast_level(self):
+        """
+        Returns the casting level of the origin spell (which may be None for nested automation in homebrew spells).
+        """
         default = self.spell_level_override or 0
         if self.spell:
             default = default or self.spell.level

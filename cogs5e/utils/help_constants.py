@@ -54,7 +54,7 @@ An italicized argument below means the argument supports ephemeral arguments - e
 
 **To Hit**
 *adv/dis* - Give advantage or disadvantage to the attack roll(s).
-*ea* - Elven Accuracy, double advantage on the attack roll.
+*eadv* - Elven Accuracy, double advantage on the attack roll.
 *hit* - The attack automatically hits.
 *miss* - The attack automatically misses.
 *-attackroll <value>* - Force the rolled attack to be a fixed number plus modifiers.

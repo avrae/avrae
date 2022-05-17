@@ -134,7 +134,7 @@ async def get_selection(
         content = msg.content.lower()
         valid = content in ("c", "n", "p")
         try:
-            valid = valid or (1 <= int(content) <= (len(choices) + 1))
+            valid = valid or (1 <= int(content) <= len(choices))
         except ValueError:
             pass
         return msg.author == ctx.author and msg.channel == ctx.channel and valid
@@ -194,7 +194,8 @@ async def get_selection(
                 await m.delete()
     if m is None or m.content.lower() == "c":
         raise SelectionCancelled()
-    return choices[int(m.content) - 1]
+    idx = int(m.content) - 1
+    return choices[idx]
 
 
 async def search_and_select(

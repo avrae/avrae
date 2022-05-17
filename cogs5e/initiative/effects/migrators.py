@@ -48,10 +48,10 @@ def jit_v1_to_v2(d: dict, combat: "Combat", combatant: "Combatant") -> Initiativ
         damage_bonus=data.get("d"),
         magical_damage=bool(data.get("magical")),
         silvered_damage=bool(data.get("silvered")),
-        resistances=[Resistance.from_str(v) for v in data.get("resist", [])],
-        immunities=[Resistance.from_str(v) for v in data.get("immune", [])],
-        vulnerabilities=[Resistance.from_str(v) for v in data.get("vuln", [])],
-        ignored_resistances=[Resistance.from_str(v) for v in data.get("neutral", [])],
+        resistances=[Resistance.from_dict(v) for v in data.get("resist", [])],
+        immunities=[Resistance.from_dict(v) for v in data.get("immune", [])],
+        vulnerabilities=[Resistance.from_dict(v) for v in data.get("vuln", [])],
+        ignored_resistances=[Resistance.from_dict(v) for v in data.get("neutral", [])],
         ac_value=ac_value,
         ac_bonus=ac_bonus,
         max_hp_value=max_hp_value,
@@ -70,12 +70,15 @@ def jit_v1_to_v2(d: dict, combat: "Combat", combatant: "Combatant") -> Initiativ
     end_on_turn_end = d["tonend"]
     if d["remaining"] > 0:
         end_round = combat.round_num + d["remaining"]
-        # if we are going to tick this effect once this round, subtract 1 from the end round
-        has_ticked_this_round = combat.index is not None and (
-            combat.index > combatant.index if end_on_turn_end else combat.index >= combatant.index
-        )
-        if not has_ticked_this_round:
-            end_round -= 1
+        # this code is broken for combatants in groups since the group is not yet registered in the combatant map
+        # to get the index
+        if combatant.group is None:
+            # if we are going to tick this effect once this round, subtract 1 from the end round
+            has_ticked_this_round = combat.index is not None and (
+                combat.index > combatant.index if end_on_turn_end else combat.index >= combatant.index
+            )
+            if not has_ticked_this_round:
+                end_round -= 1
 
     # parent/children
     children = [InitEffectReference.from_dict(r) for r in d["children"]]

@@ -212,7 +212,7 @@ class InitiativeEffect:
     @property
     def remaining(self) -> Optional[int]:
         """Returns the number of ticks this effect has remaining, or None if the effect has infinite duration."""
-        if self.duration is None:
+        if self.duration is None or self.end_round is None:
             return None
         elif self.combat is None:
             return self.duration

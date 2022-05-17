@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import re
+from math import floor
 from typing import List
 
 import aiohttp
@@ -8,9 +9,8 @@ import automation_common
 import pydantic
 import yaml
 from markdownify import markdownify
-from math import floor
 
-import gamedata.compendium as gd
+import gamedata as gd
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills

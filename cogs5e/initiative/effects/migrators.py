@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.resistance import Resistance
+from utils import constants
 from utils.enums import AdvantageType
 from utils.functions import reconcile_adv
 from .effect import InitEffectReference, InitiativeEffect
@@ -42,6 +43,15 @@ def jit_v1_to_v2(d: dict, combat: "Combat", combatant: "Combatant") -> Initiativ
     except (ValueError, TypeError):
         pass
 
+    # sadv/sdis handling
+    save_adv = set(data.get("sadv", []))
+    if "all" in save_adv:
+        save_adv = set(constants.STAT_ABBREVIATIONS)
+
+    save_dis = set(data.get("sdis", []))
+    if "all" in save_dis:
+        save_dis = set(constants.STAT_ABBREVIATIONS)
+
     effects = InitPassiveEffect(
         attack_advantage=AdvantageType(reconcile_adv(adv=data.get("adv"), dis=data.get("dis"), eadv=data.get("eadv"))),
         to_hit_bonus=data.get("b"),
@@ -57,8 +67,8 @@ def jit_v1_to_v2(d: dict, combat: "Combat", combatant: "Combatant") -> Initiativ
         max_hp_value=max_hp_value,
         max_hp_bonus=max_hp_bonus,
         save_bonus=data.get("sb"),
-        save_adv=set(data.get("sadv", [])),
-        save_dis=set(data.get("sdis", [])),
+        save_adv=save_adv,
+        save_dis=save_dis,
         check_bonus=data.get("cb"),
     )
     attacks = []

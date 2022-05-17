@@ -91,14 +91,15 @@ def _str_attack_advantage(value: AdvantageType):
 def _str_save_adv(value: Set[str]):
     if value.issuperset(STAT_ABBREVIATIONS):
         return "Save Advantage: All"
-    saves = ", ".join(verbose_stat(s) for s in value)
+    saves = ", ".join(verbose_stat(s) for s in value if s in STAT_ABBREVIATIONS)
+    # ^ if s...: temp fix for SENTRY-22D, happens when migrating old ieffect with -sadv all
     return f"Save Advantage: {saves}"
 
 
 def _str_save_dis(value: Set[str]):
     if value.issuperset(STAT_ABBREVIATIONS):
         return "Save Disadvantage: All"
-    saves = ", ".join(verbose_stat(s) for s in value)
+    saves = ", ".join(verbose_stat(s) for s in value if s in STAT_ABBREVIATIONS)
     return f"Save Disadvantage: {saves}"
 
 

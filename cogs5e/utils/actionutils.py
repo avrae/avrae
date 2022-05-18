@@ -4,7 +4,7 @@ from collections import namedtuple
 import discord
 
 from cogs5e.initiative import InitiativeEffect
-from cogs5e.initiative.types import BaseCombatant
+from cogs5e.initiative.types import BaseCombatant, CombatantType
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLicense
 from gamedata import lookuputils
@@ -275,6 +275,15 @@ async def cast_spell(spell, ctx, caster, targets, args, combat=None):
             embed.description = f"*{phrase}*"
         embed.add_field(name="Description", value=smart_trim(spell.description), inline=False)
         embed.set_footer(text="No spell automation found.")
+
+        # commit the caster
+        if isinstance(caster, BaseCombatant):
+            caster: "Combatant"
+            if caster.type == CombatantType.PLAYER:
+                caster: "PlayerCombatant"
+                await caster.character.commit(ctx)
+        elif hasattr(caster, "commit"):
+            await caster.commit(ctx)
 
     if cast_level != spell.level and spell.higherlevels:
         embed.add_field(name="At Higher Levels", value=smart_trim(spell.higherlevels), inline=False)

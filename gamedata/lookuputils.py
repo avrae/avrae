@@ -61,8 +61,6 @@ async def handle_required_license(ctx, err):
     """
     result = err.entity
 
-    log.info(f"err: {err}")
-
     await ctx.bot.mdb.analytics_nsrd_lookup.update_one(
         {"type": result.entity_type, "name": result.name}, {"$inc": {"num_lookups": 1}}, upsert=True
     )
@@ -392,36 +390,22 @@ async def get_spell_choices(ctx, homebrew=True):
 
 
 # ---- item stuff ----
-async def get_item_choices(ctx, homebrew=True):
+async def get_item_entitlement_choice_map(ctx, homebrew=True):
     """
     Gets a list of items in the current context for the user to choose from.
 
     :param ctx: The context.
     :param homebrew: Whether to include homebrew entities.
     """
-    if filter_by_license:
-        adventuring_gear = await available(ctx, compendium.adventuring_gear, "adventuring-gear")
-        armor = await available(ctx, compendium.armor, "armor")
-        magic_items = await available(ctx, compendium.magic_items, "magic-item")
-        weapons = await available(ctx, compendium.weapons, "weapon")
-        # available_items = adventuring_gear + armor + magic_items + weapons
-        available_items = {
-            "adventuring-gear": adventuring_gear,
-            "armor": armor,
-            "magic-item": magic_items,
-            "weapon": weapons,
-        }
-    else:
-        # available_items = compendium.adventuring_gear + compendium.armor + compendium.magic_items + compendium.weapons
-        available_items = {
-            "adventuring-gear": compendium.adventuring_gear,
-            "armor": compendium.armor,
-            "magic-item": compendium.magic_items,
-            "weapon": compendium.weapons,
-        }
+    available_items = {
+        "adventuring-gear": compendium.adventuring_gear,
+        "armor": compendium.armor,
+        "magic-item": compendium.magic_items,
+        "weapon": compendium.weapons,
+    }
 
     if not homebrew:
-        return compendium.items
+        return available_items
 
     # personal pack
     try:
@@ -433,14 +417,14 @@ async def get_item_choices(ctx, homebrew=True):
         pack_id = None
 
     # server packs
-    choices = list(itertools.chain(compendium.items, custom_items))
+    choices = custom_items
     if ctx.guild:
         async for servpack in Pack.server_active(ctx):
             if servpack.id != pack_id:
                 choices.extend(servpack.items)
-    log.info(f"len(choices): {len(choices)}\n")
-    log.info(f"len(choices[0]): {len(choices[0])}\n")
-    return choices
+
+    available_items["magic-item"] = compendium.magic_items + choices
+    return available_items
 
 
 # ---- race stuff ----

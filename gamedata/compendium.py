@@ -56,8 +56,12 @@ class Compendium:
         self.rfeats = []  # type: list[RaceFeature]
         self.subrfeats = []  # type: list[RaceFeature]
 
+        self.adventuring_gear = []  # type: list[AdventuringGear]
+        self.armor = []  # type: list[Armor]
+        self.magic_items = []  # type: list[MagicItem]
+        self.weapons = []  # type: list[Weapon]
+
         self.feats = []  # type: list[Feat]
-        self.items = []  # type: list[Item]
         self.monsters = []  # type: list[Monster]
         self.spells = []  # type: list[gamedata.spell.Spell]
         self.books = []  # type: list[Book]
@@ -151,10 +155,6 @@ class Compendium:
         # if a Feat has the hidden attribute, we skip registering it in the lookup list but still register it in
         # entity lookup so it can grant limiteduse/etc
         self.feats = self._deserialize_and_register_lookups(Feat, self.raw_feats, skip_out_filter=lambda f: f.hidden)
-        # self.items = self._deserialize_and_register_lookups(AdventuringGear, self.raw_adventuring_gear)
-        # self.items.extend(self._deserialize_and_register_lookups(Armor, self.raw_armor))
-        # self.items.extend(self._deserialize_and_register_lookups(MagicItem, self.raw_magic_items))
-        # self.items.extend(self._deserialize_and_register_lookups(Weapon, self.raw_weapons))
         self.adventuring_gear = self._deserialize_and_register_lookups(AdventuringGear, self.raw_adventuring_gear)
         self.armor = self._deserialize_and_register_lookups(Armor, self.raw_armor)
         self.magic_items = self._deserialize_and_register_lookups(MagicItem, self.raw_magic_items)

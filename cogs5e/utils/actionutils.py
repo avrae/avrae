@@ -64,9 +64,16 @@ async def run_attack(
     }
     args.update_nx(arg_defaults)
 
-    return await run_automation(
+    result = await run_automation(
         ctx, embed, args, caster, attack.automation, targets, combat, **attack.__run_automation_kwargs__
     )
+
+    # common embed operations
+    embeds.add_fields_from_args(embed, args.get("f"))
+    if "thumb" in args:
+        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
+
+    return result
 
 
 async def run_action(
@@ -102,15 +109,22 @@ async def run_action(
         embed.title = f"{name} uses {action.name}!"
 
     if action.automation is not None:
-        return await run_automation(ctx, embed, args, caster, action.automation, targets, combat)
-
-    # else, show action description and note that it can't be automated
-    if action.snippet:
-        embed.description = action.snippet
+        result = await run_automation(ctx, embed, args, caster, action.automation, targets, combat)
     else:
-        embed.description = "Unknown action effect."
-    embed.set_footer(text="No action automation found.")
-    return None
+        # else, show action description and note that it can't be automated
+        if action.snippet:
+            embed.description = action.snippet
+        else:
+            embed.description = "Unknown action effect."
+        embed.set_footer(text="No action automation found.")
+        result = None
+
+    # common embed operations
+    embeds.add_fields_from_args(embed, args.get("f"))
+    if "thumb" in args:
+        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
+
+    return result
 
 
 async def cast_spell(
@@ -310,8 +324,12 @@ async def cast_spell(
         conflicts = ", ".join(e.name for e in conc_conflict)
         embed.add_field(name="Concentration", value=f"Dropped {conflicts} due to concentration.")
 
-    if "thumb" not in args and spell.image:
+    # embed operations
+    if "thumb" in args:
+        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
+    elif spell.image:
         embed.set_thumbnail(url=spell.image)
+    embeds.add_fields_from_args(embed, args.get("f"))
     lookuputils.handle_source_footer(embed, spell, add_source_str=False)
 
     return CastResult(embed=embed, success=True, automation_result=automation_result)
@@ -361,11 +379,6 @@ async def run_automation(
         and not (combat and caster in combat.get_combatants())
     ):
         await caster.commit(ctx)
-
-    # common embed operations
-    embeds.add_fields_from_args(embed, args.get("f"))
-    if "thumb" in args:
-        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
 
     return result
 

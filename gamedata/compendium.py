@@ -11,7 +11,7 @@ from gamedata.action import Action
 from gamedata.background import Background
 from gamedata.book import Book
 from gamedata.feat import Feat
-from gamedata.item import Item
+from gamedata.item import AdventuringGear, Armor, MagicItem, Weapon
 from gamedata.klass import Class, ClassFeature, Subclass
 from gamedata.mixins import LimitedUseGrantorMixin
 from gamedata.monster import Monster
@@ -32,7 +32,10 @@ class Compendium:
         self.raw_monsters = []  # type: list[dict]
         self.raw_classes = []  # type: list[dict]
         self.raw_feats = []  # type: list[dict]
-        self.raw_items = []  # type: list[dict]
+        self.raw_adventuring_gear = []  # type: list[dict]
+        self.raw_armor = []  # type: list[dict]
+        self.raw_magic_items = []  # type: list[dict]
+        self.raw_weapons = []  # type: list[dict]
         self.raw_races = []  # type: list[dict]
         self.raw_subraces = []  # type: list[dict]
         self.raw_spells = []  # type: list[dict]
@@ -103,7 +106,10 @@ class Compendium:
         self.raw_feats = self.read_json("feats.json", [])
         self.raw_monsters = self.read_json("monsters.json", [])
         self.raw_backgrounds = self.read_json("backgrounds.json", [])
-        self.raw_items = self.read_json("items.json", [])
+        self.raw_adventuring_gear = self.read_json("adventuring-gear.json", [])
+        self.raw_armor = self.read_json("armor.json", [])
+        self.raw_magic_items = self.read_json("magic-items.json", [])
+        self.raw_weapons = self.read_json("weapons.json", [])
         self.raw_races = self.read_json("races.json", [])
         self.raw_subraces = self.read_json("subraces.json", [])
         self.raw_spells = self.read_json("spells.json", [])
@@ -120,7 +126,10 @@ class Compendium:
         self.raw_feats = lookup.get("feats", [])
         self.raw_monsters = lookup.get("monsters", [])
         self.raw_backgrounds = lookup.get("backgrounds", [])
-        self.raw_items = lookup.get("items", [])
+        self.raw_adventuring_gear = lookup.get("adventuring-gear", [])
+        self.raw_armor = lookup.get("armor", [])
+        self.raw_magic_items = lookup.get("magic-items", [])
+        self.raw_weapons = lookup.get("weapons", [])
         self.raw_races = lookup.get("races", [])
         self.raw_subraces = lookup.get("subraces", [])
         self.raw_spells = lookup.get("spells", [])
@@ -142,7 +151,14 @@ class Compendium:
         # if a Feat has the hidden attribute, we skip registering it in the lookup list but still register it in
         # entity lookup so it can grant limiteduse/etc
         self.feats = self._deserialize_and_register_lookups(Feat, self.raw_feats, skip_out_filter=lambda f: f.hidden)
-        self.items = self._deserialize_and_register_lookups(Item, self.raw_items)
+        # self.items = self._deserialize_and_register_lookups(AdventuringGear, self.raw_adventuring_gear)
+        # self.items.extend(self._deserialize_and_register_lookups(Armor, self.raw_armor))
+        # self.items.extend(self._deserialize_and_register_lookups(MagicItem, self.raw_magic_items))
+        # self.items.extend(self._deserialize_and_register_lookups(Weapon, self.raw_weapons))
+        self.adventuring_gear = self._deserialize_and_register_lookups(AdventuringGear, self.raw_adventuring_gear)
+        self.armor = self._deserialize_and_register_lookups(Armor, self.raw_armor)
+        self.magic_items = self._deserialize_and_register_lookups(MagicItem, self.raw_magic_items)
+        self.weapons = self._deserialize_and_register_lookups(Weapon, self.raw_weapons)
         self.monsters = self._deserialize_and_register_lookups(Monster, self.raw_monsters)
         self.spells = self._deserialize_and_register_lookups(gamedata.spell.Spell, self.raw_spells)
         self.books = self._deserialize_and_register_lookups(Book, self.raw_books)

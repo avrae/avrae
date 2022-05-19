@@ -11,7 +11,10 @@ import gamedata.compendium
 
 Background = gamedata.background.Background
 Feat = gamedata.feat.Feat
-Item = gamedata.item.Item
+AdventuringGear = gamedata.item.AdventuringGear
+Armor = gamedata.item.Armor
+MagicItem = gamedata.item.MagicItem
+Weapon = gamedata.item.Weapon
 Class = gamedata.klass.Class
 Subclass = gamedata.klass.Subclass
 Monster = gamedata.monster.Monster

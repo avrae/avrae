@@ -23,6 +23,10 @@ from utils.functions import chunk_text, get_positivity, search_and_select, smart
 
 LARGE_THRESHOLD = 200
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class Lookup(commands.Cog):
     """Commands to help look up items, status effects, rules, etc."""

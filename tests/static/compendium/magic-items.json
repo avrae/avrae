@@ -1,0 +1,28 @@
+[
+  {
+    "id": 4581,
+    "name": "Bag of Holding",
+    "source": "BR",
+    "isFree": true,
+    "page": 153,
+    "url": "https://www.dndbeyond.com/magic-items/4581-bag-of-holding",
+    "isLegacy": false,
+    "meta": "*Wondrous Item, uncommon*",
+    "attunement": false,
+    "desc": "This bag has an interior space considerably larger than its outside dimensions, roughly 2 feet in diameter at the mouth and 4 feet deep. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. The bag weighs 15 pounds, regardless of its contents. Retrieving an item from the bag requires an action.\n\nIf the bag is overloaded, pierced, or torn, it ruptures and is destroyed, and its contents are scattered in the Astral Plane. If the bag is turned inside out, its contents spill forth, unharmed, but the bag must be put right before it can be used again. Breathing creatures inside the bag can survive up to a number of minutes equal to 10 divided by the number of creatures (minimum 1 minute), after which time they begin to suffocate.\n\nPlacing a _bag of holding_ inside an extradimensional space created by a handy haversack, portable hole, or similar item instantly destroys both items and opens a gate to the Astral Plane. The gate originates where the one item was placed inside the other. Any creature within 10 feet of the gate is sucked through it to a random location on the Astral Plane. The gate then closes. The gate is one-way only and can't be reopened.",
+    "image": "https://media-waterdeep.cursecdn.com/avatars/thumbnails/18/895/315/315/636381754110020421.jpeg"
+  },
+  {
+    "id": 4582,
+    "name": "Non-free Bag of Holding",
+    "source": "BR",
+    "isFree": false,
+    "page": 153,
+    "url": "https://www.dndbeyond.com/magic-items/4581-bag-of-holding",
+    "isLegacy": false,
+    "meta": "*Wondrous Item, uncommon*",
+    "attunement": false,
+    "desc": "This bag has an interior space considerably larger than its outside dimensions, roughly 2 feet in diameter at the mouth and 4 feet deep. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. The bag weighs 15 pounds, regardless of its contents. Retrieving an item from the bag requires an action.\n\nIf the bag is overloaded, pierced, or torn, it ruptures and is destroyed, and its contents are scattered in the Astral Plane. If the bag is turned inside out, its contents spill forth, unharmed, but the bag must be put right before it can be used again. Breathing creatures inside the bag can survive up to a number of minutes equal to 10 divided by the number of creatures (minimum 1 minute), after which time they begin to suffocate.\n\nPlacing a _bag of holding_ inside an extradimensional space created by a handy haversack, portable hole, or similar item instantly destroys both items and opens a gate to the Astral Plane. The gate originates where the one item was placed inside the other. Any creature within 10 feet of the gate is sucked through it to a random location on the Astral Plane. The gate then closes. The gate is one-way only and can't be reopened.",
+    "image": "https://media-waterdeep.cursecdn.com/avatars/thumbnails/18/895/315/315/636381754110020421.jpeg"
+  }
+]

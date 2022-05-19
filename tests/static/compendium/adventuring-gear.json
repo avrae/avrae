@@ -1,0 +1,28 @@
+[
+  {
+    "id": 69,
+    "name": "Pole (10-foot)",
+    "source": "BR",
+    "isFree": true,
+    "page": null,
+    "url": "https://www.dndbeyond.com/equipment/pole-10-foot",
+    "meta": "*Adventuring Gear*\n0.05gp, 7 lbs.",
+    "attunement": false,
+    "desc": "When you suspect a trap, you can put the end of your 10-foot pole through that hole in the wall instead of reaching in with your hand.",
+    "image": null,
+    "typeId": 2103445194
+  },
+  {
+    "id": 70,
+    "name": "Non-free Pole (10-foot)",
+    "source": "BR",
+    "isFree": false,
+    "page": null,
+    "url": "https://www.dndbeyond.com/equipment/pole-10-foot",
+    "meta": "*Adventuring Gear*\n0.05gp, 7 lbs.",
+    "attunement": false,
+    "desc": "When you suspect a trap, you can put the end of your 10-foot pole through that hole in the wall instead of reaching in with your hand.",
+    "image": null,
+    "typeId": 2103445194
+  }
+]

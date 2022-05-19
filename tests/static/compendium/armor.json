@@ -1,0 +1,28 @@
+[
+  {
+    "id": 10,
+    "name": "Leather",
+    "source": "BR",
+    "isFree": true,
+    "page": null,
+    "url": "https://www.dndbeyond.com/equipment/leather",
+    "meta": "*Light Armor*\n10gp, 10 lbs. --- AC 11 + DEX",
+    "attunement": false,
+    "desc": "The breastplate and shoulder protectors of this armor are made of leather that has been stiffened by being boiled in oil. The rest of the armor is made of softer and more flexible materials.",
+    "image": null,
+    "typeId": 701257905
+  },
+  {
+    "id": 11,
+    "name": "Non-free Leather",
+    "source": "BR",
+    "isFree": false,
+    "page": null,
+    "url": "https://www.dndbeyond.com/equipment/leather",
+    "meta": "*Light Armor*\n10gp, 10 lbs. --- AC 11 + DEX",
+    "attunement": false,
+    "desc": "The breastplate and shoulder protectors of this armor are made of leather that has been stiffened by being boiled in oil. The rest of the armor is made of softer and more flexible materials.",
+    "image": null,
+    "typeId": 701257905
+  }
+]

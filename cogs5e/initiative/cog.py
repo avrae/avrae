@@ -1475,7 +1475,7 @@ class InitTracker(commands.Cog):
             embed.add_field(
                 name="Links",
                 value="[Project Description](https://www.cis.upenn.edu/~ccb/language-to-avrae.html) "
-                "\u2022 [Privacy Policy](https://www.fandom.com/privacy-policy)",
+                "\u2022 [Privacy Policy](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy)",
                 inline=False,
             )
             await ctx.send(embed=embed)

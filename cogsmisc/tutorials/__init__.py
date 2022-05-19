@@ -243,8 +243,8 @@ class Tutorials(commands.Cog):
             value=f"If you ever want a refresher on a command or feature, use the `{prefix}help` command for help on a "
             f"command, or `{prefix}tutorial` for a list of available tutorials.\n\n"
             f"For even more resources, come join us in the development Discord at <https://support.avrae.io>!\n\n"
-            f"[Privacy Policy](https://www.fandom.com/privacy-policy) "
-            f"| [Terms of Use](https://www.fandom.com/terms-of-use)",
+            f"[Privacy Policy](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy) "
+            f"| [Terms of Use](https://company.wizards.com/en/legal/terms)",
         )
 
         try:

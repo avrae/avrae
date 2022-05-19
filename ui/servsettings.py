@@ -427,7 +427,7 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
                 f"*This data will be used in a project to make advances in interactive fiction and text "
                 f"generation using artificial intelligence at the University of Pennsylvania.*\n"
                 f"*Read more about the project [here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html), "
-                f"and our data handling and Privacy Policy [here](https://www.fandom.com/privacy-policy).*",
+                f"and our data handling and Privacy Policy [here](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy).*",
                 inline=False,
             )
 

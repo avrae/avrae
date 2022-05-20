@@ -55,6 +55,7 @@ class InitTracker(commands.Cog):
         self.bot = bot
         self.nlp = NLPRecorder(bot)
         self.buttons = ButtonHandler(bot)
+        self.member_converter = commands.MemberConverter()
 
     # ==== special methods ====
     async def cog_load(self):
@@ -618,7 +619,8 @@ class InitTracker(commands.Cog):
         `dyn` - Dynamic initiative; Rerolls all initiatves at the start of a round.
         `turnnotif` - Notifies the controller of the next combatant in initiative.
         `deathdelete` - Toggles removing monsters below 0 HP.
-        `-name <name>` - Sets a name for the combat instance
+        `-name <name>` - Sets a name for the combat instance.
+        `-combatdm <@mention>` - Changes this combat's dm. You must be a DM or the combat's current DM.
         """
         args = argparse(settings)
         combat = await ctx.get_combat()
@@ -637,6 +639,19 @@ class InitTracker(commands.Cog):
         if args.last("deathdelete", default=False, type_=bool):
             options.deathdelete = not options.deathdelete
             out += f"Monsters at 0 HP will be {'removed' if options.deathdelete else 'left'}.\n"
+        if combat_dm := args.last("combatdm"):
+            # check: is the user a dm/the dm
+            servsettings = await ctx.get_server_settings()
+            author_id = ctx.author.id
+            allowed_to_pass = author_id == combat.dm_id or servsettings.is_dm(ctx.author)
+            if not allowed_to_pass:
+                raise commands.UserInputError("You are not allowed to change this Combat's DM.")
+            try:
+                member = await self.member_converter.convert(ctx, combat_dm)
+            except commands.BadArgument:
+                raise commands.UserInputError("You must pass a valid member mention as an argument.")
+            combat.dm_id = member.id
+            out += f"This combat's DM has been set to {member.mention}.\n"
 
         combat.options = options
         await combat.commit()

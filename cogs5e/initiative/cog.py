@@ -650,8 +650,9 @@ class InitTracker(commands.Cog):
                 member = await self.member_converter.convert(ctx, combat_dm)
             except commands.BadArgument:
                 raise commands.UserInputError("You must pass a valid member mention as an argument.")
-            combat.dm_id = member.id
-            out += f"This combat's DM has been set to {member.mention}.\n"
+            else:
+                combat.dm_id = member.id
+                out += f"Current combat DM has been set to {member.mention}.\n"
 
         combat.options = options
         await combat.commit()

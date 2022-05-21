@@ -98,7 +98,10 @@ class Homebrew(commands.Cog):
                 r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", url
             )
         ):
-            return await ctx.send("This is not a CritterDB link.")
+            return await ctx.send(
+                "This is not a valid CritterDB link. Ensure the link is to the "
+                "bestiary and not an individual creature."
+            )
 
         loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")
         bestiary_id = match.group(2)

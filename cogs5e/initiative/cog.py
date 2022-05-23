@@ -1390,7 +1390,7 @@ class InitTracker(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send(
                     f"No matching spells found in {combatant.name}'s spellbook. Cast again "
-                    f"with the `-i` argument to ignore restrictions!"
+                    "with the `-i` argument to ignore restrictions!"
                 )
         else:
             spell = await select_spell_full(ctx, spell_name)

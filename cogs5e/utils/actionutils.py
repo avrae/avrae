@@ -1,10 +1,11 @@
 import itertools
 from collections import namedtuple
+from typing import Iterable, List, Optional, TYPE_CHECKING, Union
 
-import discord
+import disnake
 
 from cogs5e.initiative import InitiativeEffect
-from cogs5e.initiative.types import BaseCombatant
+from cogs5e.initiative.types import BaseCombatant, CombatantType
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLicense
 from gamedata import lookuputils
@@ -13,19 +14,29 @@ from utils.enums import CritDamageType
 from utils.functions import a_or_an, confirm, maybe_http_url, natural_join, search_and_select, smart_trim, verbose_stat
 from utils.settings import ServerSettings
 
+if TYPE_CHECKING:
+    from cogs5e.initiative import Combatant, PlayerCombatant, Combat
+    from cogs5e.models.automation import AutomationResult, Automation
+    from cogs5e.models.character import Character
+    from cogs5e.models.sheet.statblock import StatBlock
+    from cogs5e.models.sheet.attack import Attack, AttackList
+    from cogs5e.models.sheet.action import Action, Actions
+    from gamedata import Spell
+    from utils.argparser import ParsedArguments
+    from utils.context import AvraeContext
 
-async def run_attack(ctx, embed, args, caster, attack, targets, combat):
+
+async def run_attack(
+    ctx: "AvraeContext",
+    embed: disnake.Embed,
+    args: "ParsedArguments",
+    caster: "StatBlock",
+    attack: "Attack",
+    targets: List[Union[str, "StatBlock"]],
+    combat: Optional["Combat"],
+) -> "AutomationResult":
     """
     Runs an attack: adds title, handles -f and -thumb args, commits combat, runs automation, edits embed.
-
-    :type ctx: discord.ext.commands.Context
-    :type embed: discord.Embed
-    :type args: utils.argparser.ParsedArguments
-    :type caster: cogs5e.models.sheet.statblock.StatBlock
-    :type attack: cogs5e.models.sheet.attack.Attack
-    :type targets: list of str or list of cogs5e.models.sheet.statblock.StatBlock
-    :type combat: None or cogs5e.models.initiative.Combat
-    :rtype: cogs5e.models.automation.AutomationResult
     """
     if not args.last("h", type_=bool):
         name = caster.get_title_name()
@@ -53,23 +64,29 @@ async def run_attack(ctx, embed, args, caster, attack, targets, combat):
     }
     args.update_nx(arg_defaults)
 
-    return await run_automation(
+    result = await run_automation(
         ctx, embed, args, caster, attack.automation, targets, combat, **attack.__run_automation_kwargs__
     )
 
+    # common embed operations
+    embeds.add_fields_from_args(embed, args.get("f"))
+    if "thumb" in args:
+        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
 
-async def run_action(ctx, embed, args, caster, action, targets, combat):
+    return result
+
+
+async def run_action(
+    ctx: "AvraeContext",
+    embed: disnake.Embed,
+    args: "ParsedArguments",
+    caster: "Character",
+    action: "Action",
+    targets: List[Union[str, "StatBlock"]],
+    combat: Optional["Combat"],
+) -> Optional["AutomationResult"]:
     """
     Runs an action: adds title, handles -f and -thumb args, commits combat, runs automation, edits embed.
-
-    :type ctx: discord.ext.commands.Context
-    :type embed: discord.Embed
-    :type args: utils.argparser.ParsedArguments
-    :type caster: cogs5e.models.character.Character
-    :type action: cogs5e.models.sheet.action.Action
-    :type targets: list of str or list of cogs5e.models.sheet.statblock.StatBlock
-    :type combat: None or cogs5e.models.initiative.Combat
-    :rtype: cogs5e.models.automation.AutomationResult or None
     """
     await ctx.trigger_typing()
 
@@ -92,31 +109,41 @@ async def run_action(ctx, embed, args, caster, action, targets, combat):
         embed.title = f"{name} uses {action.name}!"
 
     if action.automation is not None:
-        return await run_automation(ctx, embed, args, caster, action.automation, targets, combat)
-
-    # else, show action description and note that it can't be automated
-    if action.snippet:
-        embed.description = action.snippet
+        result = await run_automation(ctx, embed, args, caster, action.automation, targets, combat)
     else:
-        embed.description = "Unknown action effect."
-    embed.set_footer(text="No action automation found.")
-    return None
+        # else, show action description and note that it can't be automated
+        if action.snippet:
+            embed.description = action.snippet
+        else:
+            embed.description = "Unknown action effect."
+        embed.set_footer(text="No action automation found.")
+        result = None
+
+    # common embed operations
+    embeds.add_fields_from_args(embed, args.get("f"))
+    if "thumb" in args:
+        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
+
+    return result
 
 
-async def cast_spell(spell, ctx, caster, targets, args, combat=None):
+async def cast_spell(
+    spell: "Spell",
+    ctx: "AvraeContext",
+    caster: "StatBlock",
+    targets: List[Union[str, "StatBlock"]],
+    args: "ParsedArguments",
+    combat: Optional["Combat"] = None,
+) -> "CastResult":
     """
     Casts this spell.
 
     :param spell: The spell to cast.
     :param ctx: The context of the casting.
     :param caster: The caster of this spell.
-    :type caster: :class:`~cogs5e.models.sheet.statblock.StatBlock`
     :param targets: A list of targets
-    :type targets: list of :class:`~cogs5e.models.sheet.statblock.StatBlock`
     :param args: Args
-    :type args: :class:`~utils.argparser.ParsedArguments`
     :param combat: The combat the spell was cast in, if applicable.
-    :rtype: CastResult
     """
 
     # generic args
@@ -225,7 +252,7 @@ async def cast_spell(spell, ctx, caster, targets, args, combat=None):
         stat_override = f" with {verbose_stat(with_arg)}"
 
     # begin setup
-    embed = discord.Embed()
+    embed = disnake.Embed()
     if title:
         embed.title = (
             title.replace("[name]", caster.name)
@@ -243,6 +270,7 @@ async def cast_spell(spell, ctx, caster, targets, args, combat=None):
     conc_conflict = None
     conc_effect = None
     if all((spell.concentration, isinstance(caster, BaseCombatant), combat, not noconc)):
+        caster: "Combatant"  # to make pycharm typechecking happy
         duration = args.last("dur", spell.get_combat_duration(), int)
         conc_effect = InitiativeEffect.new(
             combat=combat, combatant=caster, name=spell.name, duration=duration, concentration=True
@@ -269,12 +297,22 @@ async def cast_spell(spell, ctx, caster, targets, args, combat=None):
             dc_override=dc_override,
             spell_override=spell_override,
         )
-    else:  # no automation, display spell description
+    else:
+        # no automation, display spell description
         phrase = args.join("phrase", "\n")
         if phrase:
             embed.description = f"*{phrase}*"
         embed.add_field(name="Description", value=smart_trim(spell.description), inline=False)
         embed.set_footer(text="No spell automation found.")
+
+        # commit the caster
+        if isinstance(caster, BaseCombatant):
+            caster: "Combatant"  # to make pycharm typechecking happy
+            if caster.type == CombatantType.PLAYER:
+                caster: "PlayerCombatant"  # to make pycharm typechecking happy
+                await caster.character.commit(ctx)
+        elif hasattr(caster, "commit"):
+            await caster.commit(ctx)
 
     if cast_level != spell.level and spell.higherlevels:
         embed.add_field(name="At Higher Levels", value=smart_trim(spell.higherlevels), inline=False)
@@ -286,8 +324,12 @@ async def cast_spell(spell, ctx, caster, targets, args, combat=None):
         conflicts = ", ".join(e.name for e in conc_conflict)
         embed.add_field(name="Concentration", value=f"Dropped {conflicts} due to concentration.")
 
-    if "thumb" not in args and spell.image:
+    # embed operations
+    if "thumb" in args:
+        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
+    elif spell.image:
         embed.set_thumbnail(url=spell.image)
+    embeds.add_fields_from_args(embed, args.get("f"))
     lookuputils.handle_source_footer(embed, spell, add_source_str=False)
 
     return CastResult(embed=embed, success=True, automation_result=automation_result)
@@ -296,19 +338,19 @@ async def cast_spell(spell, ctx, caster, targets, args, combat=None):
 CastResult = namedtuple("CastResult", "embed success automation_result")
 
 
-async def run_automation(ctx, embed, args, caster, automation, targets, combat, always_commit_caster=False, **kwargs):
+async def run_automation(
+    ctx: Union["AvraeContext", disnake.Interaction],
+    embed: disnake.Embed,
+    args: "ParsedArguments",
+    caster: "StatBlock",
+    automation: "Automation",
+    targets: List[Union[str, "StatBlock"]],
+    combat: Optional["Combat"],
+    always_commit_caster: bool = False,
+    **kwargs,
+) -> "AutomationResult":
     """
     Common automation runner
-
-    :type ctx: utils.context.AvraeContext | disnake.Interaction
-    :type embed: discord.Embed
-    :type args: utils.argparser.ParsedArguments
-    :type caster: cogs5e.models.sheet.statblock.StatBlock
-    :type automation: cogs5e.models.automation.Automation
-    :type targets: list of str or list of cogs5e.models.sheet.statblock.StatBlock
-    :type combat: None or cogs5e.models.initiative.Combat
-    :type always_commit_caster: bool
-    :rtype: cogs5e.models.automation.AutomationResult
     """
     # get crit type in context
     # this could be running from an Interaction, which doesn't have the get_server_settings utility;
@@ -338,24 +380,22 @@ async def run_automation(ctx, embed, args, caster, automation, targets, combat, 
     ):
         await caster.commit(ctx)
 
-    # common embed operations
-    embeds.add_fields_from_args(embed, args.get("f"))
-    if "thumb" in args:
-        embed.set_thumbnail(url=maybe_http_url(args.last("thumb", "")))
-
     return result
 
 
-async def select_action(ctx, name, attacks, actions=None, allow_no_automation=False, **kwargs):
+async def select_action(
+    ctx: "AvraeContext",
+    name: str,
+    attacks: "AttackList",
+    actions: "Actions" = None,
+    allow_no_automation: bool = False,
+    **kwargs,
+) -> Union["Attack", "Action"]:
     """
     Prompts the user to select an action from the caster's valid list of runnable actions, or returns a single
     unambiguous action.
 
-    :type ctx: discord.ext.commands.Context
-    :type name: str
-    :type attacks: cogs5e.models.sheet.attack.AttackList
-    :type actions: cogs5e.models.sheet.action.Actions
-    :param bool allow_no_automation:
+    :param allow_no_automation:
         When selecting from a player's action list, whether to allow returning an action that has no action gamedata.
     :rtype: cogs5e.models.sheet.attack.Attack or cogs5e.models.sheet.action.Action
     """
@@ -370,22 +410,22 @@ async def select_action(ctx, name, attacks, actions=None, allow_no_automation=Fa
 
 
 # ==== action display ====
-async def send_action_list(ctx, caster, destination=None, attacks=None, actions=None, embed=None, args=None):
+async def send_action_list(
+    ctx: "AvraeContext",
+    caster: "StatBlock",
+    destination: disnake.abc.Messageable = None,
+    attacks: "AttackList" = None,
+    actions: "Actions" = None,
+    embed: disnake.Embed = None,
+    args: Iterable[str] = None,
+):
     """
     Sends the list of actions and attacks given to the given destination.
-
-    :type ctx: discord.ext.commands.Context
-    :type caster: cogs5e.models.sheet.statblock.StatBlock
-    :type destination: discord.abc.Messageable
-    :type attacks: cogs5e.models.sheet.attack.AttackList
-    :type actions: cogs5e.models.sheet.action.Actions
-    :type embed: discord.Embed
-    :type args: Iterable[str]
     """
     if destination is None:
         destination = ctx
     if embed is None:
-        embed = discord.Embed(color=caster.get_color(), title=f"{caster.get_title_name()}'s Actions")
+        embed = disnake.Embed(color=caster.get_color(), title=f"{caster.get_title_name()}'s Actions")
     if args is None:
         args = ()
 

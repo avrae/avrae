@@ -4,6 +4,7 @@ Created on Nov 29, 2016
 @author: andrew
 """
 import itertools
+import logging
 
 import discord
 from discord.ext import commands
@@ -22,6 +23,8 @@ from utils.argparser import argparse
 from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str, try_delete
 
 LARGE_THRESHOLD = 200
+
+log = logging.getLogger(__name__)
 
 
 class Lookup(commands.Cog):
@@ -567,8 +570,8 @@ class Lookup(commands.Cog):
     @commands.command(name="item")
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
-        choices = await lookuputils.get_item_choices(ctx)
-        item = await lookuputils.search_entities(ctx, {"magic-item": choices}, name, query_type="item")
+        choices = await lookuputils.get_item_entitlement_choice_map(ctx)
+        item = await lookuputils.search_entities(ctx, choices, name, query_type="item")
 
         embed = EmbedWithAuthor(ctx)
 

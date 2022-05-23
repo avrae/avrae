@@ -1,5 +1,7 @@
 from typing import Optional, TYPE_CHECKING, Union
 
+import disnake.utils
+
 import aliasing.api.statblock
 import aliasing.evaluators
 from utils.enums import CritDamageType
@@ -131,7 +133,7 @@ class Automation:
         inner = Effect.build_child_str(self.effects, caster, evaluator)
         if not inner:
             inner = ", ".join(e.type for e in self.effects)
-        return f"{inner[0].upper()}{inner[1:]}."
+        return disnake.utils.escape_markdown(f"{inner[0].upper()}{inner[1:]}.", as_needed=True)
 
     def __str__(self):
         return f"Automation ({len(self.effects)} effects)"

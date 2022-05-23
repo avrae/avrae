@@ -8,6 +8,7 @@ import io
 import re
 import textwrap
 from collections import Counter
+from math import ceil
 
 import d20
 import discord
@@ -223,7 +224,7 @@ class CollectableManagementGroup(commands.Group):
         # build the resulting embed
         if collections:
             total = len(collections)
-            maxpage = total // 25 + 1
+            maxpage = ceil(total / 25)
             page = max(1, min(page, maxpage))
             pages = [collections[i : i + 25] for i in range(0, total, 25)]
             for name, bindings_str in pages[page - 1]:

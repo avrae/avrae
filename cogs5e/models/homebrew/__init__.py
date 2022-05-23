@@ -29,7 +29,7 @@ class Pack(HomebrewContainer):
 
     @classmethod
     def from_dict(cls, raw):
-        raw["items"] = [gamedata.Item.from_homebrew(s, raw["name"]) for s in raw["items"]]
+        raw["items"] = [gamedata.HomebrewItem.from_homebrew(s, raw["name"]) for s in raw["items"]]
         return cls(**raw)
 
     # subscription helpers

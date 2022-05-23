@@ -8,7 +8,6 @@ This key is set when a combat starts and expired 2 minutes after a combat ends i
 recording.
 """
 import datetime
-import hashlib
 import logging
 import re
 import time
@@ -44,18 +43,20 @@ class RecordedMessage(RecordedEvent):
     author_name: str
     created_at: float
     content: str
-    embeds: List[dict]  # just call disnake.Embed.to_dict() to generate these
+    embeds: List[dict]  # call disnake.Embed.to_dict() to generate these
+    components: List[dict]  # call disnake.Component.to_dict() to generate these
 
     @classmethod
     def from_message(cls, combat_id: str, message: disnake.Message):
         return cls(
             combat_id=combat_id,
             message_id=message.id,
-            author_id=anonymize_id(message.author.id),
+            author_id=message.author.id,
             author_name=message.author.display_name,
             created_at=message.created_at.timestamp(),
             content=message.content,
             embeds=[embed.to_dict() for embed in message.embeds],
+            components=[component.to_dict() for component in message.components],
         )
 
 
@@ -91,11 +92,32 @@ class RecordedCommandInvocation(RecordedMessage):
             created_at=message.created_at.timestamp(),
             content=message.content,
             embeds=[embed.to_dict() for embed in message.embeds],
+            components=[component.to_dict() for component in message.components],
             prefix=ctx.prefix,
             command_name=ctx.command.qualified_name,
             called_by_alias=ctx.nlp_is_alias,
             caster=caster,
             targets=targets,
+        )
+
+
+class RecordedButtonInteraction(RecordedEvent):
+    event_type = "button_press"
+    interaction_message_id: int
+    author_id: str
+    author_name: str
+    button_id: str
+    button_label: str
+
+    @classmethod
+    def from_interaction(cls, combat_id: str, interaction: disnake.MessageInteraction):
+        return cls(
+            combat_id=combat_id,
+            interaction_message_id=interaction.message.id,
+            author_id=interaction.author.id,
+            author_name=interaction.author.display_name,
+            button_id=interaction.data.custom_id,
+            button_label=interaction.component.label,
         )
 
 
@@ -140,10 +162,12 @@ class NLPRecorder:
     def register_listeners(self):
         self.bot.add_listener(self.on_message)
         self.bot.add_listener(self.on_command_completion)
+        self.bot.add_listener(self.on_button_click)
 
     def deregister_listeners(self):
         self.bot.remove_listener(self.on_message)
         self.bot.remove_listener(self.on_command_completion)
+        self.bot.remove_listener(self.on_button_click)
 
     # ==== listeners ====
     async def on_message(self, message: disnake.Message):
@@ -155,6 +179,11 @@ class NLPRecorder:
         if ctx.guild is None:
             return
         await self.on_guild_command(ctx)
+
+    async def on_button_click(self, interaction: disnake.MessageInteraction):
+        if interaction.guild_id is None:
+            return
+        await self.on_guild_button_click(interaction)
 
     # ==== main methods ====
     async def on_combat_start(self, combat: Combat):
@@ -198,6 +227,16 @@ class NLPRecorder:
         is_recording, combat_id = await self._recording_info(ctx.guild.id, ctx.channel.id)
         if is_recording:
             await self._record_event(RecordedCommandInvocation.from_ctx(combat_id=combat_id, ctx=ctx))
+
+    async def on_guild_button_click(self, interaction: disnake.MessageInteraction):
+        """
+        Called when a button is clicked in a guild. If the guild has not opted in to NLP recording, does nothing.
+        """
+        is_recording, combat_id = await self._recording_info(interaction.guild_id, interaction.channel_id)
+        if is_recording:
+            await self._record_event(
+                RecordedButtonInteraction.from_interaction(combat_id=combat_id, interaction=interaction)
+            )
 
     async def on_combat_commit(self, combat: Combat):
         """
@@ -363,34 +402,3 @@ class NLPRecorder:
             log.debug(str(response))
             if failed_count := response.get("FailedPutCount"):
                 log.error(f"Failed to record {failed_count} NLP events; response={response!r}")
-
-    # ==== docdb ingest impls ====
-    # async def _record_event_docdb(self, combat_id: str, event: RecordedEvent):
-    #     """Saves an event to the recording for the given combat ID."""
-    #     log.debug(f"saving 1 event to {combat_id=} of type {event.event_type!r}")
-    #     await self.bot.mdb.nlp_recordings.insert_one(event.dict())
-
-    # async def _record_events_docdb(self, combat_id: str, events: Iterable[RecordedEvent]):
-    #     """Saves many events to the recording for the given combat ID."""
-    #     now = datetime.datetime.now()
-    #     documents = [
-    #         {
-    #             "combat_id": combat_id,
-    #             "timestamp": now,
-    #             **event.dict()
-    #         }
-    #         for event in events
-    #     ]
-    #     if not documents:
-    #         return
-    #     log.debug(f"saving {len(documents)} events to {combat_id=}")
-    #     await self.bot.mdb.nlp_recordings.insert_many(documents)
-
-
-# ==== helpers ====
-def anonymize_id(user_id: int) -> str:
-    """
-    Returns a new unique ID for the given user ID that cannot be linked back to the original ID.
-    This is accomplished by hashing the user ID and using the hash as the new ID.
-    """
-    return hashlib.md5(user_id.to_bytes(8, "big", signed=False)).hexdigest()

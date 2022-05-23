@@ -390,15 +390,22 @@ async def get_spell_choices(ctx, homebrew=True):
 
 
 # ---- item stuff ----
-async def get_item_choices(ctx, homebrew=True):
+async def get_item_entitlement_choice_map(ctx, homebrew=True):
     """
     Gets a list of items in the current context for the user to choose from.
 
     :param ctx: The context.
     :param homebrew: Whether to include homebrew entities.
     """
+    available_items = {
+        "adventuring-gear": compendium.adventuring_gear,
+        "armor": compendium.armor,
+        "magic-item": compendium.magic_items,
+        "weapon": compendium.weapons,
+    }
+
     if not homebrew:
-        return compendium.items
+        return available_items
 
     # personal pack
     try:
@@ -410,12 +417,14 @@ async def get_item_choices(ctx, homebrew=True):
         pack_id = None
 
     # server packs
-    choices = list(itertools.chain(compendium.items, custom_items))
+    choices = custom_items
     if ctx.guild:
         async for servpack in Pack.server_active(ctx):
             if servpack.id != pack_id:
                 choices.extend(servpack.items)
-    return choices
+
+    available_items["magic-item"] = compendium.magic_items + choices
+    return available_items
 
 
 # ---- race stuff ----

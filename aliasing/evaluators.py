@@ -130,7 +130,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             create_cc_nx=self.deprecated(since="v2.5.0", replacement="character().create_cc_nx()")(self.needs_char),
             create_cc=self.deprecated(since="v2.5.0", replacement="character().create_cc()")(self.needs_char),
             get_slots=self.deprecated(since="v2.5.0", replacement="character().spellbook.get_slots()")(self.needs_char),
-            get_slots_max=self.deprecated(since="v2.5.0", replacement="character().spellbook.get_slots_max()")(
+            get_slots_max=self.deprecated(since="v2.5.0", replacement="character().spellbook.get_max_slots()")(
                 self.needs_char
             ),
             set_slots=self.deprecated(since="v2.5.0", replacement="character().spellbook.set_slots()")(self.needs_char),
@@ -286,7 +286,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         def get_slots(level: int):
             return character.spellbook.get_slots(int(level))
 
-        @self.deprecated(since="v2.5.0", replacement="character().spellbook.get_slots_max()")
+        @self.deprecated(since="v2.5.0", replacement="character().spellbook.get_max_slots()")
         def get_slots_max(level: int):
             return character.spellbook.get_max_slots(int(level))
 

@@ -212,7 +212,7 @@ desc = (
     "View the full list of commands [here](https://avrae.io/commands)!\n"
     "Invite Avrae to your server [here](https://invite.avrae.io)!\n"
     "Join the official development server [here](https://support.avrae.io)!\n"
-    "[Privacy Policy](https://www.fandom.com/privacy-policy) | [Terms of Use](https://www.fandom.com/terms-of-use)"
+    "[Privacy Policy](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy) | [Terms of Use](https://company.wizards.com/en/legal/terms)"
 )
 intents = discord.Intents(
     guilds=True,

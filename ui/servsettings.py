@@ -422,12 +422,12 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
             embed.add_field(
                 name="Contribute Message Data to Natural Language AI Training",
                 value=f"**{self.settings.upenn_nlp_opt_in}**\n"
-                f"*If this is enabled, the contents of messages, usernames, character names, and snapshots "
-                f"of a character's resources will be recorded in channels **with an active combat.***\n"
+                f"*If this is enabled, the contents of messages, displayed nicknames, character names, and snapshots "
+                f"of a character's sheet will be recorded in channels **with an active combat.***\n"
                 f"*This data will be used in a project to make advances in interactive fiction and text "
                 f"generation using artificial intelligence at the University of Pennsylvania.*\n"
                 f"*Read more about the project [here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html), "
-                f"and our data handling and Privacy Policy [here](https://www.fandom.com/privacy-policy).*",
+                f"and our data handling and Privacy Policy [here](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy).*",
                 inline=False,
             )
 

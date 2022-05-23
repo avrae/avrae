@@ -102,7 +102,9 @@ async def test_spell(avrae, dhttp):
 
 @requires_data()
 async def test_item(avrae, dhttp):
-    for item in compendium.items:
+    for item in itertools.chain(
+        compendium.adventuring_gear, compendium.armor, compendium.magic_items, compendium.weapons
+    ):
         avrae.message(f"!item {item.name}")
         if not item.is_free:
             await dhttp.receive_message(embed=NOT_AVAILABLE_EMBED)

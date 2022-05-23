@@ -619,7 +619,8 @@ class InitTracker(commands.Cog):
         `dyn` - Dynamic initiative; Rerolls all initiatves at the start of a round.
         `turnnotif` - Notifies the controller of the next combatant in initiative.
         `deathdelete` - Toggles removing monsters below 0 HP.
-        `-name <name>` - Sets a name for the combat instance
+        `-name <name>` - Sets a name for the combat instance.
+        `-combatdm <@mention>` - Changes this combat's DM.
         """
         args = argparse(settings)
         combat = await ctx.get_combat()
@@ -638,6 +639,14 @@ class InitTracker(commands.Cog):
         if args.last("deathdelete", default=False, type_=bool):
             options.deathdelete = not options.deathdelete
             out += f"Monsters at 0 HP will be {'removed' if options.deathdelete else 'left'}.\n"
+        if combat_dm := args.last("combatdm"):
+            try:
+                member = await commands.MemberConverter().convert(ctx, combat_dm)
+            except commands.BadArgument:
+                raise commands.UserInputError("You must pass a valid member mention as an argument.")
+            else:
+                combat.dm_id = member.id
+                out += f"Current combat DM has been set to {member.mention}.\n"
 
         combat.options = options
         await combat.commit()

@@ -298,8 +298,21 @@ class ParsedArguments:
 
         :param context: The context to add arguments to.
         :param args: The arguments to add.
-        :type args: :class:`~utils.argparser.ParsedArguments`
+        :type args: :class:`~utils.argparser.ParsedArguments`, or dict[str, list[str]]
         """
+        if isinstance(args, dict):
+            if all(
+                isinstance(k, (collections.UserString, str))
+                and isinstance(v, (collections.UserList, list))
+                and all(isinstance(i, (collections.UserString, str)) for i in v)
+                for k, v in args.items()
+            ):
+                args = ParsedArguments.from_dict(args)
+            else:
+                raise InvalidArgument(f"Argument is not in the format dict[str, list[str]] (in {args})")
+        elif not isinstance(args, ParsedArguments):
+            raise InvalidArgument(f"Argument is not a dict or ParsedArguments (in {args})")
+
         self._contexts[context] = args
 
     # builtins

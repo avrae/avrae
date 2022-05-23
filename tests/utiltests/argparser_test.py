@@ -3,6 +3,7 @@ from discord.ext.commands import ExpectedClosingQuoteError
 
 from utils.argparser import argparse, argquote, argsplit
 from utils.enums import AdvantageType
+from cogs5e.models.errors import InvalidArgument
 
 
 def test_argsplit():
@@ -182,6 +183,14 @@ def test_contextual_argparse():
     args = argparse("-d 5")
     args.add_context("foo", argparse('-d 1 -phrase "I am foo"'))
     args.add_context("bar", argparse('-d 2 -phrase "I am bar"'))
+    args.add_context("baz", {"d": ["3"], "phrase": ["I am baz"]})
+
+    with pytest.raises(InvalidArgument):
+        args.add_context(1, {1: ["a", "b"]})
+    with pytest.raises(InvalidArgument):
+        args.add_context(2, {"a": [1, "b"]})
+    with pytest.raises(InvalidArgument):
+        args.add_context(3, 1)
 
     args.set_context("foo")
     assert args.last("d") == "1"
@@ -194,6 +203,12 @@ def test_contextual_argparse():
     assert args.get("d") == ["5", "2"]
     assert args.last("phrase") == "I am bar"
     assert args.get("phrase") == ["I am bar"]
+
+    args.set_context("baz")
+    assert args.last("d") == "3"
+    assert args.get("d") == ["5", "3"]
+    assert args.last("phrase") == "I am baz"
+    assert args.get("phrase") == ["I am baz"]
 
     args.set_context("bletch")
     assert args.last("d") == "5"
@@ -212,6 +227,7 @@ def test_contextual_ephemeral_argparse():
     args = argparse("-d3 5")
     args.add_context("foo", argparse('-d 3 -d1 1 -phrase "I am foo"'))
     args.add_context("bar", argparse('-d1 2 -phrase "I am bar"'))
+    args.add_context("baz", {"d1": ["3"], "phrase": ["I am baz"]})
 
     args.set_context("foo")
     assert args.get("d", ephem=True) == ["3", "5", "1"]
@@ -219,6 +235,10 @@ def test_contextual_ephemeral_argparse():
 
     args.set_context("bar")
     assert args.get("d", ephem=True) == ["5", "2"]
+    assert args.get("d", ephem=True) == []
+
+    args.set_context("baz")
+    assert args.get("d", ephem=True) == ["3"]
     assert args.get("d", ephem=True) == []
 
     args.set_context(None)

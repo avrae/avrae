@@ -99,8 +99,7 @@ class Homebrew(commands.Cog):
             )
         ):
             return await ctx.send(
-                "This is not a valid CritterDB link. Ensure the link is to the "
-                "bestiary and not an individual creature."
+                "This is not a valid CritterDB link. Ensure the link is to the bestiary and not an individual creature."
             )
 
         loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")
@@ -263,9 +262,7 @@ class Homebrew(commands.Cog):
 
         await pack.subscribe(ctx)
         pack_owner = await user_from_id(ctx, pack.owner)
-        await ctx.send(
-            f"Subscribed to {pack.name} by {pack_owner}. " f"Use `{ctx.prefix}pack {pack.name}` to select it."
-        )
+        await ctx.send(f"Subscribed to {pack.name} by {pack_owner}. Use `{ctx.prefix}pack {pack.name}` to select it.")
 
     @pack.command(name="unsubscribe", aliases=["unsub"])
     async def pack_unsub(self, ctx, name):
@@ -388,9 +385,7 @@ class Homebrew(commands.Cog):
 
         await tome.subscribe(ctx)
         tome_owner = await user_from_id(ctx, tome.owner)
-        await ctx.send(
-            f"Subscribed to {tome.name} by {tome_owner}. " f"Use `{ctx.prefix}tome {tome.name}` to select it."
-        )
+        await ctx.send(f"Subscribed to {tome.name} by {tome_owner}. Use `{ctx.prefix}tome {tome.name}` to select it.")
 
     @tome.command(name="unsubscribe", aliases=["unsub"])
     async def tome_unsub(self, ctx, name):

@@ -331,7 +331,8 @@ class TestIEffect:
 class TestText:
     async def test_valid_entityreference(self, character, avrae, dhttp):
         avrae.message(
-            '!a import {"name":"Text Test","automation":[{"type": "text", "text": {"id": 75, "typeId": 12168134}}],"_v":2}'
+            '!a import {"name":"Text Test","automation":[{"type": "text", "text": {"id": 75, "typeId":'
+            ' 12168134}}],"_v":2}'
         )
         await dhttp.drain()
         avrae.message('!a "Text Test"')
@@ -339,7 +340,8 @@ class TestText:
 
     async def test_missing_entitlement_entityreference(self, character, avrae, dhttp):
         avrae.message(
-            '!a import {"name":"Text Test2","automation":[{"type": "text", "text": {"id": -75, "typeId": 12168134}}],"_v":2}'
+            '!a import {"name":"Text Test2","automation":[{"type": "text", "text": {"id": -75, "typeId":'
+            ' 12168134}}],"_v":2}'
         )
         await dhttp.drain()
         avrae.message('!a "Text Test2"')
@@ -347,7 +349,8 @@ class TestText:
 
     async def test_invalid_entityreference(self, character, avrae, dhttp):
         avrae.message(
-            '!a import {"name":"Text Test3","automation":[{"type": "text", "text": {"id": -9999999, "typeId": 12168134}}],"_v":2}'
+            '!a import {"name":"Text Test3","automation":[{"type": "text", "text": {"id": -9999999, "typeId":'
+            ' 12168134}}],"_v":2}'
         )
         await dhttp.drain()
         avrae.message('!a "Text Test3"')
@@ -355,7 +358,8 @@ class TestText:
 
     async def test_invalid2_entityreference(self, character, avrae, dhttp):
         avrae.message(
-            '!a import {"name":"Text Test4","automation":[{"type": "text", "text": {"id": 2102, "typeId": 1118725998}}],"_v":2}'
+            '!a import {"name":"Text Test4","automation":[{"type": "text", "text": {"id": 2102, "typeId":'
+            ' 1118725998}}],"_v":2}'
         )
         await dhttp.drain()
         avrae.message('!a "Text Test4"')

@@ -41,7 +41,7 @@ class Save(Effect):
         super().run(autoctx)
         if autoctx.target is None:
             raise TargetException(
-                "Tried to make a save without a target! Make sure all Save effects are inside " "of a Target effect."
+                "Tried to make a save without a target! Make sure all Save effects are inside of a Target effect."
             )
 
         # ==== args ====

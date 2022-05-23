@@ -157,14 +157,14 @@ async def get_collectable_named(
             f"I found both a personal {obj_name} and {len(subscribed_obj_ids)} workshop {obj_name}(es) "
             f"named {ctx.prefix}{name}. Use `{ctx.prefix}{obj_command_name} autofix` to automatically assign "
             f"all conflicting {obj_name_pl} unique names, or `{ctx.prefix}{obj_command_name} rename {name} <new name>` "
-            f"to manually rename it."
+            "to manually rename it."
         )
     if len(subscribed_obj_ids) > 1:
         raise AliasNameConflict(
             f"I found {len(subscribed_obj_ids)} workshop {obj_name_pl} "
             f"named {ctx.prefix}{name}. Use `{ctx.prefix}{obj_command_name} autofix` to automatically assign "
             f"all conflicting {obj_name_pl} unique names, or `{ctx.prefix}{obj_command_name} rename {name} <new name>` "
-            f"to manually rename it."
+            "to manually rename it."
         )
     # otherwise return the subscribed
     return await workshop_cls.from_id(ctx, subscribed_obj_ids[0])
@@ -231,7 +231,7 @@ def set_cvar(character, name, value):
     value = str(value)
     if not name.isidentifier():
         raise InvalidArgument(
-            "Cvar names must be identifiers " "(only contain a-z, A-Z, 0-9, _, and not start with a number)."
+            "Cvar names must be identifiers (only contain a-z, A-Z, 0-9, _, and not start with a number)."
         )
     elif len(name) > VAR_NAME_LIMIT:
         raise InvalidArgument(f"Cvar name must be shorter than {VAR_NAME_LIMIT} characters.")
@@ -255,7 +255,7 @@ async def set_uvar(ctx, name, value):
     value = str(value)
     if not name.isidentifier():
         raise InvalidArgument(
-            "Uvar names must be valid identifiers " "(only contain a-z, A-Z, 0-9, _, and not start with a number)."
+            "Uvar names must be valid identifiers (only contain a-z, A-Z, 0-9, _, and not start with a number)."
         )
     elif len(name) > VAR_NAME_LIMIT:
         raise InvalidArgument(f"Uvar name must be shorter than {VAR_NAME_LIMIT} characters.")
@@ -301,7 +301,7 @@ async def set_svar(ctx, name, value):
     value = str(value)
     if not name.isidentifier():
         raise InvalidArgument(
-            "Svar names must be valid identifiers " "(only contain a-z, A-Z, 0-9, _, and not start with a number)."
+            "Svar names must be valid identifiers (only contain a-z, A-Z, 0-9, _, and not start with a number)."
         )
     elif len(name) > VAR_NAME_LIMIT:
         raise InvalidArgument(f"Svar name must be shorter than {VAR_NAME_LIMIT} characters.")
@@ -436,10 +436,10 @@ async def handle_alias_exception(ctx, err):
     if not isinstance(e, AliasException) or e.pm_user:
         with suppress(disnake.HTTPException):
             await ctx.author.send(
-                f"```py\n"
+                "```py\n"
                 f"{''.join(tb)}"
-                f"```"
-                f"This is an issue in a user-created command; do *not* report this on the official bug tracker."
+                "```"
+                "This is an issue in a user-created command; do *not* report this on the official bug tracker."
             )
 
     # send error message to channel
@@ -469,10 +469,10 @@ async def send_warnings(ctx, warns: List["evaluators.ScriptingWarning"]):
     warn_strs = "\n".join(out)
     with suppress(disnake.HTTPException):
         await ctx.author.send(
-            f"One or more aliases or snippets raised warnings:\n"
+            "One or more aliases or snippets raised warnings:\n"
             f"{warn_strs}"
-            f"This is an issue in a user-created command; please contact the author. Do *not* report this on the "
-            f"official bug tracker."
+            "This is an issue in a user-created command; please contact the author. Do *not* report this on the "
+            "official bug tracker."
         )
 
 
@@ -529,7 +529,7 @@ async def handle_alias_required_licenses(ctx, err):
         if blocked_by_ff:
             embed.title = "D&D Beyond is currently unavailable"
             embed.description = (
-                f"I was unable to communicate with D&D Beyond to confirm access to:\n"
+                "I was unable to communicate with D&D Beyond to confirm access to:\n"
                 f"{', '.join(e.name for e in err.entities)}"
             )
         else:
@@ -542,7 +542,7 @@ async def handle_alias_required_licenses(ctx, err):
                 "[here](https://www.dndbeyond.com/account)."
             )
             embed.set_footer(
-                text="Already linked your account? It may take up to a minute for Avrae to recognize the " "link."
+                text="Already linked your account? It may take up to a minute for Avrae to recognize the link."
             )
     else:
         missing_source_ids = {e.source for e in err.entities}
@@ -569,5 +569,5 @@ async def handle_alias_required_licenses(ctx, err):
         )
         embed.url = marketplace_url
 
-        embed.set_footer(text="Already unlocked? It may take up to a minute for Avrae to recognize the " "purchase.")
+        embed.set_footer(text="Already unlocked? It may take up to a minute for Avrae to recognize the purchase.")
     await ctx.send(embed=embed)

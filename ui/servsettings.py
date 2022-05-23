@@ -87,24 +87,28 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             dm_roles = "Dungeon Master, DM, Game Master, or GM"
         embed.add_field(
             name="__Lookup Settings__",
-            value=f"**DM Roles**: {dm_roles}\n"
-            f"**Monsters Require DM**: {self.settings.lookup_dm_required}\n"
-            f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
-            f"**Direct Message Results**: {self.settings.lookup_pm_result}\n"
-            f"**Prefer Legacy Content**: {legacy_preference_desc(self.settings.legacy_preference)}",
+            value=(
+                f"**DM Roles**: {dm_roles}\n"
+                f"**Monsters Require DM**: {self.settings.lookup_dm_required}\n"
+                f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
+                f"**Direct Message Results**: {self.settings.lookup_pm_result}\n"
+                f"**Prefer Legacy Content**: {legacy_preference_desc(self.settings.legacy_preference)}"
+            ),
             inline=False,
         )
         embed.add_field(name="Inline Rolling Settings", value=await self.get_inline_rolling_desc(), inline=False)
 
         embed.add_field(
             name="__Custom Stat Roll Settings__",
-            value=f"**Dice**: {self.settings.randchar_dice}\n"
-            f"**Number of Sets**: {self.settings.randchar_sets}\n"
-            f"**Assign Stats**: {self.settings.randchar_straight}\n"
-            f"**Stat Names:** {stat_names_desc(self.settings.randchar_stat_names)}\n"
-            f"**Minimum Total**: {self.settings.randchar_min}\n"
-            f"**Maximum Total**: {self.settings.randchar_max}\n"
-            f"**Over/Under Rules**: {get_over_under_desc(self.settings.randchar_rules)}",
+            value=(
+                f"**Dice**: {self.settings.randchar_dice}\n"
+                f"**Number of Sets**: {self.settings.randchar_sets}\n"
+                f"**Assign Stats**: {self.settings.randchar_straight}\n"
+                f"**Stat Names:** {stat_names_desc(self.settings.randchar_stat_names)}\n"
+                f"**Minimum Total**: {self.settings.randchar_min}\n"
+                f"**Maximum Total**: {self.settings.randchar_max}\n"
+                f"**Over/Under Rules**: {get_over_under_desc(self.settings.randchar_rules)}"
+            ),
             inline=False,
         )
 
@@ -116,9 +120,11 @@ class ServerSettingsUI(ServerSettingsMenuBase):
             nlp_enabled_description = f"\n**Contribute Message Data to NLP Training**: {self.settings.upenn_nlp_opt_in}"
         embed.add_field(
             name="__Miscellaneous Settings__",
-            value=f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}\n"
-            f"**Critical Damage Type**: {crit_type_desc(self.settings.crit_type)}"
-            f"{nlp_enabled_description}",
+            value=(
+                f"**Show DDB Campaign Message**: {self.settings.show_campaign_cta}\n"
+                f"**Critical Damage Type**: {crit_type_desc(self.settings.crit_type)}"
+                f"{nlp_enabled_description}"
+            ),
             inline=False,
         )
 
@@ -247,49 +253,61 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         if not self.settings.dm_roles:
             embed.add_field(
                 name="DM Roles",
-                value=f"**Dungeon Master, DM, Game Master, or GM**\n"
-                f"*Any user with a role named one of these will be considered a DM. This lets them look up a "
-                f"monster's full stat block if `Monsters Require DM` is enabled, skip other players' turns in "
-                f"initiative, and more.*",
+                value=(
+                    f"**Dungeon Master, DM, Game Master, or GM**\n"
+                    f"*Any user with a role named one of these will be considered a DM. This lets them look up a "
+                    f"monster's full stat block if `Monsters Require DM` is enabled, skip other players' turns in "
+                    f"initiative, and more.*"
+                ),
                 inline=False,
             )
         else:
             dm_roles = natural_join([f"<@&{role_id}>" for role_id in self.settings.dm_roles], "or")
             embed.add_field(
                 name="DM Roles",
-                value=f"**{dm_roles}**\n"
-                f"*Any user with at least one of these roles will be considered a DM. This lets them look up a "
-                f"monster's full stat block if `Monsters Require DM` is enabled, skip turns in initiative, and "
-                f"more.*",
+                value=(
+                    f"**{dm_roles}**\n"
+                    "*Any user with at least one of these roles will be considered a DM. This lets them look up a "
+                    "monster's full stat block if `Monsters Require DM` is enabled, skip turns in initiative, and "
+                    "more.*"
+                ),
                 inline=False,
             )
         embed.add_field(
             name="Monsters Require DM",
-            value=f"**{self.settings.lookup_dm_required}**\n"
-            f"*If this is enabled, monster lookups will display hidden stats for any user without "
-            f"a role named DM, GM, Dungeon Master, Game Master, or the DM role configured above.*",
+            value=(
+                f"**{self.settings.lookup_dm_required}**\n"
+                "*If this is enabled, monster lookups will display hidden stats for any user without "
+                "a role named DM, GM, Dungeon Master, Game Master, or the DM role configured above.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Direct Message DMs",
-            value=f"**{self.settings.lookup_pm_dm}**\n"
-            f"*If this is enabled, the result of monster lookups will be direct messaged to the user who looked "
-            f"it up, rather than being printed to the channel, if the user is a DM.*",
+            value=(
+                f"**{self.settings.lookup_pm_dm}**\n"
+                "*If this is enabled, the result of monster lookups will be direct messaged to the user who looked "
+                "it up, rather than being printed to the channel, if the user is a DM.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Direct Message Results",
-            value=f"**{self.settings.lookup_pm_result}**\n"
-            f"*If this is enabled, the result of all lookups will be direct messaged to the user who looked "
-            f"it up, rather than being printed to the channel.*",
+            value=(
+                f"**{self.settings.lookup_pm_result}**\n"
+                "*If this is enabled, the result of all lookups will be direct messaged to the user who looked "
+                "it up, rather than being printed to the channel.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Prefer Legacy Content",
-            value=f"**{legacy_preference_desc(self.settings.legacy_preference)}**\n"
-            f"*If the only two options found in a content search are a legacy and non-legacy version of the same "
-            f"thing, whether to prefer the latest version, the legacy version, or always ask the user to select "
-            f"between the two.*",
+            value=(
+                f"**{legacy_preference_desc(self.settings.legacy_preference)}**\n"
+                "*If the only two options found in a content search are a legacy and non-legacy version of the same "
+                "thing, whether to prefer the latest version, the legacy version, or always ask the user to select "
+                "between the two.*"
+            ),
         )
         return {"embed": embed}
 
@@ -395,23 +413,27 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         )
         embed.add_field(
             name="Show DDB Campaign Message",
-            value=f"**{self.settings.show_campaign_cta}**\n"
-            f"*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when "
-            f"you import a character in an unlinked campaign.*",
+            value=(
+                f"**{self.settings.show_campaign_cta}**\n"
+                "*If this is enabled, you will receive occasional reminders to link your D&D Beyond campaign when "
+                "you import a character in an unlinked campaign.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Crit Damage Type",
-            value=f"**{crit_type_desc(self.settings.crit_type)}**\n"
-            f"_This affects how critical damage is treated on the server._\n"
-            f" ● Add Max Dice Value\n"
-            f"> _This type adds the maximum value of each die to the total._\n> `2d8 + 4` -> `2d8 + 16 + 4`\n"
-            f" ● Double Dice Amount (Default)\n"
-            f"> _This type doubles the amount of dice rolled._\n> `2d8 + 4` -> `4d8 + 4`\n"
-            f" ● Double Dice Total\n"
-            f"> _This type doubles the total value of the dice rolled._\n> `2d8 + 4` -> `(2d8) * 2 + 4`\n"
-            f" ● Double Total\n"
-            f"> _This type doubles the total, including modifiers._\n> `2d8 + 4` -> `(2d8 + 4) * 2`",
+            value=(
+                f"**{crit_type_desc(self.settings.crit_type)}**\n"
+                "_This affects how critical damage is treated on the server._\n"
+                " ● Add Max Dice Value\n"
+                "> _This type adds the maximum value of each die to the total._\n> `2d8 + 4` -> `2d8 + 16 + 4`\n"
+                " ● Double Dice Amount (Default)\n"
+                "> _This type doubles the amount of dice rolled._\n> `2d8 + 4` -> `4d8 + 4`\n"
+                " ● Double Dice Total\n"
+                "> _This type doubles the total value of the dice rolled._\n> `2d8 + 4` -> `(2d8) * 2 + 4`\n"
+                " ● Double Total\n"
+                "> _This type doubles the total, including modifiers._\n> `2d8 + 4` -> `(2d8 + 4) * 2`"
+            ),
             inline=False,
         )
 
@@ -421,13 +443,15 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         if nlp_feature_flag:
             embed.add_field(
                 name="Contribute Message Data to Natural Language AI Training",
-                value=f"**{self.settings.upenn_nlp_opt_in}**\n"
-                f"*If this is enabled, the contents of messages, displayed nicknames, character names, and snapshots "
-                f"of a character's sheet will be recorded in channels **with an active combat.***\n"
-                f"*This data will be used in a project to make advances in interactive fiction and text "
-                f"generation using artificial intelligence at the University of Pennsylvania.*\n"
-                f"*Read more about the project [here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html), "
-                f"and our data handling and Privacy Policy [here](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy).*",
+                value=(
+                    f"**{self.settings.upenn_nlp_opt_in}**\n*If this is enabled, the contents of messages, displayed"
+                    " nicknames, character names, and snapshots of a character's sheet will be recorded in channels"
+                    " **with an active combat.***\n*This data will be used in a project to make advances in"
+                    " interactive fiction and text generation using artificial intelligence at the University of"
+                    " Pennsylvania.*\n*Read more about the project"
+                    " [here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html), and our data handling and Privacy"
+                    " Policy [here](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy).*"
+                ),
                 inline=False,
             )
 
@@ -531,7 +555,8 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
                     stat_names = randchar_stat_names.replace(", ", ",").split(",")
                 if len(stat_names) != self.settings.randchar_num:
                     await interaction.send(
-                        f"Number of stat names does not match the number of stats. Press `{button.label}` to try again.",
+                        f"Number of stat names does not match the number of stats. Press `{button.label}` to try"
+                        " again.",
                         ephemeral=True,
                     )
                     self.settings.randchar_straight = False
@@ -661,50 +686,64 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
         )
         embed.add_field(
             name="Dice Rolled",
-            value=f"**{self.settings.randchar_dice}**\n"
-            f"*This is the dice string that will be rolled six times for "
-            f"each stat set.*",
+            value=(
+                f"**{self.settings.randchar_dice}**\n"
+                "*This is the dice string that will be rolled six times for "
+                "each stat set.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Number of Sets",
-            value=f"**{self.settings.randchar_sets}**\n"
-            f"*This is how many sets of stat rolls it will return, "
-            f"allowing your players to choose between them.*",
+            value=(
+                f"**{self.settings.randchar_sets}**\n"
+                "*This is how many sets of stat rolls it will return, "
+                "allowing your players to choose between them.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Number of Stats",
-            value=f"**{self.settings.randchar_num}**\n"
-            f"*This is how many stat rolls it will return per set, "
-            f"allowing your players to choose between them.*",
+            value=(
+                f"**{self.settings.randchar_num}**\n"
+                "*This is how many stat rolls it will return per set, "
+                "allowing your players to choose between them.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Assign Stats Directly",
-            value=f"**{self.settings.randchar_straight}**\n"
-            f"**Stat Names:** {stat_names_desc(self.settings.randchar_stat_names)}\n"
-            f"*If this is enabled, stats will automatically be assigned to stats in the order "
-            f"they are rolled.*",
+            value=(
+                f"**{self.settings.randchar_straight}**\n"
+                f"**Stat Names:** {stat_names_desc(self.settings.randchar_stat_names)}\n"
+                "*If this is enabled, stats will automatically be assigned to stats in the order "
+                "they are rolled.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Minimum Total Score Required",
-            value=f"**{self.settings.randchar_min}**\n"
-            f"*This is the minimum combined score required. Standard array is 72 total.*",
+            value=(
+                f"**{self.settings.randchar_min}**\n"
+                "*This is the minimum combined score required. Standard array is 72 total.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Maximum Total Score Required",
-            value=f"**{self.settings.randchar_max}**\n"
-            f"*This is the maximum combined score required. Standard array is 72 total.*",
+            value=(
+                f"**{self.settings.randchar_max}**\n"
+                "*This is the maximum combined score required. Standard array is 72 total.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Over/Under Rules",
-            value=f"**{get_over_under_desc(self.settings.randchar_rules)}**\n"
-            f"*This is a list of how many of the stats you require to be over/under a certain value, "
-            f"such as having at least one stat over 17, or two stats under 10.*",
+            value=(
+                f"**{get_over_under_desc(self.settings.randchar_rules)}**\n"
+                "*This is a list of how many of the stats you require to be over/under a certain value, "
+                "such as having at least one stat over 17, or two stats under 10.*"
+            ),
             inline=False,
         )
 

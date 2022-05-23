@@ -46,7 +46,8 @@ class RunningTheGame(Tutorial):
                             state_map.data.get("has_check"),
                         ),
                         (
-                            f"Make an ability save for a monster with `{ctx.prefix}monsave <name of monster> <ability>`.",
+                            f"Make an ability save for a monster with `{ctx.prefix}monsave <name of monster>"
+                            " <ability>`.",
                             state_map.data.get("has_save"),
                         ),
                     ]

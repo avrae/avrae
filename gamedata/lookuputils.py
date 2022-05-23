@@ -107,7 +107,7 @@ async def handle_required_license(ctx, err):
                 "[here](https://www.dndbeyond.com/account)."
             )
             embed.set_footer(
-                text="Already linked your account? It may take up to a minute for Avrae to recognize the " "link."
+                text="Already linked your account? It may take up to a minute for Avrae to recognize the link."
             )
     else:
         embed.title = f"Unlock {result.name} on D&D Beyond to view it here!"

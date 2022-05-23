@@ -207,12 +207,12 @@ class Avrae(commands.AutoShardedBot):
 
 
 desc = (
-    "Play D&D over Discord! Featuring advanced dice, initiative tracking, D&D Beyond integration, and more, you'll "
-    "never need another D&D bot.\n"
-    "View the full list of commands [here](https://avrae.io/commands)!\n"
-    "Invite Avrae to your server [here](https://invite.avrae.io)!\n"
-    "Join the official development server [here](https://support.avrae.io)!\n"
-    "[Privacy Policy](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy) | [Terms of Use](https://company.wizards.com/en/legal/terms)"
+    "Play D&D over Discord! Featuring advanced dice, initiative tracking, D&D Beyond integration, and more, you'll"
+    " never need another D&D bot.\nView the full list of commands [here](https://avrae.io/commands)!\nInvite Avrae to"
+    " your server [here](https://invite.avrae.io)!\nJoin the official development server"
+    " [here](https://support.avrae.io)!\n[Privacy"
+    " Policy](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy) | [Terms of"
+    " Use](https://company.wizards.com/en/legal/terms)"
 )
 intents = discord.Intents(
     guilds=True,
@@ -304,7 +304,7 @@ async def on_command_error(ctx, error):
         elif isinstance(original, Forbidden):
             try:
                 return await ctx.author.send(
-                    f"Error: I am missing permissions to run this command. "
+                    "Error: I am missing permissions to run this command. "
                     f"Please make sure I have permission to send messages to <#{ctx.channel.id}>."
                 )
             except HTTPException:
@@ -333,7 +333,7 @@ async def on_command_error(ctx, error):
 
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-        f"Please join <https://support.avrae.io> and let us know about the error!"
+        "Please join <https://support.avrae.io> and let us know about the error!"
     )
 
     log.warning("Error caused by message: `{}`".format(ctx.message.content))

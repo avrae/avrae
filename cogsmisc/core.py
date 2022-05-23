@@ -51,7 +51,7 @@ class Core(commands.Cog):
     @commands.command()
     async def invite(self, ctx):
         """Prints a link to invite Avrae to your server."""
-        await ctx.send("You can invite Avrae to your server here:\n" "<https://invite.avrae.io>")
+        await ctx.send("You can invite Avrae to your server here:\n<https://invite.avrae.io>")
 
     @commands.group(invoke_without_command=True)
     async def changelog(self, ctx):
@@ -102,9 +102,11 @@ class Core(commands.Cog):
             stats[k] = await Stats.get_statistic(ctx, k)
 
         embed = discord.Embed(
-            description="Avrae, a bot to streamline D&D 5e online.\n"
-            "Check out the latest release notes "
-            "[here](https://github.com/avrae/avrae/releases/latest)."
+            description=(
+                "Avrae, a bot to streamline D&D 5e online.\n"
+                "Check out the latest release notes "
+                "[here](https://github.com/avrae/avrae/releases/latest)."
+            )
         )
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://invite.avrae.io"
@@ -132,14 +134,16 @@ class Core(commands.Cog):
         embed.add_field(name="Commands Run", value=commands_run)
         embed.add_field(
             name="Servers",
-            value=f"{len(self.bot.guilds):,} on this cluster\n" f"{await Stats.get_guild_count(self.bot):,} total",
+            value=f"{len(self.bot.guilds):,} on this cluster\n{await Stats.get_guild_count(self.bot):,} total",
         )
         memory_usage = psutil.Process().memory_full_info().uss / 1024**2
         embed.add_field(name="Memory Usage", value="{:.2f} MiB".format(memory_usage))
         embed.add_field(
             name="About",
-            value="Made with :heart: by zhu.exe#4211 and the D&D Beyond team\n"
-            "Join the official development server [here](https://discord.gg/pQbd4s6)!",
+            value=(
+                "Made with :heart: by zhu.exe#4211 and the D&D Beyond team\n"
+                "Join the official development server [here](https://discord.gg/pQbd4s6)!"
+            ),
             inline=False,
         )
 
@@ -162,18 +166,18 @@ class Core(commands.Cog):
             embed.add_field(
                 name="Having trouble?",
                 value=(
-                    f"On occasion, the first time you link your Discord and D&D Beyond accounts, "
-                    f"Discord may use a temporary account that differs from your actual account. "
-                    f"If your accounts appear linked, but this command says they are not, compare "
-                    f"the numbers at the end of your Discord username to the numbers displayed in "
-                    f"the [D&D Beyond Account Settings](https://www.dndbeyond.com/account). For "
+                    "On occasion, the first time you link your Discord and D&D Beyond accounts, "
+                    "Discord may use a temporary account that differs from your actual account. "
+                    "If your accounts appear linked, but this command says they are not, compare "
+                    "the numbers at the end of your Discord username to the numbers displayed in "
+                    "the [D&D Beyond Account Settings](https://www.dndbeyond.com/account). For "
                     f"this account, `{ctx.author!s}`, they should be `{ctx.author.discriminator}`. "
-                    f"If they do not match, unlink the account, and try again."
+                    "If they do not match, unlink the account, and try again."
                 ),
             )
 
             embed.set_footer(
-                text="Already linked your account? It may take up to 15 minutes for Avrae to recognize " "the link."
+                text="Already linked your account? It may take up to 15 minutes for Avrae to recognize the link."
             )
             return await ctx.send(embed=embed)
 

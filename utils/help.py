@@ -21,7 +21,7 @@ class AvraeHelp(HelpCommand):
         """Returns help command's ending note. This is mainly useful to override for i18n purposes."""
         command_name = self.invoked_with
         return (
-            f"An underlined command signifies that the command has subcommands.\n"
+            "An underlined command signifies that the command has subcommands.\n"
             f"Type {self.context.clean_prefix}{command_name} <command> for more info on a command.\n"
             f"You can also type {self.context.clean_prefix}{command_name} <category> for more info on a category."
         )
@@ -74,9 +74,11 @@ class AvraeHelp(HelpCommand):
 
     def add_help_footer(self):
         self.embed_paginator.set_footer(
-            value="Arguments surrounded in angled brackets (<args>) are mandatory,"
-            " while those surrounded in square brackets ([args]) are optional."
-            " In either case, don't include the brackets."
+            value=(
+                "Arguments surrounded in angled brackets (<args>) are mandatory,"
+                " while those surrounded in square brackets ([args]) are optional."
+                " In either case, don't include the brackets."
+            )
         )
 
     # ===== HelpCommand overrides =====
@@ -228,7 +230,7 @@ class AvraeHelp(HelpCommand):
         # metadata
         self.embed_paginator.add_field(name=f"{ctx.prefix}{' '.join(fqp)}")
         self.embed_paginator.extend_field(
-            f"From {the_collection.name} by {owner}.\n" f"[View on Workshop]({the_collection.url})"
+            f"From {the_collection.name} by {owner}.\n[View on Workshop]({the_collection.url})"
         )
 
         # docs
@@ -250,9 +252,11 @@ class AvraeHelp(HelpCommand):
 help_command = AvraeHelp(
     verify_checks=False,  # allows guild-only commands to be shown in PMs
     command_attrs=dict(
-        help="Shows the help for the bot or a specific command.\n"
-        "__Valid Arguments__\n"
-        "-here - Sends help to the channel instead of PMs.",
+        help=(
+            "Shows the help for the bot or a specific command.\n"
+            "__Valid Arguments__\n"
+            "-here - Sends help to the channel instead of PMs."
+        ),
         brief="Shows this message.",
     ),
 )

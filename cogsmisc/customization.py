@@ -126,8 +126,10 @@ class CollectableManagementGroup(commands.Group):
         if not self.is_server:
             self.serve = self.command(
                 name="serve",
-                help=f"Sets {a_or_an(self.obj_name)} as a server {self.obj_name} or subscribes the server to the "
-                f"workshop collection it is found in.",
+                help=(
+                    f"Sets {a_or_an(self.obj_name)} as a server {self.obj_name} or subscribes the server to the "
+                    "workshop collection it is found in."
+                ),
             )(self.serve)
 
     # we override the Group copy command since we register commands in __init__
@@ -155,12 +157,11 @@ class CollectableManagementGroup(commands.Group):
         await obj.commit(ctx.bot.mdb)
 
         out = (
-            f"{self.obj_name.capitalize()} `{name}` added."
-            f"```py\n{ctx.prefix}{self.obj_copy_command} {name} {code}\n```"
+            f"{self.obj_name.capitalize()} `{name}` added.```py\n{ctx.prefix}{self.obj_copy_command} {name} {code}\n```"
         )
 
         if len(out) > 2000:
-            out = f"{self.obj_name.capitalize()} `{name}` added.\n" f"Command output too long to display."
+            out = f"{self.obj_name.capitalize()} `{name}` added.\nCommand output too long to display."
 
         await ctx.send(out)
 
@@ -191,7 +192,7 @@ class CollectableManagementGroup(commands.Group):
             the_collection = await collectable.load_collection(ctx)
             owner = await user_from_id(ctx, the_collection.owner)
             embed.title = f"{ctx.prefix}{name}" if self.is_alias else name
-            embed.description = f"From {the_collection.name} by {owner}.\n" f"[View on Workshop]({the_collection.url})"
+            embed.description = f"From {the_collection.name} by {owner}.\n[View on Workshop]({the_collection.url})"
             embeds.add_fields_from_long_text(embed, "Help", collectable.docs or "No documentation.")
 
             if isinstance(collectable, workshop.WorkshopAlias):
@@ -248,7 +249,7 @@ class CollectableManagementGroup(commands.Group):
         if obj is None:
             return await ctx.send(
                 f"{self.obj_name.capitalize()} not found. If this is a workshop {self.obj_name}, you "
-                f"can unsubscribe on the Avrae Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions> "
+                "can unsubscribe on the Avrae Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions> "
                 f"or by using `{ctx.prefix}{self.name} unsubscribe <collection name>`."
             )
         await obj.delete(ctx.bot.mdb)
@@ -357,7 +358,7 @@ class CollectableManagementGroup(commands.Group):
         response = await confirm(
             ctx,
             f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
-            f"Do you want to continue? (Reply with yes/no)\n"
+            "Do you want to continue? (Reply with yes/no)\n"
             f"{changes}",
         )
         if not response:
@@ -455,7 +456,7 @@ class CollectableManagementGroup(commands.Group):
         if existing_server_obj is not None and not await confirm(
             ctx,
             f"There is already an existing server {self.obj_name} named `{name}`. Do you want to overwrite it? "
-            f"(Reply with yes/no)",
+            "(Reply with yes/no)",
         ):
             return await ctx.send("Ok, aborting.")
 
@@ -466,7 +467,7 @@ class CollectableManagementGroup(commands.Group):
         )
 
         if len(out) > 2000:
-            out = f"Server {self.obj_name} `{server_obj.name}` added." f"Command output too long to display."
+            out = f"Server {self.obj_name} `{server_obj.name}` added.Command output too long to display."
 
         await ctx.send(out)
 
@@ -519,14 +520,20 @@ async def _snippet_before_edit(ctx, name=None, delete=False):
         return
     name = name.lower()
     if name in SPECIAL_ARGS or name.startswith("-"):
-        confirmation = f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument in Avrae commands.\nAre you sure you want to create this snippet? (Reply with yes/no)"
+        confirmation = (
+            f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument"
+            " in Avrae commands.\nAre you sure you want to create this snippet? (Reply with yes/no)"
+        )
     # roll string checking
     try:
         d20.parse(name)
     except d20.RollSyntaxError:
         pass
     else:
-        confirmation = f"**Warning:** Creating a snippet named `{name}` might cause hidden problems if you try to use the same roll in other commands.\nAre you sure you want to create this snippet? (Reply with yes/no)"
+        confirmation = (
+            f"**Warning:** Creating a snippet named `{name}` might cause hidden problems if you try to use the same"
+            " roll in other commands.\nAre you sure you want to create this snippet? (Reply with yes/no)"
+        )
 
     if confirmation is not None:
         if not await confirm(ctx, confirmation):
@@ -584,7 +591,7 @@ class Customization(commands.Cog):
             if not await confirm(
                 ctx,
                 f"Are you sure you want to set my prefix to `{prefix}`? This will affect "
-                f"everyone on this server! (Reply with yes/no)",
+                "everyone on this server! (Reply with yes/no)",
             ):
                 return await ctx.send("Ok, cancelling.")
 
@@ -696,7 +703,7 @@ class Customization(commands.Cog):
             ctx,
             f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
             f"Are you *absolutely sure* you want to continue?\n"
-            "Type `Yes, I am sure` to confirm.",
+            f"Type `Yes, I am sure` to confirm.",
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
@@ -870,8 +877,8 @@ class Customization(commands.Cog):
         if not await confirm(
             ctx,
             f"This will delete **ALL** of your user variables (uvars). "
-            "Are you *absolutely sure* you want to continue?\n"
-            "Type `Yes, I am sure` to confirm.",
+            f"Are you *absolutely sure* you want to continue?\n"
+            f"Type `Yes, I am sure` to confirm.",
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
@@ -955,9 +962,11 @@ class Customization(commands.Cog):
             ctx,
             outside_codeblock=f"**{name}**:\n*Owner: {gvar['owner_name']}*",
             inside_codeblock=gvar["value"],
-            too_long_message=f"This gvar is too long to display in a single message. I've "
-            f"attached it here, but you can also view it at "
-            f"<https://avrae.io/dashboard/gvars?lookup={name}>.",
+            too_long_message=(
+                "This gvar is too long to display in a single message. I've "
+                "attached it here, but you can also view it at "
+                f"<https://avrae.io/dashboard/gvars?lookup={name}>."
+            ),
         )
 
     @globalvar.command(name="create")

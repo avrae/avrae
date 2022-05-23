@@ -21,7 +21,7 @@ class AttackSyntaxError(ExternalImportError):
         self.sheet = sheet
         self.error = error
         super().__init__(
-            f"Attack syntax issue for attack '{attack_name}' in cell {cell} on sheet '{sheet}':\n" f"> {error}"
+            f"Attack syntax issue for attack '{attack_name}' in cell {cell} on sheet '{sheet}':\n> {error}"
         )
 
 

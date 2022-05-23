@@ -90,15 +90,17 @@ class GameLog(commands.Cog):
         embed.title = f"Linked {result.campaign_name}!"
         embed.description = (
             f"Linked {result.campaign_name} to this channel! Your players' rolls from D&D Beyond "
-            f"will show up here, and checks, saves, and attacks made by characters in your campaign "
-            f"here will appear in D&D Beyond!"
+            "will show up here, and checks, saves, and attacks made by characters in your campaign "
+            "here will appear in D&D Beyond!"
         )
         embed.add_field(
             name="Not Seeing Rolls?",
-            value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
-            f"and Discord accounts are linked](https://www.dndbeyond.com/account) and their "
-            f"[characters are imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)! "
-            f"You can check your players' link status with `{ctx.prefix}ddb`.",
+            value=(
+                "Not seeing one or more of your players' rolls? Make sure their [D&D Beyond and Discord accounts are"
+                " linked](https://www.dndbeyond.com/account) and their [characters are"
+                " imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)!"
+                f" You can check your players' link status with `{ctx.prefix}ddb`."
+            ),
         )
         await ctx.send(embed=embed)
 
@@ -110,9 +112,9 @@ class GameLog(commands.Cog):
         existing_links = await CampaignLink.get_channel_links(ctx)
         if not existing_links:
             return await ctx.send(
-                f"This channel is not linked to any D&D Beyond campaigns. "
+                "This channel is not linked to any D&D Beyond campaigns. "
                 f"Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/...` to have "
-                f"your and your players' rolls show up here in real time!"
+                "your and your players' rolls show up here in real time!"
             )
         embed = embeds.EmbedWithAuthor(ctx)
         embed.title = "D&D Beyond Campaign Links"
@@ -123,10 +125,12 @@ class GameLog(commands.Cog):
         )
         embed.add_field(
             name="Not Seeing Rolls?",
-            value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
-            f"and Discord accounts are linked](https://www.dndbeyond.com/account) and their "
-            f"[characters are imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)! "
-            f"You can check your players' link status with `{ctx.prefix}ddb`.",
+            value=(
+                "Not seeing one or more of your players' rolls? Make sure their [D&D Beyond and Discord accounts are"
+                " linked](https://www.dndbeyond.com/account) and their [characters are"
+                " imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)!"
+                f" You can check your players' link status with `{ctx.prefix}ddb`."
+            ),
         )
         await ctx.send(embed=embed)
 
@@ -142,9 +146,9 @@ class GameLog(commands.Cog):
         existing_links = await CampaignLink.get_channel_links(ctx)
         if not existing_links:
             return await ctx.send(
-                f"This channel is not linked to any D&D Beyond campaigns. "
+                "This channel is not linked to any D&D Beyond campaigns. "
                 f"Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/...` to have "
-                f"your and your players' rolls show up here in real time!"
+                "your and your players' rolls show up here in real time!"
             )
         the_link = await search_and_select(ctx, existing_links, name, key=lambda cl: cl.campaign_name)
 

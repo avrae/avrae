@@ -166,7 +166,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 elif resp.status == 403:
                     if ddb_user is None:
                         raise ExternalImportError(
-                            "This character is private. Link your D&D Beyond and Discord accounts" " to import it!"
+                            "This character is private. Link your D&D Beyond and Discord accounts to import it!"
                         )
                     else:
                         raise ExternalImportError("You do not have permission to view this character.")
@@ -174,7 +174,7 @@ class BeyondSheetParser(SheetLoaderABC):
                     raise ExternalImportError("This character does not exist. Are you using the right link?")
                 elif resp.status == 429:
                     raise ExternalImportError(
-                        "Too many people are trying to import characters! Please try again in " "a few minutes."
+                        "Too many people are trying to import characters! Please try again in a few minutes."
                     )
                 else:
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")

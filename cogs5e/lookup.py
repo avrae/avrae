@@ -341,9 +341,9 @@ class Lookup(commands.Cog):
                 proper_name = f"The {monster.name}" if not monster.proper else monster.name
                 legendary = [
                     f"{proper_name} can take {monster.la_per_round} legendary actions, choosing from "
-                    f"the options below. Only one legendary action can be used at a time and only at the "
+                    "the options below. Only one legendary action can be used at a time and only at the "
                     f"end of another creature's turn. {proper_name} regains spent legendary actions at "
-                    f"the start of its turn."
+                    "the start of its turn."
                 ]
                 for a in monster.legactions:
                     if a.name:
@@ -524,7 +524,7 @@ class Lookup(commands.Cog):
             if spell.level > 0
             else f"{spell.get_school().lower()} cantrip"
         )
-        embed.description = f"*{school_level}. " f"({', '.join(itertools.chain(spell.classes, spell.subclasses))})*"
+        embed.description = f"*{school_level}. ({', '.join(itertools.chain(spell.classes, spell.subclasses))})*"
         if spell.ritual:
             time = f"{spell.time} (ritual)"
         else:

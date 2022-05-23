@@ -78,9 +78,7 @@ class GameTrack(commands.Cog):
         if level is None and value is None:  # show remaining
             embed.description = f"__**Remaining Spell Slots**__\n{character.spellbook.slots_str()}"
         elif value is None:
-            embed.description = (
-                f"__**Remaining Level {level} Spell Slots**__\n" f"{character.spellbook.slots_str(level)}"
-            )
+            embed.description = f"__**Remaining Level {level} Spell Slots**__\n{character.spellbook.slots_str(level)}"
         else:
             old_slots = character.spellbook.get_slots(level)
             value = maybe_mod(value, old_slots)
@@ -94,8 +92,10 @@ class GameTrack(commands.Cog):
         # footer - pact vs non pact
         if character.spellbook.max_pact_slots is not None:
             embed.set_footer(
-                text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
-                f"{constants.FILLED_BUBBLE_ALT} / {constants.EMPTY_BUBBLE_ALT} = Pact Slot"
+                text=(
+                    f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
+                    f"{constants.FILLED_BUBBLE_ALT} / {constants.EMPTY_BUBBLE_ALT} = Pact Slot"
+                )
             )
         else:
             embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used")
@@ -801,7 +801,7 @@ class GameTrack(commands.Cog):
                 spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.spellbook)
             except NoSelectionElements:
                 return await ctx.send(
-                    f"No matching spells found. Make sure this spell is in your "
+                    "No matching spells found. Make sure this spell is in your "
                     f"`{ctx.prefix}spellbook`, or cast with the `-i` argument to ignore restrictions!"
                 )
         else:

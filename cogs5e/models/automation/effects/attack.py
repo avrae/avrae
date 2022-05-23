@@ -37,8 +37,7 @@ class Attack(Effect):
         super().run(autoctx)
         if autoctx.target is None:
             raise TargetException(
-                "Tried to make an attack without a target! Make sure all Attack effects are inside "
-                "of a Target effect."
+                "Tried to make an attack without a target! Make sure all Attack effects are inside of a Target effect."
             )
 
         # ==== arguments ====

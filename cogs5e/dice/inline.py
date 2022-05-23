@@ -137,17 +137,21 @@ class InlineRoller:
         embed.description = f"Hi {user.mention}, it looks like this is your first time using inline rolling with me!"
         embed.add_field(
             name="What is Inline Rolling?",
-            value="Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll reply "
-            "to it with a roll for each one. You can send messages with multiple, too, like this: ```\n"
-            "I attack the goblin with my shortsword [[1d20 + 6]] for a total of [[1d6 + 3]] piercing damage.\n"
-            "```",
+            value=(
+                "Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll reply "
+                "to it with a roll for each one. You can send messages with multiple, too, like this: ```\n"
+                "I attack the goblin with my shortsword [[1d20 + 6]] for a total of [[1d6 + 3]] piercing damage.\n"
+                "```"
+            ),
             inline=False,
         )
         # noinspection DuplicatedCode
         embed.add_field(
             name="Learn More",
-            value="You can learn more about Inline Rolling in [the Avrae cheatsheets]"
-            "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
+            value=(
+                "You can learn more about Inline Rolling in [the Avrae cheatsheets]"
+                "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html)."
+            ),
             inline=False,
         )
         embed.set_footer(text="You won't see this message again.")
@@ -167,16 +171,20 @@ class InlineRoller:
         embed.description = f"Hi {user.mention}, it looks like this is your first time using inline rolling with me!"
         embed.add_field(
             name="What is Inline Rolling?",
-            value="Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll react "
-            f"with the {INLINE_ROLLING_EMOJI} emoji. You can click it to have me roll all of the dice in your "
-            "message, and I'll reply with my own message!",
+            value=(
+                "Whenever you send a message with some dice in between double brackets (e.g. `[[1d20]]`), I'll react "
+                f"with the {INLINE_ROLLING_EMOJI} emoji. You can click it to have me roll all of the dice in your "
+                "message, and I'll reply with my own message!"
+            ),
             inline=False,
         )
         # noinspection DuplicatedCode
         embed.add_field(
             name="Learn More",
-            value="You can learn more about Inline Rolling in [the Avrae cheatsheets]"
-            "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html).",
+            value=(
+                "You can learn more about Inline Rolling in [the Avrae cheatsheets]"
+                "(https://avrae.readthedocs.io/en/latest/cheatsheets/inline_rolling.html)."
+            ),
             inline=False,
         )
         embed.set_footer(text="You won't see this message again.")

@@ -126,12 +126,12 @@ class Spellcasting(Tutorial):
                     [
                         (
                             f"Manually lose a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
-                            f"-<number of spell slots>`.",
+                            "-<number of spell slots>`.",
                             state_map.data.get("has_removed"),
                         ),
                         (
                             f"Manually gain a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
-                            f"+<number of spell slots>`.",
+                            "+<number of spell slots>`.",
                             state_map.data.get("has_added"),
                         ),
                     ]
@@ -165,7 +165,10 @@ class Spellcasting(Tutorial):
                     if character.sheet_type == "beyond":
                         warlock_info = "Since you're a Warlock, your pact slots will reset on a Short Rest, too!"
                     elif warlock_level == character.levels.total_level:
-                        warlock_info = f"By the way, since you're a Warlock, you can also set your spell slots to recover on a Short Rest with `{ctx.prefix}csettings srslots true`."
+                        warlock_info = (
+                            "By the way, since you're a Warlock, you can also set your spell slots to recover on a"
+                            f" Short Rest with `{ctx.prefix}csettings srslots true`."
+                        )
             except NoCharacter:
                 pass
 

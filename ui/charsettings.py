@@ -103,20 +103,24 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
         embed = embeds.EmbedWithCharacter(self.character, title=f"Character Settings for {self.character.name}")
         embed.add_field(
             name="__Cosmetic Settings__",
-            value=f"**Embed Color**: {color_setting_desc(self.settings.color)}\n"
-            f"**Show Character Image**: {self.settings.embed_image}\n"
-            f"**Use Compact Coin Display:** {self.settings.compact_coins}\n"
-            f"**Coin Conversion Mode**: {autoconvert_coins_desc(self.settings.autoconvert_coins)}",
+            value=(
+                f"**Embed Color**: {color_setting_desc(self.settings.color)}\n"
+                f"**Show Character Image**: {self.settings.embed_image}\n"
+                f"**Use Compact Coin Display:** {self.settings.compact_coins}\n"
+                f"**Coin Conversion Mode**: {autoconvert_coins_desc(self.settings.autoconvert_coins)}"
+            ),
             inline=False,
         )
         embed.add_field(
             name="__Gameplay Settings__",
-            value=f"**Crit Range**: {crit_range_desc(self.settings.crit_on)}\n"
-            f"**Extra Crit Dice**: {self.settings.extra_crit_dice}\n"
-            f"**Reroll**: {self.settings.reroll}\n"
-            f"**Ignore Crits**: {self.settings.ignore_crit}\n"
-            f"**Reliable Talent**: {self.settings.talent}\n"
-            f"**Reset All Spell Slots on Short Rest**: {self.settings.srslots}",
+            value=(
+                f"**Crit Range**: {crit_range_desc(self.settings.crit_on)}\n"
+                f"**Extra Crit Dice**: {self.settings.extra_crit_dice}\n"
+                f"**Reroll**: {self.settings.reroll}\n"
+                f"**Ignore Crits**: {self.settings.ignore_crit}\n"
+                f"**Reliable Talent**: {self.settings.talent}\n"
+                f"**Reset All Spell Slots on Short Rest**: {self.settings.srslots}"
+            ),
             inline=False,
         )
 
@@ -195,29 +199,37 @@ class _CosmeticSettingsUI(CharacterSettingsMenuBase):
         )
         embed.add_field(
             name="Embed Color",
-            value=f"**{color_setting_desc(self.settings.color)}**\n"
-            f"*This color will appear on the left side of your character's check, save, actions, and some "
-            f"other embeds (like this one!).*",
+            value=(
+                f"**{color_setting_desc(self.settings.color)}**\n"
+                "*This color will appear on the left side of your character's check, save, actions, and some "
+                "other embeds (like this one!).*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Show Character Image",
-            value=f"**{self.settings.embed_image}**\n"
-            f"*If this is disabled, your character's portrait will not appear on the right side of their "
-            f"checks, saves, actions, and some other embeds.*",
+            value=(
+                f"**{self.settings.embed_image}**\n"
+                "*If this is disabled, your character's portrait will not appear on the right side of their "
+                "checks, saves, actions, and some other embeds.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Compact Coin Display",
-            value=f"**{self.settings.compact_coins}**\n"
-            f"*If this is enabled, your coins will be displayed in decimal gold format.*",
+            value=(
+                f"**{self.settings.compact_coins}**\n"
+                "*If this is enabled, your coins will be displayed in decimal gold format.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Coin Conversion Mode",
-            value=f"**{autoconvert_coins_desc(self.settings.autoconvert_coins)}**\n"
-            f"*If a coin transaction would cause you to have a negative number of a certain currency, "
-            f"whether to automatically convert other coins to cover the transaction.*",
+            value=(
+                f"**{autoconvert_coins_desc(self.settings.autoconvert_coins)}**\n"
+                "*If a coin transaction would cause you to have a negative number of a certain currency, "
+                "whether to automatically convert other coins to cover the transaction.*"
+            ),
             inline=False,
         )
         return {"embed": embed}
@@ -285,37 +297,47 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
         )
         embed.add_field(
             name="Crit Range",
-            value=f"**{crit_range_desc(self.settings.crit_on)}**\n"
-            f"*If an attack roll's natural roll (the value on the d20 before modifiers) lands in this range, "
-            f"the attack will be counted as a crit.*",
+            value=(
+                f"**{crit_range_desc(self.settings.crit_on)}**\n"
+                "*If an attack roll's natural roll (the value on the d20 before modifiers) lands in this range, "
+                "the attack will be counted as a crit.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Extra Crit Dice",
-            value=f"**{self.settings.extra_crit_dice}**\n"
-            f"*How many additional dice to add to a weapon's damage dice on a crit (in addition to doubling the "
-            f"dice).*",
+            value=(
+                f"**{self.settings.extra_crit_dice}**\n"
+                "*How many additional dice to add to a weapon's damage dice on a crit (in addition to doubling the "
+                "dice).*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Reroll",
-            value=f"**{self.settings.reroll}**\n"
-            f"*If an attack, save, or ability check's natural roll lands on this number, the die will be "
-            f"rerolled up to once.*",
+            value=(
+                f"**{self.settings.reroll}**\n"
+                "*If an attack, save, or ability check's natural roll lands on this number, the die will be "
+                "rerolled up to once.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Ignore Crits",
-            value=f"**{self.settings.ignore_crit}**\n"
-            f"*If this is enabled, any attack against your character will not have its damage dice doubled on a "
-            f"critical hit.*",
+            value=(
+                f"**{self.settings.ignore_crit}**\n"
+                "*If this is enabled, any attack against your character will not have its damage dice doubled on a "
+                "critical hit.*"
+            ),
             inline=False,
         )
         embed.add_field(
             name="Reliable Talent",
-            value=f"**{self.settings.talent}**\n"
-            f"*If this is enabled, any d20 roll on an ability check that lets you add your proficiency bonus "
-            f"will be treated as a 10 if it rolls 9 or lower.*",
+            value=(
+                f"**{self.settings.talent}**\n"
+                "*If this is enabled, any d20 roll on an ability check that lets you add your proficiency bonus "
+                "will be treated as a 10 if it rolls 9 or lower.*"
+            ),
             inline=False,
         )
         sr_slot_note = ""
@@ -323,9 +345,11 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
             sr_slot_note = " Note that your pact slots will reset on a short rest even if this setting is disabled."
         embed.add_field(
             name="Reset All Spell Slots on Short Rest",
-            value=f"**{self.settings.srslots}**\n"
-            f"*If this is enabled, all of your spell slots (including non-pact slots) will reset on a short "
-            f"rest.{sr_slot_note}*",
+            value=(
+                f"**{self.settings.srslots}**\n"
+                "*If this is enabled, all of your spell slots (including non-pact slots) will reset on a short "
+                f"rest.{sr_slot_note}*"
+            ),
             inline=False,
         )
         return {"embed": embed}
@@ -366,17 +390,21 @@ class _CharacterSyncSettingsUI(CharacterSettingsMenuBase):
         if outbound:
             embed.add_field(
                 name="Outbound Sync",
-                value=f"**{self.settings.sync_outbound}**\n"
-                f"*If this is enabled, updates to your character's HP, spell slots, custom counters, and more "
-                f"will be sent to your sheet provider live.*",
+                value=(
+                    f"**{self.settings.sync_outbound}**\n"
+                    "*If this is enabled, updates to your character's HP, spell slots, custom counters, and more "
+                    "will be sent to your sheet provider live.*"
+                ),
                 inline=False,
             )
         if inbound:
             embed.add_field(
                 name="Inbound Sync",
-                value=f"**{self.settings.sync_inbound}**\n"
-                f"*If this is enabled, if you change your character's HP, spell slots, custom counters, or more "
-                f"on your sheet provider, they will be updated here as well.*",
+                value=(
+                    f"**{self.settings.sync_inbound}**\n"
+                    "*If this is enabled, if you change your character's HP, spell slots, custom counters, or more "
+                    "on your sheet provider, they will be updated here as well.*"
+                ),
                 inline=False,
             )
         if not (outbound or inbound):

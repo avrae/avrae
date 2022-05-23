@@ -161,8 +161,10 @@ async def get_selection(
         else:
             embed.add_field(
                 name="Instructions",
-                value="Type your response in the channel you called the command. This message was PMed to "
-                "you to hide the monster name.",
+                value=(
+                    "Type your response in the channel you called the command. This message was PMed to "
+                    "you to hide the monster name."
+                ),
                 inline=False,
             )
             select_msg = await ctx.author.send(embed=embed)

@@ -42,8 +42,7 @@ async def test_ma(avrae, dhttp):
     avrae.message("!ma kobold dagger -h")
     await dhttp.receive_delete()
     await dhttp.receive_message(
-        f"An unknown creature attacks with a Dagger!\n"
-        f"{TO_HIT_PATTERN}\n({DAMAGE_PATTERN}\n)?\*Melee Weapon Attack:.+",
+        f"An unknown creature attacks with a Dagger!\n{TO_HIT_PATTERN}\n({DAMAGE_PATTERN}\n)?\*Melee Weapon Attack:.+",
         dm=True,
     )
     atk_embed = discord.Embed(title="An unknown creature attacks with a Dagger!")

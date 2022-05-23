@@ -129,7 +129,7 @@ class InitTracker(commands.Cog):
         with suppress(disnake.HTTPException):
             await temp_summary_msg.pin()
         out = (
-            f"Everyone roll for initiative!\n"
+            "Everyone roll for initiative!\n"
             f"If you have a character set up with SheetManager: `{ctx.clean_prefix}init join`\n"
             f"If it's a 5e monster: `{ctx.clean_prefix}init madd <monster name>`\n"
             f"Otherwise: `{ctx.clean_prefix}init add <modifier> <name>`"
@@ -137,7 +137,7 @@ class InitTracker(commands.Cog):
         if guild_settings.upenn_nlp_opt_in and await utils.nlp_feature_flag_enabled(self.bot):
             out = (
                 f"{out}\nMessages sent in this channel during combat will be recorded for research purposes. "
-                f"By sending messages in this channel during this combat, you agree to participate in the Avrae NLP "
+                "By sending messages in this channel during this combat, you agree to participate in the Avrae NLP "
                 f"study. See `{ctx.clean_prefix}init nlp` for more information."
             )
             combat.nlp_record_session_id = utils.create_nlp_record_session_id()
@@ -1390,7 +1390,7 @@ class InitTracker(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send(
                     f"No matching spells found in {combatant.name}'s spellbook. Cast again "
-                    f"with the `-i` argument to ignore restrictions!"
+                    "with the `-i` argument to ignore restrictions!"
                 )
         else:
             spell = await select_spell_full(ctx, spell_name)
@@ -1442,7 +1442,7 @@ class InitTracker(commands.Cog):
         combat = await ctx.get_combat()
 
         with suppress(disnake.HTTPException):
-            await ctx.author.send(f"End of combat report: {combat.round_num} rounds " f"{combat.get_summary(True)}")
+            await ctx.author.send(f"End of combat report: {combat.round_num} rounds {combat.get_summary(True)}")
             summary = combat.get_summary_msg()
             await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
             await summary.unpin()
@@ -1469,28 +1469,36 @@ class InitTracker(commands.Cog):
             )
             embed.add_field(
                 name="To Opt Out",
-                value="To opt out, you may choose not to participate in any recorded channel. You may also ask a "
-                f"server moderator to use the `{ctx.clean_prefix}init nlp stopall` command, or ask a server "
-                "administrator to disable `Contribute Message Data to Natural Language AI Training` in the "
-                f"`{ctx.clean_prefix}servsettings` command.",
+                value=(
+                    "To opt out, you may choose not to participate in any recorded channel. You may also ask a "
+                    f"server moderator to use the `{ctx.clean_prefix}init nlp stopall` command, or ask a server "
+                    "administrator to disable `Contribute Message Data to Natural Language AI Training` in the "
+                    f"`{ctx.clean_prefix}servsettings` command."
+                ),
                 inline=False,
             )
             embed.add_field(
                 name="Learn More",
-                value="You can learn more about the Avrae NLP project "
-                "[here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html).",
+                value=(
+                    "You can learn more about the Avrae NLP project "
+                    "[here](https://www.cis.upenn.edu/~ccb/language-to-avrae.html)."
+                ),
                 inline=False,
             )
             embed.add_field(
                 name="Subcommands",
-                value="**list** - List all channels in this server currently recording message data.\n"
-                "**stopall** - Stop all message recording currently active on this server. "
-                "Requires *Manage Messages* Discord permissions.",
+                value=(
+                    "**list** - List all channels in this server currently recording message data.\n"
+                    "**stopall** - Stop all message recording currently active on this server. "
+                    "Requires *Manage Messages* Discord permissions."
+                ),
             )
             embed.add_field(
                 name="Links",
-                value="[Project Description](https://www.cis.upenn.edu/~ccb/language-to-avrae.html) "
-                "\u2022 [Privacy Policy](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy)",
+                value=(
+                    "[Project Description](https://www.cis.upenn.edu/~ccb/language-to-avrae.html) "
+                    "\u2022 [Privacy Policy](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy)"
+                ),
                 inline=False,
             )
             await ctx.send(embed=embed)
@@ -1545,7 +1553,7 @@ class InitTracker(commands.Cog):
         stopped_recordings = await self.nlp.stop_all_recordings(ctx.guild)
         await ctx.send(
             f"Ok, I have stopped recording messages in {stopped_recordings} channels.\n"
-            f"Starting new combats will still begin a new recording - to opt out of contributing data to this project, "
-            f"ask a server administrator to disable `Contribute Message Data to Natural Language AI Training` in the "
+            "Starting new combats will still begin a new recording - to opt out of contributing data to this project, "
+            "ask a server administrator to disable `Contribute Message Data to Natural Language AI Training` in the "
             f"`{ctx.clean_prefix}servsettings` command."
         )

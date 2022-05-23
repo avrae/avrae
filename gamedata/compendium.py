@@ -280,7 +280,7 @@ class Compendium:
                 return
             elif entity.name != self._entity_lookup[k].name:
                 log.debug(
-                    f"Overwriting existing entity lookup key: {k} " f"({self._entity_lookup[k].name} -> {entity.name})"
+                    f"Overwriting existing entity lookup key: {k} ({self._entity_lookup[k].name} -> {entity.name})"
                 )
             else:
                 log.debug(

@@ -19,7 +19,7 @@ class PlayingTheGame(Tutorial):
             except NoCharacter:
                 await state_map.end_tutorial(ctx)
                 raise PrerequisiteFailed(
-                    f"You need an active character to run this tutorial. Switch to one using "
+                    "You need an active character to run this tutorial. Switch to one using "
                     f"`{ctx.prefix}character <name>`, or try out the quickstart tutorial to learn how to import one!"
                 )
 

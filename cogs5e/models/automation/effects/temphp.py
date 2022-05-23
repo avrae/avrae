@@ -29,7 +29,7 @@ class TempHP(Effect):
         super().run(autoctx)
         if autoctx.target is None:
             raise TargetException(
-                "Tried to add temp HP without a target! Make sure all TempHP effects are inside " "of a Target effect."
+                "Tried to add temp HP without a target! Make sure all TempHP effects are inside of a Target effect."
             )
         args = autoctx.args
         amount = self.amount

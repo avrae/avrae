@@ -61,8 +61,7 @@ class LegacyIEffect(Effect):
         super().run(autoctx)
         if autoctx.target is None:
             raise TargetException(
-                "Tried to add an effect without a target! Make sure all IEffect effects are inside "
-                "of a Target effect."
+                "Tried to add an effect without a target! Make sure all IEffect effects are inside of a Target effect."
             )
 
         if isinstance(self.duration, str):
@@ -227,8 +226,7 @@ class IEffect(Effect):
         super().run(autoctx)
         if autoctx.target is None:
             raise TargetException(
-                "Tried to add an effect without a target! Make sure all IEffect effects are inside "
-                "of a Target effect."
+                "Tried to add an effect without a target! Make sure all IEffect effects are inside of a Target effect."
             )
 
         if isinstance(self.duration, str):

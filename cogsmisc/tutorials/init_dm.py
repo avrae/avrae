@@ -224,7 +224,7 @@ class DMInitiative(Tutorial):
                 woofer = get_the_woofer(the_combat)
                 if woofer is None:
                     await ctx.send(
-                        f"Uh oh, looks like I can't find the Death Dog. "
+                        "Uh oh, looks like I can't find the Death Dog. "
                         f'Try readding it with `{ctx.prefix}i madd "Death Dog"`'
                     )
                     return
@@ -257,7 +257,7 @@ class DMInitiative(Tutorial):
                 woofer = get_the_woofer(the_combat)
                 if woofer is None:
                     await ctx.send(
-                        f"Uh oh, looks like I can't find the Death Dog. "
+                        "Uh oh, looks like I can't find the Death Dog. "
                         f'Try readding it with `{ctx.prefix}i madd "Death Dog"`'
                     )
                     return
@@ -293,7 +293,7 @@ class DMInitiative(Tutorial):
                 woofer = get_the_woofer(the_combat)
                 if woofer is None:
                     await ctx.send(
-                        f"Uh oh, looks like I can't find the Death Dog. "
+                        "Uh oh, looks like I can't find the Death Dog. "
                         f'Try readding it with `{ctx.prefix}i madd "Death Dog"`'
                     )
                     return
@@ -359,7 +359,7 @@ class DMInitiative(Tutorial):
                         await ctx.send("Ok. I've added her back to the fight - try again!")
                     else:
                         await ctx.send(
-                            f"Ok. If you'd like to continue this tutorial later, "
+                            "Ok. If you'd like to continue this tutorial later, "
                             f"run `{ctx.prefix}tutorial` to add Orkira back and continue."
                         )
                         return

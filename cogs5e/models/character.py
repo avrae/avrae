@@ -644,8 +644,10 @@ class Character(StatBlock):
         # sheet url?
         if self._import_version < SHEET_VERSION:
             embed.set_footer(
-                text=f"You are using an old sheet version ({self.sheet_type} v{self._import_version}). "
-                f"Please run !update."
+                text=(
+                    f"You are using an old sheet version ({self.sheet_type} v{self._import_version}). "
+                    "Please run !update."
+                )
             )
 
         return embed

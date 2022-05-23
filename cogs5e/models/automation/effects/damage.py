@@ -34,7 +34,7 @@ class Damage(Effect):
         super().run(autoctx)
         if autoctx.target is None:
             raise TargetException(
-                "Tried to do damage without a target! Make sure all Damage effects are inside " "of a Target effect."
+                "Tried to do damage without a target! Make sure all Damage effects are inside of a Target effect."
             )
         # general arguments
         args = autoctx.args

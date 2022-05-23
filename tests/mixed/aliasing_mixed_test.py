@@ -131,7 +131,7 @@ class TestCharacterAliases:
     async def test_echo_attributes(self, avrae, dhttp):
         character = await active_character(avrae)
         avrae.message(
-            "!alias foobar echo {charismaMod} {proficiencyBonus} {charismaMod+proficiencyBonus}\n" "<name> <color>"
+            "!alias foobar echo {charismaMod} {proficiencyBonus} {charismaMod+proficiencyBonus}\n<name> <color>"
         )
         await dhttp.receive_message()
 

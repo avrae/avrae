@@ -199,14 +199,14 @@ async def cast_spell(
                 # don't know spell
                 err = (
                     f"You don't know this spell! Use `{ctx.prefix}sb add {spell.name}` to add it to your "
-                    f"spellbook, or pass `-i` to ignore restrictions."
+                    "spellbook, or pass `-i` to ignore restrictions."
                 )
             else:
                 # ?
                 err = (
                     "Not enough spell slots remaining, or spell not in known spell list!\n"
                     f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, "
-                    f"or pass `-i` to ignore restrictions."
+                    "or pass `-i` to ignore restrictions."
                 )
             embed.description = err
             if cast_level > 0:
@@ -224,8 +224,10 @@ async def cast_spell(
                 embed = embeds.EmbedWithAuthor(
                     ctx,
                     title=f"Cannot cast spell!",
-                    description=f"{spell.name} is not prepared! Prepare it on your character sheet and use "
-                    f"`{ctx.prefix}update` to mark it as prepared, or use `-i` to ignore restrictions.",
+                    description=(
+                        f"{spell.name} is not prepared! Prepare it on your character sheet and use "
+                        f"`{ctx.prefix}update` to mark it as prepared, or use `-i` to ignore restrictions."
+                    ),
                 )
                 return CastResult(embed=embed, success=False, automation_result=None)
 
@@ -524,7 +526,7 @@ async def send_action_list(
         if not has_ddb_link:
             description = (
                 f"{description}\nItalicized actions are for display only and cannot be run. "
-                f"Connect your D&D Beyond account to unlock the full potential of these actions!"
+                "Connect your D&D Beyond account to unlock the full potential of these actions!"
             )
         else:
             source_names = natural_join([lookuputils.long_source_name(s) for s in source_names], "and")
@@ -543,8 +545,10 @@ async def send_action_list(
     if not verbose and actions:
         if non_automated_count:
             ep.set_footer(
-                value=f"Use the -v argument to view each action's full description "
-                f"and {non_automated_count} display-only actions."
+                value=(
+                    "Use the -v argument to view each action's full description "
+                    f"and {non_automated_count} display-only actions."
+                )
             )
         else:
             ep.set_footer(value=f"Use the -v argument to view each action's full description.")

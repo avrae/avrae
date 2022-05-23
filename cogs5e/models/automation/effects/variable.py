@@ -48,7 +48,7 @@ class SetVariable(Effect):
             final_value = int(value)
         except (TypeError, ValueError):
             raise AutomationException(
-                f"{value} cannot be interpreted as an integer " f"(in `{self.name} = {level_value}`)."
+                f"{value} cannot be interpreted as an integer (in `{self.name} = {level_value}`)."
             )
 
         # bind

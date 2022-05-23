@@ -43,7 +43,7 @@ class Tutorial(abc.ABC):
                 if value.first:
                     if self.first_state is not None:
                         raise ValueError(
-                            f"Found 2 first states in tutorial {self.name!r}: " f"({self.first_state.key}, {value.key})"
+                            f"Found 2 first states in tutorial {self.name!r}: ({self.first_state.key}, {value.key})"
                         )
                     self.first_state = value
         if self.first_state is None:

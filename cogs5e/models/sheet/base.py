@@ -172,7 +172,7 @@ class Skills:
     def from_dict(cls, d):
         if set(d.keys()) != set(SKILL_NAMES):
             raise ValueError(
-                f"Some skills are missing. " f"Difference: {set(d.keys()).symmetric_difference(set(SKILL_NAMES))}"
+                f"Some skills are missing. Difference: {set(d.keys()).symmetric_difference(set(SKILL_NAMES))}"
             )
         skills = {k: Skill.from_dict(v) for k, v in d.items()}
         return cls(skills)
@@ -250,7 +250,7 @@ class Saves:
     def from_dict(cls, d):
         if set(d.keys()) != set(SAVE_NAMES):
             raise ValueError(
-                f"Some saves are missing. " f"Difference: {set(d.keys()).symmetric_difference(set(SAVE_NAMES))}"
+                f"Some saves are missing. Difference: {set(d.keys()).symmetric_difference(set(SAVE_NAMES))}"
             )
         saves = {k: Skill.from_dict(v) for k, v in d.items()}
         return cls(saves)

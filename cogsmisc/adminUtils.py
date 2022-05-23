@@ -245,7 +245,7 @@ class AdminUtils(commands.Cog):
         entitlement_entity = compendium.lookup_entity(e.entitlement_entity_type, e.entitlement_entity_id)
         entitlement_entity_name = entitlement_entity.name if entitlement_entity is not None else "unknown entity!"
         await ctx.send(
-            f"```py\n"
+            "```py\n"
             f"# {e.entity_id=}, {e.type_id=}\n"
             f"# {e.entitlement_entity_id=}, {e.entitlement_entity_type=} ({entitlement_entity_name})\n"
             f"{e!r}\n```"

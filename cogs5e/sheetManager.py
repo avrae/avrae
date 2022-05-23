@@ -580,8 +580,7 @@ class SheetManager(commands.Cog):
 
         if not out:
             return await ctx.send(
-                f"No valid settings found. Try `{ctx.prefix}csettings` with no arguments to use an "
-                f"interactive menu!"
+                f"No valid settings found. Try `{ctx.prefix}csettings` with no arguments to use an interactive menu!"
             )
 
         await char.options.commit(ctx.bot.mdb, char)
@@ -594,8 +593,8 @@ class SheetManager(commands.Cog):
         if conflict:
             return await confirm(
                 ctx,
-                f"Warning: This will overwrite a character with the same ID. Do you wish to continue "
-                f"(Reply with yes/no)?\n"
+                "Warning: This will overwrite a character with the same ID. Do you wish to continue "
+                "(Reply with yes/no)?\n"
                 f"If you only wanted to update your character, run `{ctx.prefix}update` instead.",
             )
         return True
@@ -704,7 +703,7 @@ class SheetManager(commands.Cog):
 
         desc = (
             f"Your current active character is {active_character.name}. "
-            f"All of your checks, saves and actions will use this character's stats."
+            "All of your checks, saves and actions will use this character's stats."
         )
         if (link := active_character.get_sheet_url()) is not None:
             desc = f"{desc}\n[Go to Character Sheet]({link})"
@@ -720,23 +719,29 @@ class SheetManager(commands.Cog):
             global_character: Character = await ctx.get_character(ignore_guild=True)
         except NoCharacter:
             embed.set_footer(
-                text=f"{active_character.name} is only active on {ctx.guild.name}. You have no global "
-                f"active character. To set one, use {ctx.prefix}character <name>."
+                text=(
+                    f"{active_character.name} is only active on {ctx.guild.name}. You have no global "
+                    f"active character. To set one, use {ctx.prefix}character <name>."
+                )
             )
             return embed
 
         # global active character is server active
         if global_character.upstream == active_character.upstream:
             embed.set_footer(
-                text=f"{active_character.name} is active on {ctx.guild.name} and globally. "
-                f"To change active characters, use {ctx.prefix}character <name>."
+                text=(
+                    f"{active_character.name} is active on {ctx.guild.name} and globally. "
+                    f"To change active characters, use {ctx.prefix}character <name>."
+                )
             )
             return embed
 
         # global and server active differ
         embed.set_footer(
-            text=f"{active_character.name} is active on {ctx.guild.name}, overriding your global active "
-            f"character. To change active characters, use {ctx.prefix}character <name>."
+            text=(
+                f"{active_character.name} is active on {ctx.guild.name}, overriding your global active "
+                f"character. To change active characters, use {ctx.prefix}character <name>."
+            )
         )
         return embed
 
@@ -770,8 +775,10 @@ async def send_ddb_ctas(ctx, character):
     if ddb_user is None:
         embed.add_field(
             name="Connect Your D&D Beyond Account",
-            value="Visit your [Account Settings](https://www.dndbeyond.com/account) page in D&D Beyond to link your "
-            "D&D Beyond and Discord accounts. This lets you use all your D&D Beyond content in Avrae for free!",
+            value=(
+                "Visit your [Account Settings](https://www.dndbeyond.com/account) page in D&D Beyond to link your "
+                "D&D Beyond and Discord accounts. This lets you use all your D&D Beyond content in Avrae for free!"
+            ),
             inline=False,
         )
     # game log
@@ -781,10 +788,12 @@ async def send_ddb_ctas(ctx, character):
         except NoCampaignLink:
             embed.add_field(
                 name="Link Your D&D Beyond Campaign",
-                value=f"Sync rolls between a Discord channel and your D&D Beyond character sheet by linking your "
-                f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
-                f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.\n"
-                f"This message can be disabled in `{ctx.prefix}server_settings`.",
+                value=(
+                    "Sync rolls between a Discord channel and your D&D Beyond character sheet by linking your "
+                    f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
+                    f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.\n"
+                    f"This message can be disabled in `{ctx.prefix}server_settings`."
+                ),
                 inline=False,
             )
 

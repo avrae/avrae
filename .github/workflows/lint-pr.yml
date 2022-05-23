@@ -45,4 +45,4 @@ jobs:
 
       - name: Ensure code is blackified
         run: |
-          black . --check
+          black . --check --diff

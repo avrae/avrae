@@ -1375,7 +1375,12 @@ class InitTracker(commands.Cog):
                 return await ctx.send("Combatant not found.")
 
         if isinstance(combatant, CombatantGroup):
-            return await ctx.send("Groups cannot cast spells.")
+            choices = []  # list of (name, caster, attack)
+            for com in combatant.get_combatants():
+                if spell_name in com.spellbook:
+                        choices.append((f"{spell_name} ({com.name})", com, spell_name))
+
+            _, combatant, spell_name = await search_and_select(ctx, choices, spell_name, lambda choice: choice[0], message="Select your spell.")
 
         is_character = isinstance(combatant, PlayerCombatant)
         if is_character and combatant.character_owner == str(ctx.author.id):

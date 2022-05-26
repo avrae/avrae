@@ -22,7 +22,7 @@ from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
 from utils.argparser import argparse
-from utils.functions import confirm, get_guild_member, search_and_select, try_delete, get_initials
+from utils.functions import confirm, get_guild_member, search_and_select, try_delete, get_initials, get_selection
 from . import (
     Combat,
     CombatOptions,
@@ -1377,10 +1377,9 @@ class InitTracker(commands.Cog):
         if isinstance(combatant, CombatantGroup):
             choices = []  # list of (name, caster, attack)
             for com in combatant.get_combatants():
-                if spell_name in com.spellbook:
-                        choices.append((f"{spell_name} ({com.name})", com, spell_name))
+                choices.append((f"({com.name})", com, spell_name))
 
-            _, combatant, spell_name = await search_and_select(ctx, choices, spell_name, lambda choice: choice[0], message="Select your spell.")
+            _, combatant, spell_name = await get_selection(ctx, choices, lambda choice: choice[0], message="Select the Caster.")
 
         is_character = isinstance(combatant, PlayerCombatant)
         if is_character and combatant.character_owner == str(ctx.author.id):

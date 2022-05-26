@@ -472,21 +472,33 @@ class Combatant(BaseCombatant, StatBlock):
         else:
             return f"{self.init:>2}: {self.name} {hp_str}"
 
-    def get_status(self, private=False) -> str:
+    def get_status(
+        self,
+        private=False,
+        resistances=True,
+        notes=True,
+        duration=True,
+        parenthetical=True,
+        concentration=True,
+        description=True,
+    ) -> str:
         """
         Gets the start-of-turn status of a combatant.
         :param private: Whether to return the full revealed stats or not.
+        :param duration:
         :return: A string describing the combatant.
         """
         name = self.name
         hp_ac = self._get_hp_and_ac(private)
-        resists = self._get_resist_string(private)
-        notes = "\n# " + self.notes if self.notes else ""
-        effects = self._get_long_effects()
-        return f"{name} {hp_ac} {resists}{notes}\n{effects}".strip()
+        resists = self._get_resist_string(private) if resistances else ""
+        note_str = "\n# " + self.notes if self.notes and notes else ""
+        effects = self._get_long_effects(
+            duration=duration, parenthetical=parenthetical, concentration=concentration, description=description
+        )
+        return f"{name} {hp_ac} {resists}{note_str}\n{effects}".strip()
 
-    def _get_long_effects(self) -> str:
-        return "\n".join(f"* {str(e)}" for e in self.get_effects())
+    def _get_long_effects(self, **kwargs) -> str:
+        return "\n".join(f"* {e.get_str(**kwargs)}" for e in self.get_effects())
 
     def _get_effects_and_notes(self) -> str:
         out = []

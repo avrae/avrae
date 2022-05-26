@@ -475,7 +475,7 @@ class InitTracker(commands.Cog):
                     to_remove.append(co)
 
         # actually advance the turn
-        advanced_round, out = combat.advance_turn()
+        advanced_round, advanced_round_messages = combat.advance_turn()
 
         # now we can remove the combatants
         removed_messages = []
@@ -488,19 +488,8 @@ class InitTracker(commands.Cog):
         if advanced_round:
             await Stats.increase_stat(ctx, "rounds_init_tracked_life")
 
-        # build the output
-        if combat.current_combatant is None:
-            out.append("\nNo combatants remain.")
-        else:
-            out.append(combat.get_turn_str())
-        out.extend(removed_messages)
-
         # send and commit
-        await ctx.send(
-            "\n".join(out),
-            allowed_mentions=combat.get_turn_str_mentions(),
-            components=utils.combatant_interaction_components(combat.current_combatant),
-        )
+        await utils.send_turn_message(ctx, combat, before=advanced_round_messages, after=removed_messages)
         await combat.final()
 
     @init.command(name="prev", aliases=["previous", "rewind"])
@@ -515,11 +504,7 @@ class InitTracker(commands.Cog):
 
         combat.rewind_turn()
 
-        await ctx.send(
-            combat.get_turn_str(),
-            allowed_mentions=combat.get_turn_str_mentions(),
-            components=utils.combatant_interaction_components(combat.current_combatant),
-        )
+        await utils.send_turn_message(ctx, combat)
         await combat.final()
 
     @init.command(name="move", aliases=["goto"])
@@ -546,11 +531,7 @@ class InitTracker(commands.Cog):
                 combatant = await combat.select_combatant(target)
                 combat.goto_turn(combatant, True)
 
-        await ctx.send(
-            combat.get_turn_str(),
-            allowed_mentions=combat.get_turn_str_mentions(),
-            components=utils.combatant_interaction_components(combat.current_combatant),
-        )
+        await utils.send_turn_message(ctx, combat)
         await combat.final()
 
     @init.command(name="skipround", aliases=["round", "skiprounds"])
@@ -564,22 +545,13 @@ class InitTracker(commands.Cog):
                 to_remove.append(co)
 
         messages = combat.skip_rounds(numrounds)
-        out = messages
 
-        if (turn_str := combat.get_turn_str()) is not None:
-            out.append(turn_str)
-        else:
-            out.append(combat.get_summary())
-
+        removed_messages = []
         for co in to_remove:
             combat.remove_combatant(co)
-            out.append("{} automatically removed from combat.".format(co.name))
+            removed_messages.append(f"{co.name} automatically removed from combat.")
 
-        await ctx.send(
-            "\n".join(out),
-            allowed_mentions=combat.get_turn_str_mentions(),
-            components=utils.combatant_interaction_components(combat.current_combatant),
-        )
+        await utils.send_turn_message(ctx, combat, before=messages, after=removed_messages)
         await combat.final()
 
     @init.command(name="reroll", aliases=["shuffle"])

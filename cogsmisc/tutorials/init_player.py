@@ -1,6 +1,6 @@
 import asyncio
 
-from cogs5e.initiative import CombatNotFound, InitiativeEffect, MonsterCombatant, PlayerCombatant
+from cogs5e.initiative import CombatNotFound, InitiativeEffect, MonsterCombatant, PlayerCombatant, utils as initutils
 from cogs5e.utils import targetutils
 from gamedata import Monster
 from gamedata.compendium import compendium
@@ -117,7 +117,7 @@ class PlayerInitiative(Tutorial):
             pc = await get_pc(ctx)
             if combat.current_combatant is not pc:
                 combat.goto_turn(pc, is_combatant=True)
-                await ctx.send(combat.get_turn_str(), allowed_mentions=combat.get_turn_str_mentions())
+                await initutils.send_turn_message(ctx, combat)
                 await combat.final()
 
             embed = TutorialEmbed(self, ctx)

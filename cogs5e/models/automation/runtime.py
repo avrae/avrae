@@ -40,6 +40,7 @@ class AutomationContext:
         ieffect: Optional["InitiativeEffect"] = None,
         allow_caster_ieffects: bool = True,
         allow_target_ieffects: bool = True,
+        from_button: bool = False,
     ):
         # runtime options
         self.ctx = ctx
@@ -72,6 +73,7 @@ class AutomationContext:
         self.ieffect = ieffect
         if ieffect is not None:
             self.metavars["ieffect"] = aliasing.api.combat.SimpleEffect(ieffect)
+        self.from_button = from_button
         self.allow_caster_ieffects = allow_caster_ieffects
         self.allow_target_ieffects = allow_target_ieffects
 

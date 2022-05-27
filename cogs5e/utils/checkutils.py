@@ -142,7 +142,7 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
     # phrase
     phrase = args.join("phrase", "\n")
     # num rolls
-    iterations = min(args.last("rr", 1, int), 25)
+    iterations = max(min(args.last("rr", 1, int), 25), 1)
     # dc
     dc = args.last("dc", type_=int)
     # ro

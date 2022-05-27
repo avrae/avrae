@@ -62,7 +62,7 @@ class Save(Effect):
         # dc hierarchy: arg > self.dc > spell cast override > spellbook dc
         dc = dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
         if "dc" in autoctx.args:
-            dc = maybe_mod(autoctx.args.last("dc"), dc)
+            dc = maybe_mod(autoctx.args.last("dc", ""), dc)
 
         if dc is None:
             raise NoSpellDC("No spell save DC found. Use the `-dc` argument to specify one!")

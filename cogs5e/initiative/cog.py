@@ -282,13 +282,7 @@ class InitTracker(commands.Cog):
         ac = args.last("ac", type_=int)
         n = args.last("n", 1)
         note = args.last("note")
-        name_template = args.last(
-            "name",
-            get_name(
-                monster,
-            )
-            + "#",
-        )
+        name_template = args.last("name", f"{get_name(monster)}#")
         init_skill = monster.skills.initiative
 
         combat = await ctx.get_combat()

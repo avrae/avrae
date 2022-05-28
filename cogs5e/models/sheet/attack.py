@@ -167,10 +167,10 @@ def old_to_automation(bonus=None, damage=None, details=None):
     """Returns an Automation instance representing an old attack."""
     from cogs5e.models import automation
 
-    if damage is not None:
+    if damage:
         damage = automation.Damage(damage)
 
-    if bonus is not None:
+    if bonus:
         hit = [damage] if damage else []
         attack_eff = [automation.Attack(hit=hit, miss=[], attackBonus=str(bonus).strip("{}<>"))]
     else:

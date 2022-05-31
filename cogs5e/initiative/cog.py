@@ -282,7 +282,7 @@ class InitTracker(commands.Cog):
         ac = args.last("ac", type_=int)
         n = args.last("n", 1)
         note = args.last("note")
-        name_template = args.last("name", get_initials(monster.name) + "#")
+        name_template = args.last("name", f"{get_name(monster)}#")
         init_skill = monster.skills.initiative
 
         combat = await ctx.get_combat()
@@ -1557,3 +1557,18 @@ class InitTracker(commands.Cog):
             "ask a server administrator to disable `Contribute Message Data to Natural Language AI Training` in the "
             f"`{ctx.clean_prefix}servsettings` command."
         )
+
+
+monster_name_exceptions = (294945, 2059697)
+
+
+def get_name(monster):
+    """
+    Checks if a monster's ID is in the list of exceptions (bad words, etc), returning the first two letters
+    if it is, otherwise grabs its initials.
+    """
+
+    if monster.entity_id in monster_name_exceptions:
+        return monster.name[:2].upper()
+
+    return get_initials(monster.name)

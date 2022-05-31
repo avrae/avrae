@@ -506,8 +506,14 @@ class Combat:
             pass
 
     # stringification
-    def get_turn_str(self) -> Optional[str]:
-        """Gets the string representing the current turn, and all combatants on it."""
+    def get_turn_str(self, status=True, **kwargs) -> Optional[str]:
+        """
+        Gets the string representing the current turn, and all combatants on it.
+
+        If *status* is false, only displays the combatant's name and no status codeblock.
+
+        Any other kwargs are passed to Combatant.get_status().
+        """
         combatant = self.current_combatant
 
         if combatant is None:
@@ -515,18 +521,18 @@ class Combat:
 
         if isinstance(combatant, CombatantGroup):
             combatants = combatant.get_combatants()
-            combatant_statuses = "\n".join([co.get_status() for co in combatants])
+            combatant_statuses = "\n".join(co.get_status(**kwargs) for co in combatants)
             mentions = ", ".join({co.controller_mention() for co in combatants})
-            out = (
-                f"**Initiative {self.turn_num} (round {self.round_num})**: {combatant.name} ({mentions})\n"
-                f"```md\n{combatant_statuses}```"
-            )
-
+            out = f"**Initiative {self.turn_num} (round {self.round_num})**: {combatant.name} ({mentions})\n"
         else:
+            combatant_statuses = combatant.get_status(**kwargs)
             out = (
                 f"**Initiative {self.turn_num} (round {self.round_num})**: {combatant.name} "
-                f"({combatant.controller_mention()})\n```md\n{combatant.get_status()}```"
+                f"({combatant.controller_mention()})\n"
             )
+
+        if status:
+            out += f"```md\n{combatant_statuses}```"
 
         if self.options.turnnotif:
             next_combatant = self.next_combatant

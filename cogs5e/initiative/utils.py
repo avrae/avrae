@@ -11,7 +11,8 @@ from utils.functions import smart_trim
 from .types import CombatantType
 
 if TYPE_CHECKING:
-    from . import Combatant, CombatantGroup
+    from utils.context import AvraeContext
+    from . import Combatant, CombatantGroup, Combat
 
 
 def create_combatant_id():
@@ -56,28 +57,7 @@ def can_see_combatant_details(author, combatant, combat) -> bool:
     return True
 
 
-def get_combatant_status_content(
-    combatant: Union["Combatant", "CombatantGroup"],
-    author: disnake.User,
-    show_hidden_attrs: bool = False,
-) -> str:
-    """Given a combatant, return a Markdown-formatted string to display their current status."""
-    if not combatant.type == CombatantType.GROUP:
-        private = show_hidden_attrs and can_see_combatant_details(author, combatant, combatant.combat)
-        status = combatant.get_status(private=private)
-        if private and combatant.type == CombatantType.MONSTER:
-            status = f"{status}\n* This creature is a {combatant.monster_name}."
-    else:
-        combat = combatant.combat
-        status = "\n".join(
-            [
-                co.get_status(private=show_hidden_attrs and can_see_combatant_details(author, co, combat))
-                for co in combatant.get_combatants()
-            ]
-        )
-    return f"```markdown\n{status}\n```"
-
-
+# ==== interactions ====
 def combatant_interaction_components(combatant: Union["Combatant", "CombatantGroup"]) -> list[disnake.ui.Button]:
     """Given a combatant, returns a list of components with up to 25 valid interactions for that combatant."""
     if combatant is None:
@@ -111,3 +91,97 @@ def _combatant_interaction_components_single(combatant: "Combatant", label_prefi
             )
             buttons.append(interaction_button)
     return buttons
+
+
+# ==== stringification ===
+_status_kwarg_strategies = [
+    dict(),
+    dict(description=False),
+    dict(description=False, parenthetical=False),
+    dict(description=False, parenthetical=False, notes=False),
+    dict(description=False, parenthetical=False, notes=False, resistances=False),
+    dict(description=False, parenthetical=False, notes=False, resistances=False, duration=False, concentration=False),
+]
+
+
+def get_combatant_status_content(
+    combatant: Union["Combatant", "CombatantGroup"],
+    author: disnake.User,
+    show_hidden_attrs: bool = False,
+    max_len=2000,
+) -> str:
+    """Given a combatant, return a Markdown-formatted string to display their current status."""
+    for strategy in _turn_str_kwarg_strategies:
+        result = _get_combatant_status_inner(combatant, author, show_hidden_attrs, **strategy)
+        if len(result) <= max_len:
+            break
+    else:
+        return "Unable to create a status message!"
+    return result
+
+
+def _get_combatant_status_inner(
+    combatant: Union["Combatant", "CombatantGroup"], author: disnake.User, show_hidden_attrs: bool = False, **kwargs
+):
+    """Inner helper to constrain the length of the combatant status; kwargs passed to Combatant.get_status()"""
+    if not combatant.type == CombatantType.GROUP:
+        private = show_hidden_attrs and can_see_combatant_details(author, combatant, combatant.combat)
+        status = combatant.get_status(private=private, **kwargs)
+        if private and combatant.type == CombatantType.MONSTER:
+            status = f"{status}\n* This creature is a {combatant.monster_name}."
+    else:
+        combat = combatant.combat
+        status = "\n".join(
+            [
+                co.get_status(private=show_hidden_attrs and can_see_combatant_details(author, co, combat), **kwargs)
+                for co in combatant.get_combatants()
+            ]
+        )
+    return f"```md\n{status}\n```"
+
+
+_turn_str_kwarg_strategies = [
+    *_status_kwarg_strategies,
+    dict(status=False),
+]
+
+
+def get_turn_str_content(combat: "Combat", max_len=2000) -> str:
+    """
+    Returns a string for the start-of-turn message for the current combat, ensuring that the total length of the string
+    is less than *max_len*.
+    """
+    for strategy in _turn_str_kwarg_strategies:
+        result = combat.get_turn_str(**strategy)
+        if len(result) <= max_len:
+            break
+    else:
+        return "Unable to create a start-of-turn message!"
+    return result
+
+
+async def send_turn_message(ctx: "AvraeContext", combat: "Combat", before: list[str] = None, after: list[str] = None):
+    """
+    Send the message labelling the current turn of combat to the contextual channel, optionally with some additional
+    messages to display to the user *before*/*after* the main combatant string.
+
+    If there is no active combatant, sends the combat summary instead.
+    """
+    before_str = after_str = ""
+    if before:
+        before_str = "\n".join(before) + "\n"
+    if after:
+        after_str = "\n" + "\n".join(after)
+
+    allowed_mentions = None
+    components = None
+    if combat.current_combatant is not None:
+        content = get_turn_str_content(combat, max_len=2000 - (len(before_str) + len(after_str)))
+        allowed_mentions = combat.get_turn_str_mentions()
+        components = combatant_interaction_components(combat.current_combatant)
+    else:
+        content = combat.get_summary()
+
+    result = before_str + content + after_str
+
+    return await ctx.send(result, allowed_mentions=allowed_mentions, components=components)

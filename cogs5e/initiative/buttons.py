@@ -114,7 +114,7 @@ async def update_triggering_message(inter: disnake.MessageInteraction, combat, c
     # (HACK: it's probably an on-turn message if it mentions someone, otherwise it's probably an !i status message)
     if inter.message.mentions:
         await inter.edit_original_message(
-            content=combat.get_turn_str(),
+            content=utils.get_turn_str_content(combat),
             allowed_mentions=combat.get_turn_str_mentions(),
             components=utils.combatant_interaction_components(combatant),
         )

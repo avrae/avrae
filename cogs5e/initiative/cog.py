@@ -1375,7 +1375,9 @@ class InitTracker(commands.Cog):
                 return await ctx.send("Combatant not found.")
 
         if isinstance(combatant, CombatantGroup):
-            combatant = await get_selection(ctx, combatant.get_combatants(), key=lambda com: com.name, message="Select the caster.")
+            combatant = await get_selection(
+                ctx, combatant.get_combatants(), key=lambda com: com.name, message="Select the caster."
+            )
 
         is_character = isinstance(combatant, PlayerCombatant)
         if is_character and combatant.character_owner == str(ctx.author.id):

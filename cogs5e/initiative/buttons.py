@@ -88,6 +88,7 @@ class ButtonHandler:
             spell_override=button_interaction.override_default_casting_mod,
             spell=spell,
             spell_level_override=button_interaction.granting_spell_cast_level,
+            from_button=True,
         )
 
         # and send the result

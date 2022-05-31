@@ -63,7 +63,7 @@ class Target(Effect):
 
     # --- action target types ---
     def run_all_target(self, autoctx, targets):
-        if autoctx.ieffect is not None:
+        if autoctx.ieffect is not None and autoctx.from_button:
             raise TargetException("You can only use the `self`, `parent`, or `children` target on an IEffect button.")
 
         result_pairs = []
@@ -73,7 +73,7 @@ class Target(Effect):
         return result_pairs
 
     def run_indexed_target(self, autoctx, targets, idx):
-        if autoctx.ieffect is not None:
+        if autoctx.ieffect is not None and autoctx.from_button:
             raise TargetException("You can only use the `self`, `parent`, or `children` target on an IEffect button.")
 
         targets = self.sorted_targets(targets)

@@ -90,6 +90,7 @@ class AttackInteraction(InitEffectInteraction):
             spell_override=self.override_default_casting_mod,
             spell=spell,
             spell_level_override=self.granting_spell_cast_level,
+            ieffect=self.effect,
         )
         return attack
 

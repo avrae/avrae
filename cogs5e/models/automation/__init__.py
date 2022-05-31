@@ -51,6 +51,7 @@ class Automation:
         ieffect: Optional["InitiativeEffect"] = None,
         allow_caster_ieffects: bool = True,
         allow_target_ieffects: bool = True,
+        from_button: bool = False,
     ) -> AutomationResult:
         """
         Runs automation.
@@ -77,6 +78,7 @@ class Automation:
                                       -d, adv, magical, etc) are considered during execution.
         :param allow_target_ieffects: Whether effects granted by ieffects on a target (usually defensive like
                                       -sb, sadv, -ac, -resist, etc) are considered during execution.
+        :param from_button: Whether this automation is being run from a button or not
         """
         if not targets:
             targets = []
@@ -97,6 +99,7 @@ class Automation:
             ieffect=ieffect,
             allow_caster_ieffects=allow_caster_ieffects,
             allow_target_ieffects=allow_target_ieffects,
+            from_button=from_button,
         )
 
         automation_results = []

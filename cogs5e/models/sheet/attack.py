@@ -163,7 +163,7 @@ class AttackList:
         return bool(self.attacks)
 
 
-def old_to_automation(bonus=None, damage=None, details=None):
+def old_to_automation(bonus: str | None = None, damage: str | None = None, details: str | None = None):
     """Returns an Automation instance representing an old attack."""
     from cogs5e.models import automation
 

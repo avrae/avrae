@@ -114,6 +114,7 @@ class ContextBotProxy:
         # to make draconic tests work
         self.prefix = "!"
         self.invoked_with = "foo"
+        self.message = MessageProxy()
 
     @property
     def channel(self):
@@ -126,3 +127,8 @@ class ContextBotProxy:
     @property
     def author(self):
         return self.guild.get_member(int(DEFAULT_USER_ID))
+
+
+class MessageProxy:
+    def __init__(self):
+        self.id = 112358132134

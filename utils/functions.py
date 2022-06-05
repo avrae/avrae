@@ -490,7 +490,7 @@ def reconcile_adv(adv=False, dis=False, eadv=False) -> enums.AdvantageType:
     :return: The combined advantage result
     """
     result = 0
-    if adv:
+    if adv or eadv:
         result += 1
     if dis:
         result += -1

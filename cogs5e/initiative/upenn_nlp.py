@@ -7,7 +7,6 @@ Redis - if the key is present in for a given guild channel, that channel is cons
 This key is set when a combat starts and expired 2 minutes after a combat ends in a channel that has opted in to NLP
 recording.
 """
-import dataclasses
 import datetime
 import logging
 import re
@@ -139,6 +138,7 @@ class RecordedAutomation(RecordedEvent):
     @classmethod
     def new(
         cls,
+        ctx: Union["AvraeContext", disnake.Interaction],
         combat: "Combat",
         automation: "Automation",
         automation_result: "AutomationResult",
@@ -147,9 +147,9 @@ class RecordedAutomation(RecordedEvent):
     ):
         return cls(
             combat_id=combat.nlp_record_session_id,
-            interaction_id=interaction_id(combat.ctx),
+            interaction_id=interaction_id(ctx),
             automation=automation.to_dict(),
-            automation_result=dataclasses.asdict(automation_result),
+            automation_result=automation_result.to_dict(),
             caster=caster.to_dict(),
             targets=[t.to_dict() if hasattr(t, "to_dict") else t for t in targets],
         )
@@ -157,7 +157,8 @@ class RecordedAutomation(RecordedEvent):
 
 class RecordedCombatState(RecordedEvent):
     event_type = "combat_state_update"
-    interaction_id: int
+    # due to caching this might not actually be the interaction this state update is tied to
+    probable_interaction_id: int
     data: Any
     human_readable: str
 
@@ -165,7 +166,7 @@ class RecordedCombatState(RecordedEvent):
     def from_combat(cls, combat: "Combat"):
         return cls(
             combat_id=combat.nlp_record_session_id,
-            interaction_id=interaction_id(combat.ctx),
+            probable_interaction_id=interaction_id(combat.ctx),
             data=combat.to_dict(),
             human_readable=combat.get_summary(private=True),
         )
@@ -276,6 +277,7 @@ class NLPRecorder:
 
     async def on_automation_run(
         self,
+        ctx: Union["AvraeContext", disnake.Interaction],
         combat: "Combat",
         automation: "Automation",
         automation_result: "AutomationResult",
@@ -285,7 +287,9 @@ class NLPRecorder:
         """Called each time an automation run completes in a recorded combat."""
         is_recording, combat_id = await self._recording_info(combat.ctx.guild.id, combat.ctx.channel.id)
         if is_recording:
-            await self._record_event(RecordedAutomation.new(combat, automation, automation_result, caster, targets))
+            await self._record_event(
+                RecordedAutomation.new(ctx, combat, automation, automation_result, caster, targets)
+            )
 
     async def on_combat_commit(self, combat: "Combat"):
         """
@@ -419,6 +423,7 @@ class NLPRecorder:
             return
 
         log.debug(f"saving 1 event to {event.combat_id=} of type {event.event_type!r}")
+        log.debug(event.json(indent=2))
         try:
             response = await self._kinesis_firehose.put_record(
                 DeliveryStreamName=config.NLP_KINESIS_DELIVERY_STREAM, Record={"Data": event.json().encode()}
@@ -454,7 +459,7 @@ class NLPRecorder:
 
 
 # ==== helpers ====
-def interaction_id(ctx: Union["AvraeContext", "disnake.Interaction"]):
+def interaction_id(ctx: Union["AvraeContext", disnake.Interaction]):
     """Helper to retrieve the interaction ID from a context or interaction."""
     if isinstance(ctx, disnake.Interaction):
         return ctx.id

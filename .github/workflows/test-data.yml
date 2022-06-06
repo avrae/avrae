@@ -6,7 +6,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    environment: require-review
     steps:
       - name: Set up Python 3.10
         uses: actions/setup-python@v2

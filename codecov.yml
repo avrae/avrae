@@ -1,0 +1,6 @@
+# for gamedata tests, pull files out of the nested repo
+fixes:
+  - "avrae/::"
+# don't add annotations everywhere about coverage pls
+github_checks:
+  annotations: false

@@ -41,14 +41,6 @@ jobs:
       - name: Run Tests
         run: pytest --tb=short --disable-warnings -rfE --cov=avrae.cogs5e --cov=avrae.cogsmisc --cov=avrae.utils --cov-report=xml:shared/coverage.xml tests/
 
-        # because the avrae project is in a nested dir but our tests are in the root, we have to do some path fixing
-      - name: Supply coverage fixes
-        run: |
-          echo "
-          fixes:
-            - \"avrae/::\"
-          " >> codecov.yml
-
       - name: Upload Coverage
         uses: codecov/codecov-action@v2
         with:

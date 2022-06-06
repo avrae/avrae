@@ -1,0 +1,47 @@
+name: Test Gamedata
+
+on:
+  [ push, pull_request ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+
+      - name: Checkout Gamedata repo
+        uses: actions/checkout@v3
+        with:
+          repository: avrae/avrae-data-entry
+          token: ${{ secrets.ORG_REPO_ACCESS_TOKEN }}
+
+      - name: Checkout Avrae
+        uses: actions/checkout@v3
+        with:
+          path: avrae
+
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt -r avrae/tests/requirements.txt
+          mkdir shared
+
+      - name: Run Tests
+        run: pytest --tb=short --disable-warnings -rfE --cov=avrae/cogs5e --cov=avrae/cogsmisc --cov=avrae/utils --cov-report=xml:shared/coverage.xml tests/
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v1
+        with:
+          files: ./shared/coverage.xml

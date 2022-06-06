@@ -1,8 +1,16 @@
+from typing import Any, List, TYPE_CHECKING, Tuple, Union
+
 from . import Effect
-from .. import utils
+from .. import results, utils
 from ..errors import TargetException
-from ..results import TargetResult
 from ..runtime import AutomationTarget
+
+_TargetT = Any
+
+if TYPE_CHECKING:
+    from cogs5e.models.sheet.statblock import StatBlock
+
+    _TargetT = Union[StatBlock, str, None]
 
 
 class Target(Effect):
@@ -15,7 +23,7 @@ class Target(Effect):
     @classmethod
     def from_data(cls, data):
         data["effects"] = Effect.deserialize(data["effects"])
-        return super(Target, cls).from_data(data)
+        return super().from_data(data)
 
     def to_dict(self):
         out = super().to_dict()
@@ -34,58 +42,57 @@ class Target(Effect):
 
         match self.target:
             case "all" | "each":
-                result_pairs = self.run_all_target(autoctx, targets)
+                iteration_results = self.run_all_target(autoctx, targets)
             case "self":
-                result_pairs = self.run_self_target(autoctx)
+                iteration_results = self.run_self_target(autoctx)
             case "parent":
-                result_pairs = self.run_parent_target(autoctx)
+                iteration_results = self.run_parent_target(autoctx)
             case "children":
-                result_pairs = self.run_children_target(autoctx)
+                iteration_results = self.run_children_target(autoctx)
             case int(idx1):
-                result_pairs = self.run_indexed_target(autoctx, targets, idx1 - 1)
+                iteration_results = self.run_indexed_target(autoctx, targets, idx1 - 1)
             case _:
                 raise TargetException(f"Invalid target supplied: {self.target!r}")
 
         # in case we had no valid targets, we should still run everything once against no target to display Meta
-        if not result_pairs:
-            result_pairs = self.run_one_target(autoctx, target=None, target_index=0)
+        if not iteration_results:
+            iteration_results = self.run_effects(autoctx, target=None)
 
         # restore the previous target
         autoctx.target = previous_target
         autoctx.metavars["target"] = utils.maybe_alias_statblock(previous_target)  # #1335
 
-        final_targets, results = zip(*result_pairs)  # convenient unzipping :D
-        return TargetResult(final_targets, results)
+        return results.TargetResult(iteration_results)
 
     # ==== target type impls ====
-    def run_self_target(self, autoctx):
-        return self.run_one_target(autoctx, target=autoctx.caster, target_index=0)
+    def run_self_target(self, autoctx) -> list[results.TargetIteration]:
+        return self.run_effects(autoctx, target=autoctx.caster)
 
     # --- action target types ---
-    def run_all_target(self, autoctx, targets):
+    def run_all_target(self, autoctx, targets) -> list[results.TargetIteration]:
         if autoctx.ieffect is not None and autoctx.from_button:
             raise TargetException("You can only use the `self`, `parent`, or `children` target on an IEffect button.")
 
         result_pairs = []
-        for idx, target in enumerate(self.sorted_targets(targets)):
-            result_pairs.extend(self.run_one_target(autoctx, target, idx))
+        for idx, (original_idx, target) in enumerate(self.sorted_targets(targets)):
+            result_pairs.extend(self.run_effects(autoctx, target, idx, original_idx))
 
         return result_pairs
 
-    def run_indexed_target(self, autoctx, targets, idx):
+    def run_indexed_target(self, autoctx, targets, idx) -> list[results.TargetIteration]:
         if autoctx.ieffect is not None and autoctx.from_button:
             raise TargetException("You can only use the `self`, `parent`, or `children` target on an IEffect button.")
 
-        targets = self.sorted_targets(targets)
+        sorted_targets = self.sorted_targets(targets)
         try:
-            target = targets[idx]
+            original_idx, target = sorted_targets[idx]
         except IndexError:
             return []
 
-        return self.run_one_target(autoctx, target, 0)
+        return self.run_effects(autoctx, target, 0, original_idx)
 
     # --- button target types ---
-    def run_parent_target(self, autoctx):
+    def run_parent_target(self, autoctx) -> list[results.TargetIteration]:
         if autoctx.ieffect is None:
             raise TargetException("You can only use the `self`, `each`, or numbered targets on an action.")
 
@@ -96,9 +103,9 @@ class Target(Effect):
         if target is None:
             return []
 
-        return self.run_one_target(autoctx, target, 0)
+        return self.run_effects(autoctx, target)
 
-    def run_children_target(self, autoctx):
+    def run_children_target(self, autoctx) -> list[results.TargetIteration]:
         if autoctx.ieffect is None:
             raise TargetException("You can only use the `self`, `each`, or numbered targets on an action.")
 
@@ -112,35 +119,38 @@ class Target(Effect):
                 targets.append(target)
 
         result_pairs = []
-        for idx, target in enumerate(self.sorted_targets(targets)):
-            result_pairs.extend(self.run_one_target(autoctx, target, idx))
+        for idx, (original_idx, target) in enumerate(self.sorted_targets(targets)):
+            result_pairs.extend(self.run_effects(autoctx, target, idx, original_idx))
         return result_pairs
 
     # ==== helpers ====
-    def sorted_targets(self, targets):
+    def sorted_targets(self, targets) -> List[Tuple[int, _TargetT]]:
+        """
+        Given a list of targets, returns a list of pairs representing the sorted targets and their original index
+        in the input list (for result building later).
+        """
         if self.sort_by == "hp_asc":
-            return sorted(targets, key=lambda t: utils.target_hp_or_default(t, float("inf")))
+            return sorted(enumerate(targets), key=lambda pair: utils.target_hp_or_default(pair[1], float("inf")))
         elif self.sort_by == "hp_desc":
-            return sorted(targets, key=lambda t: utils.target_hp_or_default(t, float("-inf")), reverse=True)
-        return targets
+            return sorted(
+                enumerate(targets), key=lambda pair: utils.target_hp_or_default(pair[1], float("-inf")), reverse=True
+            )
+        return list(enumerate(targets))
 
-    def run_one_target(self, autoctx, target, target_index):
-        result_pairs = []
+    def run_effects(self, autoctx, target, target_index=0, original_target_index=None) -> list[results.TargetIteration]:
+        # set up autoctx and metavars
         autoctx.target = AutomationTarget(autoctx, target)
         autoctx.metavars["target"] = utils.maybe_alias_statblock(target)  # #1335
         autoctx.metavars["targetIndex"] = target_index  # #1711
         autoctx.metavars["targetNumber"] = target_index + 1
-        for iteration_result in self.run_effects(autoctx):
-            result_pairs.append((target, iteration_result))
-        return result_pairs
 
-    def run_effects(self, autoctx):
+        # args
         args = autoctx.args
         args.set_context(autoctx.target.target)
         rr = min(args.last("rr", 1, int), 25)
 
         in_target = autoctx.target.target is not None
-        results = []
+        iteration_results = []
 
         # #1335
         autoctx.metavars["targetIteration"] = 1
@@ -162,9 +172,18 @@ class Target(Effect):
                 if in_target:
                     autoctx.queue(f"\n**__{iter_title}__**")
 
-                iteration_results = self.run_children(self.effects, autoctx)
-                total_damage += sum(r.get_damage() for r in iteration_results)
-                results.append(iteration_results)
+                child_results = self.run_children(self.effects, autoctx)
+                total_damage += sum(r.get_damage() for r in child_results)
+                iteration_results.append(
+                    results.TargetIteration(
+                        target_type=self.target,
+                        is_simple=autoctx.target.is_simple,
+                        target_id=autoctx.target.combatant and autoctx.target.combatant.id,
+                        target_index=original_target_index,
+                        target_iteration=iteration + 1,
+                        results=child_results,
+                    )
+                )
 
                 # no target, rr
                 if not in_target:
@@ -180,13 +199,23 @@ class Target(Effect):
                     autoctx.queue(f"{total_damage}")
                     autoctx.push_embed_field("Total Damage", inline=True)
         else:
-            results.append(self.run_children(self.effects, autoctx))
+            child_results = self.run_children(self.effects, autoctx)
+            iteration_results.append(
+                results.TargetIteration(
+                    target_type=self.target,
+                    is_simple=autoctx.target.is_simple,
+                    target_id=autoctx.target.combatant and autoctx.target.combatant.id,
+                    target_index=original_target_index,
+                    target_iteration=1,
+                    results=child_results,
+                )
+            )
             if in_target:  # target, no rr
                 autoctx.push_embed_field(autoctx.target.name)
             else:  # no target, no rr
                 autoctx.push_embed_field(None, to_meta=True)
 
-        return results
+        return iteration_results
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

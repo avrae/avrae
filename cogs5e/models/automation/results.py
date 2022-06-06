@@ -1,11 +1,10 @@
 import abc
 from dataclasses import dataclass, field
-from typing import Iterable, List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Iterable, List, Optional, TYPE_CHECKING
 
 import d20
 
 if TYPE_CHECKING:
-    from cogs5e.models.sheet.statblock import StatBlock
     from cogs5e.initiative import InitiativeEffect
     from gamedata import Spell
 
@@ -55,20 +54,29 @@ class AutomationResult(EffectResult):
     caster_needs_commit: bool = False
 
 
+@dataclass
+class TargetIteration:
+    # all, each, int, self, parent, or children
+    target_type: str
+    # whether the target was a str or None
+    is_simple: bool
+    # if the target is a combatant, their combatant ID
+    target_id: Optional[str]
+    # where the target was in the targets arg (accounting for sorting), for all/each/int targeting only
+    target_index: Optional[int]
+    # if -rr is passed, the iteration number (1-indexed)
+    target_iteration: int
+    # the results of this iteration
+    results: List[EffectResult]
+
+
 @dataclass(frozen=True)
 class TargetResult(EffectResult):
-    """
-    A zippable pair representing each iteration on a target and the results of that iteration.
-
-    The same target may appear multiple times consecutively, which represents the multiple iterations of -rr.
-    """
-
-    targets: Tuple[Union[None, str, "StatBlock"]] = ()
-    results: Tuple[List[EffectResult], ...] = ()
+    results: List[TargetIteration]
 
     def get_children(self):
         for inst in self.results:
-            yield from inst
+            yield from inst.results
 
 
 @dataclass(frozen=True)

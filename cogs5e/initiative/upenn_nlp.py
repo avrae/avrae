@@ -7,11 +7,12 @@ Redis - if the key is present in for a given guild channel, that channel is cons
 This key is set when a combat starts and expired 2 minutes after a combat ends in a channel that has opted in to NLP
 recording.
 """
+import dataclasses
 import datetime
 import logging
 import re
 import time
-from typing import Any, List, MutableMapping, Optional, Sequence, Tuple
+from typing import Any, List, MutableMapping, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import botocore.exceptions
 import cachetools
@@ -19,10 +20,14 @@ import disnake
 from aiobotocore.session import get_session
 from pydantic import BaseModel, Field
 
-import utils.context
 from utils import config
-from .combat import Combat
 from .utils import nlp_feature_flag_enabled
+
+if TYPE_CHECKING:
+    from cogs5e.models.automation import Automation, AutomationResult
+    from cogs5e.models.sheet.statblock import StatBlock
+    from utils.context import AvraeContext
+    from .combat import Combat
 
 ONE_MONTH_SECS = 2592000
 
@@ -69,7 +74,7 @@ class RecordedCommandInvocation(RecordedMessage):
     targets: Optional[List[dict]]
 
     @classmethod
-    def from_ctx(cls, combat_id: str, ctx: utils.context.AvraeContext):
+    def from_ctx(cls, combat_id: str, ctx: "AvraeContext"):
         message = ctx.message
 
         # caster
@@ -103,6 +108,7 @@ class RecordedCommandInvocation(RecordedMessage):
 
 class RecordedButtonInteraction(RecordedEvent):
     event_type = "button_press"
+    interaction_id: int
     interaction_message_id: int
     author_id: str
     author_name: str
@@ -113,6 +119,7 @@ class RecordedButtonInteraction(RecordedEvent):
     def from_interaction(cls, combat_id: str, interaction: disnake.MessageInteraction):
         return cls(
             combat_id=combat_id,
+            interaction_id=interaction.id,
             interaction_message_id=interaction.message.id,
             author_id=interaction.author.id,
             author_name=interaction.author.display_name,
@@ -121,15 +128,44 @@ class RecordedButtonInteraction(RecordedEvent):
         )
 
 
+class RecordedAutomation(RecordedEvent):
+    event_type = "automation_run"
+    interaction_id: int
+    automation: Any
+    automation_result: Any
+    caster: Optional[dict]  # this is a StatBlock, typed as dict since StatBlock does not inherit from BaseModel
+    targets: Optional[List[dict]]
+
+    @classmethod
+    def new(
+        cls,
+        combat: "Combat",
+        automation: "Automation",
+        automation_result: "AutomationResult",
+        caster: "StatBlock",
+        targets: List[Union["StatBlock", str]],
+    ):
+        return cls(
+            combat_id=combat.nlp_record_session_id,
+            interaction_id=interaction_id(combat.ctx),
+            automation=automation.to_dict(),
+            automation_result=dataclasses.asdict(automation_result),
+            caster=caster.to_dict(),
+            targets=[t.to_dict() if hasattr(t, "to_dict") else t for t in targets],
+        )
+
+
 class RecordedCombatState(RecordedEvent):
     event_type = "combat_state_update"
+    interaction_id: int
     data: Any
     human_readable: str
 
     @classmethod
-    def from_combat(cls, combat: Combat):
+    def from_combat(cls, combat: "Combat"):
         return cls(
             combat_id=combat.nlp_record_session_id,
+            interaction_id=interaction_id(combat.ctx),
             data=combat.to_dict(),
             human_readable=combat.get_summary(private=True),
         )
@@ -175,7 +211,7 @@ class NLPRecorder:
             return
         await self.on_guild_message(message)
 
-    async def on_command_completion(self, ctx: utils.context.AvraeContext):
+    async def on_command_completion(self, ctx: "AvraeContext"):
         if ctx.guild is None:
             return
         await self.on_guild_command(ctx)
@@ -186,7 +222,7 @@ class NLPRecorder:
         await self.on_guild_button_click(interaction)
 
     # ==== main methods ====
-    async def on_combat_start(self, combat: Combat):
+    async def on_combat_start(self, combat: "Combat"):
         """
         Called with the just-started combat instance after a combat is started in a guild with NLP recording enabled.
         """
@@ -219,7 +255,7 @@ class NLPRecorder:
         if is_recording:
             await self._record_event(RecordedMessage.from_message(combat_id=combat_id, message=message))
 
-    async def on_guild_command(self, ctx: utils.context.AvraeContext):
+    async def on_guild_command(self, ctx: "AvraeContext"):
         """
         Called after each successful invocation of a command in a guild. If the guild has not opted in to
         NLP recording, does nothing.
@@ -238,7 +274,20 @@ class NLPRecorder:
                 RecordedButtonInteraction.from_interaction(combat_id=combat_id, interaction=interaction)
             )
 
-    async def on_combat_commit(self, combat: Combat):
+    async def on_automation_run(
+        self,
+        combat: "Combat",
+        automation: "Automation",
+        automation_result: "AutomationResult",
+        caster: "StatBlock",
+        targets: List[Union["StatBlock", str]],
+    ):
+        """Called each time an automation run completes in a recorded combat."""
+        is_recording, combat_id = await self._recording_info(combat.ctx.guild.id, combat.ctx.channel.id)
+        if is_recording:
+            await self._record_event(RecordedAutomation.new(combat, automation, automation_result, caster, targets))
+
+    async def on_combat_commit(self, combat: "Combat"):
         """
         Called each time a combat that is being recorded is committed.
         """
@@ -249,7 +298,7 @@ class NLPRecorder:
         # record a snapshot of the combat's human-readable and machine-readable state
         await self._record_event(RecordedCombatState.from_combat(combat))
 
-    async def on_combat_end(self, combat: Combat):
+    async def on_combat_end(self, combat: "Combat"):
         """
         Called each time a combat that is being recorded ends.
         """
@@ -402,3 +451,11 @@ class NLPRecorder:
             log.debug(str(response))
             if failed_count := response.get("FailedPutCount"):
                 log.error(f"Failed to record {failed_count} NLP events; response={response!r}")
+
+
+# ==== helpers ====
+def interaction_id(ctx: Union["AvraeContext", "disnake.Interaction"]):
+    """Helper to retrieve the interaction ID from a context or interaction."""
+    if isinstance(ctx, disnake.Interaction):
+        return ctx.id
+    return ctx.message.id

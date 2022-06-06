@@ -423,7 +423,6 @@ class NLPRecorder:
             return
 
         log.debug(f"saving 1 event to {event.combat_id=} of type {event.event_type!r}")
-        log.debug(event.json(indent=2))
         try:
             response = await self._kinesis_firehose.put_record(
                 DeliveryStreamName=config.NLP_KINESIS_DELIVERY_STREAM, Record={"Data": event.json().encode()}

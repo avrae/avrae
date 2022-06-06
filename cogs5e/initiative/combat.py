@@ -1,8 +1,8 @@
 import asyncio
+import weakref
 from functools import cached_property
 from typing import List, Literal, Optional, TYPE_CHECKING, Tuple, Union, overload
 
-import cachetools
 import disnake
 from d20 import roll
 from pydantic import BaseModel
@@ -32,12 +32,11 @@ class CombatOptions(BaseModel):
 
 
 class Combat:
-    # we cache up to 500 combats in memory for a short period
     # this makes sure that multiple calls to Combat.from_ctx() in the same invocation or two simultaneous ones
     # retrieve/modify the same Combat state
     # caches based on channel id
     # probably won't encounter any scaling issues, since a combat will be shard-specific
-    _cache: cachetools.TTLCache[str, "Combat"] = cachetools.TTLCache(maxsize=500, ttl=10)
+    _cache: weakref.WeakValueDictionary[str, "Combat"] = weakref.WeakValueDictionary()
 
     def __init__(
         self,

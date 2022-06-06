@@ -39,7 +39,7 @@ jobs:
           mkdir shared
 
       - name: Run Tests
-        run: pytest --tb=short --disable-warnings -rfE --cov=avrae/cogs5e --cov=avrae/cogsmisc --cov=avrae/utils --cov-report=xml:shared/coverage.xml tests/
+        run: pytest --tb=short --disable-warnings -rfE --cov=avrae.cogs5e --cov=avrae.cogsmisc --cov=avrae.utils --cov-report=xml:shared/coverage.xml tests/
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v1

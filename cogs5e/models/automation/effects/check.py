@@ -124,8 +124,10 @@ class Check(Effect):
         autoctx.metavars["lastCheckDC"] = check_dc
 
         # ==== contest ====
+        contest_skill_key = None
         contest_skill_name = None
         contest_roll = None
+        contest_did_tie = False
         if self.contest_ability is not None:
             contest_skill, contest_skill_key = get_highest_skill(autoctx.caster, self.contest_ability_list)
             contest_skill_name = camel_to_title(contest_skill_key)
@@ -141,6 +143,7 @@ class Check(Effect):
             autoctx.queue(f"**{contest_skill_name} Contest ({autoctx.caster.name})**: {contest_roll.result}")
 
         # ==== execution ====
+        skill, skill_key = get_highest_skill(autoctx.target.target, ability_list)
         if auto_pass:
             is_success = True
             autoctx.queue(f"**{skill_name} Check:** Automatic success!")
@@ -149,7 +152,6 @@ class Check(Effect):
             autoctx.queue(f"**{skill_name} Check:** Automatic failure!")
         elif not autoctx.target.is_simple:
             # roll for the target
-            skill, skill_key = get_highest_skill(autoctx.target.target, ability_list)
             skill_name = camel_to_title(skill_key)
             check_dice = get_check_dice_for_statblock(
                 autoctx,
@@ -177,6 +179,7 @@ class Check(Effect):
                 elif check_roll.total == contest_roll.total:
                     success_str = "; Tie!"
                     autoctx.metavars["lastContestDidTie"] = True
+                    contest_did_tie = True
                     if self.contest_tie_behaviour == "fail" or self.contest_tie_behaviour is None:
                         is_success = False
                     elif self.contest_tie_behaviour == "success":
@@ -203,13 +206,16 @@ class Check(Effect):
             children = self.on_fail(autoctx)
 
         return CheckResult(
+            skill_key=skill_key,
             skill_name=skill_name,
             check_roll=check_roll,
             dc=check_dc,
             did_succeed=is_success,
             children=children,
+            contest_skill_key=contest_skill_key,
             contest_skill_name=contest_skill_name,
             contest_roll=contest_roll,
+            contest_did_tie=contest_did_tie,
         )
 
     def on_success(self, autoctx):

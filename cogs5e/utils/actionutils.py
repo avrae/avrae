@@ -373,6 +373,9 @@ async def run_automation(
 
     # do commits
     if combat:
+        # NLP: record the automation run
+        if (nlp_recorder := combat.nlp_recorder) is not None:
+            await nlp_recorder.on_automation_run(ctx, combat, automation, result, caster, targets)
         await combat.final()
     # commit character only if we have not already committed it via combat final
     if (

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from utils.argparser import ParsedArguments
     from cogs5e.initiative import Combat, InitiativeEffect
     from gamedata.spell import Spell
+    from utils.context import AvraeContext
 
 
 class Automation:
@@ -34,8 +35,8 @@ class Automation:
 
     async def run(
         self,
-        ctx,
-        embed,
+        ctx: Union["AvraeContext", disnake.Interaction],
+        embed: disnake.Embed,
         caster: "StatBlock",
         targets: list[Union[str, "StatBlock"]],
         args: "ParsedArguments",
@@ -57,9 +58,7 @@ class Automation:
         Runs automation.
 
         :param ctx: The discord context the automation is being run in.
-        :type ctx: discord.ext.commands.Context
         :param embed: The embed to add automation fields to.
-        :type embed: discord.Embed
         :param caster: The StatBlock casting this automation.
         :param targets: A list of str or StatBlock or None hit by this automation.
         :param args: ParsedArguments.

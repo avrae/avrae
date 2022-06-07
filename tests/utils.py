@@ -131,4 +131,4 @@ class ContextBotProxy:
 
 class MessageProxy:
     def __init__(self):
-        self.id = MESSAGE_ID
+        self.id = int(MESSAGE_ID)

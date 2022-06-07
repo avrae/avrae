@@ -6,7 +6,7 @@ import pytest
 from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
 from gamedata.compendium import compendium
-from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID, TEST_GUILD_ID
+from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID, TEST_GUILD_ID, MESSAGE_ID
 from utils.settings import ServerSettings
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -131,4 +131,4 @@ class ContextBotProxy:
 
 class MessageProxy:
     def __init__(self):
-        self.id = 112358132134
+        self.id = MESSAGE_ID

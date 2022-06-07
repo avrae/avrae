@@ -85,7 +85,7 @@ class AliasContext:
     def __repr__(self):
         return (
             f"<{self.__class__.__name__} guild={self.guild!r} channel={self.channel!r} author={self.author!r} "
-            f"prefix={self.prefix!r} alias={self.alias!r} message={self.message!r}>"
+            f"prefix={self.prefix!r} alias={self.alias!r} message={self.message_id!r}>"
         )
 
 

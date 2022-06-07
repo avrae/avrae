@@ -18,7 +18,7 @@ class AliasContext:
         self._author = AliasAuthor(ctx.author)
         self._prefix = ctx.prefix
         self._alias = ctx.invoked_with
-        self._message = ctx.message.id
+        self._message_id = ctx.message.id
 
     @property
     def guild(self):
@@ -71,16 +71,16 @@ class AliasContext:
         return self._alias
 
     @property
-    def message(self):
+    def message_id(self):
         """
         The ID of the message the alias was invoked with.
 
-        >>> !test {{ctx.message}}
+        >>> !test {{ctx.message_id}}
         982495360129847306
 
         :rtype: int
         """
-        return self._message
+        return self._message_id
 
     def __repr__(self):
         return (

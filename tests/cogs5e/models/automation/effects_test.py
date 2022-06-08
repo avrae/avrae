@@ -404,7 +404,7 @@ class TestIEffect:
         avrae.message('!a "Add Stack"')
         await dhttp.drain()
         
-        assert combatant.get_effect("Stacked 3", strict=True)
+        assert combatant.get_effect("Stacked x3", strict=True)
         assert (combatant.max_hp - old_hp)==3
         
         # check if removing both stacks will remove the parent

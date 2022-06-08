@@ -424,7 +424,7 @@ class TestIEffect:
 
         assert not combatant.get_effect("Stacked", strict=True)
 
-    def test_cleanup_stacking_ieffect(self, avrae, dhttp):
+    async def test_cleanup_stacking_ieffect(self, avrae, dhttp):
         # clear effects in preparation for next test
         avrae.message(f'!i re "{character.name}"')
         await dhttp.drain()
@@ -520,7 +520,7 @@ class TestIEffect:
 
         assert not any([kobold.get_effect("Targeted", strict=True) for kobold in kobolds])
 
-    def test_cleanup_stack_children(self, avrae, dhttp):
+    async def test_cleanup_stack_children(self, avrae, dhttp):
         # clear up remaining effects
         combat = await active_combat(avrae)
         for combatant in combat.combatants:

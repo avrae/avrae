@@ -499,7 +499,9 @@ class TestIEffect:
 
         assert (root_effect := combatant.get_effect("Targets Chosen", strict=True))
         assert combatant.get_effect("Targets Chosen x1", strict=True)
-        assert root_effect is child_effect.get_parent_effect()
+        assert root_effect is (
+            child_effect.get_parent_effect() and child_effect.get_parent_effect().get_parent_effect()
+        )
 
         avrae.message('!a "Add Target" -t KO2 -t KO3')
         await dhttp.drain()

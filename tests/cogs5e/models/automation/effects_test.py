@@ -327,7 +327,7 @@ class TestIEffect:
         avrae.message(f'!i re "{character.name}"')
         await dhttp.drain()
 
-    attack_data = textwrap.dedent(
+    stack_data = textwrap.dedent(
         """
         name: Stacking Test
         _v: 2
@@ -369,7 +369,7 @@ class TestIEffect:
 
     async def test_stacking_ieffect(self, character, avrae, dhttp):
 
-        avrae.message(f"""!a import {self.attack_data}""")
+        avrae.message(f"""!a import {self.stack_data}""")
         await dhttp.drain()
 
         char = await active_character(avrae)
@@ -429,7 +429,7 @@ class TestIEffect:
         avrae.message(f'!i re "{character.name}"')
         await dhttp.drain()
 
-    attack_data = textwrap.dedent(
+    child_data = textwrap.dedent(
         """
         name: Target Practice
         _v: 2
@@ -478,7 +478,7 @@ class TestIEffect:
     ).strip()
 
     async def test_stack_children(self, character, avrae, dhttp):
-        avrae.message(f"""!a import {self.attack_data}""")
+        avrae.message(f"""!a import {self.child_data}""")
         await dhttp.drain()
 
         char = await active_character(avrae)
@@ -528,7 +528,7 @@ class TestIEffect:
             await dhttp.drain()
             combatant.reset_hp()
 
-    attack_data = textwrap.dedent(
+    parent_child_attack_data = textwrap.dedent(
         """
         name: Targeting
         _v: 2
@@ -569,7 +569,7 @@ class TestIEffect:
     ).strip()
 
     async def test_parent_children_target(self, character, avrae, dhttp):
-        avrae.message(f"""!a import {self.attack_data}""")
+        avrae.message(f"""!a import {self.parent_child_attack_data}""")
         await dhttp.drain()
 
         char = await active_character(avrae)

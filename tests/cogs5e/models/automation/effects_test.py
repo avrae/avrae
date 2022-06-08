@@ -179,139 +179,144 @@ class TestIEffect:
 
     attack_data = textwrap.dedent(
         """
-          - name: New Button Test
-            _v: 2
-            automation:
-              - type: target
-                target: self
+        name: New Button Test
+        _v: 2
+        automation:
+          - type: target
+            target: self
+            effects:
+              - type: ieffect2
+                name: Prone
+                buttons:
+                  - label: Stand Up
+                    verb: stands up
+                    style: 3
+                    automation:
+                      - type: text
+                        text: ok I haven't implemented removing effects yet lol
+              - type: ieffect2
+                name: Burning
                 effects:
-                  - type: ieffect2
-                    name: Prone
-                    buttons:
-                      - label: Stand Up
-                        verb: stands up
-                        style: 3
-                        automation:
+                  save_dis: [ all ]
+                  damage_bonus: 1 [fire]
+                attacks:
+                  - attack:
+                      name: Burning Hand (not the spell)
+                      _v: 2
+                      automation:
+                        - type: target
+                          target: each
+                          effects:
+                            - type: damage
+                              damage: 1d8[fire]
+                buttons:
+                  - label: Take Fire Damage
+                    verb: is burning
+                    style: 4
+                    automation:
+                      - type: target
+                        target: self
+                        effects:
+                          - type: damage
+                            damage: 1d6[fire]
+                  - label: Douse
+                    verb: puts themself out
+                    automation:
+                      - type: text
+                        text: ok still no remove effect yet lol
+              - type: ieffect2
+                name: Parent Test
+                save_as: parent_test
+                buttons:
+                  - label: ping children
+                    verb: lists all the child effects
+                    automation:
+                      - type: target
+                        target: children
+                        effects:
                           - type: text
-                            text: ok I haven't implemented removing effects yet lol
-                  - type: ieffect2
-                    name: Burning
-                    effects:
-                      save_dis: [ all ]
-                      damage_bonus: 1 [fire]
-                    attacks:
-                      - attack:
-                          name: Burning Hand (not the spell)
-                          _v: 2
-                          automation:
-                            - type: target
-                              target: each
-                              effects:
-                                - type: damage
-                                  damage: 1d8[fire]
-                    buttons:
-                      - label: Take Fire Damage
-                        verb: is burning
-                        style: 4
-                        automation:
-                          - type: target
-                            target: self
-                            effects:
-                              - type: damage
-                                damage: 1d6[fire]
-                      - label: Douse
-                        verb: puts themself out
-                        automation:
+                            text: "{target.name} has a child effect"
+          - type: target
+            target: each
+            effects:
+              - type: ieffect2
+                name: Child Effect
+                parent: parent_test
+                buttons:
+                  - label: ping parent
+                    automation:
+                      - type: target
+                        target: parent
+                        effects:
                           - type: text
-                            text: ok still no remove effect yet lol
-                  - type: ieffect2
-                    name: Parent Test
-                    save_as: parent_test
-                    buttons:
-                      - label: ping children
-                        verb: lists all the child effects
-                        automation:
-                          - type: target
-                            target: children
-                            effects:
-                              - type: text
-                                text: "{target.name} has a child effect"
-              - type: target
-                target: each
+                            text: "{target.name} has the parent effect"
+        """
+    ).strip()
+    
+    stack_data = textwrap.dedent(
+        """
+        name: Stacking Test
+        _v: 2
+        automation:
+          - type: target
+            target: self
+            effects:
+              - type: ieffect2
+                stacking: true
+                name: Stacked
                 effects:
-                  - type: ieffect2
-                    name: Child Effect
-                    parent: parent_test
-                    buttons:
-                      - label: ping parent
-                        automation:
-                          - type: target
-                            target: parent
+                    max_hp_bonus: "1"
+                buttons:
+                  - label: Add Stack
+                    automation:
+                      - type: target
+                        target: self
+                        effects:
+                          - type: ieffect2
+                            stacking: true
+                            name: Stacked
                             effects:
-                              - type: text
-                                text: "{target.name} has the parent effect"
-          - name: Stacking Test
-            _v: 2
-            automation:
-              - type: target
-                target: self
+                                max_hp_bonus: "1"
+                attacks:
+                  - name: Add Stack
+                    _v: 2
+                    automation:
+                      - type: target
+                        target: self
+                        effects:
+                          - type: ieffect2
+                            stacking: true
+                            name: Stacked
+                            effects:
+                                max_hp_bonus: "1"
+              - type: ieffect2
+                stacking: true
+                name: Stacked
                 effects:
-                  - type: ieffect2
-                    stacking: true
-                    name: Stacked
-                    effects:
-                        max_hp_bonus: "1"
-                    buttons:
-                      - label: Add Stack
-                        automation:
-                          - type: target
-                            target: self
+                    max_hp_bonus: "1"
+                buttons:
+                  - label: Add Stack
+                    automation:
+                      - type: target
+                        target: self
+                        effects:
+                          - type: ieffect2
+                            stacking: true
+                            name: Stacked
                             effects:
-                              - type: ieffect2
-                                stacking: true
-                                name: Stacked
-                                effects:
-                                    max_hp_bonus: "1"
-                    attacks:
-                      - name: Add Stack
-                        _v: 2
-                        automation:
-                          - type: target
-                            target: self
+                                max_hp_bonus: "1"
+                attacks:
+                  - name: Add Stack
+                    _v: 2
+                    automation:
+                      - type: target
+                        target: self
+                        effects:
+                          - type: ieffect2
+                            stacking: true
+                            name: Stacked
                             effects:
-                              - type: ieffect2
-                                stacking: true
-                                name: Stacked
-                                effects:
-                                    max_hp_bonus: "1"
-                  - type: ieffect2
-                    stacking: true
-                    name: Stacked
-                    effects:
-                        max_hp_bonus: "1"
-                    buttons:
-                      - label: Add Stack
-                        automation:
-                          - type: target
-                            target: self
-                            effects:
-                              - type: ieffect2
-                                stacking: true
-                                name: Stacked
-                                effects:
-                                    max_hp_bonus: "1"
-                    attacks:
-                      - name: Add Stack
-                        _v: 2
-                        automation:
-                          - type: target
-                            target: self
-                            effects:
-                              - type: ieffect2
-                                stacking: true
-                                name: Stacked
-                                effects:
-                                    max_hp_bonus: "1"
+                                max_hp_bonus: "1"
         """
     ).strip()
 
@@ -348,7 +353,7 @@ class TestIEffect:
         assert serialized1 == serialized2
 
     async def test_buttons_e2e(self, character, avrae, dhttp):
-        avrae.message(f"!a import {self.attack_data}")
+        avrae.message(f"""!a import {self.attack_data}""")
         await dhttp.drain()
 
         avrae.message(f'!a "New Button Test" -t "{character.name}"')
@@ -389,6 +394,9 @@ class TestIEffect:
         await dhttp.drain()
         
     async def test_stacking_ieffect(self, character, avrae, dhttp):
+        
+        avrae.message(f"""!a import {self.stack_data}""")
+        await dhttp.drain()
         
         char = await active_character(avrae)
         combat = await active_combat(avrae)

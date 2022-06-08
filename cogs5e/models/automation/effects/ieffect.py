@@ -264,7 +264,7 @@ class IEffect(Effect):
                 end_on_turn_end=self.end_on_turn_end,
                 concentration=self.concentration,
                 desc=desc,
-                stack=int(self.stacking or 0)
+                stack=int(self.stacking or 0),
             )
             conc_parent = None
             stack_parent = None
@@ -294,7 +294,7 @@ class IEffect(Effect):
                 effect_result = combatant.add_effect(effect)
                 autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
                 root_effect = effect
-                
+
             # stacking
             # find the next correct name for the effect and create a new one, without conflicting pieces
             # preserves the root effect
@@ -305,16 +305,12 @@ class IEffect(Effect):
                     count += 1
                     new_name = f"{self.name} x{count}"
                 effect = init.InitiativeEffect.new(
-                    combat=combatant.combat,
-                    combatant=combatant,
-                    name=new_name,
-                    passive_effects=effects,
-                    stack=-1
+                    combat=combatant.combat, combatant=combatant, name=new_name, passive_effects=effects, stack=-1
                 )
                 effect.set_parent(stack_parent)
                 combatant.add_effect(effect)
                 autoctx.queue(f"**Stacking Effect**: {effect.get_str(description=False)}")
-                
+
             if at_root and (conc_conflict := effect_result["conc_conflict"]):
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
 

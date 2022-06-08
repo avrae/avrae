@@ -253,46 +253,6 @@ class TestIEffect:
         """
     ).strip()
 
-    stack_data = textwrap.dedent(
-        """
-        name: Stacking Test
-        _v: 2
-        automation:
-          - type: target
-            target: self
-            effects:
-              - type: ieffect2
-                stacking: true
-                name: Stacked
-                effects:
-                    max_hp_bonus: "1"
-                buttons:
-                  - label: Add Stack
-                    automation:
-                      - type: target
-                        target: self
-                        effects:
-                          - type: ieffect2
-                            stacking: true
-                            name: Stacked
-                            effects:
-                                max_hp_bonus: "1"
-                attacks:
-                  - attack:
-                        name: Add Stack
-                        _v: 2
-                        automation:
-                          - type: target
-                            target: self
-                            effects:
-                              - type: ieffect2
-                                stacking: true
-                                name: Stacked
-                                effects:
-                                    max_hp_bonus: "1"
-        """
-    ).strip()
-
     async def test_ieffect_setup(self, avrae, dhttp):
         await start_init(avrae, dhttp)
         avrae.message("!init join")
@@ -367,9 +327,49 @@ class TestIEffect:
         avrae.message(f'!i re "{character.name}"')
         await dhttp.drain()
 
+    attack_data = textwrap.dedent(
+        """
+        name: Stacking Test
+        _v: 2
+        automation:
+          - type: target
+            target: self
+            effects:
+              - type: ieffect2
+                stacking: true
+                name: Stacked
+                effects:
+                    max_hp_bonus: "1"
+                buttons:
+                  - label: Add Stack
+                    automation:
+                      - type: target
+                        target: self
+                        effects:
+                          - type: ieffect2
+                            stacking: true
+                            name: Stacked
+                            effects:
+                                max_hp_bonus: "1"
+                attacks:
+                  - attack:
+                        name: Add Stack
+                        _v: 2
+                        automation:
+                          - type: target
+                            target: self
+                            effects:
+                              - type: ieffect2
+                                stacking: true
+                                name: Stacked
+                                effects:
+                                    max_hp_bonus: "1"
+        """
+    ).strip()
+
     async def test_stacking_ieffect(self, character, avrae, dhttp):
 
-        avrae.message(f"""!a import {self.stack_data}""")
+        avrae.message(f"""!a import {self.attack_data}""")
         await dhttp.drain()
 
         char = await active_character(avrae)
@@ -423,6 +423,175 @@ class TestIEffect:
         await dhttp.drain()
 
         assert not combatant.get_effect("Stacked", strict=True)
+
+    def test_cleanup_stacking_ieffect(self, avrae, dhttp):
+        # clear effects in preparation for next test
+        avrae.message(f'!i re "{character.name}"')
+        await dhttp.drain()
+
+    attack_data = textwrap.dedent(
+        """
+        name: Target Practice
+        _v: 2
+        automation:
+          - type: target
+            target: self
+            effects:
+              - type: ieffect2
+                stacking: true
+                name: Targets Chosen
+                save_as: targets
+                attacks:
+                  - attack:
+                        name: Hit All
+                        _v: 2
+                        automation:
+                          - type: target
+                            target: children
+                            effects:
+                              - type: damage
+                                damage: "1"
+                  - attack:
+                        name: Add Target
+                        _v: 2
+                        automation:
+                          - type: target
+                            target: self
+                            effects:
+                              - type: ieffect2
+                                stacking: true
+                                name: Targets Chosen
+                                save_as: targets
+                          - type: target
+                            target: all
+                            effects:
+                              - type: ieffect2
+                                name: Targeted
+                                parent: targets
+          - type: target
+            target: all
+            effects:
+              - type: ieffect2
+                name: Targeted
+                parent: targets
+        """
+    ).strip()
+
+    async def test_stack_children(self, character, avrae, dhttp):
+        avrae.message(f"""!a import {self.attack_data}""")
+        await dhttp.drain()
+
+        char = await active_character(avrae)
+        combat = await active_combat(avrae)
+        combatant = combat.get_combatant(char.name, strict=True)
+
+        avrae.message("!i madd kobold -n 3 -name KO#")
+        await dhttp.drain()
+
+        kobolds = [combat.get_combatant(x, strict=True) for x in ["KO1", "KO2", "KO3"]]
+
+        avrae.message('!a "Target Practice" -t KO1')
+        await dhttp.drain()
+
+        assert kobolds[0].get_effect("Targeted", strict=True)
+        assert not kobolds[1].get_effect("Targeted", strict=True)
+        assert not kobolds[2].get_effect("Targeted", strict=True)
+
+        assert combatant.get_effect("Targets Chosen", strict=True)
+        assert combatant.get_effect("Targets Chosen x1", strict=True)
+
+        avrae.message('!a "Add Target" -t KO2 -t KO3')
+        await dhttp.drain()
+
+        assert kobolds[1].get_effect("Targeted", strict=True)
+        assert kobolds[2].get_effect("Targeted", strict=True)
+
+        assert combatant.get_effect("Targets Chosen x2", strict=True)
+
+        avrae.message('!a "Hit All"')
+        await dhttp.drain()
+
+        assert all([kobold.hp == (kobold.max_hp - 1) for kobold in kobolds])
+        assert combatant.hp == combatant.max_hp
+
+        # test clearing all effects effects
+        avrae.message(f'!i re "{character.name}"')
+        await dhttp.drain()
+
+        assert not any([kobold.get_effect("Targeted", strict=True) for kobold in kobolds])
+
+    def test_cleanup_stack_children(self, avrae, dhttp):
+        # clear up remaining effects
+        combat = await active_combat(avrae)
+        for combatant in combat.combatants:
+            avrae.message(f'!i re "{combatant.name}"')
+            await dhttp.drain()
+            combatant.reset_hp()
+
+    attack_data = textwrap.dedent(
+        """
+        name: Targeting
+        _v: 2
+        automation:
+          - type: target
+            target: self
+            effects:
+              - type: ieffect2
+                name: Targets Chosen
+                save_as: targets
+                attacks:
+                  - attack:
+                        name: Hit All
+                        _v: 2
+                        automation:
+                          - type: target
+                            target: children
+                            effects:
+                              - type: damage
+                                damage: "1"
+          - type: target
+            target: all
+            effects:
+              - type: ieffect2
+                name: Targeted
+                parent: targets
+                attacks:
+                  - attack:
+                        name: Hit Back
+                        _v: 2
+                        automation:
+                          - type: target
+                            target: parent
+                            effects:
+                              - type: damage
+                                damage: "1"
+        """
+    ).strip()
+
+    async def test_parent_children_target(self, character, avrae, dhttp):
+        avrae.message(f"""!a import {self.attack_data}""")
+        await dhttp.drain()
+
+        char = await active_character(avrae)
+        combat = await active_combat(avrae)
+        combatant = combat.get_combatant(char.name, strict=True)
+
+        kobolds = [combat.get_combatant(x, strict=True) for x in ["KO1", "KO2", "KO3"]]
+
+        avrae.message('!a "Targeting" -t KO1 -t KO2 -t KO3')
+        await dhttp.drain()
+
+        assert all([kobold.get_effect("Targeted", strict=True) for kobold in kobolds])
+
+        avrae.message('!a "Hit All"')
+        await dhttp.drain()
+
+        assert all([kobold.hp == (kobold.max_hp - 1) for kobold in kobolds])
+
+        avrae.message('!i aoo "KO1" "Hit Back"')
+        await dhttp.drain()
+
+        assert combatant.hp == (combatant.map_hp - 1)
 
     async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
         await end_init(avrae, dhttp)

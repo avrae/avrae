@@ -182,7 +182,7 @@ class InitiativeEffect:
             children=children,
             parent=parent,
             desc=d["desc"],
-            stack=d.get("stack",False),
+            stack=d.get("stack", False),
         )
 
     def to_dict(self):
@@ -398,7 +398,7 @@ class InitiativeEffect:
             if effect not in removed:  # no infinite recursion please
                 removed.append(effect)
                 effect.remove(removed)
-        if self.stack == -1 and len([x for x in self.get_parent_effect().get_children_effects()])==1:
+        if self.stack == -1 and len([x for x in self.get_parent_effect().get_children_effects()]) == 1:
             removed.append(self.get_parent_effect())
             self.get_parent_effect().remove(removed)
         if self.combatant is not None:

@@ -424,7 +424,7 @@ class TestIEffect:
 
         assert not combatant.get_effect("Stacked", strict=True)
 
-    async def test_cleanup_stacking_ieffect(self, avrae, dhttp):
+    async def test_cleanup_stacking_ieffect(self, character, avrae, dhttp):
         # clear effects in preparation for next test
         avrae.message(f'!i re "{character.name}"')
         await dhttp.drain()
@@ -493,12 +493,13 @@ class TestIEffect:
         avrae.message('!a "Target Practice" -t KO1')
         await dhttp.drain()
 
-        assert kobolds[0].get_effect("Targeted", strict=True)
+        assert (child_effect := kobolds[0].get_effect("Targeted", strict=True))
         assert not kobolds[1].get_effect("Targeted", strict=True)
         assert not kobolds[2].get_effect("Targeted", strict=True)
 
-        assert combatant.get_effect("Targets Chosen", strict=True)
+        assert (root_effect := combatant.get_effect("Targets Chosen", strict=True))
         assert combatant.get_effect("Targets Chosen x1", strict=True)
+        assert root_effect is child_effect.get_parent_effect()
 
         avrae.message('!a "Add Target" -t KO2 -t KO3')
         await dhttp.drain()
@@ -591,7 +592,7 @@ class TestIEffect:
         avrae.message('!i aoo "KO1" "Hit Back"')
         await dhttp.drain()
 
-        assert combatant.hp == (combatant.map_hp - 1)
+        assert combatant.hp == (combatant.max_hp - 1)
 
     async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
         await end_init(avrae, dhttp)

@@ -278,45 +278,18 @@ class TestIEffect:
                             effects:
                                 max_hp_bonus: "1"
                 attacks:
-                  - name: Add Stack
-                    _v: 2
-                    automation:
-                      - type: target
-                        target: self
-                        effects:
-                          - type: ieffect2
-                            stacking: true
-                            name: Stacked
+                  - attack:
+                        name: Add Stack
+                        _v: 2
+                        automation:
+                          - type: target
+                            target: self
                             effects:
-                                max_hp_bonus: "1"
-              - type: ieffect2
-                stacking: true
-                name: Stacked
-                effects:
-                    max_hp_bonus: "1"
-                buttons:
-                  - label: Add Stack
-                    automation:
-                      - type: target
-                        target: self
-                        effects:
-                          - type: ieffect2
-                            stacking: true
-                            name: Stacked
-                            effects:
-                                max_hp_bonus: "1"
-                attacks:
-                  - name: Add Stack
-                    _v: 2
-                    automation:
-                      - type: target
-                        target: self
-                        effects:
-                          - type: ieffect2
-                            stacking: true
-                            name: Stacked
-                            effects:
-                                max_hp_bonus: "1"
+                              - type: ieffect2
+                                stacking: true
+                                name: Stacked
+                                effects:
+                                    max_hp_bonus: "1"
         """
     ).strip()
 
@@ -428,9 +401,15 @@ class TestIEffect:
         avrae.message('!a "Add Stack"')
         await dhttp.drain()
         
+        assert combatant.get_effect("Stacked 3", strict=True)
         assert (combatant.max_hp - old_hp)==3
         
         # check if removing both stacks will remove the parent
+        avrae.message(f'!i re "{character.name}" "Stacked 3"')
+        await dhttp.drain()
+        
+        assert combatant.get_effect("Stacked", strict=True)
+        
         avrae.message(f'!i re "{character.name}" "Stacked 2"')
         await dhttp.drain()
         

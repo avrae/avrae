@@ -264,7 +264,7 @@ class IEffect(Effect):
                 end_on_turn_end=self.end_on_turn_end,
                 concentration=self.concentration,
                 desc=desc,
-                stack=int(self.stacking)
+                stack=int(self.stacking or 0)
             )
             conc_parent = None
             stack_parent = None

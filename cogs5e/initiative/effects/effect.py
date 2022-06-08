@@ -49,6 +49,7 @@ class InitiativeEffect:
         children: List[InitEffectReference] = None,
         parent: Optional[InitEffectReference] = None,
         desc: str = None,
+        stack: bool = False,
     ):
         if effects is None:
             effects = InitPassiveEffect()
@@ -79,6 +80,7 @@ class InitiativeEffect:
         self.children = children
         self.parent = parent
         self.desc = desc
+        self.stack = stack
 
     @classmethod
     def new(
@@ -95,6 +97,7 @@ class InitiativeEffect:
         passive_effects: InitPassiveEffect = None,
         attacks: list[AttackInteraction] = None,
         buttons: list[ButtonInteraction] = None,
+        stack: bool = False,
     ):
         # either parse effect_args or passive_effects/attacks
         if effect_args is not None and (passive_effects is not None or attacks is not None):
@@ -146,6 +149,7 @@ class InitiativeEffect:
             end_on_turn_end=end_on_turn_end,
             concentration=concentration,
             desc=desc,
+            stack=stack,
         )
 
     @classmethod
@@ -178,6 +182,7 @@ class InitiativeEffect:
             children=children,
             parent=parent,
             desc=d["desc"],
+            stack=d.get("stack",False),
         )
 
     def to_dict(self):
@@ -200,6 +205,7 @@ class InitiativeEffect:
             "parent": parent,
             "desc": self.desc,
             "_v": 2,
+            "stack": self.stack,
         }
 
     def set_parent(self, parent: "InitiativeEffect"):
@@ -392,5 +398,8 @@ class InitiativeEffect:
             if effect not in removed:  # no infinite recursion please
                 removed.append(effect)
                 effect.remove(removed)
+        if self.stack == -1 and len(self.get_parent_effect().get_children_effects())==1:
+            removed.append(self.get_parent_effect())
+            self.get_parent_effect().remove(removed)
         if self.combatant is not None:
             self.combatant.remove_effect(self)

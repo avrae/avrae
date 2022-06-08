@@ -179,77 +179,139 @@ class TestIEffect:
 
     attack_data = textwrap.dedent(
         """
-        name: New Button Test
-        _v: 2
-        automation:
-          - type: target
-            target: self
-            effects:
-              - type: ieffect2
-                name: Prone
-                buttons:
-                  - label: Stand Up
-                    verb: stands up
-                    style: 3
-                    automation:
-                      - type: text
-                        text: ok I haven't implemented removing effects yet lol
-              - type: ieffect2
-                name: Burning
+          - name: New Button Test
+            _v: 2
+            automation:
+              - type: target
+                target: self
                 effects:
-                  save_dis: [ all ]
-                  damage_bonus: 1 [fire]
-                attacks:
-                  - attack:
-                      name: Burning Hand (not the spell)
-                      _v: 2
-                      automation:
-                        - type: target
-                          target: each
-                          effects:
-                            - type: damage
-                              damage: 1d8[fire]
-                buttons:
-                  - label: Take Fire Damage
-                    verb: is burning
-                    style: 4
-                    automation:
-                      - type: target
-                        target: self
-                        effects:
-                          - type: damage
-                            damage: 1d6[fire]
-                  - label: Douse
-                    verb: puts themself out
-                    automation:
-                      - type: text
-                        text: ok still no remove effect yet lol
-              - type: ieffect2
-                name: Parent Test
-                save_as: parent_test
-                buttons:
-                  - label: ping children
-                    verb: lists all the child effects
-                    automation:
-                      - type: target
-                        target: children
-                        effects:
+                  - type: ieffect2
+                    name: Prone
+                    buttons:
+                      - label: Stand Up
+                        verb: stands up
+                        style: 3
+                        automation:
                           - type: text
-                            text: "{target.name} has a child effect"
-          - type: target
-            target: each
-            effects:
-              - type: ieffect2
-                name: Child Effect
-                parent: parent_test
-                buttons:
-                  - label: ping parent
-                    automation:
-                      - type: target
-                        target: parent
-                        effects:
+                            text: ok I haven't implemented removing effects yet lol
+                  - type: ieffect2
+                    name: Burning
+                    effects:
+                      save_dis: [ all ]
+                      damage_bonus: 1 [fire]
+                    attacks:
+                      - attack:
+                          name: Burning Hand (not the spell)
+                          _v: 2
+                          automation:
+                            - type: target
+                              target: each
+                              effects:
+                                - type: damage
+                                  damage: 1d8[fire]
+                    buttons:
+                      - label: Take Fire Damage
+                        verb: is burning
+                        style: 4
+                        automation:
+                          - type: target
+                            target: self
+                            effects:
+                              - type: damage
+                                damage: 1d6[fire]
+                      - label: Douse
+                        verb: puts themself out
+                        automation:
                           - type: text
-                            text: "{target.name} has the parent effect"
+                            text: ok still no remove effect yet lol
+                  - type: ieffect2
+                    name: Parent Test
+                    save_as: parent_test
+                    buttons:
+                      - label: ping children
+                        verb: lists all the child effects
+                        automation:
+                          - type: target
+                            target: children
+                            effects:
+                              - type: text
+                                text: "{target.name} has a child effect"
+              - type: target
+                target: each
+                effects:
+                  - type: ieffect2
+                    name: Child Effect
+                    parent: parent_test
+                    buttons:
+                      - label: ping parent
+                        automation:
+                          - type: target
+                            target: parent
+                            effects:
+                              - type: text
+                                text: "{target.name} has the parent effect"
+          - name: Stacking Test
+            _v: 2
+            automation:
+              - type: target
+                target: self
+                effects:
+                  - type: ieffect2
+                    stacking: true
+                    name: Stacked
+                    effects:
+                        max_hp_bonus: "1"
+                    buttons:
+                      - label: Add Stack
+                        automation:
+                          - type: target
+                            target: self
+                            effects:
+                              - type: ieffect2
+                                stacking: true
+                                name: Stacked
+                                effects:
+                                    max_hp_bonus: "1"
+                    attacks:
+                      - name: Add Stack
+                        _v: 2
+                        automation:
+                          - type: target
+                            target: self
+                            effects:
+                              - type: ieffect2
+                                stacking: true
+                                name: Stacked
+                                effects:
+                                    max_hp_bonus: "1"
+                  - type: ieffect2
+                    stacking: true
+                    name: Stacked
+                    effects:
+                        max_hp_bonus: "1"
+                    buttons:
+                      - label: Add Stack
+                        automation:
+                          - type: target
+                            target: self
+                            effects:
+                              - type: ieffect2
+                                stacking: true
+                                name: Stacked
+                                effects:
+                                    max_hp_bonus: "1"
+                    attacks:
+                      - name: Add Stack
+                        _v: 2
+                        automation:
+                          - type: target
+                            target: self
+                            effects:
+                              - type: ieffect2
+                                stacking: true
+                                name: Stacked
+                                effects:
+                                    max_hp_bonus: "1"
         """
     ).strip()
 
@@ -322,6 +384,54 @@ class TestIEffect:
         parent = combatant.get_effect("Parent Test", strict=True)
         assert child.get_parent_effect() is parent
         assert next(parent.get_children_effects()) is child
+        
+        avrae.message(f'!i re "{character.name}"')
+        await dhttp.drain()
+        
+    async def test_stacking_ieffect(self, character, avrae, dhttp):
+        
+        char = await active_character(avrae)
+        combat = await active_combat(avrae)
+        combatant = combat.get_combatant(char.name, strict=True)
+        old_hp = combatant.max_hp
+        
+        avrae.message('!a "Stacking Test"')
+        await dhttp.drain()
+        
+        # make sure it added the root effect
+        assert combatant.get_effect("Stacked", strict=True)
+        
+        # check the list of available buttons - should be just one Add Stack
+        buttons = combatant_interaction_components(combatant)
+        assert len(buttons) == 1
+        assert [b.label for b in buttons] == ["Add Stack"]
+        
+        # check that both stacks are given the correct name
+        assert all([effect.name in ["Stacked 1", "Stacked 2"] for effect in combatant.get_effects()])
+        
+        # checks that the stacks both have the same parent
+        stacks = [combatant.get_effect(x, strict=True) for x in ["Stacked 1", "Stacked 2"]]
+        root = combatant.get_effect("Stacked", strict=True)
+        assert all([stack.get_parent_effect() is root for stack in stacks])
+        
+        # tests the stacking property
+        assert (combatant.max_hp - old_hp)==2
+        
+        avrae.message('!a "Add Stack"')
+        await dhttp.drain()
+        
+        assert (combatant.max_hp - old_hp)==3
+        
+        # check if removing both stacks will remove the parent
+        avrae.message(f'!i re "{character.name}" "Stacked 2"')
+        await dhttp.drain()
+        
+        assert combatant.get_effect("Stacked", strict=True)
+        
+        avrae.message(f'!i re "{character.name}" "Stacked 1"')
+        await dhttp.drain()
+        
+        assert (not combatant.get_effect("Stacked", strict=True))
 
     async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
         await end_init(avrae, dhttp)

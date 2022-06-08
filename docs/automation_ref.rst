@@ -328,14 +328,15 @@ It must be inside a Target effect.
 
     .. attribute:: stacking
 
-        *optional, default false* - If true and another effect with the same name is found on the target, instead of
-        overwriting, add a child effect with name ``{name} x{count}`` and no description, duration, concentration,
-        attacks, or buttons.
+        *optional, default false* - If true, first stack will create root effect with everything but the passive effects,
+        and then each stack will add a child effect with name ``{name} x{count}`` with only the passive effects. If the
+        root effect has automation, targeting its children will instead target the children of each stack.
 
     .. attribute:: save_as
 
         *optional, default None* - If supplied, saves an :class:`IEffectMetaVar` to the automation runtime, which can be
-        used in another IEffect's ``parent`` key to set its parent to this effect. Must be a valid identifier.
+        used in another IEffect's ``parent`` key to set its parent to this effect. Must be a valid identifier. If saving
+        a stacking effect, this identifier will always refer to the stack and not the root.
 
     .. attribute:: parent
 
@@ -623,7 +624,8 @@ Remove IEffect
 
 Removes the initiative effect that triggered this automation.
 Only works when run in execution triggered by an initiative effect, such as a ButtonInteraction
-(see :ref:`buttoninteraction`).
+(see :ref:`buttoninteraction`). If this removes the last stack of a stacking effect, it will remove
+the root as well.
 
 .. class:: RemoveIEffect
 

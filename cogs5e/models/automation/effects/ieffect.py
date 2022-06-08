@@ -258,12 +258,13 @@ class IEffect(Effect):
                 combatant=combatant,
                 name=self.name,
                 duration=duration,
-                passive_effects=effects,
+                passive_effects=(None if self.stacking else effects),
                 attacks=attacks,
                 buttons=buttons,
                 end_on_turn_end=self.end_on_turn_end,
                 concentration=self.concentration,
                 desc=desc,
+                stack=int(self.stacking)
             )
             conc_parent = None
             stack_parent = None
@@ -273,21 +274,6 @@ class IEffect(Effect):
                 if autoctx.conc_effect.combatant is combatant and self.concentration:
                     raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
                 conc_parent = autoctx.conc_effect
-
-            # stacking
-            # find the next correct name for the effect and create a new one, without conflicting pieces
-            if self.stacking and (stack_parent := combatant.get_effect(effect.name, strict=True)):
-                count = 2
-                new_name = f"{self.name} x{count}"
-                while combatant.get_effect(new_name, strict=True):
-                    count += 1
-                    new_name = f"{self.name} x{count}"
-                effect = init.InitiativeEffect.new(
-                    combat=combatant.combat,
-                    combatant=combatant,
-                    name=new_name,
-                    passive_effects=effects,
-                )
 
             # parenting
             explicit_parent = None
@@ -300,18 +286,41 @@ class IEffect(Effect):
                 # noinspection PyProtectedMember
                 explicit_parent = parent_ref._effect
 
-            if parent_effect := stack_parent or explicit_parent or conc_parent:
+            if parent_effect := explicit_parent or conc_parent:
                 effect.set_parent(parent_effect)
 
             # add
-            effect_result = combatant.add_effect(effect)
-            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
-            if conc_conflict := effect_result["conc_conflict"]:
+            if at_root := (not self.stacking or not bool(combatant.get_effect(effect.name, strict=True))):
+                effect_result = combatant.add_effect(effect)
+                autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
+                root_effect = effect
+                
+            # stacking
+            # find the next correct name for the effect and create a new one, without conflicting pieces
+            # preserves the root effect
+            if self.stacking and (stack_parent := combatant.get_effect(effect.name, strict=True)):
+                count = 1
+                new_name = f"{self.name} x{count}"
+                while combatant.get_effect(new_name, strict=True):
+                    count += 1
+                    new_name = f"{self.name} x{count}"
+                effect = init.InitiativeEffect.new(
+                    combat=combatant.combat,
+                    combatant=combatant,
+                    name=new_name,
+                    passive_effects=effects,
+                    stack=-1
+                )
+                effect.set_parent(stack_parent)
+                combatant.add_effect(effect)
+                autoctx.queue(f"**Stacking Effect**: {effect.get_str(description=False)}")
+                
+            if at_root and (conc_conflict := effect_result["conc_conflict"]):
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
 
             # save as
             if self.save_as is not None:
-                autoctx.metavars[self.save_as] = IEffectMetaVar(effect)
+                autoctx.metavars[self.save_as] = IEffectMetaVar(root_effect if at_root else effect)
         else:
             effect = init.InitiativeEffect.new(
                 combat=None,

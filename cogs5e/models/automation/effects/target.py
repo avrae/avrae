@@ -112,13 +112,23 @@ class Target(Effect):
         # build target list
         targets = []
         for idx, child_effect in enumerate(autoctx.ieffect.get_children_effects()):
-            target = child_effect.combatant
-            if target is None:
-                continue
-            if target not in targets:
-                targets.append(target)
+            # build list from children of children if this is the root of a stacking effect
+            if autoctx.ieffect.stack == 1:
+                for idx, subchild_effect in enumerate(child_effect.get_children_effects()):
+                    target = subchild_effect.combatant
+                    if target is None:
+                        continue
+                    if target not in targets:
+                        targets.append(target)
+            else:
+                target = child_effect.combatant
+                if target is None:
+                    continue
+                if target not in targets:
+                    targets.append(target)
 
         result_pairs = []
+
         for idx, (original_idx, target) in enumerate(self.sorted_targets(targets)):
             result_pairs.extend(self.run_effects(autoctx, target, idx, original_idx))
         return result_pairs

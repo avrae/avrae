@@ -252,7 +252,7 @@ class TestIEffect:
                             text: "{target.name} has the parent effect"
         """
     ).strip()
-    
+
     stack_data = textwrap.dedent(
         """
         name: Stacking Test
@@ -362,69 +362,74 @@ class TestIEffect:
         parent = combatant.get_effect("Parent Test", strict=True)
         assert child.get_parent_effect() is parent
         assert next(parent.get_children_effects()) is child
-        
+
+        # clear effects in preparation for next test
         avrae.message(f'!i re "{character.name}"')
         await dhttp.drain()
-        
+
     async def test_stacking_ieffect(self, character, avrae, dhttp):
-        
+
         avrae.message(f"""!a import {self.stack_data}""")
         await dhttp.drain()
-        
+
         char = await active_character(avrae)
         combat = await active_combat(avrae)
         combatant = combat.get_combatant(char.name, strict=True)
         old_hp = combatant.max_hp
-        
+
         avrae.message('!a "Stacking Test"')
         await dhttp.drain()
-        
+
         # make sure it added the root effect
         assert combatant.get_effect("Stacked", strict=True)
-        
+
         # check the list of available buttons - should be just one Add Stack
         buttons = combatant_interaction_components(combatant)
         assert len(buttons) == 1
         assert [b.label for b in buttons] == ["Add Stack"]
-        
+
         # check that both effects are given the correct name
         assert all([effect.name in ["Stacked", "Stacked x1"] for effect in combatant.get_effects()])
-        
+
         avrae.message('!a "Stacking Test"')
         await dhttp.drain()
-        
+
         # checks that the stacks both have the same parent
         stacks = [combatant.get_effect(x, strict=True) for x in ["Stacked x1", "Stacked x2"]]
         root = combatant.get_effect("Stacked", strict=True)
         assert all([stack.get_parent_effect() is root for stack in stacks])
-        
+
         # tests the stacking property
-        assert (combatant.max_hp - old_hp)==2
-        
+        assert (combatant.max_hp - old_hp) == 2
+
         avrae.message('!a "Add Stack"')
         await dhttp.drain()
-        
+
         assert combatant.get_effect("Stacked x3", strict=True)
-        assert (combatant.max_hp - old_hp)==3
-        
+        assert (combatant.max_hp - old_hp) == 3
+
         # check if removing both stacks will remove the parent
         avrae.message(f'!i re "{character.name}" "Stacked x3"')
         await dhttp.drain()
-        
+
         assert combatant.get_effect("Stacked", strict=True)
-        
+
         avrae.message(f'!i re "{character.name}" "Stacked x2"')
         await dhttp.drain()
-        
+
         assert combatant.get_effect("Stacked", strict=True)
-        
+
         avrae.message(f'!i re "{character.name}" "Stacked x1"')
         await dhttp.drain()
-        
-        assert (not combatant.get_effect("Stacked", strict=True))
+
+        assert not combatant.get_effect("Stacked", strict=True)
 
     async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
         await end_init(avrae, dhttp)
+
+    async def test_stacking_node_no_init(self, avrae, dhttp):
+        avrae.message('!a "Stacking Test"')
+        await dhttp.drain()
 
 
 # ==== Text ====

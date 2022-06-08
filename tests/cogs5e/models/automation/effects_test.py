@@ -387,11 +387,14 @@ class TestIEffect:
         assert len(buttons) == 1
         assert [b.label for b in buttons] == ["Add Stack"]
         
-        # check that both stacks are given the correct name
-        assert all([effect.name in ["Stacked 1", "Stacked 2"] for effect in combatant.get_effects()])
+        # check that both effects are given the correct name
+        assert all([effect.name in ["Stacked", "Stacked x1"] for effect in combatant.get_effects()])
+        
+        avrae.message('!a "Stacking Test"')
+        await dhttp.drain()
         
         # checks that the stacks both have the same parent
-        stacks = [combatant.get_effect(x, strict=True) for x in ["Stacked 1", "Stacked 2"]]
+        stacks = [combatant.get_effect(x, strict=True) for x in ["Stacked x1", "Stacked x2"]]
         root = combatant.get_effect("Stacked", strict=True)
         assert all([stack.get_parent_effect() is root for stack in stacks])
         

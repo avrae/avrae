@@ -408,17 +408,17 @@ class TestIEffect:
         assert (combatant.max_hp - old_hp)==3
         
         # check if removing both stacks will remove the parent
-        avrae.message(f'!i re "{character.name}" "Stacked 3"')
+        avrae.message(f'!i re "{character.name}" "Stacked x3"')
         await dhttp.drain()
         
         assert combatant.get_effect("Stacked", strict=True)
         
-        avrae.message(f'!i re "{character.name}" "Stacked 2"')
+        avrae.message(f'!i re "{character.name}" "Stacked x2"')
         await dhttp.drain()
         
         assert combatant.get_effect("Stacked", strict=True)
         
-        avrae.message(f'!i re "{character.name}" "Stacked 1"')
+        avrae.message(f'!i re "{character.name}" "Stacked x1"')
         await dhttp.drain()
         
         assert (not combatant.get_effect("Stacked", strict=True))

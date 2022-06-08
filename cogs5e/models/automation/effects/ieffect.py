@@ -251,6 +251,7 @@ class IEffect(Effect):
         buttons = [b.resolve(autoctx) for b in self.buttons]
 
         conc_conflict = []
+        at_root = True
         if autoctx.target.combatant is not None:
             combatant = autoctx.target.combatant
             effect = init.InitiativeEffect.new(
@@ -316,7 +317,7 @@ class IEffect(Effect):
 
             # save as
             if self.save_as is not None:
-                autoctx.metavars[self.save_as] = IEffectMetaVar(root_effect if at_root else effect)
+                autoctx.metavars[self.save_as] = IEffectMetaVar(effect)
         else:
             effect = init.InitiativeEffect.new(
                 combat=None,
@@ -330,9 +331,10 @@ class IEffect(Effect):
                 concentration=self.concentration,
                 desc=desc,
             )
+            root_effect = effect
             autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
 
-        return IEffectResult(effect=effect, conc_conflict=conc_conflict)
+        return IEffectResult(effect=root_effect if at_root else effect, conc_conflict=conc_conflict)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

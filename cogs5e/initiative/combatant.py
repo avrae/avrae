@@ -97,12 +97,13 @@ class Combatant(BaseCombatant, StatBlock):
         init_skill: Skill,
         max_hp: int,
         ac: int,
+        stats: BaseStats = None
         private: bool,
         resists: Resistances,
         ctx,
         combat,
     ):
-        skills = Skills.default()
+        skills = Skills.default(stats)
         skills.update({"initiative": init_skill})
         levels = Levels({"Monster": 0})
         id = create_combatant_id()

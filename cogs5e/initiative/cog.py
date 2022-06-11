@@ -160,7 +160,17 @@ class InitTracker(commands.Cog):
         `-group <group>` - Adds the combatant to a group.
         `-hp <hp>` - Sets starting HP. Default: None.
         `-thp <thp>` - Sets starting THP. Default: 0.
-        `-ac <ac>` - Sets the combatant' AC. Default: None.
+        `-ac <ac>` - Sets the combatant's AC. Default: None.
+        `-pb <pb>` - Sets the combatant's proficiency bonus. Default: 0
+        `-str <str>` - Sets the combatant's strength score. Default: 10
+        `-dex <dex>` - Sets the combatant's dexterity score. Default: 10
+        `-con <con>` - Sets the combatant's constitution score. Default: 10
+        `-int <int>` - Sets the combatant's intelligence score. Default: 10
+        `-wis <wis>` - Sets the combatant's wisdom score. Default: 10
+        `-cha <cha>` - Sets the combatant's charisma score. Default: 10
+        `-save <ability>` - Gives the combatant proficiency in the given ability saving throw.
+        `-pro <skill>` - Gives the combatant proficiency in the given skill.
+        `-exp <skill>` - Gives the combatant expertise in the given skill.
         `-resist` <damage type> - Gives the combatant resistance to the given damage type.
         `-immune` <damage type> - Gives the combatant immunity to the given damage type.
         `-vuln` <damage type> - Gives the combatant vulnerability to the given damage type.
@@ -210,6 +220,16 @@ class InitTracker(commands.Cog):
         for k in ("resist", "immune", "vuln"):
             resists[k] = args.get(k)
 
+        stats = BaseStats(
+            args.last("pb", type_=int, default=0),
+            args.last("str", type_=int, default=10),
+            args.last("dex", type_=int, default=10),
+            args.last("con", type_=int, default=10),
+            args.last("int", type_=int, default=10),
+            args.last("wis", type_=int, default=10),
+            args.last("cha", type_=int, default=10),
+        )
+        
         combat = await ctx.get_combat()
 
         if combat.get_combatant(name, True) is not None:
@@ -227,7 +247,7 @@ class InitTracker(commands.Cog):
             init_roll_skeleton = str(init)
 
         me = Combatant.new(
-            name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx, combat
+            name, controller, init, init_skill, hp, ac, stats, private, Resistances.from_dict(resists), ctx, combat
         )
 
         # -thp (#1142)

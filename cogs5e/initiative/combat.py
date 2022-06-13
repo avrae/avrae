@@ -1,8 +1,8 @@
 import asyncio
+import weakref
 from functools import cached_property
-from typing import Any, List, Literal, Optional, TYPE_CHECKING, Tuple, overload
+from typing import List, Literal, Optional, TYPE_CHECKING, Tuple, Union, overload
 
-import cachetools
 import disnake
 from d20 import roll
 from pydantic import BaseModel
@@ -17,15 +17,10 @@ from .types import CombatantType
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
 # ==== typing ====
-_NLPRecorderT = Any
-_CtxT = Any
 if TYPE_CHECKING:
     import cogs5e.initiative
     from .upenn_nlp import NLPRecorder
     from utils.context import AvraeContext
-
-    _NLPRecorderT = NLPRecorder
-    _CtxT = AvraeContext
 
 
 # ==== code ====
@@ -37,12 +32,11 @@ class CombatOptions(BaseModel):
 
 
 class Combat:
-    # we cache up to 500 combats in memory for a short period
     # this makes sure that multiple calls to Combat.from_ctx() in the same invocation or two simultaneous ones
     # retrieve/modify the same Combat state
     # caches based on channel id
     # probably won't encounter any scaling issues, since a combat will be shard-specific
-    _cache: cachetools.TTLCache[str, "Combat"] = cachetools.TTLCache(maxsize=500, ttl=10)
+    _cache: weakref.WeakValueDictionary[str, "Combat"] = weakref.WeakValueDictionary()
 
     def __init__(
         self,
@@ -50,7 +44,7 @@ class Combat:
         message_id: int,
         dm_id: int,
         options: CombatOptions,
-        ctx: _CtxT,
+        ctx: Union["AvraeContext", "disnake.Interaction"],
         combatants: List[Combatant] = None,
         round_num: int = 0,
         turn_num: int = 0,
@@ -75,7 +69,14 @@ class Combat:
         self.nlp_record_session_id = nlp_record_session_id
 
     @classmethod
-    def new(cls, channel_id: str, message_id: int, dm_id: int, options: CombatOptions, ctx: _CtxT):
+    def new(
+        cls,
+        channel_id: str,
+        message_id: int,
+        dm_id: int,
+        options: CombatOptions,
+        ctx: Union["AvraeContext", "disnake.Interaction"],
+    ):
         return cls(channel_id, message_id, dm_id, options, ctx)
 
     # async deser
@@ -217,7 +218,7 @@ class Combat:
         return self._combatants[index]
 
     @cached_property
-    def nlp_recorder(self) -> Optional[_NLPRecorderT]:
+    def nlp_recorder(self) -> Optional["NLPRecorder"]:
         if self.nlp_record_session_id is None or self.ctx is None:
             return None
         combat_cog = self.ctx.bot.get_cog("InitTracker")  # type: Optional[cogs5e.initiative.InitTracker]

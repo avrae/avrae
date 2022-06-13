@@ -6,7 +6,7 @@ import pytest
 from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
 from gamedata.compendium import compendium
-from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID, TEST_GUILD_ID
+from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID, TEST_GUILD_ID, MESSAGE_ID
 from utils.settings import ServerSettings
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -114,6 +114,7 @@ class ContextBotProxy:
         # to make draconic tests work
         self.prefix = "!"
         self.invoked_with = "foo"
+        self.message = MessageProxy()
 
     @property
     def channel(self):
@@ -126,3 +127,8 @@ class ContextBotProxy:
     @property
     def author(self):
         return self.guild.get_member(int(DEFAULT_USER_ID))
+
+
+class MessageProxy:
+    def __init__(self):
+        self.id = int(MESSAGE_ID)

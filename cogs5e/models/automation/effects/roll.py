@@ -65,9 +65,10 @@ class Roll(Effect):
 
         simplified_expr = copy.deepcopy(rolled.expr)
         d20.utils.simplify_expr(simplified_expr)
-        autoctx.metavars[self.name] = RollEffectMetaVar(simplified_expr)
+        simplified_metavar = RollEffectMetaVar(simplified_expr)
+        autoctx.metavars[self.name] = simplified_metavar
         autoctx.metavars["lastRoll"] = rolled.total  # #1335
-        return RollResult(result=rolled.total, roll=rolled, simplified_expr=simplified_expr, hidden=self.hidden)
+        return RollResult(result=rolled.total, roll=rolled, simplified_metavar=simplified_metavar, hidden=self.hidden)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

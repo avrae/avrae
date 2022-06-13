@@ -135,3 +135,15 @@ jobs:
         with:
           environment: production
           set_commits: skip
+
+  # ===== update avrae-data-entry submodule =====
+  update-submodules:
+    name: Update Org Repo Submodules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger repo update (avrae-data-entry)
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.ORG_REPO_ACCESS_TOKEN }}
+          repository: avrae/avrae-data-entry
+          event-type: update-avrae

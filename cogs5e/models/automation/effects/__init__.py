@@ -1,5 +1,6 @@
 import logging
 
+from .. import results
 from ..errors import AutomationException, StopExecution
 from ..runtime import AutomationContext
 
@@ -43,18 +44,20 @@ class Effect:
         return [e.to_dict() for e in obj_list]
 
     @staticmethod
-    def run_children(child, autoctx):
-        results = []
+    def run_children(child, autoctx) -> list[results.EffectResult]:
+        child_results = []
         for effect in child:
             try:
                 result = effect.run(autoctx)
                 if result is not None:
-                    results.append(result)
+                    child_results.append(result)
+                else:
+                    log.warning(f"Automation effect missing result! {effect.type=}")
             except StopExecution:
                 raise
             except AutomationException as e:
                 autoctx.meta_queue(f"**Error**: {e}")
-        return results
+        return child_results
 
     # required methods
     @classmethod

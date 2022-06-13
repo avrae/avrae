@@ -35,6 +35,7 @@ from . import (
 )
 from .buttons import ButtonHandler
 from .upenn_nlp import NLPRecorder
+from ..exploration import ExplorationNotFound
 
 log = logging.getLogger(__name__)
 
@@ -446,6 +447,11 @@ class InitTracker(commands.Cog):
         combat = await ctx.get_combat()
         servsettings = await ctx.get_server_settings()
 
+        try:
+            exploration = await ctx.get_exploration()
+        except ExplorationNotFound:
+            exploration = None
+
         if len(combat.get_combatants()) == 0:
             await ctx.send("There are no combatants.")
             return
@@ -487,6 +493,9 @@ class InitTracker(commands.Cog):
         await Stats.increase_stat(ctx, "turns_init_tracked_life")
         if advanced_round:
             await Stats.increase_stat(ctx, "rounds_init_tracked_life")
+            if exploration is not None:
+                await exploration.skip_rounds(ctx, 1)
+                await exploration.final()
 
         # send and commit
         await utils.send_turn_message(ctx, combat, before=advanced_round_messages, after=removed_messages)

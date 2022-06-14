@@ -1,6 +1,6 @@
 # avrae org deps
 git+https://github.com/avrae/draconic@master
-git+https://github.com/avrae/automation-common@v3.6.10
+git+https://github.com/avrae/automation-common@v4.1.0
 d20==1.1.2
 
 # top-level deps

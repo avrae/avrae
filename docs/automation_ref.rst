@@ -793,7 +793,7 @@ Use Counter
         counter: string | SpellSlotReference | AbilityReference;
         amount: IntExpression;
         allowOverflow?: boolean;
-        errorBehaviour?: null | "warn" | "raise";
+        errorBehaviour?: "warn" | "raise" | "ignore";
     }
 
 Uses a number of charges of the given counter, and displays the remaining amount and delta.
@@ -821,9 +821,9 @@ Uses a number of charges of the given counter, and displays the remaining amount
 
         *optional, default "warn"* - How to behave if modifying the counter raises an error:
 
-        - ``null``: All errors are silently consumed.
         - ``"warn"``: Automation will continue to run, and any errors will appear in the output. (*default*)
         - ``"raise"``: Raise the error and halt execution.
+        - ``"ignore"``: All errors are silently consumed.
 
         Some, but not all, possible error conditions are:
 

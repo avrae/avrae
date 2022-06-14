@@ -143,7 +143,7 @@ class Check(Effect):
             autoctx.queue(f"**{contest_skill_name} Contest ({autoctx.caster.name})**: {contest_roll.result}")
 
         # ==== execution ====
-        skill, skill_key = get_highest_skill(autoctx.target.target, ability_list)
+        skill_key = None  # In case the target is simple
         if auto_pass:
             is_success = True
             autoctx.queue(f"**{skill_name} Check:** Automatic success!")
@@ -152,6 +152,7 @@ class Check(Effect):
             autoctx.queue(f"**{skill_name} Check:** Automatic failure!")
         elif not autoctx.target.is_simple:
             # roll for the target
+            skill, skill_key = get_highest_skill(autoctx.target.target, ability_list)
             skill_name = camel_to_title(skill_key)
             check_dice = get_check_dice_for_statblock(
                 autoctx,

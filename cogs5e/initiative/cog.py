@@ -255,16 +255,16 @@ class InitTracker(commands.Cog):
         )
 
         for skill in profs:
-            me.skills[skill].prof = 1
-            me.skills[skill].value += me.stats.prof_bonus
+            me.skills[skill.lower().replace(" ","")].prof = 1
+            me.skills[skill.lower().replace(" ","")].value += me.stats.prof_bonus
                 
         for skill in exps:
-            me.skills[skill].prof = 2
-            me.skills[skill].value += 2*me.stats.prof_bonus
+            me.skills[skill.lower().replace(" ","")].prof = 2
+            me.skills[skill.lower().replace(" ","")].value += 2*me.stats.prof_bonus
                 
         for ability in saves:
-            me.saves[ability].prof = 1
-            me.saves[ability].value += me.stats.prof_bonus
+            me.saves[ability.lower()+"Save"].prof = 1
+            me.saves[ability.lower()+"Save"].value += me.stats.prof_bonus
         
         # -thp (#1142)
         if thp and thp > 0:

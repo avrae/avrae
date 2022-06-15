@@ -14,7 +14,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, EmbedWithColor
 from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
 from cogs5e.models.sheet.attack import Attack
-from cogs5e.models.sheet.base import Skill
+from cogs5e.models.sheet.base import BaseStats, Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *

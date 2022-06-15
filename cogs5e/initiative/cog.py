@@ -17,6 +17,7 @@ from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import BaseStats, Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
+from utils.constants import STAT_ABBR_MAP
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
@@ -255,16 +256,24 @@ class InitTracker(commands.Cog):
         )
 
         for skill in profs:
-            me.skills[skill.capitalize().replace(" ","")].prof = 1
-            me.skills[skill.capitalize().replace(" ","")].value += me.stats.prof_bonus
+            skill = skill.capitalize().replace(" ","")
+            skill = skill[0].lower()+skill[1:]
+            me.skills[skill].prof = 1
+            me.skills[skill].value += me.stats.prof_bonus
                 
         for skill in exps:
-            me.skills[skill.capitalize().replace(" ","")].prof = 2
-            me.skills[skill.capitalize().replace(" ","")].value += 2*me.stats.prof_bonus
+            skill = skill.capitalize().replace(" ","")
+            skill = skill[0].lower()+skill[1:]
+            me.skills[skill].prof = 2
+            me.skills[skill].value += 2*me.stats.prof_bonus
                 
         for ability in saves:
-            me.saves[ability.lower()+"Save"].prof = 1
-            me.saves[ability.lower()+"Save"].value += me.stats.prof_bonus
+            if ability.lower() in STAT_ABBR_MAP:
+                ability = STAT_ABBR_MAP[ability.lower()].lower()
+            else:
+                ability = ability.lower()
+            me.saves[ability+"Save"].prof = 1
+            me.saves[ability+"Save"].value += me.stats.prof_bonus
         
         # -thp (#1142)
         if thp and thp > 0:

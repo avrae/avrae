@@ -323,6 +323,64 @@ class TestIEffect:
         assert child.get_parent_effect() is parent
         assert next(parent.get_children_effects()) is child
 
+    async def test_cleanup_ieffect(self, character, avrae, dhttp):
+        # clear effects in preparation for next test
+        avrae.message(f'!i re "{character.name}"')
+        await dhttp.drain()
+
+    rmieffect_data = textwrap.dedent(
+        """
+        - name: Removal Test
+          _v: 2
+          automation:
+            - type: target
+              target: self
+              effects:
+                - type: ieffect2
+                  name: Test
+                  save_as: test
+            - type: remove_ieffect
+              target: test
+        - name: Interaction Removal
+          _v: 2
+          automation:
+            - type: target
+              target: self
+              effects:
+                - type: ieffect2
+                  name: Test
+                  attacks:
+                    - attack:
+                        _v: 2
+                        name: Remove Now
+                        automation:
+                          - type: remove_ieffect
+        """
+    ).strip()
+
+    async def test_remove_ieffect(self, character, avrae, dhttp):
+        avrae.message(f"!a import {self.rmieffect_data}")
+        await dhttp.drain()
+
+        char = await active_character(avrae)
+        combat = await active_combat(avrae)
+        combatant = combat.get_combatant(char.name, strict=True)
+
+        avrae.message(f'!a "Removal Test"')
+        await dhttp.drain()
+
+        assert not combatant.get_effect("Test", strict=True)
+
+        avrae.message(f'!a "Interaction Removal"')
+        await dhttp.drain()
+
+        assert combatant.get_effect("Test", strict=True)
+
+        avrae.message(f'!a "Remove Now"')
+        await dhttp.drain()
+
+        assert not combatant.get_effect("Test", strict=True)
+
     async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
         await end_init(avrae, dhttp)
 

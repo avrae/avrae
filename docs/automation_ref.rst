@@ -619,10 +619,11 @@ Remove IEffect
     {
         type: "remove_ieffect";
         removeParent?: "always" | "if_no_children";
+        target?: string;
     }
 
-Removes the initiative effect that triggered this automation.
-Only works when run in execution triggered by an initiative effect, such as a ButtonInteraction
+Removes the targeted initiative effect or the initiative effect that triggered this automation.
+If target is not supplied, only works when run in execution triggered by an initiative effect, such as a ButtonInteraction
 (see :ref:`buttoninteraction`).
 
 .. class:: RemoveIEffect
@@ -635,6 +636,12 @@ Only works when run in execution triggered by an initiative effect, such as a Bu
         - ``"always"`` - If the removed effect has a parent, remove it too.
         - ``"if_no_children"`` - If the removed effect has a parent and its only remaining child was the removed effect,
           remove it too.
+          
+    .. attribute:: target
+
+        *optional, default None* - If supplied, will try to remove the given effect instead of the interaction effect. This must be the
+        name of an existing :class:`IEffectMetaVar`. If ``target`` is supplied, the target must be a valid :class:`IEffectMetaVar` or
+        an error will be displayed.
 
 **Variables**
 

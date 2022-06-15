@@ -256,15 +256,15 @@ class InitTracker(commands.Cog):
 
         if profs:
             for skill in profs:
-                me.Skills.skill.prof = 1
+                me.skills.skill.prof = 1
                 
         if exps:
             for skill in exps:
-                me.Skills.skill.prof = 2
+                me.skills.skill.prof = 2
                 
         if saves:
             for ability in saves:
-                me.Saves.ability.prof = 1
+                me.saves.ability.prof = 1
         
         # -thp (#1142)
         if thp and thp > 0:

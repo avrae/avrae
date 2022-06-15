@@ -232,7 +232,7 @@ class InitTracker(commands.Cog):
         
         profs = args.get("prof")
         exps = args.get("exp")
-        saves = args.get("saves")
+        saves = args.get("save")
         
         combat = await ctx.get_combat()
 

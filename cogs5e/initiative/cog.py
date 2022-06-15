@@ -247,7 +247,7 @@ class InitTracker(commands.Cog):
             init_roll_skeleton = str(init)
 
         me = Combatant.new(
-            name, controller, init, init_skill, hp, ac, stats, private, Resistances.from_dict(resists), ctx, combat
+            name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx, combat, stats
         )
 
         # -thp (#1142)

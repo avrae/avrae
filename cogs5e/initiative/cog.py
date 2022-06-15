@@ -17,13 +17,13 @@ from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import BaseStats, Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
-from utils.constants import STAT_ABBR_MAP
+from utils.constants import STAT_NAMES, SKILL_NAMES
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
 from utils.argparser import argparse
-from utils.functions import confirm, get_guild_member, search_and_select, try_delete, get_initials, get_selection
+from utils.functions import confirm, get_guild_member, search_and_select, try_delete, get_initials, get_selection, camel_to_title
 from . import (
     Combat,
     CombatOptions,
@@ -256,24 +256,19 @@ class InitTracker(commands.Cog):
         )
 
         for skill in profs:
-            skill = skill.capitalize().replace(" ","")
-            skill = skill[0].lower()+skill[1:]
-            me.skills[skill].prof = 1
-            me.skills[skill].value += me.stats.prof_bonus
+            skill_key = await search_and_select(ctx, SKILL_NAMES, skill, lambda s: s)
+            me.skills[skill_key].prof = 1
+            me.skills[skill_key].value += me.stats.prof_bonus
                 
         for skill in exps:
-            skill = skill.capitalize().replace(" ","")
-            skill = skill[0].lower()+skill[1:]
-            me.skills[skill].prof = 2
-            me.skills[skill].value += 2*me.stats.prof_bonus
+            skill_key = await search_and_select(ctx, SKILL_NAMES, skill, lambda s: s)
+            me.skills[skill_key].prof = 2
+            me.skills[skill_key].value += 2*me.stats.prof_bonus
                 
         for ability in saves:
-            if ability.lower() in STAT_ABBR_MAP:
-                ability = STAT_ABBR_MAP[ability.lower()].lower()
-            else:
-                ability = ability.lower()
-            me.saves[ability+"Save"].prof = 1
-            me.saves[ability+"Save"].value += me.stats.prof_bonus
+            save_key = await search_and_select(ctx, STAT_NAMES, ability, lambda s: s)
+            me.saves[save_key+"Save"].prof = 1
+            me.saves[save_key+"Save"].value += me.stats.prof_bonus
         
         # -thp (#1142)
         if thp and thp > 0:

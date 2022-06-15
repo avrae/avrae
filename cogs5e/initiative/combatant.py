@@ -97,7 +97,7 @@ class Combatant(BaseCombatant, StatBlock):
         init_skill: Skill,
         max_hp: int,
         ac: int,
-        stats: BaseStats = None
+        stats: BaseStats = None,
         private: bool,
         resists: Resistances,
         ctx,

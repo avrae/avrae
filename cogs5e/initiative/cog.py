@@ -254,20 +254,17 @@ class InitTracker(commands.Cog):
             name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx, combat, stats
         )
 
-        if profs:
-            for skill in profs:
-                me.skills[skill].prof = 1
-                me.skills[skill].value += me.stats.prof_bonus
+        for skill in profs:
+            me.skills[skill].prof = 1
+            me.skills[skill].value += me.stats.prof_bonus
                 
-        if exps:
-            for skill in exps:
-                me.skills[skill].prof = 2
-                me.skills[skill].value += 2*me.stats.prof_bonus
+        for skill in exps:
+            me.skills[skill].prof = 2
+            me.skills[skill].value += 2*me.stats.prof_bonus
                 
-        if saves:
-            for ability in saves:
-                me.saves[ability].prof = 1
-                me.saves[ability].value += me.stats.prof_bonus
+        for ability in saves:
+            me.saves[ability].prof = 1
+            me.saves[ability].value += me.stats.prof_bonus
         
         # -thp (#1142)
         if thp and thp > 0:

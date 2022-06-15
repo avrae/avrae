@@ -23,7 +23,7 @@ from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
 from utils.argparser import argparse
-from utils.functions import confirm, get_guild_member, search_and_select, try_delete, get_initials, get_selection, camel_to_title
+from utils.functions import confirm, get_guild_member, search_and_select, try_delete, get_initials, get_selection
 from . import (
     Combat,
     CombatOptions,

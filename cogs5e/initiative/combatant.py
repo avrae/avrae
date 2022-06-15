@@ -105,6 +105,7 @@ class Combatant(BaseCombatant, StatBlock):
     ):
         skills = Skills.default(stats)
         skills.update({"initiative": init_skill})
+        saves = Saves.default(stats)
         levels = Levels({"Monster": 0})
         id = create_combatant_id()
         return cls(
@@ -115,9 +116,11 @@ class Combatant(BaseCombatant, StatBlock):
             controller_id,
             private,
             init,
+            stats=stats,
             levels=levels,
             resistances=resists,
             skills=skills,
+            saves=saves,
             max_hp=max_hp,
             ac=ac,
         )

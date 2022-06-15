@@ -169,7 +169,7 @@ class InitTracker(commands.Cog):
         `-wis <wis>` - Sets the combatant's wisdom score. Default: 10
         `-cha <cha>` - Sets the combatant's charisma score. Default: 10
         `-save <ability>` - Gives the combatant proficiency in the given ability saving throw.
-        `-pro <skill>` - Gives the combatant proficiency in the given skill.
+        `-prof <skill>` - Gives the combatant proficiency in the given skill.
         `-exp <skill>` - Gives the combatant expertise in the given skill.
         `-resist` <damage type> - Gives the combatant resistance to the given damage type.
         `-immune` <damage type> - Gives the combatant immunity to the given damage type.
@@ -230,6 +230,10 @@ class InitTracker(commands.Cog):
             args.last("cha", type_=int, default=10),
         )
         
+        profs = args.get("prof")
+        exps = args.get("exp")
+        saves = args.get("saves")
+        
         combat = await ctx.get_combat()
 
         if combat.get_combatant(name, True) is not None:
@@ -250,6 +254,18 @@ class InitTracker(commands.Cog):
             name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx, combat, stats
         )
 
+        if profs:
+            for skill in profs:
+                me.Skills.skill.prof = 1
+                
+        if exps:
+            for skill in exps:
+                me.Skills.skill.prof = 2
+                
+        if saves:
+            for ability in saves:
+                me.Saves.ability.prof = 1
+        
         # -thp (#1142)
         if thp and thp > 0:
             me.temp_hp = thp

@@ -1,7 +1,7 @@
 import logging
-import weakref
 from collections import namedtuple
 
+import cachetools
 from discord.ext.commands import NoPrivateMessage
 
 import aliasing.evaluators
@@ -12,12 +12,12 @@ from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharact
 from cogs5e.models.sheet.action import Actions
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
-from cogs5e.models.sheet.coinpurse import Coinpurse
 from cogs5e.models.sheet.mixins import HasIntegrationMixin
 from cogs5e.models.sheet.player import CustomCounter, DeathSaves, ManualOverrides
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock
+from cogs5e.models.sheet.coinpurse import Coinpurse
 from cogs5e.sheets.abc import SHEET_VERSION
 from utils.functions import search_and_select
 from utils.settings import CharacterSettings
@@ -29,10 +29,11 @@ log = logging.getLogger(__name__)
 
 
 class Character(StatBlock):
+    # cache characters for 10 seconds to avoid race conditions
     # this makes sure that multiple calls to Character.from_ctx() in the same invocation or two simultaneous ones
     # retrieve/modify the same Character state
     # caches based on (owner, upstream)
-    _cache = weakref.WeakValueDictionary()
+    _cache = cachetools.TTLCache(maxsize=50, ttl=5)
 
     def __init__(
         self,

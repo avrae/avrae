@@ -101,7 +101,7 @@ class DMInitiative(Tutorial):
         async def transition(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
-            By default, Avrae gives each monster a unique ID using the first two letters of its name and a number.  If you check your pinned messages, you should see DE1 added to the fight.
+            By default, Avrae gives each monster a unique ID using the initials its name (or the first two letters if it only has a single initial) and a number.  If you check your pinned messages, you should see DD1 added to the fight.
             
             There are other arguments you can use here, too, to control how the monster is added.  You can give it a special name (`-name Woofer`), add a few at once (`-n 3`) or (`-n 1d3`), and more.  Check `{ctx.prefix}help i madd` for the full list.
             
@@ -140,7 +140,7 @@ class DMInitiative(Tutorial):
             embed.description = f"""
             There are other commands you can use to control the turn order as well.  While `{ctx.prefix}i next` goes forward, `{ctx.prefix}i prev` goes back.  You can also jump to a specific combatant with `{ctx.prefix}i move <name>`.
             
-            If you check your pins again, you'll also see that DE1 is now highlighted, indicating the current turn.
+            If you check your pins again, you'll also see that DD1 is now highlighted, indicating the current turn.
             """
             await ctx.send(embed=embed)
             await state_map.transition_with_delay(ctx, self.tutorial.Attacks1, 5)
@@ -211,7 +211,7 @@ class DMInitiative(Tutorial):
             
             You might also notice, however, that the death dog's exact HP is not shown.  It's simply stated as `<Healthy>`.  Let's manually apply some damage using `{ctx.prefix}init hp <name> [hp]`.
             ```
-            {ctx.prefix}i hp DE1 -1
+            {ctx.prefix}i hp DD1 -1
             ```
             """
             await ctx.send(embed=embed)
@@ -240,11 +240,11 @@ class DMInitiative(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Hit Points II"
             embed.description = f"""
-            As you can see, DE1 has changed from `<Healthy>` to `<Injured>`.  This gives players a rough idea of a creature's health without spoiling things entirely.  Since you, the DM, control that creature, you have also received a direct message from Avrae revealing its actual HP.
+            As you can see, DD1 has changed from `<Healthy>` to `<Injured>`.  This gives players a rough idea of a creature's health without spoiling things entirely.  Since you, the DM, control that creature, you have also received a direct message from Avrae revealing its actual HP.
             
             As the battle continues and our creature drops to half of its max HP, that status will change again.  Let's use `{ctx.prefix}init hp set <name> <hp>` this time to set its HP to a specific value.
             ```
-            {ctx.prefix}i hp set DE1 15
+            {ctx.prefix}i hp set DD1 15
             ```
             """
             await ctx.send(embed=embed)
@@ -280,7 +280,7 @@ class DMInitiative(Tutorial):
             embed.description = f"""
             Now since the death dog hasn't actually taken damage in our fight here, let's reset its health using `{ctx.prefix}init hp max <name>`.
             ```
-            {ctx.prefix}i hp max DE1
+            {ctx.prefix}i hp max DD1
             ```
             """
             await ctx.send(embed=embed)
@@ -309,7 +309,7 @@ class DMInitiative(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Ending Your Turn"
             embed.description = f"""
-            DE1 is back to `<Healthy>` and ready for the fight, but that's all it can do for now.  Let's end our turn and move to the next combatant.
+            DD1 is back to `<Healthy>` and ready for the fight, but that's all it can do for now.  Let's end our turn and move to the next combatant.
             ```
             {ctx.prefix}i next
             ```
@@ -335,9 +335,9 @@ class DMInitiative(Tutorial):
             
             As for Orkira herself, she has one big advantage over your death dog: spellcasting!  The command this time is `{ctx.prefix}init cast <spell_name> [args]`.
             
-            Let's summon a spiritual weapon and target our death dog (`-t DE1`).  Don't forget those quotes around the spell name since it's more than one word.
+            Let's summon a spiritual weapon and target our death dog (`-t DD1`).  Don't forget those quotes around the spell name since it's more than one word.
             ```
-            {ctx.prefix}i cast "spiritual weapon" -t DE1
+            {ctx.prefix}i cast "spiritual weapon" -t DD1
             ```
             """
             await ctx.send(embed=embed)
@@ -436,7 +436,7 @@ class DMInitiative(Tutorial):
             
             The help text there also says Orkira can spend her bonus action to use that attack now.  Let's give it a try!
             ```
-            {ctx.prefix}i a "spiritual weapon" -t DE1
+            {ctx.prefix}i a "spiritual weapon" -t DD1
             ```
             """
             await ctx.send(embed=embed)
@@ -501,7 +501,7 @@ class DMInitiative(Tutorial):
             embed.description = f"""
             Combatants can similarly be removed.  If Orkira defeats the death dog (changing its status to `<Dead>`), it will be removed automatically at the end of its turn.  For now, it's going to avoid that fate and choose to flee instead.  We can remove it manually with `{ctx.prefix}init remove <name>`.
             ```
-            {ctx.prefix}i remove DE1
+            {ctx.prefix}i remove DD1
             ```
             """
             await ctx.send(embed=embed)
@@ -565,7 +565,7 @@ async def add_orkira(ctx, combat):
 
 
 def get_the_woofer(combat):
-    """Gets the next death dog in combat (hopefully DE1?)"""
+    """Gets the next death dog in combat (hopefully DD1?)"""
     return next(
         (c for c in combat.get_combatants() if isinstance(c, MonsterCombatant) and c.monster_name == "Death Dog"), None
     )

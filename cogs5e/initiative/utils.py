@@ -146,13 +146,19 @@ _turn_str_kwarg_strategies = [
 ]
 
 
-def get_turn_str_content(combat: "Combat", max_len=2000) -> str:
+def get_turn_str_content(combat: "Combat", max_len=2000, combatant: "Combatant" = None) -> str:
     """
     Returns a string for the start-of-turn message for the current combat, ensuring that the total length of the string
     is less than *max_len*.
+
+    If *combatant* is passed, returns the turn str for that combatant, otherwise, returns the turn str for the current
+    turn.
     """
     for strategy in _turn_str_kwarg_strategies:
-        result = combat.get_turn_str(**strategy)
+        if combatant is None:
+            result = combat.get_turn_str(**strategy)
+        else:
+            result = combat.get_turn_str_for(combatant, **strategy)
         if len(result) <= max_len:
             break
     else:

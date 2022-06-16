@@ -11,9 +11,26 @@ pytestmark = pytest.mark.asyncio
 
 async def test_parse_coin_args():
     assert parse_coin_args("+10") == CoinsArgs(gp=10, explicit=False)
-    assert parse_coin_args("+10cp +10gp -8ep") == CoinsArgs(gp=10, ep=-8, cp=10, explicit=True)
     assert parse_coin_args("-10.47") == CoinsArgs(cp=-1047, explicit=False)
     assert parse_coin_args("+10.388888") == CoinsArgs(gp=10, sp=3, cp=8, explicit=False)
+    assert parse_coin_args("+10cp +10gp -8ep") == CoinsArgs(gp=10, ep=-8, cp=10, explicit=True)
+    assert parse_coin_args("+10cp10gp") == CoinsArgs(gp=10, cp=10, explicit=True)
+    assert parse_coin_args("10cp-10   gp") == CoinsArgs(gp=-10, cp=10, explicit=True)
+    assert parse_coin_args("10     cp10    gp") == CoinsArgs(gp=10, cp=10, explicit=True)
+
+
+async def test_parse_coins_args_invalid():
+    """+10+10 and other weird strings resulting in +20cp"""
+    invalid_coin_args = (
+        "this is not actually coin",
+        "+10+10",
+        "+10 + 10 -19",
+        "+1gp +1.2sp",
+        "1 + 1",
+    )
+    for invalid in invalid_coin_args:
+        with pytest.raises(InvalidArgument):
+            parse_coin_args(invalid)
 
 
 async def test_resolve_strict_coins(avrae):

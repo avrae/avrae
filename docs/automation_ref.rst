@@ -38,6 +38,8 @@ All Automation runs provide the following variables:
   automation.
 - ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`, :class:`str`, or None) A list of combatants
   targeted by this automation (i.e. the ``-t`` argument).
+- ``spell_attack_bonus`` (:class:`int` or None) - The attack bonus for the spell, or the caster's default attack bonus.
+- ``spell_dc`` (:class:`int` or None) - The DC for the spell, or the caster's default DC.
 
 Additionally, runs triggered by an initiative effect (such as automation provided in a :ref:`ButtonInteraction`) provide
 the following variables:

@@ -89,6 +89,7 @@ It designates what creatures to affect.
 
 - ``target`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The current target.
 - ``targetIteration`` (:class:`int`) If running multiple iterations (i.e. ``-rr``), the current iteration (1-indexed).
+- ``targetIterations`` (:class:`int`) The total number of iterations. Minimum 1, maximum 25.
 - ``targetIndex`` (:class:`int`) The index of the target in the list of targets processed by this effect
   (0-indexed - first target = ``0``, second = ``1``, etc.). Self targets, nth-targets, and parent targets will always
   be ``0``.

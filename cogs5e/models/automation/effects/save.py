@@ -60,7 +60,12 @@ class Save(Effect):
                 raise AutomationException(f"{self.dc!r} cannot be interpreted as a DC.")
 
         # dc hierarchy: arg > self.dc > spell cast override > spellbook dc
-        dc = dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
+        dc = autoctx.caster.spellbook.dc
+        if dc_override:
+            dc = dc_override
+        elif autoctx.dc_override is not None:
+            dc = autoctx.dc_override
+
         if "dc" in autoctx.args:
             dc = maybe_mod(autoctx.args.last("dc"), dc)
 

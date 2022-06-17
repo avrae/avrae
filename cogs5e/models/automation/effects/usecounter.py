@@ -120,8 +120,9 @@ class UseCounter(Effect):
         autoctx.spell_level_override = level
 
         # queue resource usage in own field
-        overflow_str = f"\n({overflow} overflow)" if overflow else ""
-        autoctx.postflight_queue_field(name="Spell Slots", value=f"{slots_str} ({delta:+}){overflow_str}")
+        if amount:
+            overflow_str = f"\n({overflow} overflow)" if overflow else ""
+            autoctx.postflight_queue_field(name="Spell Slots", value=f"{slots_str} ({delta:+}){overflow_str}")
 
         return UseCounterResult(
             counter_name=str(level),
@@ -141,8 +142,9 @@ class UseCounter(Effect):
         overflow = abs(final_value - target_value)
 
         # queue resource usage in own field
-        overflow_str = f"\n({overflow} overflow)" if overflow else ""
-        autoctx.postflight_queue_field(name=counter.name, value=f"{str(counter)} ({delta:+}){overflow_str}")
+        if amount:
+            overflow_str = f"\n({overflow} overflow)" if overflow else ""
+            autoctx.postflight_queue_field(name=counter.name, value=f"{str(counter)} ({delta:+}){overflow_str}")
 
         return UseCounterResult(
             counter_name=counter.name, counter_remaining=final_value, used_amount=-delta, requested_amount=amount

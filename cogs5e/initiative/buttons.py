@@ -1,4 +1,5 @@
 import asyncio
+from typing import Iterable, TYPE_CHECKING
 
 import disnake
 
@@ -6,13 +7,24 @@ import gamedata
 from cogs5e.utils import actionutils
 from utils.argparser import ParsedArguments
 from . import Combat, CombatNotFound, CombatantType, utils
+from .utils import InteractionMessageType
+
+if TYPE_CHECKING:
+    from . import Combatant
 
 
 class ButtonHandler:
     def __init__(self, bot):
         self.bot = bot
 
-    async def handle(self, inter: disnake.MessageInteraction, combatant_id: str, effect_id: str, button_id: str):
+    async def handle(
+        self,
+        inter: disnake.MessageInteraction,
+        combatant_id: str,
+        effect_id: str,
+        button_id: str,
+        message_type: InteractionMessageType,
+    ):
         # load the combat
         try:
             # oh boy, here we go with ctx duck-typing
@@ -26,9 +38,10 @@ class ButtonHandler:
         # find the combatant
         combatant = combat.combatant_by_id(combatant_id)
         if combatant is None:
-            # if the combatant was removed, we can remove the buttons
+            # if the combatant was removed, we can remove buttons with the same combatant ID
+            # but the message might have combatants in the same group
             await inter.send("This combatant is no longer in the referenced combat.", ephemeral=True)
-            await remove_triggering_message_components(inter)
+            await remove_triggering_message_components_for_combatant(inter, combatant_id)
             return
 
         # check ownership
@@ -46,7 +59,7 @@ class ButtonHandler:
         if effect is None:
             # we can't remove all the buttons if the effect got yeeted, but we can update them
             await inter.send("This effect is no longer active on the referenced combatant.", ephemeral=True)
-            await update_triggering_message(inter, combat, combatant)
+            await update_triggering_message(inter, combat, combatant, message_type)
             return
 
         # find the ButtonInteraction
@@ -54,7 +67,7 @@ class ButtonHandler:
         if button_interaction is None:
             # this should be impossible, but if it happens, we'll update the components anyway
             await inter.send("This effect no longer provides this button interaction.", ephemeral=True)
-            await update_triggering_message(inter, combat, combatant)
+            await update_triggering_message(inter, combat, combatant, message_type)
             return
 
         # in some rate-limited cases we can fail the 3-second response time so we have to defer each interaction
@@ -93,7 +106,7 @@ class ButtonHandler:
 
         # and send the result
         await asyncio.gather(
-            update_triggering_message(inter, combat, combatant),
+            update_triggering_message(inter, combat, combatant, message_type),
             inter.channel.send(embed=embed),
         )
         if (gamelog := self.bot.get_cog("GameLog")) and combatant.type == CombatantType.PLAYER and result is not None:
@@ -108,18 +121,59 @@ async def remove_triggering_message_components(inter: disnake.MessageInteraction
         pass
 
 
-async def update_triggering_message(inter: disnake.MessageInteraction, combat, combatant):
+async def remove_triggering_message_components_for_combatant(inter: disnake.MessageInteraction, combatant_id: str):
+    """
+    Update the triggering message of the interaction, removing any components with the combatant's custom id prefix.
+    """
+    # ieb:<combatant_id>:<effect_id>:<button_id>
+    combatant_prefix = f"ieb:{combatant_id}:"
+    components = [
+        disnake.ui.Button.from_component(button)
+        for button in _walk_components_extract_buttons(inter.message.components)
+        if not button.custom_id.startswith(combatant_prefix)
+    ]
+    try:
+        await inter.message.edit(components=components)
+    except disnake.HTTPException:
+        pass
+
+
+def _walk_components_extract_buttons(components: list[disnake.Component]) -> Iterable[disnake.Button]:
+    """Given a list of message components, yields all the buttons, recursively entering into ActionRows."""
+    for component in components:
+        if isinstance(component, disnake.Button):
+            yield component
+        elif isinstance(component, disnake.ActionRow):
+            yield from _walk_components_extract_buttons(component.children)
+
+
+async def update_triggering_message(
+    inter: disnake.MessageInteraction, combat: "Combat", combatant: "Combatant", message_type: InteractionMessageType
+):
     """Update the triggering message of the interaction to reflect the combatant's current state."""
     # get the new state of the combatant
-    # (HACK: it's probably an on-turn message if it mentions someone, otherwise it's probably an !i status message)
-    if inter.message.mentions:
+    if message_type == InteractionMessageType.TURN_MESSAGE:
         await inter.edit_original_message(
-            content=utils.get_turn_str_content(combat, combatant=combatant),
+            content=utils.get_turn_str_content(combat, combatant=combatant, promote_to_group=True),
+            # todo: can we remove the below if DisnakeDev/disnake#573 gets fixed?
             allowed_mentions=combat.get_turn_str_mentions_for(combatant),
-            components=utils.combatant_interaction_components(combatant),
+            components=utils.combatant_interaction_components(
+                combatant, message_type=message_type, promote_to_group=True
+            ),
         )
-    else:
+    elif message_type == InteractionMessageType.STATUS_INDIVIDUAL:
         await inter.edit_original_message(
-            content=utils.get_combatant_status_content(combatant=combatant, author=inter.author),
-            components=utils.combatant_interaction_components(combatant),
+            content=utils.get_combatant_status_content(
+                combatant=combatant, author=inter.author, promote_to_group=False
+            ),
+            components=utils.combatant_interaction_components(
+                combatant, message_type=message_type, promote_to_group=False
+            ),
+        )
+    else:  # message_type == InteractionMessageType.STATUS_GROUP
+        await inter.edit_original_message(
+            content=utils.get_combatant_status_content(combatant=combatant, author=inter.author, promote_to_group=True),
+            components=utils.combatant_interaction_components(
+                combatant, message_type=message_type, promote_to_group=True
+            ),
         )

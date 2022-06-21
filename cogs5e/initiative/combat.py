@@ -557,7 +557,7 @@ class Combat:
         """Like get_turn_str_mentions, but for a specific combatant."""
         if isinstance(combatant, CombatantGroup):
             # noinspection PyUnresolvedReferences
-            user_ids = {disnake.Object(id=comb.controller_id) for comb in self.current_combatant.get_combatants()}
+            user_ids = {disnake.Object(id=comb.controller_id) for comb in combatant.get_combatants()}
         else:
             user_ids = {disnake.Object(id=combatant.controller_id)}
         return disnake.AllowedMentions(users=list(user_ids))

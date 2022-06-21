@@ -38,6 +38,8 @@ All Automation runs provide the following variables:
   automation.
 - ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`, :class:`str`, or None) A list of combatants
   targeted by this automation (i.e. the ``-t`` argument).
+- ``spell_attack_bonus`` (:class:`int` or None) - The attack bonus for the spell, or the caster's default attack bonus.
+- ``spell_dc`` (:class:`int` or None) - The DC for the spell, or the caster's default DC.
 
 Additionally, runs triggered by an initiative effect (such as automation provided in a :ref:`ButtonInteraction`) provide
 the following variables:
@@ -87,6 +89,7 @@ It designates what creatures to affect.
 
 - ``target`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The current target.
 - ``targetIteration`` (:class:`int`) If running multiple iterations (i.e. ``-rr``), the current iteration (1-indexed).
+- ``targetIterations`` (:class:`int`) The total number of iterations. Minimum 1, maximum 25.
 - ``targetIndex`` (:class:`int`) The index of the target in the list of targets processed by this effect
   (0-indexed - first target = ``0``, second = ``1``, etc.). Self targets, nth-targets, and parent targets will always
   be ``0``.

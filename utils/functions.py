@@ -26,10 +26,9 @@ sentinel = object()
 
 def list_get(index, default, l):
     try:
-        a = l[index]
+        return l[index]
     except IndexError:
-        a = default
-    return a
+        return default
 
 
 def get_positivity(string):

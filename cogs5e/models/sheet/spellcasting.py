@@ -59,7 +59,9 @@ class Spellbook:
     # ===== display helpers =====
     def _slots_str_minimal(self, level: int):
         """Returns the slot level string if there are slots of this level, otherwise empty string."""
-        assert 0 < level < 10
+        if not 0 < level < 10:
+            # not InvalidSpellLevel because if we're here, this is an internal error
+            raise ValueError(f"Spell level must between 1 and 9 (got {level})")
         _max = self.get_max_slots(level)
         remaining = self.get_slots(level)
 

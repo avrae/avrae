@@ -50,7 +50,7 @@ class UseCounter(Effect):
         # handle -amt, -l, -i
         amt = autoctx.args.last("amt", None, int, ephem=True)
         ignore = autoctx.args.last("i")
-        # -l handled in use_spell_slot
+        # -l, nopact handled in use_spell_slot
 
         try:
             amount = amt or autoctx.parse_intexpression(self.amount)
@@ -99,6 +99,7 @@ class UseCounter(Effect):
     def use_spell_slot(self, autoctx, amount, ignore_resources: bool = False):
         spellref_level = autoctx.parse_intexpression(self.counter.slot)
         level = autoctx.args.last("l", spellref_level, int)
+        nopact = autoctx.args.last("nopact")
         if ignore_resources:  # handled here to return counter name (#1582)
             return UseCounterResult(counter_name=str(level), requested_amount=amount, skipped=True)
 
@@ -111,7 +112,7 @@ class UseCounter(Effect):
             new_value = max(min(target_value, autoctx.caster.spellbook.get_max_slots(level)), 0)
 
         # use the slot(s) and output
-        autoctx.caster.spellbook.set_slots(level, new_value)
+        autoctx.caster.spellbook.set_slots(level, new_value, pact=not nopact)
         delta = new_value - old_value
         overflow = abs(new_value - target_value)
         slots_str = autoctx.caster.spellbook.slots_str(level)

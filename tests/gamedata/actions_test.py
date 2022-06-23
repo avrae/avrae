@@ -51,15 +51,7 @@ async def test_action_simulate_string_target(action, ara, avrae):
 @pytest.mark.asyncio
 @pytest.mark.simulation
 @requires_data(fail_if_no_data=True)
-async def test_action_simulate_target(action, ara, bob, avrae):
-    automation = get_action_automation(action)
-    await run_automation(automation, avrae, caster=ara, targets=[bob])
-
-
-@pytest.mark.asyncio
-@pytest.mark.simulation
-@requires_data(fail_if_no_data=True)
-async def test_action_simulate_more_complex_targets(action, ara, bob, avrae):
+async def test_action_simulate_statblock_targets(action, ara, bob, avrae):
     automation = get_action_automation(action)
     await run_automation(automation, avrae, caster=ara, targets=[ara, bob])
 

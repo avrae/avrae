@@ -23,7 +23,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs:
-      - determine-run
+      - check
     services:
       redis: # redis://redis:6379/0
         image: redis

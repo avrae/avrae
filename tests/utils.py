@@ -16,7 +16,9 @@ from utils.settings import ServerSettings
 if TYPE_CHECKING:
     from tests.mocks import Request
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
+GAMEDATA_BASE_PATH = os.getenv("TEST_GAMEDATA_BASE_PATH")
+if GAMEDATA_BASE_PATH is None:
+    GAMEDATA_BASE_PATH = os.path.join(os.path.dirname(__file__), "static/compendium")
 
 # rolled dice: the individual results of dice
 # matches:
@@ -65,10 +67,13 @@ SAVE_PATTERN = rf"\*\*\w+ Save:?\*\*:? {D20_PATTERN}; (Failure|Success)!"
 SAVE_SPELL_PATTERN = rf"{SAVE_PATTERN}\n{DAMAGE_PATTERN}"
 
 
-def requires_data():
+def requires_data(fail_if_no_data=False):
     """
-    A wrapper that skips a test if data is not loaded.
-    Only a severely limited subset of data is available in tests.
+    A decorator that skips a test if data is not loaded.
+    By default, only a severely limited subset of data is available in tests.
+    Test environments can inject real gamedata by writing to tests/static/compendium.
+
+    Default exposed gamedata:
     Conditions: FakeCondition
     Names: Elf, Family
     Rules: Fake Rule
@@ -83,11 +88,15 @@ def requires_data():
     Spells: Fire Bolt, Fireball
     """
     if not compendium.spells:  # if spells have not loaded, no data has
-        compendium.load_all_json(base_path=os.path.join(dir_path, "static", "compendium"))
+        compendium.load_all_json(base_path=GAMEDATA_BASE_PATH)
         compendium.load_common()
 
     if not compendium.spells:  # we have no data, then
-        return pytest.mark.skip(reason="Test requires data")
+        if not fail_if_no_data:
+            return pytest.mark.skip(reason="Test requires gamedata")
+        else:
+            # this returns a decorator, so make our actual method just fail
+            return lambda func: lambda *_, **__: pytest.fail("Test requires gamedata")
 
     return lambda func: func
 

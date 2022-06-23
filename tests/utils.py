@@ -150,6 +150,7 @@ class MessageProxy:
         self.id = int(MESSAGE_ID)
 
 
+# ==== assertion helpers ====
 def compare_embeds(request_embed, embed, *, regex: bool = True):
     """Recursively checks to ensure that two embeds have the same structure."""
     assert type(request_embed) == type(embed)
@@ -203,6 +204,7 @@ def message_content_check(request: "Request", content: str = None, *, regex: boo
     return match
 
 
+# ==== combat helpers ====
 async def start_init(avrae, dhttp):
     dhttp.clear()
     avrae.message("!init begin")

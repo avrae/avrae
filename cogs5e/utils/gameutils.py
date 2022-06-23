@@ -95,12 +95,12 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
     +10gp -10pp -> CoinsArgs(pp=-10, gp=10, ep=0, sp=0, cp=0)
     -10gp 50gp 1gp -> CoinsArgs(pp=0, gp=41, ep=0, sp=0, cp=0)
     """
-    is_valid = re.fullmatch(r"(([+-]?\d+)\s*([pgesc]p)?\s*)+", args, re.IGNORECASE)
+    is_valid = re.fullmatch(r"(([+-]?\d+)\s*([pgesc]p)\s*)+", args, re.IGNORECASE)
     if not is_valid:
         raise InvalidArgument("Coins must be a number or a currency string, e.g. `+101.2` or `10cp +101gp -2sp`.")
 
     out = CoinsArgs(explicit=True)
-    for coin_match in re.finditer(r"(?P<amount>[+-]?\d+)\s*(?P<currency>[pgesc]p)?", args, re.IGNORECASE):
+    for coin_match in re.finditer(r"(?P<amount>[+-]?\d+)\s*(?P<currency>[pgesc]p)", args, re.IGNORECASE):
         amount = int(coin_match["amount"])
         currency = coin_match["currency"]
 

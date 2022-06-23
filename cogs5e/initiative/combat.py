@@ -517,10 +517,16 @@ class Combat:
         Any other kwargs are passed to Combatant.get_status().
         """
         combatant = self.current_combatant
-
         if combatant is None:
             return None
+        out = self.get_turn_str_for(combatant, status, **kwargs)
+        if self.options.turnnotif:
+            next_combatant = self.next_combatant
+            out += f"**Next up**: {next_combatant.name} ({next_combatant.controller_mention()})\n"
+        return out
 
+    def get_turn_str_for(self, combatant: Combatant, status=True, **kwargs) -> str:
+        """Like get_turn_str, but for a specific combatant."""
         if isinstance(combatant, CombatantGroup):
             combatants = combatant.get_combatants()
             combatant_statuses = "\n".join(co.get_status(**kwargs) for co in combatants)
@@ -536,23 +542,24 @@ class Combat:
         if status:
             out += f"```md\n{combatant_statuses}```"
 
-        if self.options.turnnotif:
-            next_combatant = self.next_combatant
-            out += f"**Next up**: {next_combatant.name} ({next_combatant.controller_mention()})\n"
         return out
 
     def get_turn_str_mentions(self) -> disnake.AllowedMentions:
         """Gets the :class:`disnake.AllowedMentions` for the users mentioned in the current turn str."""
         if self.current_combatant is None:
             return disnake.AllowedMentions.none()
-        if isinstance(self.current_combatant, CombatantGroup):
-            # noinspection PyUnresolvedReferences
-            user_ids = {disnake.Object(id=comb.controller_id) for comb in self.current_combatant.get_combatants()}
-        else:
-            user_ids = {disnake.Object(id=self.current_combatant.controller_id)}
-
+        mentions = self.get_turn_str_mentions_for(self.current_combatant)
         if self.options.turnnotif and self.next_combatant is not None:
-            user_ids.add(disnake.Object(id=self.next_combatant.controller_id))
+            mentions.merge(self.get_turn_str_mentions_for(self.next_combatant))
+        return mentions
+
+    def get_turn_str_mentions_for(self, combatant) -> disnake.AllowedMentions:
+        """Like get_turn_str_mentions, but for a specific combatant."""
+        if isinstance(combatant, CombatantGroup):
+            # noinspection PyUnresolvedReferences
+            user_ids = {disnake.Object(id=comb.controller_id) for comb in combatant.get_combatants()}
+        else:
+            user_ids = {disnake.Object(id=combatant.controller_id)}
         return disnake.AllowedMentions(users=list(user_ids))
 
     def get_summary(self, private=False) -> str:

@@ -38,6 +38,8 @@ All Automation runs provide the following variables:
   automation.
 - ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`, :class:`str`, or None) A list of combatants
   targeted by this automation (i.e. the ``-t`` argument).
+- ``spell_attack_bonus`` (:class:`int` or None) - The attack bonus for the spell, or the caster's default attack bonus.
+- ``spell_dc`` (:class:`int` or None) - The DC for the spell, or the caster's default DC.
 
 Additionally, runs triggered by an initiative effect (such as automation provided in a :ref:`ButtonInteraction`) provide
 the following variables:
@@ -87,6 +89,7 @@ It designates what creatures to affect.
 
 - ``target`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The current target.
 - ``targetIteration`` (:class:`int`) If running multiple iterations (i.e. ``-rr``), the current iteration (1-indexed).
+- ``targetIterations`` (:class:`int`) The total number of iterations. Minimum 1, maximum 25.
 - ``targetIndex`` (:class:`int`) The index of the target in the list of targets processed by this effect
   (0-indexed - first target = ``0``, second = ``1``, etc.). Self targets, nth-targets, and parent targets will always
   be ``0``.
@@ -793,7 +796,7 @@ Use Counter
         counter: string | SpellSlotReference | AbilityReference;
         amount: IntExpression;
         allowOverflow?: boolean;
-        errorBehaviour?: null | "warn" | "raise";
+        errorBehaviour?: "warn" | "raise" | "ignore";
     }
 
 Uses a number of charges of the given counter, and displays the remaining amount and delta.
@@ -821,9 +824,9 @@ Uses a number of charges of the given counter, and displays the remaining amount
 
         *optional, default "warn"* - How to behave if modifying the counter raises an error:
 
-        - ``null``: All errors are silently consumed.
         - ``"warn"``: Automation will continue to run, and any errors will appear in the output. (*default*)
         - ``"raise"``: Raise the error and halt execution.
+        - ``"ignore"``: All errors are silently consumed.
 
         Some, but not all, possible error conditions are:
 

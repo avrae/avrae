@@ -98,7 +98,7 @@ class Attack(Effect):
             nocrit = nocrit or autoctx.target.character.options.ignore_crit
 
         # ==== execution ====
-        attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
+        attack_bonus = autoctx.ab_override if autoctx.ab_override is not None else autoctx.caster.spellbook.sab
 
         # explicit bonus
         if self.bonus:

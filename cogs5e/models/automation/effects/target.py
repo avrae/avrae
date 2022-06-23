@@ -154,6 +154,7 @@ class Target(Effect):
 
         # #1335
         autoctx.metavars["targetIteration"] = 1
+        autoctx.metavars["targetIterations"] = rr
 
         # 2 binary attributes: (rr?, target?)
         # each case must end with a push_embed_field()

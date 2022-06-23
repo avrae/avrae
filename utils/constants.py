@@ -151,4 +151,4 @@ HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
 
 # ==== Discord component custom id prefixes ====
 # any string, up to 100 characters long
-B_INIT_EFFECT = "ieb:"  # ieb:<combatant_id>:<effect_id>:<interaction_id>
+B_INIT_EFFECT = "ieb:"  # ieb:<combatant_id>:<effect_id>:<interaction_id>:<interaction_message_type> (92)

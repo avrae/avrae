@@ -9,10 +9,21 @@ on:
       - synchronize
       - labeled  # to approve 3pp PRs, add a label to the PR (like ci: approved)
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: determine if secret is set
+        run: '[ "${{ secrets.ORG_REPO_ACCESS_TOKEN }}" ] || exit 1'
+
   test:
     runs-on: ubuntu-latest
-    if: ${{ secrets.ORG_REPO_ACCESS_TOKEN }}
+    needs:
+      - determine-run
     services:
       redis: # redis://redis:6379/0
         image: redis

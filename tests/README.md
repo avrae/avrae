@@ -18,3 +18,15 @@ TODO
 ## Running Tests
 
 TODO
+
+## Writing Tests
+
+### Unit Tests
+
+### E2E Tests
+
+### Gamedata Tests
+
+### Fixtures
+
+TODO

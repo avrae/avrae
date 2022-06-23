@@ -1,12 +1,16 @@
 import os
+import re
 from contextlib import asynccontextmanager
 
+import disnake
 import pytest
+from disnake import Embed
 
 from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
 from gamedata.compendium import compendium
-from tests.discord_mock import DEFAULT_USER_ID, MESSAGE_ID, TEST_CHANNEL_ID, TEST_GUILD_ID
+from tests.discord_mock_data import DEFAULT_USER_ID, MESSAGE_ID, TEST_CHANNEL_ID, TEST_GUILD_ID
+from tests.mocks import Request
 from utils.settings import ServerSettings
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -132,3 +136,81 @@ class ContextBotProxy:
 class MessageProxy:
     def __init__(self):
         self.id = int(MESSAGE_ID)
+
+
+def compare_embeds(request_embed, embed, *, regex: bool = True):
+    """Recursively checks to ensure that two embeds have the same structure."""
+    assert type(request_embed) == type(embed)
+
+    if isinstance(embed, dict):
+        for k, v in embed.items():
+            if k == "inline":
+                continue
+            elif isinstance(v, (dict, list)):
+                compare_embeds(request_embed[k], embed[k])
+            elif isinstance(v, str) and regex:
+                assert re.match(embed[k], request_embed[k])
+            else:
+                assert request_embed[k] == embed[k]
+    elif isinstance(embed, list):  # list of fields, usually
+        assert len(embed) <= len(request_embed)
+        for e, r in zip(embed, request_embed):
+            compare_embeds(r, e)
+    else:
+        assert request_embed == embed
+
+
+def embed_assertions(embed):
+    """Checks to ensure that the embed is valid."""
+    assert len(embed) <= 6000
+    assert len(embed.title) <= 256
+    assert len(embed.description) <= 4096
+    assert len(embed.fields) <= 25
+    for field in embed.fields:
+        assert 0 < len(field.name) <= 256
+        assert 0 < len(field.value) <= 1024
+    if embed.footer:
+        assert len(embed.footer.text) <= 2048
+    if embed.author:
+        assert len(embed.author.name) <= 256
+
+
+def message_content_check(request: Request, content: str = None, *, regex: bool = True, embed: Embed = None):
+    match = None
+    if content:
+        if regex:
+            match = re.match(content, request.data.get("content"))
+            assert match
+        else:
+            assert request.data.get("content") == content
+    if embed:
+        embed_data = request.data.get("embeds")
+        assert embed_data is not None and embed_data
+        embed_assertions(disnake.Embed.from_dict(embed_data[0]))
+        compare_embeds(embed_data[0], embed.to_dict(), regex=regex)
+    return match
+
+
+async def start_init(avrae, dhttp):
+    dhttp.clear()
+    avrae.message("!init begin")
+    await dhttp.receive_delete()
+    await dhttp.receive_message()
+    await dhttp.receive_pin()
+    await dhttp.receive_edit()
+    await dhttp.receive_message()
+
+
+async def end_init(avrae, dhttp):
+    dhttp.clear()
+    avrae.message("!init end")
+    await dhttp.receive_delete()
+    await dhttp.receive_message()
+    avrae.message("y")
+    await dhttp.receive_delete()
+    await dhttp.receive_delete()
+    await dhttp.receive_message()
+    await dhttp.receive_message(dm=True)
+    await dhttp.receive_edit()
+    await dhttp.receive_unpin()
+    await dhttp.receive_edit()

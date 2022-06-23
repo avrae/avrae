@@ -1,8 +1,7 @@
 import pytest
-from discord import Embed
+from disnake import Embed
 
 from tests.utils import active_character
-from cogs5e.models.embeds import EmbedWithCharacter
 
 pytestmark = pytest.mark.asyncio
 

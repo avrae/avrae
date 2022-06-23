@@ -8,7 +8,6 @@ from .simulation_utils import run_automation
 
 
 def unfurl_action_pair(action):
-    print(action)
     automation_d = action[0]["automation"]
     if automation_d is None:
         pytest.skip("Action has no automation")

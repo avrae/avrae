@@ -48,15 +48,15 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Checkout Avrae
+        uses: actions/checkout@v3
+
       - name: Checkout Gamedata repo
         uses: actions/checkout@v3
         with:
           path: avrae-data
           repository: avrae/avrae-data
           token: ${{ secrets.ORG_REPO_ACCESS_TOKEN }}
-
-      - name: Checkout Avrae
-        uses: actions/checkout@v3
 
       - name: Cache pip
         uses: actions/cache@v2

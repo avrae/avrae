@@ -61,7 +61,7 @@ def generate_monster_actions(monsters):
 )
 def monster_attack(request):
     """Parameterized fixture providing each attack from each monster individually in a (attack, monster_dict) pair."""
-    yield copy.deepcopy(request.param[0]), request.param[1]
+    yield copy.deepcopy(request.param[0]), copy.deepcopy(request.param[1])
 
 
 # ---- actions ----

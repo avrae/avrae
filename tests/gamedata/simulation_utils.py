@@ -43,8 +43,12 @@ def create_basic_combatant(combat, avrae):
 def create_monster_combatant(combat, avrae, monster_id=16939):
     """Creates a new monster combatant, adds it to the combat, and returns it. Defaults to using a kobold"""
     mon = compendium.lookup_entity(Monster.entity_type, monster_id)
+    return create_monster_combatant_from_monster(combat, avrae, mon)
+
+
+def create_monster_combatant_from_monster(combat, avrae, monster):
     monster_combatant = MonsterCombatant.from_monster(
-        mon,
+        monster,
         ctx=ContextBotProxy(avrae),
         combat=combat,
         name="Test Monster",

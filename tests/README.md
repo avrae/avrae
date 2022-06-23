@@ -87,8 +87,8 @@ Gamedata tests run simulations on every official automation document in order to
 the Automation Engine. Generally, these are added by writing more official automation, rather than gamedata tests.
 
 As these tests operate on non-SRD data, care must be taken not to expose the underlying data in the tests. For PRs
-opened by outside contributors, a project maintainer must approve the gamedata test workflow by commenting on the PR
-with any message containing `[ci approve gamedata]`.
+opened by outside contributors, a project maintainer must approve the gamedata test workflow by adding the `ci: approve`
+label to the PR. Maintainers may need to remove and re-add the label to rerun the PR after PR updates.
 
 ### Fixtures
 

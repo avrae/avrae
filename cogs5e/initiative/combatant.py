@@ -717,7 +717,7 @@ class PlayerCombatant(Combatant):
         self._character = None  # cache
 
     @classmethod
-    async def from_character(cls, character, ctx, combat, controller_id, init, private):
+    def from_character(cls, character, ctx, combat, controller_id, init, private):
         id = create_combatant_id()
         inst = cls(
             ctx,

@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+import pathlib
 import random
 
 import pytest
@@ -134,3 +135,19 @@ async def global_fixture(avrae, dhttp, request):
     yield
     await dhttp.drain()
     log.info(f"Finished test: {request.function.__name__}")
+
+
+# ==== marks ====
+def pytest_collection_modifyitems(config, items):
+    """
+    mark every test in e2e/ with the *e2e* mark, unit/ with *unit*, and gamedata/ with *gamedata*
+    """
+    rootdir = pathlib.Path(config.rootdir)
+    for item in items:
+        rel_path = pathlib.Path(item.fspath).relative_to(rootdir)
+        if "e2e" in rel_path.parts:
+            item.add_marker(pytest.mark.e2e)
+        elif "unit" in rel_path.parts:
+            item.add_marker(pytest.mark.unit)
+        elif "gamedata" in rel_path.parts:
+            item.add_marker(pytest.mark.gamedata)

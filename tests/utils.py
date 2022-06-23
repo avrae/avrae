@@ -1,6 +1,7 @@
 import os
 import re
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 import disnake
 import pytest
@@ -10,8 +11,10 @@ from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
 from gamedata.compendium import compendium
 from tests.discord_mock_data import DEFAULT_USER_ID, MESSAGE_ID, TEST_CHANNEL_ID, TEST_GUILD_ID
-from tests.mocks import Request
 from utils.settings import ServerSettings
+
+if TYPE_CHECKING:
+    from tests.mocks import Request
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -175,7 +178,7 @@ def embed_assertions(embed):
         assert len(embed.author.name) <= 256
 
 
-def message_content_check(request: Request, content: str = None, *, regex: bool = True, embed: Embed = None):
+def message_content_check(request: "Request", content: str = None, *, regex: bool = True, embed: Embed = None):
     match = None
     if content:
         if regex:

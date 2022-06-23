@@ -1,5 +1,6 @@
 import asyncio
 import copy
+import logging
 import urllib.parse
 from contextlib import contextmanager
 from fnmatch import fnmatchcase
@@ -7,9 +8,10 @@ from fnmatch import fnmatchcase
 from disnake import Embed
 from disnake.http import HTTPClient, Route
 
-from tests.conftest import log
-from tests.utils import message_content_check
 from tests.discord_mock_data import MESSAGE_ID, RESPONSES, TEST_CHANNEL_ID, TEST_DMCHANNEL_ID
+from tests.utils import message_content_check
+
+log = logging.getLogger(__name__)
 
 
 class Request:

@@ -1,9 +1,10 @@
+import logging
+
 import pytest
 from disnake import DiscordException
 from disnake.ext import commands
 
 from cogs5e.models.errors import AvraeException
-from tests.conftest import log
 from tests.discord_mock_data import (
     DEFAULT_USER,
     DEFAULT_USER_ID,
@@ -15,6 +16,8 @@ from tests.discord_mock_data import (
 )
 from utils import config
 from utils.config import DEFAULT_PREFIX
+
+log = logging.getLogger(__name__)
 
 
 # methods to monkey-patch in to send messages to the bot without sending

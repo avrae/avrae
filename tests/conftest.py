@@ -28,7 +28,7 @@ pass  # here to prevent pycharm from moving around my imports >:C
 from cogs5e.models.character import Character  # noqa: E402
 from cogs5e.models.errors import AvraeException  # noqa: E402
 from cogs5e.initiative import Combat  # noqa: E402
-from tests.setup import *  # noqa: E4
+from tests.discord_mock import *  # noqa: E4
 from utils.config import DEFAULT_PREFIX  # noqa: E402
 
 SENTINEL = object()

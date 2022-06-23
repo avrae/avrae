@@ -83,4 +83,3 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           files: ./shared/coverage.xml
-          root_dir: avrae

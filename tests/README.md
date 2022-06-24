@@ -92,4 +92,24 @@ label to the PR. Maintainers may need to remove and re-add the label to rerun th
 
 ### Fixtures
 
-TODO
+#### E2E/Unit Fixtures
+
+- `dhttp`: The mock Discord client, used to run assertions on bot output. See E2E Tests above.
+- `avrae`: The Avrae instance, used to send mock messages. See E2E Tests above.
+- `character`: A parameterized fixture that provides various Character objects and sets the yielded character as the
+  active character in the test db.
+- `init_fixture`: A fixture that should be used at the class scope to clean up after a group if initiative tests.
+
+#### Gamedata/Simulation Fixtures
+
+- `spells`: A fixture providing the entirety of `spells.json`.
+- `monsters`: A fixture providing the entirety of `monsters.json`.
+- `actions`: A fixture providing the entirety of `actions.json`.
+- `spell`: A parameterized fixture providing each spell in `spells.json` individually.
+- `monster`: A parameterized fixture providing each monster in `monsters.json` individually.
+- `monster_attack`: A parameterized fixture providing each attack of each monster in `monsters.json` individually.
+- `action`: A parameterized fixture providing each action in `actions.json` individually.
+- `bob`: A generic StatBlock caster that includes spellcasting information.
+- `ara`: A Character caster (level 10 Bard/Warlock). Does not set up the DB (c.f. `character`).
+- `mock_combat`: A fixture that provides an ephemeral Combat instance for use in simulation tests without having to
+  start a combat using E2E methods.

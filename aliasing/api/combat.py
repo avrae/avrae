@@ -461,6 +461,8 @@ class SimpleCombatant(AliasStatBlock):
             parsed_attacks = [init.effects.AttackInteraction.from_dict(a) for a in normalized_attacks]
         if buttons:
             normalized_buttons = validators.ButtonInteractionList.parse_obj(buttons).dict(exclude_unset=True)
+            for button in normalized_buttons:
+                button["id"] = init.utils.create_button_interaction_id()
             parsed_buttons = [init.effects.ButtonInteraction.from_dict(b) for b in normalized_buttons]
 
         # add effect

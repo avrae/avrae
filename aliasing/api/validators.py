@@ -4,7 +4,7 @@ Useful validators for methods with complex types (like SimpleCombatant.add_effec
 from typing import List, Optional, Sequence, Set
 
 import automation_common
-from pydantic import BaseModel, Field, conint, constr, validator
+from pydantic import BaseModel, conint, constr, validator
 
 import cogs5e.initiative as init
 from cogs5e.models.errors import InvalidArgument
@@ -62,7 +62,6 @@ class AttackInteractionList(BaseModel):
 
 
 class ButtonInteraction(BaseModel):
-    id: str = Field(default_factory=init.utils.create_button_interaction_id)
     automation: automation_common.validation.ValidatedAutomation
     label: constr(max_length=80, min_length=1, strip_whitespace=True)
     verb: Optional[str255]

@@ -4,6 +4,7 @@ from .effects import InitiativeEffect
 from .errors import *
 from .group import CombatantGroup
 from .types import CombatantType
+from . import utils
 
 pass  # don't move my imports, pycharm - the cog has to be imported last
 

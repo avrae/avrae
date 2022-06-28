@@ -1102,6 +1102,136 @@ SimpleEffect
 
         :type: bool
 
+.. _ieffectargs:
+
+Initiative Effect Args
+^^^^^^^^^^^^^^^^^^^^^^
+
+The *passive_effects*, *attacks*, and *buttons* arguments to ``SimpleCombatant.add_effect()`` should be a dict/list that
+follows the schema below, respectively.
+
+Some examples are provided below.
+
+.. code-block:: python
+
+    class PassiveEffects:
+        attack_advantage: Optional[enums.AdvantageType]
+        to_hit_bonus: Optional[str255]
+        damage_bonus: Optional[str255]
+        magical_damage: Optional[bool]
+        silvered_damage: Optional[bool]
+        resistances: Optional[List[str255]]
+        immunities: Optional[List[str255]]
+        vulnerabilities: Optional[List[str255]]
+        ignored_resistances: Optional[List[str255]]
+        ac_value: Optional[int]
+        ac_bonus: Optional[int]
+        max_hp_value: Optional[int]
+        max_hp_bonus: Optional[int]
+        save_bonus: Optional[str255]
+        save_adv: Optional[Set[str]]
+        save_dis: Optional[Set[str]]
+        check_bonus: Optional[str255]
+        check_adv: Optional[Set[str]]
+        check_dis: Optional[Set[str]]
+
+    class AttackInteraction:
+        attack: AttackModel  # this can be any attack built on the Avrae Dashboard
+        override_default_dc: Optional[int]
+        override_default_attack_bonus: Optional[int]
+        override_default_casting_mod: Optional[int]
+
+    class ButtonInteraction:
+        automation: Automation  # this can be any automation built on the Avrae Dashboard
+        label: str
+        verb: Optional[str255]
+        style: Optional[conint(ge=1, le=4)]
+        override_default_dc: Optional[int]
+        override_default_attack_bonus: Optional[int]
+        override_default_casting_mod: Optional[int]
+
+**Example: Passive Effects**
+
+Also see :ref:`passiveeffects` for more information.
+
+.. code-block:: python
+
+    combatant.add_effect(
+        "Some Magical Effect",
+        passive_effects={
+            "attack_advantage": 1,
+            "damage_bonus": "1d4 [fire]",
+            "magical_damage": True,
+            "resistances": ["fire", "nonmagical slashing"],
+            "ac_bonus": 2,
+            "save_adv": ["dexterity"]
+        }
+    )
+
+**Example: Granting Attacks**
+
+Also see :ref:`attackinteraction` for more information. Note that the Automation schema differs slightly from the
+aliasing API.
+
+.. code-block:: python
+
+    combatant.add_effect(
+        "Some Magical Effect",
+        attacks=[{
+            "attack": {
+                "_v": 2,
+                "name": "Magical Attack",
+                "verb": "shows off the power of",
+                "automation": [
+                    {
+                        "type": "target",
+                        "target": "each",
+                        "effects": [
+                            {
+                                "type": "attack",
+                                "hit": [
+                                    {
+                                        "type": "damage",
+                                        "damage": "1d10[fire]"
+                                    }
+                                ],
+                                "miss": []
+                            }
+                        ]
+                    }
+                ]
+            }
+        }]
+    )
+
+**Example: Granting Buttons**
+
+Also see :ref:`buttoninteraction` for more information. Note that the Automation schema differs slightly from the
+aliasing API.
+
+.. code-block:: python
+
+    combatant.add_effect(
+        "Some Magical Effect",
+        buttons=[{
+            "label": "On Fire",
+            "verb": "is burning",
+            "style": 4,
+            "automation": [
+                {
+                    "type": "target",
+                    "target": "self",
+                    "effects": [
+                        {
+                            "type": "damage",
+                            "damage": "1d6 [fire]"
+                        }
+                    ]
+                }
+            ]
+        }]
+    )
+
 SimpleRollResult
 ----------------
 

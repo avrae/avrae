@@ -412,7 +412,7 @@ class SimpleCombatant(AliasStatBlock):
         buttons: list[dict] = None,
     ):
         """
-        Adds an effect to the combatant.
+        Adds an effect to the combatant. Returns the added effect.
 
         .. note::
 
@@ -434,6 +434,7 @@ class SimpleCombatant(AliasStatBlock):
         :param passive_effects: The passive effects this effect should grant. See :ref:`ieffectargs`.
         :param attacks: The attacks granted by this effect. See :ref:`ieffectargs`.
         :param buttons: The buttons granted by this effect. See :ref:`ieffectargs`.
+        :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """  # noqa: E501
         # validate types
         name = str(name)
@@ -496,6 +497,8 @@ class SimpleCombatant(AliasStatBlock):
             effect_obj.set_parent(parent._effect)
         self._combatant.add_effect(effect_obj)
         self._update_effects()
+
+        return SimpleEffect(effect_obj)
 
     def remove_effect(self, name: str):
         """

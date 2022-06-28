@@ -1,6 +1,5 @@
 from aliasing.api.statblock import AliasSkill
 from cogs5e.models.sheet.base import Skill
-import pytest
 
 
 # TODO: AliasStatBlock tests

@@ -1,4 +1,4 @@
-import discord
+import disnake
 import pytest
 
 pytestmark = pytest.mark.asyncio
@@ -16,7 +16,7 @@ async def test_basic_commands(avrae, dhttp):
 
     avrae.message('!embed -f foo|bar -title "Hello world"', dm=True)
     await dhttp.receive_delete(dm=True)
-    await dhttp.receive_message(embed=discord.Embed(title=r"Hello \w+"), regex=True, dm=True)
+    await dhttp.receive_message(embed=disnake.Embed(title=r"Hello \w+"), regex=True, dm=True)
 
 
 async def test_nonexistant_commands(avrae, dhttp):

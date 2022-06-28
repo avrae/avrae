@@ -1,5 +1,5 @@
-# TODO complete tests/add assertations
-import discord
+# TODO complete tests/add assertions
+import disnake
 import pytest
 
 from tests.utils import active_character
@@ -105,7 +105,7 @@ class TestComplexAttacks:
         await _receive_attack()
 
         avrae.message("!a TESTATTACKFOOBAR -phrase foobar -title barfoo")
-        await _receive_attack(discord.Embed(description=r"\*foobar\*", title="barfoo"))
+        await _receive_attack(disnake.Embed(description=r"\*foobar\*", title="barfoo"))
 
         avrae.message("!a TESTATTACKFOOBAR adv")
         await _receive_attack()

@@ -1,10 +1,9 @@
-import discord
+import disnake
 import pytest
 
 from cogs5e.models.sheet.resistance import Resistance
 from gamedata.compendium import compendium
-from tests.conftest import end_init, start_init
-from tests.utils import D20_PATTERN, active_character, active_combat, server_settings
+from tests.utils import D20_PATTERN, active_character, active_combat, end_init, server_settings, start_init
 
 pytestmark = pytest.mark.asyncio
 
@@ -57,7 +56,7 @@ class TestInitiativeWithCharacters:
         avrae.message("!init join")
         await dhttp.receive_delete()
         await dhttp.receive_edit()
-        join_embed = discord.Embed(title=rf".+ makes an Initiative check!", description=D20_PATTERN)
+        join_embed = disnake.Embed(title=rf".+ makes an Initiative check!", description=D20_PATTERN)
         join_embed.set_footer(text="Added to combat!")
         await dhttp.receive_message(embed=join_embed)
 

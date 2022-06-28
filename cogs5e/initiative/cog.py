@@ -433,7 +433,7 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant already exists.")
             return
 
-        me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
+        me = PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
 
         # -note (#1211)
         if note:

@@ -1,6 +1,5 @@
-from typing import List, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
-import pydantic
 from d20 import roll
 
 import cogs5e.initiative as init
@@ -518,92 +517,6 @@ class SimpleCombatant(AliasStatBlock):
     # === utility ====
     def _update_effects(self):
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
-
-    # === deprecated ===
-    # fixme deprecate, remove v4.1
-    @property
-    def resists(self):
-        if self._interpreter is not None:
-            self._interpreter.warn_deprecated("resists", since="v2.5.0", replacement="SimpleCombatant.resistances")
-        return self.resistances
-
-    @property
-    def level(self):
-        if self._interpreter is not None:
-            self._interpreter.warn_deprecated("level", since="v2.5.0", replacement="SimpleCombatant.levels.total_level")
-        return self._combatant.spellbook.caster_level
-
-    @property
-    def temphp(self):  # deprecated - use temp_hp instead
-        """
-        .. deprecated:: 2.5.0
-            Use ``SimpleCombatant.temp_hp`` instead.
-
-        How many temporary hit points the combatant has.
-
-        :rtype: int
-        """
-        if self._interpreter is not None:
-            self._interpreter.warn_deprecated("temphp", since="v2.5.0", replacement="SimpleCombatant.temp_hp")
-        return self.temp_hp
-
-    @property
-    def maxhp(self):  # deprecated - use max_hp instead
-        """
-        .. deprecated:: 2.5.0
-            Use ``SimpleCombatant.max_hp`` instead.
-
-        The combatant's maximum hit points. ``None`` if not set.
-
-        :rtype: Optional[int]
-        """
-        if self._interpreter is not None:
-            self._interpreter.warn_deprecated("maxhp", since="v2.5.0", replacement="SimpleCombatant.max_hp")
-        return self.max_hp
-
-    def mod_hp(self, mod: int, overheal: bool = False):  # deprecated - use modify_hp instead
-        """
-        .. deprecated:: 2.5.0
-            Use ``SimpleCombatant.modify_hp()`` instead.
-
-        Modifies a combatant's remaining hit points by a value.
-
-        :param int mod: The amount of HP to add.
-        :param bool overheal: Whether to allow exceeding max HP.
-        """
-        if self._interpreter is not None:
-            self._interpreter.warn_deprecated("mod_hp()", since="v2.5.0", replacement="SimpleCombatant.modify_hp()")
-        self.modify_hp(mod, overflow=overheal)
-
-    def set_thp(self, thp: int):  # deprecated - use set_temp_hp
-        """
-        .. deprecated:: 2.5.0
-            Use ``SimpleCombatant.set_temp_hp()`` instead.
-
-        Sets the combatant's temp HP.
-
-        :param int thp: The new temp HP.
-        """
-        if self._interpreter is not None:
-            self._interpreter.warn_deprecated("set_thp()", since="v2.5.0", replacement="SimpleCombatant.set_temp_hp()")
-        self.set_temp_hp(thp)
-
-    def wouldhit(self, to_hit: int):
-        """
-        .. deprecated:: 1.1.5
-            Use ``to_hit >= combatant.ac`` instead.
-
-        Checks if a roll would hit this combatant.
-
-        :param int to_hit: The rolled total.
-        :return: Whether the total would hit.
-        :rtype: bool
-        """
-        if self._interpreter is not None:
-            self._interpreter.warn_deprecated("wouldhit()", since="v1.1.5", replacement="to_hit >= SimpleCombatant.ac")
-        if self._combatant.ac:
-            return to_hit >= self._combatant.ac
-        return None
 
 
 class SimpleGroup:

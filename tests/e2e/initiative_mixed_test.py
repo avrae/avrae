@@ -1,8 +1,7 @@
-import discord
+import disnake
 import pytest
 
 from gamedata.compendium import compendium
-from tests.conftest import end_init, start_init
 from tests.utils import (
     ATTACK_PATTERN,
     DAGGER_PATTER,
@@ -10,7 +9,9 @@ from tests.utils import (
     SAVE_PATTERN,
     active_character,
     active_combat,
+    end_init,
     requires_data,
+    start_init,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -99,7 +100,7 @@ class TestCharacterMixedInitiative:
 async def attack_X(dhttp, delete_first=False):
     if delete_first:
         await dhttp.receive_delete()
-    embed = discord.Embed(title=rf".* attacks with a {DAGGER_PATTER}!")
+    embed = disnake.Embed(title=rf".* attacks with a {DAGGER_PATTER}!")
     embed.add_field(name="someone", value=ATTACK_PATTERN, inline=False)
     await dhttp.receive_message(embed=embed)
     if not delete_first:
@@ -108,7 +109,7 @@ async def attack_X(dhttp, delete_first=False):
 
 async def cast_X(dhttp):
     await dhttp.receive_delete()
-    embed = discord.Embed(title=r".* casts Fireball!")
+    embed = disnake.Embed(title=r".* casts Fireball!")
     embed.add_field(name="Meta", value=rf"{DAMAGE_PATTERN}\n\*\*DC\*\*: \d+\nDEX Save", inline=False)
     await dhttp.receive_message(embed=embed)
 
@@ -122,7 +123,7 @@ async def attack_I(avrae, dhttp, name="KO1", attack_command="!attack", delete_fi
 
     if delete_first:
         await dhttp.receive_delete()
-    embed = discord.Embed(title=rf".* attacks with a {DAGGER_PATTER}!")
+    embed = disnake.Embed(title=rf".* attacks with a {DAGGER_PATTER}!")
     embed.add_field(name=name, value=ATTACK_PATTERN, inline=False)
     embed.set_footer(text=rf"{name}: <-?\d+/\d+ HP>")
     await dhttp.receive_edit()
@@ -147,7 +148,7 @@ async def cast_I(avrae, dhttp, names=("KO2", "KO3"), cast_command="!cast"):
 
     await dhttp.receive_delete()
     await dhttp.receive_edit()
-    embed = discord.Embed(title=r".* casts Fireball!")
+    embed = disnake.Embed(title=r".* casts Fireball!")
     embed.add_field(name="Meta", value=rf"{DAMAGE_PATTERN}\n\*\*DC\*\*: \d+", inline=False)
     for target in names:
         embed.add_field(name=target, value=SAVE_PATTERN, inline=False)

@@ -1,27 +1,62 @@
 name: Test Gamedata
 
 on:
-  [ push, pull_request ]
+  push:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled  # to approve 3pp PRs, add a label to the PR (like ci: approved)
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: determine if secret is set
+        run: '[ "${{ secrets.ORG_REPO_ACCESS_TOKEN }}" ] || exit 1'
+
   test:
     runs-on: ubuntu-latest
+    needs:
+      - check
+    services:
+      redis: # redis://redis:6379/0
+        image: redis
+        ports:
+          - 6379:6379
+      mongo: # mongodb://root:topsecret@mongo:27017
+        image: mongo
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: topsecret
+    env:
+      NO_DICECLOUD: 1
+      DISCORD_OWNER_USER_ID: "98765432109876543"
+      MONGO_URL: mongodb://root:topsecret@localhost:27017
+      REDIS_URL: redis://localhost:6379/0
+
     steps:
       - name: Set up Python 3.10
         uses: actions/setup-python@v2
         with:
           python-version: "3.10"
 
+      - name: Checkout Avrae
+        uses: actions/checkout@v3
+
       - name: Checkout Gamedata repo
         uses: actions/checkout@v3
         with:
-          repository: avrae/avrae-data-entry
+          path: avrae-data
+          repository: avrae/avrae-data
           token: ${{ secrets.ORG_REPO_ACCESS_TOKEN }}
-
-      - name: Checkout Avrae
-        uses: actions/checkout@v3
-        with:
-          path: avrae
 
       - name: Cache pip
         uses: actions/cache@v2
@@ -35,14 +70,16 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt -r avrae/tests/requirements.txt
+          pip install -r tests/requirements.txt
           mkdir shared
 
       - name: Run Tests
-        run: pytest --tb=short --disable-warnings -rfE --cov=avrae.cogs5e --cov=avrae.cogsmisc --cov=avrae.utils --cov-report=xml:shared/coverage.xml tests/
+        run: pytest --tb=short --disable-warnings -rfE --cov=cogs5e --cov=cogsmisc --cov=utils --cov-report=xml:shared/coverage.xml -m gamedata tests/
+        env:
+          TEST_GAMEDATA_BASE_PATH: "avrae-data/dist"
+          TEST_SIMULATION_BASE_PATH: "avrae-data/dist"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v1
         with:
           files: ./shared/coverage.xml
-          root_dir: avrae

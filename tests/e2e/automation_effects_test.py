@@ -11,8 +11,7 @@ from cogs5e.initiative.utils import InteractionMessageType, combatant_interactio
 from cogs5e.models import automation
 from cogs5e.models.sheet.statblock import StatBlock
 from gamedata.compendium import compendium
-from tests.conftest import end_init, start_init
-from tests.utils import active_character, active_combat, requires_data
+from tests.utils import active_character, active_combat, end_init, requires_data, start_init
 
 log = logging.getLogger(__name__)
 pytestmark = pytest.mark.asyncio

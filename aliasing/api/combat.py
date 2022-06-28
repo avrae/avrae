@@ -1,5 +1,6 @@
-from typing import Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
+import pydantic
 from d20 import roll
 
 import cogs5e.initiative as init
@@ -430,9 +431,9 @@ class SimpleCombatant(AliasStatBlock):
         :type parent: :class:`~aliasing.api.combat.SimpleEffect`
         :param bool end: Whether the effect ends on the end of turn.
         :param str desc: A description of the effect.
-        :param passive_effects: The passive effects this effect should grant.
-        :param attacks: The attacks granted by this effect.
-        :param buttons: The buttons granted by this effect.
+        :param passive_effects: The passive effects this effect should grant. See :ref:`ieffectargs`.
+        :param attacks: The attacks granted by this effect. See :ref:`ieffectargs`.
+        :param buttons: The buttons granted by this effect. See :ref:`ieffectargs`.
         """  # noqa: E501
         # validate types
         name = str(name)
@@ -454,16 +455,25 @@ class SimpleCombatant(AliasStatBlock):
         # parse v4.1 models (passive, attacks, buttons)
         parsed_passive = parsed_attacks = parsed_buttons = None
         if passive_effects:
-            normalized_passive = validators.PassiveEffects.parse_obj(passive_effects).dict(exclude_unset=True)
+            normalized_passive = validators.PassiveEffects.parse_obj(passive_effects).dict(exclude_none=True)
             parsed_passive = init.effects.InitPassiveEffect.from_dict(normalized_passive)
         if attacks:
-            normalized_attacks = validators.AttackInteractionList.parse_obj(attacks).dict(exclude_unset=True)
-            parsed_attacks = [init.effects.AttackInteraction.from_dict(a) for a in normalized_attacks]
+            normalized_attacks = [
+                validators.AttackInteraction.parse_obj(a) for a in validators.unsafeify(attacks, self._interpreter)
+            ]
+            parsed_attacks = [
+                init.effects.AttackInteraction.from_dict(a.dict(exclude_none=True)) for a in normalized_attacks
+            ]
         if buttons:
-            normalized_buttons = validators.ButtonInteractionList.parse_obj(buttons).dict(exclude_unset=True)
-            for button in normalized_buttons:
-                button["id"] = init.utils.create_button_interaction_id()
-            parsed_buttons = [init.effects.ButtonInteraction.from_dict(b) for b in normalized_buttons]
+            normalized_buttons = [
+                validators.ButtonInteraction.parse_obj(b) for b in validators.unsafeify(buttons, self._interpreter)
+            ]
+            parsed_buttons = [
+                init.effects.ButtonInteraction.from_dict(
+                    {**b.dict(exclude_none=True), "id": init.utils.create_button_interaction_id()}
+                )
+                for b in normalized_buttons
+            ]
 
         # add effect
         existing = self._combatant.get_effect(name, True)

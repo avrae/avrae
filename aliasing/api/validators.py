@@ -1,7 +1,7 @@
 """
 Useful validators for methods with complex types (like SimpleCombatant.add_effect()).
 """
-from typing import List, Optional, Sequence, Set
+from typing import List, Optional, Set
 
 import automation_common
 from pydantic import BaseModel, conint, constr, validator
@@ -56,9 +56,9 @@ class AttackInteraction(BaseModel):
     override_default_attack_bonus: Optional[int]
     override_default_casting_mod: Optional[int]
 
-
-class AttackInteractionList(BaseModel):
-    __root__: Sequence[AttackInteraction]
+    def dict(self, *args, **kwargs):
+        kwargs.setdefault("by_alias", True)
+        return super().dict(*args, **kwargs)
 
 
 class ButtonInteraction(BaseModel):
@@ -71,5 +71,43 @@ class ButtonInteraction(BaseModel):
     override_default_casting_mod: Optional[int]
 
 
-class ButtonInteractionList(BaseModel):
-    __root__: Sequence[ButtonInteraction]
+# ==== helpers ====
+def unsafeify(safe_thing, interpreter):
+    """
+    This recursively transforms Draconic safe-types into normal types.
+    Note that this makes a copy of any compound type.
+    """
+    memo_table = {}
+    seen = set()
+
+    # noinspection PyProtectedMember
+    def unsafety_dance(thing):
+        """
+        you can dance if you want to
+        you can leave your types behind
+        """
+        # prevent infinite recursion, also make multiple refs to the same thing more efficient
+        addr = id(thing)
+        if addr in memo_table:
+            return memo_table[addr]
+        elif addr in seen:
+            raise ValueError("Cannot use a self-referencing value here!")
+
+        if isinstance(thing, interpreter._list):
+            seen.add(addr)
+            result = [unsafety_dance(x) for x in thing]
+        elif isinstance(thing, interpreter._set):
+            seen.add(addr)
+            result = set(unsafety_dance(x) for x in thing)
+        elif isinstance(thing, interpreter._dict):
+            seen.add(addr)
+            result = {unsafety_dance(k): unsafety_dance(v) for k, v in thing.items()}
+        elif isinstance(thing, interpreter._str):
+            result = str(thing)
+        else:
+            result = thing
+
+        memo_table[addr] = result
+        return result
+
+    return unsafety_dance(safe_thing)

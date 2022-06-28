@@ -76,6 +76,21 @@ def unsafeify(safe_thing, interpreter):
     """
     This recursively transforms Draconic safe-types into normal types.
     Note that this makes a copy of any compound type.
+
+    It is possible to make this handle self-references by making the compound type branch cases save a ref to an empty
+    container before recursing and adding to it, but this actually breaks pydantic if you feed it a self-referencing
+    model, e.g.
+
+    .. code-block:: python
+
+        class Foo(pydantic.BaseModel):
+            a: typing.List["Foo"]
+        Foo.update_forward_refs()
+        a = []
+        a.append({'a': a})
+        Foo.parse_obj({'a': a})  # RecursionError!
+
+    Therefore, it is intentional that this function raises a ValueError on self-referencing compound types.
     """
     memo_table = {}
     seen = set()

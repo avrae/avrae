@@ -910,6 +910,8 @@ Draconic's syntax is very similar to Python. Other Python features supported in 
 * `Operators <https://docs.python.org/3/reference/expressions.html#unary-arithmetic-and-bitwise-operations>`_ (``2 + 2``, ``"foo" in "foobar"``, etc)
 * `Assignments <https://docs.python.org/3/reference/simple_stmts.html#assignment-statements>`_ (``a = 15``)
 * `List Comprehensions <https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions>`_
+* `Functions <https://docs.python.org/3/tutorial/controlflow.html#defining-functions>`_
+* `Lambda Expressions <https://docs.python.org/3/tutorial/controlflow.html#lambda-expressions>`_
 
 Initiative Models
 -----------------

@@ -3,7 +3,7 @@ import textwrap
 import traceback
 import uuid
 from contextlib import suppress
-from typing import List
+from typing import List, TYPE_CHECKING
 
 import disnake
 import draconic
@@ -23,12 +23,15 @@ from gamedata.lookuputils import long_source_name
 from utils.argparser import argquote, argsplit
 from utils.functions import natural_join
 
+if TYPE_CHECKING:
+    from utils.context import AvraeContext
 
-async def handle_aliases(ctx):
+
+async def handle_aliases(ctx: "AvraeContext"):
     # ctx.prefix: the invoking prefix
     # ctx.invoked_with: the first word
     alias = ctx.invoked_with
-
+    qualified_name_parts = [alias]
     server_invoker = False
 
     # personal alias/servalias
@@ -53,6 +56,7 @@ async def handle_aliases(ctx):
                 break
             try:
                 the_alias = await the_alias.get_subalias_named(ctx, next_word)
+                qualified_name_parts.append(next_word)
             except CollectableNotFound:
                 ctx.view.undo()
                 break
@@ -89,6 +93,18 @@ async def handle_aliases(ctx):
         return await handle_alias_exception(ctx, err)
     except Exception as e:
         return await ctx.send(e)
+
+    # log nlp metadata
+    qualified_alias_name = " ".join(qualified_name_parts)
+    if nlp := ctx.get_nlp_recorder():
+        await nlp.on_alias_resolve(
+            ctx=ctx,
+            alias_name=qualified_alias_name,
+            alias_body=the_alias.code,
+            content_before=ctx.message.content,
+            content_after=message_copy.content,
+            prefix=ctx.prefix
+        )
 
     # use a reimplementation of await ctx.bot.process_commands(message_copy) to set additional metadata
     new_ctx = await ctx.bot.get_context(message_copy)
@@ -378,6 +394,11 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
                 )
                 # analytics
                 await the_snippet.log_invocation(ctx, server_invoker)
+                # log nlp metadata
+                if nlp := ctx.get_nlp_recorder():
+                    await nlp.on_snippet_resolve(
+                        ctx=ctx, snippet_name=arg, snippet_body=the_snippet.code, content_after=args[index]
+                    )
             else:
                 # in case the user is using old-style on the fly templating
                 arg = await evaluator.transformed_str_async(arg, execution_scope=ExecutionScope.PERSONAL_SNIPPET)

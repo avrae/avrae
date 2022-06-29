@@ -193,6 +193,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         self._nodes_with_warnings = set()
         self.warnings: list[ScriptingWarning] = []
 
+        # imports
+        self._import_stack: list[str] = []
+
     @classmethod
     async def new(cls, ctx):
         uvars = await helpers.get_uvars(ctx)
@@ -796,7 +799,15 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         user_ns = self._names
         for ns, addr in imports.items():
-            self._import_one(ns, str(addr), user_ns)
+            # prevent circular imports: if *addr* is already on the import stack, raise an ImportError
+            if addr in self._import_stack:
+                circle = " imports\n".join(self._import_stack)
+                raise ImportError(f"Circular import detected!\n{circle} imports\n{addr}")
+            self._import_stack.append(addr)
+            try:
+                self._import_one(ns, str(addr), user_ns)
+            finally:
+                self._import_stack.pop()
         self._names = user_ns
 
     def _import_one(self, name: str, addr: str, user_ns: dict):
@@ -810,9 +821,18 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             # if the module is in cache, return the ns from cache
             mod_ns = self._cache["imports"][addr]
         except KeyError:
-            # create a new ns and run the gvar
+            # create a new for the execution
             self._names = {}
-            self.execute_module(mod_contents, module_name=addr)
+            # add a recursion depth to prevent super-nested imports
+            self._depth += 1
+            if self._depth > self._config.max_recursion_depth:
+                raise RecursionError("Maximum recursion depth exceeded")
+            # run the gvar
+            try:
+                self.execute_module(mod_contents, module_name=addr)
+            finally:
+                self._depth -= 1
+            # create a namespace and cache it
             mod_ns = SimpleNamespace(**self._names)
             self._cache["imports"][addr] = mod_ns
 

@@ -1,3 +1,12 @@
+# don't fail the build on any coverage changes
+# this is pretty much just noise
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      informational: true
 # for gamedata tests, pull files out of the nested repo
 fixes:
   - "home/runner/work/avrae/avrae/::avrae/"

@@ -1,15 +1,24 @@
 import os
+import re
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
+import disnake
 import pytest
+from disnake import Embed
 
 from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
 from gamedata.compendium import compendium
-from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID, TEST_GUILD_ID, MESSAGE_ID
+from tests.discord_mock_data import DEFAULT_USER_ID, MESSAGE_ID, TEST_CHANNEL_ID, TEST_GUILD_ID
 from utils.settings import ServerSettings
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
+if TYPE_CHECKING:
+    from tests.mocks import Request
+
+GAMEDATA_BASE_PATH = os.getenv("TEST_GAMEDATA_BASE_PATH")
+if GAMEDATA_BASE_PATH is None:
+    GAMEDATA_BASE_PATH = os.path.join(os.path.dirname(__file__), "static/compendium")
 
 # rolled dice: the individual results of dice
 # matches:
@@ -58,10 +67,13 @@ SAVE_PATTERN = rf"\*\*\w+ Save:?\*\*:? {D20_PATTERN}; (Failure|Success)!"
 SAVE_SPELL_PATTERN = rf"{SAVE_PATTERN}\n{DAMAGE_PATTERN}"
 
 
-def requires_data():
+def requires_data(fail_if_no_data=False):
     """
-    A wrapper that skips a test if data is not loaded.
-    Only a severely limited subset of data is available in tests.
+    A decorator that skips a test if data is not loaded.
+    By default, only a severely limited subset of data is available in tests.
+    Test environments can inject real gamedata by writing to tests/static/compendium.
+
+    Default exposed gamedata:
     Conditions: FakeCondition
     Names: Elf, Family
     Rules: Fake Rule
@@ -76,11 +88,15 @@ def requires_data():
     Spells: Fire Bolt, Fireball
     """
     if not compendium.spells:  # if spells have not loaded, no data has
-        compendium.load_all_json(base_path=os.path.join(dir_path, "static", "compendium"))
+        compendium.load_all_json(base_path=GAMEDATA_BASE_PATH)
         compendium.load_common()
 
     if not compendium.spells:  # we have no data, then
-        return pytest.mark.skip(reason="Test requires data")
+        if not fail_if_no_data:
+            return pytest.mark.skip(reason="Test requires gamedata")
+        else:
+            # this returns a decorator, so make our actual method just fail
+            return lambda func: lambda *_, **__: pytest.fail("Test requires gamedata")
 
     return lambda func: func
 
@@ -132,3 +148,83 @@ class ContextBotProxy:
 class MessageProxy:
     def __init__(self):
         self.id = int(MESSAGE_ID)
+
+
+# ==== assertion helpers ====
+def compare_embeds(request_embed, embed, *, regex: bool = True):
+    """Recursively checks to ensure that two embeds have the same structure."""
+    assert type(request_embed) == type(embed)
+
+    if isinstance(embed, dict):
+        for k, v in embed.items():
+            if k == "inline":
+                continue
+            elif isinstance(v, (dict, list)):
+                compare_embeds(request_embed[k], embed[k])
+            elif isinstance(v, str) and regex:
+                assert re.match(embed[k], request_embed[k])
+            else:
+                assert request_embed[k] == embed[k]
+    elif isinstance(embed, list):  # list of fields, usually
+        assert len(embed) <= len(request_embed)
+        for e, r in zip(embed, request_embed):
+            compare_embeds(r, e)
+    else:
+        assert request_embed == embed
+
+
+def embed_assertions(embed):
+    """Checks to ensure that the embed is valid."""
+    assert len(embed) <= 6000
+    assert len(embed.title) <= 256
+    assert len(embed.description) <= 4096
+    assert len(embed.fields) <= 25
+    for field in embed.fields:
+        assert 0 < len(field.name) <= 256
+        assert 0 < len(field.value) <= 1024
+    if embed.footer:
+        assert len(embed.footer.text) <= 2048
+    if embed.author:
+        assert len(embed.author.name) <= 256
+
+
+def message_content_check(request: "Request", content: str = None, *, regex: bool = True, embed: Embed = None):
+    match = None
+    if content:
+        if regex:
+            match = re.match(content, request.data.get("content"))
+            assert match
+        else:
+            assert request.data.get("content") == content
+    if embed:
+        embed_data = request.data.get("embeds")
+        assert embed_data is not None and embed_data
+        embed_assertions(disnake.Embed.from_dict(embed_data[0]))
+        compare_embeds(embed_data[0], embed.to_dict(), regex=regex)
+    return match
+
+
+# ==== combat helpers ====
+async def start_init(avrae, dhttp):
+    dhttp.clear()
+    avrae.message("!init begin")
+    await dhttp.receive_delete()
+    await dhttp.receive_message()
+    await dhttp.receive_pin()
+    await dhttp.receive_edit()
+    await dhttp.receive_message()
+
+
+async def end_init(avrae, dhttp):
+    dhttp.clear()
+    avrae.message("!init end")
+    await dhttp.receive_delete()
+    await dhttp.receive_message()
+    avrae.message("y")
+    await dhttp.receive_delete()
+    await dhttp.receive_delete()
+    await dhttp.receive_message()
+    await dhttp.receive_message(dm=True)
+    await dhttp.receive_edit()
+    await dhttp.receive_unpin()
+    await dhttp.receive_edit()

@@ -1,4 +1,4 @@
-import discord
+import disnake
 import pytest
 
 pytestmark = pytest.mark.asyncio
@@ -9,7 +9,7 @@ async def test_help(avrae, dhttp):
     await dhttp.drain()
 
     avrae.message("!help -here")
-    await dhttp.receive_message(embed=discord.Embed())
+    await dhttp.receive_message(embed=disnake.Embed())
 
 
 async def test_help_commands(avrae, dhttp):
@@ -18,7 +18,7 @@ async def test_help_commands(avrae, dhttp):
         await dhttp.drain()
 
         avrae.message(f"!help {command.qualified_name} -here")
-        await dhttp.receive_message(embed=discord.Embed())
+        await dhttp.receive_message(embed=disnake.Embed())
 
 
 async def test_help_modules(avrae, dhttp):
@@ -27,4 +27,4 @@ async def test_help_modules(avrae, dhttp):
         await dhttp.drain()
 
         avrae.message(f"!help {cog} -here")
-        await dhttp.receive_message(embed=discord.Embed())
+        await dhttp.receive_message(embed=disnake.Embed())

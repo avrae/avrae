@@ -1,9 +1,9 @@
 import pytest
 from discord.ext.commands import ExpectedClosingQuoteError
 
+from cogs5e.models.errors import InvalidArgument
 from utils.argparser import argparse, argquote, argsplit
 from utils.enums import AdvantageType
-from cogs5e.models.errors import InvalidArgument
 
 
 def test_argsplit():

@@ -89,43 +89,6 @@ class Combatant(BaseCombatant, StatBlock):
         self._cache = {}
 
     @classmethod
-    def new(
-        cls,
-        name: str,
-        controller_id: int,
-        init: int,
-        init_skill: Skill,
-        max_hp: int,
-        ac: int,
-        private: bool,
-        resists: Resistances,
-        ctx,
-        combat,
-        stats: BaseStats = None,
-    ):
-        skills = Skills.default(stats)
-        skills.update({"initiative": init_skill})
-        saves = Saves.default(stats)
-        levels = Levels({"Monster": 0})
-        id = create_combatant_id()
-        return cls(
-            ctx,
-            combat,
-            id,
-            name,
-            controller_id,
-            private,
-            init,
-            stats=stats,
-            levels=levels,
-            resistances=resists,
-            skills=skills,
-            saves=saves,
-            max_hp=max_hp,
-            ac=ac,
-        )
-
-    @classmethod
     def from_dict(cls, raw, ctx, combat):
         for key, klass in cls.DESERIALIZE_MAP.items():
             if key in raw:

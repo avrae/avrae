@@ -791,6 +791,13 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Imports Draconic global variables as modules in the current namespace. See :ref:`using-imports` for details.
 
+        Usually this should be the first statement in a code block if imports are used.
+
+        .. warning::
+
+            Only import modules from trusted sources! The entire contents of an imported module is executed once upon
+            import, and can do bad things like delete all of your variables.
+
         >>> using(
         ...     hello="50943a96-381b-427e-adb9-eea8ebf61f27"
         ... )

@@ -59,7 +59,7 @@ async def handle_required_license(ctx, err):
     :type ctx: utils.context.AvraeContext
     :type err: cogs5e.models.errors.RequiresLicense
     """
-    result = err.entity
+    result = err.entity  # type: Sourced
 
     await ctx.bot.mdb.analytics_nsrd_lookup.update_one(
         {"type": result.entity_type, "name": result.name}, {"$inc": {"num_lookups": 1}}, upsert=True
@@ -67,48 +67,26 @@ async def handle_required_license(ctx, err):
 
     embed = EmbedWithAuthor(ctx)
     if not err.has_connected_ddb:
-        # was the user blocked from nSRD by a feature flag?
-        ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
-        if ddb_user is None:
-            blocked_by_ff = False
-        else:
-            blocked_by_ff = not (await ctx.bot.ldclient.variation("entitlements-enabled", ddb_user.to_ld_dict(), False))
-
-        if blocked_by_ff:
-            # get the message from feature flag
-            # replacements:
-            # $entity_type$, $entity_name$, $source$, $long_source$
-            unavailable_title = await ctx.bot.ldclient.variation(
-                "entitlements-disabled-header", ddb_user.to_ld_dict(), f"{result.name} is not available"
-            )
-            unavailable_desc = await ctx.bot.ldclient.variation(
-                "entitlements-disabled-message", ddb_user.to_ld_dict(), f"{result.name} is currently unavailable"
-            )
-
-            embed.title = (
-                unavailable_title.replace("$entity_type$", result.entity_type)
-                .replace("$entity_name$", result.name)
-                .replace("$source$", result.source)
-                .replace("$long_source$", long_source_name(result.source))
-            )
-            embed.description = (
-                unavailable_desc.replace("$entity_type$", result.entity_type)
-                .replace("$entity_name$", result.name)
-                .replace("$source$", result.source)
-                .replace("$long_source$", long_source_name(result.source))
-            )
-        else:
-            embed.title = f"Connect your D&D Beyond account to view {result.name}!"
-            embed.url = "https://www.dndbeyond.com/account"
-            embed.description = (
-                "It looks like you don't have your Discord account connected to your D&D Beyond account!\n"
-                "Linking your account means that you'll be able to use everything you own on "
-                "D&D Beyond in Avrae for free - you can link your accounts "
-                "[here](https://www.dndbeyond.com/account)."
-            )
-            embed.set_footer(
-                text="Already linked your account? It may take up to a minute for Avrae to recognize the link."
-            )
+        embed.title = f"Connect your D&D Beyond account to view {result.name}!"
+        embed.url = "https://www.dndbeyond.com/account"
+        embed.description = (
+            "It looks like you don't have your Discord account connected to your D&D Beyond account!\n"
+            "Linking your account means that you'll be able to use everything you own on "
+            "D&D Beyond in Avrae for free - you can link your accounts "
+            "[here](https://www.dndbeyond.com/account)."
+        )
+        embed.set_footer(
+            text="Already linked your account? It may take up to a minute for Avrae to recognize the link."
+        )
+    elif result.is_legacy:
+        embed.title = f"{result.name} is no longer available!"
+        embed.description = (
+            f"This {result.entity_type} is legacy content that doesn't reflect the latest rules and lore. "
+            f"You can still view **{result.name}** here if you have access to it on D&D Beyond, but it is no longer "
+            f"available for purchase.\n\n"
+            f"[View on D&D Beyond]({result.marketplace_url}) | [Learn More](https://www.dndbeyond.com/legacy)"
+        )
+        embed.url = result.marketplace_url
     else:
         embed.title = f"Unlock {result.name} on D&D Beyond to view it here!"
         embed.description = (

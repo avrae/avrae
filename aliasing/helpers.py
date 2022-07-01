@@ -103,7 +103,7 @@ async def handle_aliases(ctx: "AvraeContext"):
             alias_body=the_alias.code,
             content_before=ctx.message.content,
             content_after=message_copy.content,
-            prefix=ctx.prefix
+            prefix=ctx.prefix,
         )
 
     # use a reimplementation of await ctx.bot.process_commands(message_copy) to set additional metadata
@@ -540,31 +540,17 @@ async def workshop_entitlements_check(ctx, ws_obj):
 async def handle_alias_required_licenses(ctx, err):
     embed = EmbedWithAuthor(ctx)
     if not err.has_connected_ddb:
-        # was the user blocked from nSRD by a feature flag?
-        ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
-        if ddb_user is None:
-            blocked_by_ff = False
-        else:
-            blocked_by_ff = not (await ctx.bot.ldclient.variation("entitlements-enabled", ddb_user.to_ld_dict(), False))
-
-        if blocked_by_ff:
-            embed.title = "D&D Beyond is currently unavailable"
-            embed.description = (
-                "I was unable to communicate with D&D Beyond to confirm access to:\n"
-                f"{', '.join(e.name for e in err.entities)}"
-            )
-        else:
-            embed.title = f"Connect your D&D Beyond account to use this customization!"
-            embed.url = "https://www.dndbeyond.com/account"
-            embed.description = (
-                "This customization requires access to one or more entities that are not in the SRD.\n"
-                "Linking your account means that you'll be able to use everything you own on "
-                "D&D Beyond in Avrae for free - you can link your accounts "
-                "[here](https://www.dndbeyond.com/account)."
-            )
-            embed.set_footer(
-                text="Already linked your account? It may take up to a minute for Avrae to recognize the link."
-            )
+        embed.title = f"Connect your D&D Beyond account to use this customization!"
+        embed.url = "https://www.dndbeyond.com/account"
+        embed.description = (
+            "This customization requires access to one or more entities that are not in the SRD.\n"
+            "Linking your account means that you'll be able to use everything you own on "
+            "D&D Beyond in Avrae for free - you can link your accounts "
+            "[here](https://www.dndbeyond.com/account)."
+        )
+        embed.set_footer(
+            text="Already linked your account? It may take up to a minute for Avrae to recognize the link."
+        )
     else:
         missing_source_ids = {e.source for e in err.entities}
         if len(err.entities) == 1:  # 1 entity, display entity piecemeal

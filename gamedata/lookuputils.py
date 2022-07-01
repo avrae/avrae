@@ -83,7 +83,7 @@ async def handle_required_license(ctx, err):
         embed.description = (
             f"This {result.entity_type} is legacy content that doesn't reflect the latest rules and lore. "
             f"You can still view **{result.name}** here if you have access to it on D&D Beyond, but it is no longer "
-            f"available for purchase.\n\n"
+            "available for purchase.\n\n"
             f"[View on D&D Beyond]({result.marketplace_url}) | [Learn More](https://www.dndbeyond.com/legacy)"
         )
         embed.url = result.marketplace_url

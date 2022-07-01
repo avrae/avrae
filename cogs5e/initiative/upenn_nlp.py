@@ -404,7 +404,7 @@ class NLPRecorder:
         alias_body: str,
         content_before: str,
         content_after: str,
-        prefix: str
+        prefix: str,
     ):
         """Called each time an alias is resolved."""
         is_recording, combat_id = await self._recording_info(ctx.guild.id, ctx.channel.id)
@@ -417,7 +417,7 @@ class NLPRecorder:
                     alias_body=alias_body,
                     content_before=content_before,
                     content_after=content_after,
-                    prefix=prefix
+                    prefix=prefix,
                 )
             )
 

@@ -160,7 +160,7 @@ class InitTracker(commands.Cog):
             combat.nlp_record_session_id = utils.create_nlp_record_session_id()
             await self.nlp.on_combat_start(combat)
 
-        await combat.final()
+        await combat.final(ctx)
         await ctx.send(out)
 
     @init.command()
@@ -263,7 +263,7 @@ class InitTracker(commands.Cog):
             grp.add_combatant(me)
             await ctx.send(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
 
-        await combat.final()
+        await combat.final(ctx)
 
     @init.command()
     async def madd(self, ctx, monster_name: str, *args):
@@ -382,7 +382,7 @@ class InitTracker(commands.Cog):
                 log.warning("\n".join(traceback.format_exception(type(e), e, e.__traceback__)))
                 out += "Error adding combatant: {}\n".format(e)
 
-        await combat.final()
+        await combat.final(ctx)
         await ctx.send(out)
         if to_pm:
             await ctx.author.send(to_pm)
@@ -447,7 +447,7 @@ class InitTracker(commands.Cog):
             grp.add_combatant(me)
             embed.set_footer(text=f"Joined group {grp.name}!")
 
-        await combat.final()
+        await combat.final(ctx)
         await ctx.send(embed=embed)
         if (gamelog := self.bot.get_cog("GameLog")) and check_result is not None:
             await gamelog.send_check(ctx, me.character, check_result.skill_name, check_result.rolls)
@@ -507,7 +507,7 @@ class InitTracker(commands.Cog):
 
         # send and commit
         await utils.send_turn_message(ctx, combat, before=advanced_round_messages, after=removed_messages)
-        await combat.final()
+        await combat.final(ctx)
 
     @init.command(name="prev", aliases=["previous", "rewind"])
     async def init_prev(self, ctx):
@@ -522,7 +522,7 @@ class InitTracker(commands.Cog):
         combat.rewind_turn()
 
         await utils.send_turn_message(ctx, combat)
-        await combat.final()
+        await combat.final(ctx)
 
     @init.command(name="move", aliases=["goto"])
     async def init_move(self, ctx, target=None):
@@ -549,7 +549,7 @@ class InitTracker(commands.Cog):
                 combat.goto_turn(combatant, True)
 
         await utils.send_turn_message(ctx, combat)
-        await combat.final()
+        await combat.final(ctx)
 
     @init.command(name="skipround", aliases=["round", "skiprounds"])
     async def skipround(self, ctx, numrounds: int = 1):
@@ -569,7 +569,7 @@ class InitTracker(commands.Cog):
             removed_messages.append(f"{co.name} automatically removed from combat.")
 
         await utils.send_turn_message(ctx, combat, before=messages, after=removed_messages)
-        await combat.final()
+        await combat.final(ctx)
 
     @init.command(name="reroll", aliases=["shuffle"])
     async def reroll(self, ctx, *args):
@@ -598,7 +598,7 @@ class InitTracker(commands.Cog):
         except disnake.HTTPException:
             pass
 
-        await combat.final()
+        await combat.final(ctx)
 
     @init.command(name="meta", aliases=["metaset"])
     async def metasetting(self, ctx, *settings):
@@ -670,7 +670,7 @@ class InitTracker(commands.Cog):
             await ctx.send("Removed note.")
         else:
             await ctx.send("Added note.")
-        await combat.final()
+        await combat.final(ctx)
 
     @init.command(aliases=["opts"])
     async def opt(self, ctx, name: str, *args):
@@ -841,7 +841,7 @@ class InitTracker(commands.Cog):
                 await destination.send(
                     "\n".join(messages), allowed_mentions=disnake.AllowedMentions(users=list(allowed_mentions))
                 )
-            await combat.final()
+            await combat.final(ctx)
         else:
             await ctx.send("No valid options found.")
 
@@ -903,7 +903,7 @@ class InitTracker(commands.Cog):
         if combatant.hp is None:
             combatant.set_hp(0)
         combatant.modify_hp(hp_roll.total)
-        await combat.final()
+        await combat.final(ctx)
         if "d" in hp:
             delta = hp_roll.result
         else:
@@ -930,7 +930,7 @@ class InitTracker(commands.Cog):
                 return await ctx.send("You can't have a negative max HP!")
             combatant.max_hp = hp_roll.total
 
-        await combat.final()
+        await combat.final(ctx)
         await gameutils.send_hp_result(ctx, combatant, delta)
 
     @hp.command(name="mod", hidden=True)
@@ -949,7 +949,7 @@ class InitTracker(commands.Cog):
         before = combatant.hp or 0
         hp_roll = roll(hp)
         combatant.set_hp(hp_roll.total)
-        await combat.final()
+        await combat.final(ctx)
         await gameutils.send_hp_result(ctx, combatant, f"{combatant.hp - before:+}")
 
     @init.command()
@@ -977,7 +977,7 @@ class InitTracker(commands.Cog):
         if "d" in thp:
             delta = f"({thp_roll.result})"
 
-        await combat.final()
+        await combat.final(ctx)
         await gameutils.send_hp_result(ctx, combatant, delta)
 
     @init.command()
@@ -1065,7 +1065,7 @@ class InitTracker(commands.Cog):
                     out += f"\nRemoved {', '.join(conflicts)} due to concentration conflict!"
             embed.add_field(name=combatant.name, value=out)
         await ctx.send(embed=embed)
-        await combat.final()
+        await combat.final(ctx)
 
     @init.command(name="re")
     async def remove_effect(self, ctx, name: str, effect: str = None):
@@ -1094,7 +1094,7 @@ class InitTracker(commands.Cog):
                 to_remove.remove()
                 out += f"Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}"
         await ctx.send(out)
-        await combat.final()
+        await combat.final(ctx)
 
     @init.group(
         aliases=["a", "action"],
@@ -1421,7 +1421,7 @@ class InitTracker(commands.Cog):
                 )
         combat.remove_combatant(combatant)
         await ctx.send("{} removed from combat.".format(combatant.name))
-        await combat.final()
+        await combat.final(ctx)
 
     @init.command()
     async def end(self, ctx, args=None):

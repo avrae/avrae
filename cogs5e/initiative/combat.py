@@ -65,7 +65,7 @@ class Combat:
         self.round_num = round_num
         self._turn = turn_num
         self._current_index = current_index
-        self.ctx = ctx
+        self.ctx = ctx  # try to avoid using this whereever possible
         self.metadata = metadata
         self.nlp_record_session_id = nlp_record_session_id
 
@@ -584,28 +584,26 @@ class Combat:
         return out.format("\n".join(combatant_strs))
 
     # db
-    async def commit(self):
+    async def commit(self, ctx):
         """Commits the combat to db."""
-        if not self.ctx:
-            raise RequiresContext
         for pc in self.get_combatants():
             if isinstance(pc, PlayerCombatant):
-                await pc.character.commit(self.ctx)
-        await self.ctx.bot.mdb.combats.update_one(
+                await pc.character.commit(ctx)
+        await ctx.bot.mdb.combats.update_one(
             {"channel": self._channel},
             {"$set": self.to_dict(), "$currentDate": {"lastchanged": True}},
             upsert=True,
         )
 
-    async def final(self):
+    async def final(self, ctx):
         """Commit, update the summary message, and fire any recorder events in parallel."""
         # Eventually edit the summary message with the latest summary - this is fire-and-forget so that edit ratelimits
         # do not hold up the rest of the execution that might be waiting on this.
         asyncio.create_task(self.update_summary())
         if self.nlp_recorder is None:
-            await self.commit()
+            await self.commit(ctx)
         else:
-            await asyncio.gather(self.commit(), self.nlp_recorder.on_combat_commit(self))
+            await asyncio.gather(self.commit(ctx), self.nlp_recorder.on_combat_commit(self, ctx))
 
     # misc
     @staticmethod

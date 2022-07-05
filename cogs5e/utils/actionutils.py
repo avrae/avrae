@@ -5,7 +5,7 @@ from typing import Iterable, List, Optional, TYPE_CHECKING, Union
 import disnake
 
 from cogs5e.initiative import InitiativeEffect
-from cogs5e.initiative.types import BaseCombatant, CombatantType
+from cogs5e.initiative.types import BaseCombatant
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLicense
 from gamedata import lookuputils
@@ -15,7 +15,7 @@ from utils.functions import a_or_an, confirm, maybe_http_url, natural_join, sear
 from utils.settings import ServerSettings
 
 if TYPE_CHECKING:
-    from cogs5e.initiative import Combatant, PlayerCombatant, Combat
+    from cogs5e.initiative import Combatant, Combat
     from cogs5e.models.automation import AutomationResult, Automation
     from cogs5e.models.character import Character
     from cogs5e.models.sheet.statblock import StatBlock
@@ -309,7 +309,7 @@ async def cast_spell(
 
         # commit the caster
         if combat:
-            await combat.final()
+            await combat.final(ctx)
         elif hasattr(caster, "commit"):
             await caster.commit(ctx)
 
@@ -373,7 +373,7 @@ async def run_automation(
         # NLP: record the automation run
         if (nlp_recorder := combat.nlp_recorder) is not None:
             await nlp_recorder.on_automation_run(ctx, combat, automation, result, caster, targets)
-        await combat.final()
+        await combat.final(ctx)
     # commit character only if we have not already committed it via combat final
     if (
         (result.caster_needs_commit or always_commit_caster)

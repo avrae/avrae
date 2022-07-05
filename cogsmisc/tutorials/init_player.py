@@ -118,7 +118,7 @@ class PlayerInitiative(Tutorial):
             if combat.current_combatant is not pc:
                 combat.goto_turn(pc, is_combatant=True)
                 await initutils.send_turn_message(ctx, combat)
-                await combat.final()
+                await combat.final(ctx)
 
             embed = TutorialEmbed(self, ctx)
             embed.title = "Combatant Status"
@@ -359,7 +359,7 @@ class PlayerInitiative(Tutorial):
             )
             pc.add_effect(effect_obj)
             await ctx.send(f"Added effect Future Lunch to {pc.name}.")
-            await combat.final()
+            await combat.final(ctx)
 
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
@@ -470,7 +470,7 @@ async def add_tarrasque(ctx, combat):
         private=True,
     )
     combat.add_combatant(terry)
-    await combat.final()
+    await combat.final(ctx)
     return terry
 
 

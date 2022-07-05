@@ -560,7 +560,7 @@ async def add_orkira(ctx, combat):
         hp=50,
     )
     combat.add_combatant(orkira)
-    await combat.final()
+    await combat.final(ctx)
     return orkira
 
 

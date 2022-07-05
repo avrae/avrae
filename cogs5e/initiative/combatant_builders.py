@@ -1,7 +1,7 @@
 from d20 import roll
 from d20 import roll
 from disnake.ext import commands
-from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from utils.constants import STAT_ABBR_MAP
 from utils.argparser import ParsedArguments
@@ -13,11 +13,11 @@ from . import (
     utils,
 )
 
+
 async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
     private = False
     place = None
     controller = ctx.author.id
-    group = None
     hp = None
     ac = None
     resists = {}
@@ -53,7 +53,7 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
     skills = Skills.default(stats)
     for skill in profs:
         skills[skill].prof = 1
-        skills[skill].value += stats.prof_bonus    
+        skills[skill].value += stats.prof_bonus
     for skill in exps:
         skills[skill].prof = 2
         skills[skill].value += 2*stats.prof_bonus
@@ -72,7 +72,7 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
         except (ValueError, TypeError):
             place = modifier
 
-    if Place is None:
+    if place is None:
         init_roll = roll(skills.initiative.d20())
         init = init_roll.total
     else:
@@ -102,24 +102,24 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
     creature_type = args.last("type", type_=str, default=None)
 
     me = Combatant(
-        ctx = ctx,
-        combat = combat,
-        id = id,
-        name = name,
+        ctx=ctx,
+        combat=combat,
+        id=id,
+        name=name,
         controller_id = controller,
         private = private,
-        init = init,
+        init=init,
         notes = note,
         # statblock info
-        stats = stats,
-        levels = levels,
-        skills = skills,
-        saves = saves,
+        stats=stats,
+        levels=levels,
+        skills=skills,
+        saves=saves,
         resistances = Resistances.from_dict(resists),
-        ac = ac,
+        ac=ac,
         max_hp = hp,
         temp_hp = thp,
-        creature_type = creature_type,
+        creature_type=creature_type,
     )
 
     return me, init_roll

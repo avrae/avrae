@@ -20,7 +20,7 @@ from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
-from utils.argparser import argparse
+from utils.argparser import argparse, ParsedArguments
 from utils.functions import (
     confirm,
     get_guild_member,
@@ -164,7 +164,7 @@ class InitTracker(commands.Cog):
         await ctx.send(out)
 
     @init.command()
-    async def add(self, ctx, name: str, *args):
+    async def add(self, ctx, modifier: int, name: str, *args):
         """
         Adds a generic combatant to the initiative order.
         Generic combatants have a 10 in every stat and +0 to every modifier by default.
@@ -199,9 +199,14 @@ class InitTracker(commands.Cog):
 
         combat = await ctx.get_combat()
 
-        me = await add_builder(ctx, combat, name, args)
-
+        if combat.get_combatant(name, True) is not None:
+            await ctx.send("Combatant already exists.")
+            return
+    
         args = argparse(args)
+
+        me, init_roll = await add_builder(ctx, combat, name, modifier, args)
+
         group = args.last("group",None)
         
         if group is None:

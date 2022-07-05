@@ -514,21 +514,8 @@ Used to specify an attack granted by an initiative effect: some automation that 
 
     .. attribute:: attack
 
-        The Attack model is any valid individual entity as exported by the attack editor on the Avrae Dashboard:
-
-        .. code-block:: typescript
-
-            {
-                _v: 2;
-                name: string;
-                automation: Effect[];
-                verb?: string;
-                proper?: boolean;
-                criton?: number;
-                phrase?: string;
-                thumb?: string;
-                extra_crit_damage?: string;
-            }
+        The Attack model is any valid individual entity as exported by the attack editor on the Avrae Dashboard.
+        See :ref:`attack-structure`.
 
     .. attribute:: defaultDC
 
@@ -1403,3 +1390,68 @@ An effect that lights the target on fire, adding two buttons on their turn to ta
       }
     ]
 
+.. _attack-structure:
+
+Custom Attack Structure
+-----------------------
+
+.. code-block:: typescript
+
+    {
+        _v: 2;
+        name: string;
+        automation: Effect[];
+        verb?: string;
+        proper?: boolean;
+        criton?: number;
+        phrase?: string;
+        thumb?: string;
+        extra_crit_damage?: string;
+    }
+
+In order to use Automation, it needs to be contained within a custom attack or spell. We recommend building these on
+the `Avrae Dashboard <https://avrae.io/dashboard/characters>`_, but if you wish to write a custom attack by hand, the
+structure is documented here.
+
+Hand-written custom attacks may be written in JSON or YAML and imported using the ``!a import`` command.
+
+.. class:: AttackModel
+
+    .. attribute:: _v
+
+        This must always be set to ``2``.
+
+    .. attribute:: name
+
+        The name of the attack.
+
+    .. attribute:: automation
+
+        The automation of the attack: a list of effects (documented above).
+
+    .. attribute:: verb
+
+        *optional, default "attacks with"* - The verb to use in attack title displays.
+
+    .. attribute:: proper
+
+        *optional, default false* - Whether or not the attack's name is a proper noun. Affects title displays.
+
+    .. attribute:: criton
+
+        *optional* - The natural roll (or higher) this attack should crit on. For example, ``criton: 18`` would cause
+        this attack to crit on a natural roll of 18, 19, or 20.
+
+    .. attribute:: phrase
+
+        *optional* - A short snippet of flavor text to display when this attack is used.
+
+    .. attribute:: thumb
+
+        *optional* - A URL to an image to display in a thumbnail when this attack is used.
+
+    .. attribute:: extra_crit_damage
+
+        *optional* - How much extra damage to deal when this attack crits, in addition to normal crit rules such as
+        doubling damage dice. For example, if this attack normally deals 1d6 damage with ``extra_crit_damage: "1d8"``,
+        it will deal 2d6 + 1d8 damage on a crit.

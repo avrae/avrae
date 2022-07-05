@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Optional, TYPE_CHECKING
 
 import discord
 from discord.ext.commands import Context
@@ -7,6 +8,10 @@ from discord.ext.commands import Context
 from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
 from utils.settings import ServerSettings
+
+if TYPE_CHECKING:
+    from cogs5e.initiative.upenn_nlp import NLPRecorder
+    import cogs5e
 
 _sentinel = object()
 
@@ -70,6 +75,13 @@ class AvraeContext(Context):
         server_settings = await ServerSettings.for_guild(self.bot.mdb, self.guild.id)
         self._server_settings = server_settings
         return server_settings
+
+    def get_nlp_recorder(self) -> Optional["NLPRecorder"]:
+        """Returns the NLP recorder singleton."""
+        combat_cog = self.bot.get_cog("InitTracker")  # type: Optional[cogs5e.initiative.InitTracker]
+        if combat_cog is None:
+            return None
+        return combat_cog.nlp
 
     # ==== overrides ====
     async def trigger_typing(self):

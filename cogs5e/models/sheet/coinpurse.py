@@ -117,7 +117,7 @@ class Coinpurse(HasIntegrationMixin):
         if not all(
             (isinstance(pp, int), isinstance(gp, int), isinstance(ep, int), isinstance(sp, int), isinstance(cp, int))
         ):
-            raise TypeError("All values must be numeric.")
+            raise TypeError("All values must be integers.")
 
         if not all((pp >= 0, gp >= 0, ep >= 0, sp >= 0, cp >= 0)):
             raise InvalidArgument("You cannot put a currency into negative numbers.")

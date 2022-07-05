@@ -35,12 +35,20 @@ log = logging.getLogger(__name__)
 
 # ==== models ====
 class RecordedEvent(BaseModel):
+    """Base class for all recorded events"""
+
     combat_id: str
     event_type: str
     timestamp: float = Field(default_factory=time.time)
 
 
 class RecordedMessage(RecordedEvent):
+    """
+    A message was sent in a recorded channel.
+
+    Causality: This is the first event in an interaction context.
+    """
+
     event_type = "message"
     message_id: int
     author_id: str
@@ -49,6 +57,7 @@ class RecordedMessage(RecordedEvent):
     content: str
     embeds: List[dict]  # call disnake.Embed.to_dict() to generate these
     components: List[dict]  # call disnake.Component.to_dict() to generate these
+    referenced_message_id: Optional[int]  # if the message was a reply (or pin add/crosspost), what does it reference?
 
     @classmethod
     def from_message(cls, combat_id: str, message: disnake.Message):
@@ -61,10 +70,57 @@ class RecordedMessage(RecordedEvent):
             content=message.content,
             embeds=[embed.to_dict() for embed in message.embeds],
             components=[component.to_dict() for component in message.components],
+            referenced_message_id=message.reference.message_id if message.reference is not None else None,
         )
 
 
+class RecordedAliasResolution(RecordedEvent):
+    """
+    An alias was evaluated.
+
+    Causality:
+    - Must occur after a RecordedMessage with the same ``message_id``
+    - If a valid command, must occur before a RecordedCommandInvocation with the same ``message_id``
+    """
+
+    event_type = "alias_resolution"
+    message_id: int
+    alias_name: str
+    alias_body: str
+    content_before: str
+    content_after: str
+    prefix: str
+
+
+class RecordedSnippetResolution(RecordedEvent):
+    """
+    A snippet was evaluated. May occur multiple times per command execution.
+
+    Causality:
+    - Must occur after a RecordedMessage with the same ``message_id``
+    - If in an alias, must occur after a RecordedAliasResolution with the same ``message_id``
+    - If a valid command, must occur before a RecordedCommandInvocation with the same ``message_id``
+    """
+
+    event_type = "snippet_resolution"
+    message_id: int
+    snippet_name: str
+    snippet_body: str
+    content_after: str
+
+
 class RecordedCommandInvocation(RecordedMessage):
+    """
+    A command successfully completed in a recorded channel.
+
+    Note: ``content`` may not match the content in the corresponding RecordedMessage as the recorded content here
+    is the resolved content after aliases.
+
+    Causality: A RecordedCommandInvocation will always happen after a RecordedMessage with the same ``message_id``.
+    If an alias or snippet was used (after v4.1.0), it must happen after a RecordedAliasResolution and/or
+    zero or more RecordedSnippetResolutions with the same ``message_id``.
+    """
+
     event_type = "command"
     prefix: str
     command_name: str
@@ -97,6 +153,7 @@ class RecordedCommandInvocation(RecordedMessage):
             content=message.content,
             embeds=[embed.to_dict() for embed in message.embeds],
             components=[component.to_dict() for component in message.components],
+            referenced_message_id=message.reference.message_id if message.reference is not None else None,
             prefix=ctx.prefix,
             command_name=ctx.command.qualified_name,
             called_by_alias=ctx.nlp_is_alias,
@@ -106,6 +163,12 @@ class RecordedCommandInvocation(RecordedMessage):
 
 
 class RecordedButtonInteraction(RecordedEvent):
+    """
+    A button was clicked in a recorded channel.
+
+    Causality: This is the first event in an interaction context.
+    """
+
     event_type = "button_press"
     interaction_id: int
     interaction_message_id: int
@@ -128,6 +191,15 @@ class RecordedButtonInteraction(RecordedEvent):
 
 
 class RecordedAutomation(RecordedEvent):
+    """
+    An Automation document finished executing in a recorded channel.
+
+    Causality:
+    - Must occur after a RecordedMessage or RecordedButtonInteraction with the same ``message_id`` or ``interaction_id``
+    - If message, must occur before RecordedCommandInvocation with the same ``message_id``
+    - Must occur before a RecordedCombatState which *may* have the same ``interaction_id``
+    """
+
     event_type = "automation_run"
     interaction_id: int
     automation: Any
@@ -156,6 +228,15 @@ class RecordedAutomation(RecordedEvent):
 
 
 class RecordedCombatState(RecordedEvent):
+    """
+    The recorded combat has been committed.
+
+    Causality:
+    - Must occur after a RecordedMessage or RecordedButtonInteraction which *may* have the same ``message_id`` or
+      ``interaction_id``
+    - Must occur before RecordedCommandInvocation which *may* have the same ``message_id`` or ``interaction_id``
+    """
+
     event_type = "combat_state_update"
     # due to caching this might not actually be the interaction this state update is tied to
     probable_interaction_id: int
@@ -316,6 +397,44 @@ class NLPRecorder:
         # record a combat end meta marker
         await self._record_event(RecordedEvent(combat_id=combat.nlp_record_session_id, event_type="combat_end"))
 
+    async def on_alias_resolve(
+        self,
+        ctx: "AvraeContext",
+        alias_name: str,
+        alias_body: str,
+        content_before: str,
+        content_after: str,
+        prefix: str,
+    ):
+        """Called each time an alias is resolved."""
+        is_recording, combat_id = await self._recording_info(ctx.guild.id, ctx.channel.id)
+        if is_recording:
+            await self._record_event(
+                RecordedAliasResolution(
+                    combat_id=combat_id,
+                    message_id=ctx.message.id,
+                    alias_name=alias_name,
+                    alias_body=alias_body,
+                    content_before=content_before,
+                    content_after=content_after,
+                    prefix=prefix,
+                )
+            )
+
+    async def on_snippet_resolve(self, ctx: "AvraeContext", snippet_name: str, snippet_body: str, content_after: str):
+        """Called each time a snippet is resolved."""
+        is_recording, combat_id = await self._recording_info(ctx.guild.id, ctx.channel.id)
+        if is_recording:
+            await self._record_event(
+                RecordedSnippetResolution(
+                    combat_id=combat_id,
+                    message_id=ctx.message.id,
+                    snippet_name=snippet_name,
+                    snippet_body=snippet_body,
+                    content_after=content_after,
+                )
+            )
+
     # ==== management ====
     async def get_recording_channels(self, guild_id: int):
         """
@@ -423,6 +542,11 @@ class NLPRecorder:
             return
 
         log.debug(f"saving 1 event to {event.combat_id=} of type {event.event_type!r}")
+        if config.TESTING:
+            # this is behind this if because .json() is (relatively) slow, even if the output is discarded
+            # so only call it on local dev
+            log.debug(event.json(indent=2))
+
         try:
             response = await self._kinesis_firehose.put_record(
                 DeliveryStreamName=config.NLP_KINESIS_DELIVERY_STREAM, Record={"Data": event.json().encode()}

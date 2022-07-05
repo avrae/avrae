@@ -135,7 +135,7 @@ def get_combatant_status_content(
     if promote_to_group and (group := combatant.get_group()) is not None:
         return get_combatant_status_content(group, author, show_hidden_attrs, max_len)
 
-    for strategy in _turn_str_kwarg_strategies:
+    for strategy in _status_kwarg_strategies:
         result = _get_combatant_status_inner(combatant, author, show_hidden_attrs, **strategy)
         if len(result) <= max_len:
             break

@@ -65,7 +65,7 @@ class Combat:
         self.round_num = round_num
         self._turn = turn_num
         self._current_index = current_index
-        self.ctx = ctx  # try to avoid using this whereever possible
+        self.ctx = ctx  # try to avoid using this whereever possible - this is *not* always the current ctx
         self.metadata = metadata
         self.nlp_record_session_id = nlp_record_session_id
 
@@ -392,12 +392,12 @@ class Combat:
 
     @overload
     async def select_combatant(
-        self, name: str, choice_message: Optional[str] = None, select_group: Literal[True] = False
+        self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[True] = False
     ) -> Optional[Combatant | CombatantGroup]:
         ...
 
     async def select_combatant(
-        self, name: str, choice_message: Optional[str] = None, select_group: Literal[False] = False
+        self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[False] = False
     ) -> Optional[Combatant]:
         """
         Opens a prompt for a user to select the combatant they were searching for.
@@ -409,7 +409,7 @@ class Combat:
         :return: The selected Combatant, or None if the search failed.
         """
         return await search_and_select(
-            self.ctx,
+            ctx,
             self.get_combatants(select_group),
             name,
             lambda c: c.name,

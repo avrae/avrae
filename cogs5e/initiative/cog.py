@@ -545,7 +545,7 @@ class InitTracker(commands.Cog):
                 target = int(target)
                 combat.goto_turn(target)
             except ValueError:
-                combatant = await combat.select_combatant(target)
+                combatant = await combat.select_combatant(ctx, target)
                 combat.goto_turn(combatant, True)
 
         await utils.send_turn_message(ctx, combat)
@@ -661,7 +661,7 @@ class InitTracker(commands.Cog):
         """Attaches a note to a combatant."""
         combat = await ctx.get_combat()
 
-        combatant = await combat.select_combatant(name)
+        combatant = await combat.select_combatant(ctx, name)
         if combatant is None:
             return await ctx.send("Combatant not found.")
 
@@ -692,7 +692,7 @@ class InitTracker(commands.Cog):
         """  # noqa: E501
         combat = await ctx.get_combat()
 
-        comb = await combat.select_combatant(name, select_group=True)
+        comb = await combat.select_combatant(ctx, name, select_group=True)
         if comb is None:
             await ctx.send("Combatant not found.")
             return
@@ -858,7 +858,7 @@ class InitTracker(commands.Cog):
         if name == "private" or name is None:
             combatant = combat.current_combatant
         else:
-            combatant = await combat.select_combatant(name, select_group=True)
+            combatant = await combat.select_combatant(ctx, name, select_group=True)
 
         if combatant is None:
             await ctx.send("Combatant or group not found.")
@@ -881,7 +881,7 @@ class InitTracker(commands.Cog):
     async def hp(self, ctx, name: str, *, hp: str = None):
         """Modifies the HP of a combatant."""
         combat = await ctx.get_combat()
-        combatant = await combat.select_combatant(name)
+        combatant = await combat.select_combatant(ctx, name)
         if combatant is None:
             return await ctx.send("Combatant not found.")
 
@@ -915,7 +915,7 @@ class InitTracker(commands.Cog):
     async def init_hp_max(self, ctx, name, *, hp: str = None):
         """Sets a combatant's max HP, or sets HP to max if no max is given."""
         combat = await ctx.get_combat()
-        combatant = await combat.select_combatant(name)
+        combatant = await combat.select_combatant(ctx, name)
         if combatant is None:
             return await ctx.send("Combatant not found.")
 
@@ -942,7 +942,7 @@ class InitTracker(commands.Cog):
     async def init_hp_set(self, ctx, name, *, hp):
         """Sets a combatant's HP to a certain value."""
         combat = await ctx.get_combat()
-        combatant = await combat.select_combatant(name)
+        combatant = await combat.select_combatant(ctx, name)
         if combatant is None:
             return await ctx.send("Combatant not found.")
 
@@ -960,7 +960,7 @@ class InitTracker(commands.Cog):
         Sets the combatants' THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP).
         """  # noqa: E501
         combat = await ctx.get_combat()
-        combatant = await combat.select_combatant(name)
+        combatant = await combat.select_combatant(ctx, name)
         if combatant is None:
             await ctx.send("Combatant not found.")
             return
@@ -1020,7 +1020,7 @@ class InitTracker(commands.Cog):
         targets = []
 
         for i, t in enumerate([target_name] + args.get("t")):
-            target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=True)
+            target = await combat.select_combatant(ctx, t, f"Select target #{i + 1}.", select_group=True)
             if isinstance(target, CombatantGroup):
                 targets.extend(target.get_combatants())
             else:
@@ -1037,7 +1037,7 @@ class InitTracker(commands.Cog):
             if not len(parent) == 2:
                 raise InvalidArgument("`parent` arg must be formatted `COMBATANT|EFFECT_NAME`")
             p_combatant = await combat.select_combatant(
-                parent[0], choice_message="Select the combatant with the parented effect."
+                ctx, parent[0], choice_message="Select the combatant with the parented effect."
             )
             parent = await p_combatant.select_effect(parent[1])
 
@@ -1074,7 +1074,7 @@ class InitTracker(commands.Cog):
 
         targets = []
 
-        target = await combat.select_combatant(name, select_group=True)
+        target = await combat.select_combatant(ctx, name, select_group=True)
         if isinstance(target, CombatantGroup):
             targets.extend(target.get_combatants())
         else:
@@ -1136,7 +1136,7 @@ class InitTracker(commands.Cog):
     async def aoo(self, ctx, combatant_name, atk_name=None, *, args=""):
         combat = await ctx.get_combat()
         try:
-            combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
+            combatant = await combat.select_combatant(ctx, combatant_name, "Select the attacker.")
         except SelectionException:
             return await ctx.send("Combatant not found.")
 
@@ -1216,7 +1216,7 @@ class InitTracker(commands.Cog):
             return await ctx.send("Attack not found.")
 
         # target handling
-        targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
+        targets = await targetutils.definitely_combat(ctx, combat, args, allow_groups=True)
 
         # embed setup
         embed = disnake.Embed(color=combatant.get_color())
@@ -1261,7 +1261,9 @@ class InitTracker(commands.Cog):
                 )
         else:
             try:
-                combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the check.")
+                combatant = await combat.select_combatant(
+                    ctx, combatant_name, "Select the combatant to make the check."
+                )
             except SelectionException:
                 return await ctx.send("Combatant not found.")
 
@@ -1311,7 +1313,7 @@ class InitTracker(commands.Cog):
                 )
         else:
             try:
-                combatant = await combat.select_combatant(combatant_name, "Select the combatant to make the save.")
+                combatant = await combat.select_combatant(ctx, combatant_name, "Select the combatant to make the save.")
             except SelectionException:
                 return await ctx.send("Combatant not found.")
 
@@ -1364,7 +1366,7 @@ class InitTracker(commands.Cog):
                 return await ctx.send(f"You must start combat with `{ctx.prefix}init next` first.")
         else:
             try:
-                combatant = await combat.select_combatant(combatant_name, "Select the caster.")
+                combatant = await combat.select_combatant(ctx, combatant_name, "Select the caster.")
             except SelectionException:
                 return await ctx.send("Combatant not found.")
 
@@ -1391,7 +1393,7 @@ class InitTracker(commands.Cog):
         else:
             spell = await select_spell_full(ctx, spell_name)
 
-        targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
+        targets = await targetutils.definitely_combat(ctx, combat, args, allow_groups=True)
         result = await actionutils.cast_spell(spell, ctx, combatant, targets, args, combat=combat)
 
         embed = result.embed
@@ -1406,7 +1408,7 @@ class InitTracker(commands.Cog):
         Usage: `!init remove <NAME>`"""
         combat = await ctx.get_combat()
 
-        combatant = await combat.select_combatant(name, select_group=True)
+        combatant = await combat.select_combatant(ctx, name, select_group=True)
         if combatant is None:
             return await ctx.send("Combatant not found.")
 

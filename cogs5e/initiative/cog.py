@@ -14,13 +14,12 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, EmbedWithColor
 from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
 from cogs5e.models.sheet.attack import Attack
-from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
-from utils.argparser import argparse
+from utils.argparser import argparse, ParsedArguments
 from utils.functions import (
     confirm,
     get_guild_member,
@@ -164,7 +163,7 @@ class InitTracker(commands.Cog):
         await ctx.send(out)
 
     @init.command()
-    async def add(self, ctx, name: str, *args):
+    async def add(self, ctx, modifier: int, name: str, *args):
         """
         Adds a generic combatant to the initiative order.
         Generic combatants have a 10 in every stat and +0 to every modifier by default.
@@ -172,7 +171,7 @@ class InitTracker(commands.Cog):
         If you are adding monsters to combat, you can use !init madd instead.
         __Valid Arguments__
         `-h` - Hides HP, AC, resistances, and attack list.
-        `-p` - Places combatant at the given modifier, instead of rolling
+        `-p <value>` - Places combatant at the given modifier, instead of rolling
         `adv`/`dis` - Rolls the initiative check with advantage/disadvantage.
         `-controller <controller>` - Pings a different person on turn.
         `-group <group>` - Adds the combatant to a group.
@@ -199,14 +198,19 @@ class InitTracker(commands.Cog):
 
         combat = await ctx.get_combat()
 
-        me = await add_builder(ctx, combat, name, args)
-
+        if combat.get_combatant(name, True) is not None:
+            await ctx.send("Combatant already exists.")
+            return
+    
         args = argparse(args)
-        group = args.last("group",None)
-        
+
+        me, init_roll = await add_builder(ctx, combat, name, modifier, args)
+
+        group = args.last("group", None)
+
         if group is None:
             combat.add_combatant(me)
-            await ctx.send(f"{me.name} was added to combat with initiative {me.init}.")
+            await ctx.send(f"{me.name} was added to combat with initiative {init_roll}.")
         else:
             grp = combat.get_group(group, create=me.init)
             grp.add_combatant(me)

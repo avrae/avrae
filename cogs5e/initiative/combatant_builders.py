@@ -37,12 +37,12 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
 
     stats = BaseStats(
         args.last("pb", type_=int, default=0),
-        args.last("str", type_=int, default=10),
-        args.last("dex", type_=int, default=10),
-        args.last("con", type_=int, default=10),
-        args.last("int", type_=int, default=10),
-        args.last("wis", type_=int, default=10),
-        args.last("cha", type_=int, default=10),
+        args.last("strength", type_=int, default=10),
+        args.last("dexterity", type_=int, default=10),
+        args.last("constitution", type_=int, default=10),
+        args.last("intelligence", type_=int, default=10),
+        args.last("wisdom", type_=int, default=10),
+        args.last("charisma", type_=int, default=10),
     )
 
     cr = args.last("cr", type_=int, default=0)

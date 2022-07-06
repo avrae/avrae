@@ -210,7 +210,7 @@ class InitTracker(commands.Cog):
 
         if group is None:
             combat.add_combatant(me)
-            await ctx.send(f"{me.name} was added to combat with initiative {me.init}.")
+            await ctx.send(f"{me.name} was added to combat with initiative {init_roll}.")
         else:
             grp = combat.get_group(group, create=me.init)
             grp.add_combatant(me)

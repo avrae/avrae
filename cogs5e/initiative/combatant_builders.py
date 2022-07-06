@@ -1,5 +1,4 @@
 from d20 import roll
-from d20 import roll
 from disnake.ext import commands
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
@@ -21,7 +20,7 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
     hp = None
     ac = None
     resists = {}
-    adv = args.adv()
+    adv = args.adv(boolwise=True)
 
     id = create_combatant_id()
 
@@ -59,7 +58,7 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
         skills[skill].value += 2*stats.prof_bonus
     
     skills.initiative.value = modifier
-    if adv:
+    if adv is not None:
         skills.initiative.adv = adv
 
     if args.get("p"):

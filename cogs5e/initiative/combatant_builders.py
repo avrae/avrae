@@ -9,7 +9,6 @@ from cogs5e.initiative.effects.passive import resolve_check_advs, resolve_save_a
 from .utils import create_combatant_id
 from . import (
     Combatant,
-    utils,
 )
 
 
@@ -48,15 +47,15 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
     levels = Levels({"Monster": cr})
 
     exps = resolve_check_advs(args.get("exp"))
-    profs = resolve_check_advs(args.get("prof"))-exps
+    profs = resolve_check_advs(args.get("prof")) - exps
     skills = Skills.default(stats)
     for skill in profs:
         skills[skill].prof = 1
         skills[skill].value += stats.prof_bonus
     for skill in exps:
         skills[skill].prof = 2
-        skills[skill].value += 2*stats.prof_bonus
-    
+        skills[skill].value += 2 * stats.prof_bonus
+
     skills.initiative.value = modifier
     if adv is not None:
         skills.initiative.adv = adv
@@ -81,7 +80,7 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
     resolved_saves = resolve_save_advs(args.get("save"))
     saves = Saves.default(stats)
     for ability in resolved_saves:
-        save_key = STAT_ABBR_MAP[ability].lower()+"Save"
+        save_key = STAT_ABBR_MAP[ability].lower() + "Save"
         saves[save_key].prof = 1
         saves[save_key].value += stats.prof_bonus
 
@@ -96,7 +95,7 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
         if hp < 1:
             raise InvalidArgument("You must pass in a positive, nonzero HP with the -hp tag.")
 
-    thp = args.last("thp", type_=int)
+    thp = args.last("thp", type_=int, default=0)
 
     creature_type = args.last("type", type_=str, default=None)
 
@@ -105,19 +104,19 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
         combat=combat,
         id=id,
         name=name,
-        controller_id = controller,
-        private = private,
+        controller_id=controller,
+        private=private,
         init=init,
-        notes = note,
+        notes=note,
         # statblock info
         stats=stats,
         levels=levels,
         skills=skills,
         saves=saves,
-        resistances = Resistances.from_dict(resists),
+        resistances=Resistances.from_dict(resists),
         ac=ac,
-        max_hp = hp,
-        temp_hp = thp,
+        max_hp=hp,
+        temp_hp=thp,
         creature_type=creature_type,
     )
 

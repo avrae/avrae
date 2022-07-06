@@ -171,7 +171,7 @@ class InitTracker(commands.Cog):
         If you are adding monsters to combat, you can use !init madd instead.
         __Valid Arguments__
         `-h` - Hides HP, AC, resistances, and attack list.
-        `-p` - Places combatant at the given modifier, instead of rolling
+        `-p <value>` - Places combatant at the given modifier, instead of rolling
         `adv`/`dis` - Rolls the initiative check with advantage/disadvantage.
         `-controller <controller>` - Pings a different person on turn.
         `-group <group>` - Adds the combatant to a group.

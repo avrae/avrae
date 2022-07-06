@@ -19,7 +19,7 @@ from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
-from utils.argparser import argparse, ParsedArguments
+from utils.argparser import argparse
 from utils.functions import (
     confirm,
     get_guild_member,
@@ -31,7 +31,6 @@ from utils.functions import (
 from . import (
     Combat,
     CombatOptions,
-    Combatant,
     CombatantGroup,
     InitiativeEffect,
     MonsterCombatant,

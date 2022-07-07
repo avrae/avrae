@@ -3,11 +3,8 @@ name: Test Gamedata
 on:
   push:
   pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - labeled  # to approve 3pp PRs, add a label to the PR (like ci: approved)
+  repository_dispatch:
+    types: [ ci-approve-command ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

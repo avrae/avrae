@@ -61,7 +61,7 @@ def parse_coin_args(args: str) -> CoinsArgs:
     """
     Parses a user's coin string into a representation of each currency.
     If the user input is a decimal number, assumes gold pieces.
-    Otherwise, allows the user to specify currencies in the form ``/(([+-]?\d+)\s*([pgesc]p)?)+/``
+    Otherwise, allows the user to specify currencies in the form ``/(([+-]?\\d+)\\s*([pgesc]p)?)+/``
     (e.g. +1gp -2sp 3cp).
     """
 

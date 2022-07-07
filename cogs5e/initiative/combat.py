@@ -158,7 +158,7 @@ class Combat:
             "channel": self._channel,
             "summary": self.summary_message_id,
             "dm": self.dm_id,
-            "options": self.options.dict(skip_defaults=True),
+            "options": self.options.dict(exclude_unset=True),
             "combatants": [c.to_dict() for c in self._combatants],
             "turn": self.turn_num,
             "round": self.round_num,

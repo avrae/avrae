@@ -80,3 +80,16 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           files: ./shared/coverage.xml
+
+      - name: Create Comment (3pp PRs)
+        if: github.event_name == 'repository_dispatch' && always()
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+          issue-number: ${{ github.event.client_payload.github.payload.issue.number }}
+          body: |
+            The gamedata test workflow concluded with ${{ job.status }}.
+            
+            [Command run output][1]
+
+            [1]: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

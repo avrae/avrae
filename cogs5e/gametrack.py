@@ -10,7 +10,7 @@ import logging
 import re
 
 import d20
-from discord.ext import commands
+from disnake.ext import commands
 
 from aliasing import helpers
 from cogs5e.models import embeds

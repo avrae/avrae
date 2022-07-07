@@ -8,14 +8,14 @@ import traceback
 
 import aioredis
 import d20
-import discord
+import disnake
 import motor.motor_asyncio
 import psutil
 import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
-from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
-from discord.ext import commands
-from discord.ext.commands.errors import CommandInvokeError
+from disnake.errors import Forbidden, HTTPException, InvalidArgument, NotFound
+from disnake.ext import commands
+from disnake.ext.commands.errors import CommandInvokeError
 
 from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
@@ -106,7 +106,7 @@ class Avrae(commands.AutoShardedBot):
     async def setup_rdb(self):
         return RedisIO(await aioredis.create_redis_pool(config.REDIS_URL, db=config.REDIS_DB_NUM))
 
-    async def get_guild_prefix(self, guild: discord.Guild) -> str:
+    async def get_guild_prefix(self, guild: disnake.Guild) -> str:
         guild_id = str(guild.id)
         if guild_id in self.prefixes:
             return self.prefixes.get(guild_id, config.DEFAULT_PREFIX)
@@ -214,7 +214,7 @@ desc = (
     " Policy](https://company.wizards.com/en/legal/wizards-coasts-privacy-policy) | [Terms of"
     " Use](https://company.wizards.com/en/legal/terms)"
 )
-intents = discord.Intents(
+intents = disnake.Intents(
     guilds=True,
     members=True,
     messages=True,
@@ -233,8 +233,8 @@ bot = Avrae(
     description=desc,
     pm_help=True,
     testing=config.TESTING,
-    activity=discord.Game(name=f"D&D 5e | {config.DEFAULT_PREFIX}help"),
-    allowed_mentions=discord.AllowedMentions.none(),
+    activity=disnake.Game(name=f"D&D 5e | {config.DEFAULT_PREFIX}help"),
+    allowed_mentions=disnake.AllowedMentions.none(),
     intents=intents,
     chunk_guilds_at_startup=False,
 )

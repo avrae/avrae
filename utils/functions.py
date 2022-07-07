@@ -10,7 +10,6 @@ import re
 from contextlib import suppress
 from typing import Callable, TYPE_CHECKING, TypeVar
 
-import discord
 import disnake
 from rapidfuzz import fuzz, process
 
@@ -141,7 +140,7 @@ async def get_selection(
     for n in range(200):
         _choices = pages[page]
         names = [key(o) for o in _choices]
-        embed = discord.Embed()
+        embed = disnake.Embed()
         embed.title = "Multiple Matches Found"
         select_str = "Which one were you looking for? (Type the number or `c` to cancel)\n"
         if len(pages) > 1:
@@ -389,7 +388,7 @@ def auth_and_chan(ctx):
 async def try_delete(message):
     try:
         await message.delete()
-    except discord.HTTPException:
+    except disnake.HTTPException:
         pass
 
 
@@ -455,12 +454,12 @@ async def user_from_id(ctx, the_id):
         # noinspection PyProtectedMember
         # technically we're not supposed to create User objects like this
         # but it *should* be fine
-        return discord.User(state=ctx.bot._connection, data=user_doc)
+        return disnake.User(state=ctx.bot._connection, data=user_doc)
 
     # fetch the user from the Discord API
     try:
         fetched_user = await ctx.bot.fetch_user(the_id)
-    except discord.NotFound:
+    except disnake.NotFound:
         return None
 
     await update_known_user(fetched_user)

@@ -2,8 +2,8 @@ import logging
 import time
 from typing import Optional, TYPE_CHECKING
 
-import discord
-from discord.ext.commands import Context
+import disnake
+from disnake.ext.commands import Context
 
 from cogs5e.initiative import Combat
 from cogs5e.models.character import Character
@@ -92,5 +92,5 @@ class AvraeContext(Context):
         self._last_typing_start = now
         try:
             await super().trigger_typing()
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             log.warning(f"Could not trigger typing: {e}")

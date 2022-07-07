@@ -1,5 +1,5 @@
 import pytest
-from discord.ext.commands import ExpectedClosingQuoteError
+from disnake.ext.commands import ExpectedClosingQuoteError
 
 from cogs5e.models.errors import InvalidArgument
 from utils.argparser import argparse, argquote, argsplit

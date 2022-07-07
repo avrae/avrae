@@ -6,8 +6,8 @@ Created on Nov 29, 2016
 import itertools
 import logging
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 import gamedata
 import ui
@@ -309,15 +309,15 @@ class Lookup(commands.Cog):
             elif len(desc) < 2048:
                 # noinspection PyTypeChecker
                 # I'm adding an Embed to a list of Embeds, shut up.
-                embed_queue.append(discord.Embed(colour=color, description=desc, title=title))
+                embed_queue.append(disnake.Embed(colour=color, description=desc, title=title))
             else:
                 # noinspection PyTypeChecker
-                embed_queue.append(discord.Embed(colour=color, title=title))
+                embed_queue.append(disnake.Embed(colour=color, title=title))
                 trait_all = chunk_text(desc, max_chunk_size=2048)
                 embed_queue[-1].description = trait_all[0]
                 for t in trait_all[1:]:
                     # noinspection PyTypeChecker
-                    embed_queue.append(discord.Embed(colour=color, description=t))
+                    embed_queue.append(disnake.Embed(colour=color, description=t))
 
         if visible:
             embed_queue[-1].description = monster.get_meta()
@@ -503,7 +503,7 @@ class Lookup(commands.Cog):
             embed.title = monster.name
         embed.description = f"{monster.size} monster."
 
-        file = discord.File(image, filename="image.png")
+        file = disnake.File(image, filename="image.png")
         embed.set_image(url="attachment://image.png")
         await ctx.send(embed=embed, file=file)
 
@@ -546,7 +546,7 @@ class Lookup(commands.Cog):
         embed_queue = [embed]
         if len(pieces) > 1:
             for i, piece in enumerate(pieces[1::2]):
-                temp_embed = discord.Embed()
+                temp_embed = disnake.Embed()
                 temp_embed.colour = color
                 if (next_idx := (i + 1) * 2) < len(pieces):  # this is chunked into 1024 pieces, and descs can handle 2
                     temp_embed.description = piece + pieces[next_idx]

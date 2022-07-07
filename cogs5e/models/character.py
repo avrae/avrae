@@ -2,7 +2,7 @@ import logging
 from collections import namedtuple
 
 import cachetools
-from discord.ext.commands import NoPrivateMessage
+from disnake.ext.commands import NoPrivateMessage
 
 import aliasing.evaluators
 from cogs5e.models.ddbsync import DDBSheetSync

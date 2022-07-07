@@ -1,6 +1,6 @@
 import logging
 
-import discord
+import disnake
 
 from cogs5e.models.errors import NoCharacter
 from ddb.gamelog.errors import IgnoreEvent
@@ -102,7 +102,7 @@ class GameLogEventContext:
         destination = await self.destination_channel()
         try:
             await destination.trigger_typing()
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             log.info(f"Could not trigger typing in channel {destination!r}: {e}")
 
     async def send(self, *args, ignore_exc=True, **kwargs):
@@ -110,7 +110,7 @@ class GameLogEventContext:
         destination = await self.destination_channel()
         try:
             return await destination.send(*args, **kwargs)
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             if not ignore_exc:
                 raise
             log.info(f"Could not send message to channel {destination!r}: {e}")

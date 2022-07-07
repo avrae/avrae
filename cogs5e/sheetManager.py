@@ -10,11 +10,11 @@ import traceback
 from typing import List
 
 import automation_common.validation
-import discord
+import disnake
 import pydantic
 import yaml
-from discord.ext import commands
-from discord.ext.commands.cooldowns import BucketType
+from disnake.ext import commands
+from disnake.ext.commands.cooldowns import BucketType
 
 import ui
 from aliasing import helpers
@@ -317,7 +317,7 @@ class SheetManager(commands.Cog):
         if not char.image:
             return await ctx.send("No image available.")
 
-        embed = discord.Embed()
+        embed = disnake.Embed()
         embed.title = char.name
         embed.colour = char.get_color()
         embed.set_image(url=char.image)
@@ -362,7 +362,7 @@ class SheetManager(commands.Cog):
         except Exception as e:
             return await ctx.send(f"Error generating token: {e}")
 
-        file = discord.File(processed, filename="image.png")
+        file = disnake.File(processed, filename="image.png")
         embed = embeds.EmbedWithCharacter(char, image=False)
         embed.set_image(url="attachment://image.png")
         await ctx.send(file=file, embed=embed)
@@ -522,7 +522,7 @@ class SheetManager(commands.Cog):
             await send_ddb_ctas(ctx, character)
 
     @commands.command()
-    async def transferchar(self, ctx, user: discord.Member):
+    async def transferchar(self, ctx, user: disnake.Member):
         """Gives a copy of the active character to another user."""
         character: Character = await ctx.get_character()
         overwrite = ""
@@ -533,7 +533,7 @@ class SheetManager(commands.Cog):
 
         await ctx.send(
             f"{user.mention}, accept a copy of {character.name}? (Type yes/no)\n{overwrite}",
-            allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
+            allowed_mentions=disnake.AllowedMentions(users=[ctx.author]),
         )
         try:
             m = await self.bot.wait_for(

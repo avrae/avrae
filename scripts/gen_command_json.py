@@ -33,7 +33,7 @@ import json
 import os
 import sys
 
-from discord.ext.commands import Group
+from disnake.ext.commands import Group
 
 # path hack to import from parent folder
 sys.path.insert(1, os.path.join(sys.path[0], ".."))

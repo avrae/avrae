@@ -1,4 +1,4 @@
-import discord
+import disnake
 import pytest
 
 from tests.utils import requires_data
@@ -42,7 +42,7 @@ async def test_rollstats(avrae, dhttp):
     dhttp.clear()
 
     avrae.message("!rollstats")
-    await dhttp.receive_message(embed=discord.Embed(title="Generating Random Stats"))
+    await dhttp.receive_message(embed=disnake.Embed(title="Generating Random Stats"))
 
 
 @requires_data()
@@ -53,4 +53,4 @@ async def test_randname(avrae, dhttp):
     await dhttp.receive_message(r"Your random name: \w+")
 
     avrae.message("!name elf family")
-    await dhttp.receive_message(embed=discord.Embed(title="Family Elf Name", description=r"\w+"))
+    await dhttp.receive_message(embed=disnake.Embed(title="Family Elf Name", description=r"\w+"))

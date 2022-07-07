@@ -1,4 +1,4 @@
-import discord
+import disnake
 import pytest
 
 from gamedata.compendium import compendium
@@ -30,11 +30,11 @@ async def test_ma(avrae, dhttp):
 
     avrae.message("!ma kobold")
     await dhttp.receive_delete()
-    await dhttp.receive_message(embed=discord.Embed(title="A Kobold's Actions"))
+    await dhttp.receive_message(embed=disnake.Embed(title="A Kobold's Actions"))
 
     avrae.message("!ma kobold dagger")
     await dhttp.receive_delete()
-    atk_embed = discord.Embed(title=r"(\w+ ?){2,3} attacks with a Dagger!")
+    atk_embed = disnake.Embed(title=r"(\w+ ?){2,3} attacks with a Dagger!")
     atk_embed.add_field(name="Meta", inline=False, value=ATTACK_PATTERN)
     atk_embed.add_field(name="Effect", inline=False, value=r"\*Melee Weapon Attack:.+")
     await dhttp.receive_message(embed=atk_embed)
@@ -45,7 +45,7 @@ async def test_ma(avrae, dhttp):
         f"An unknown creature attacks with a Dagger!\n{TO_HIT_PATTERN}\n({DAMAGE_PATTERN}\n)?\*Melee Weapon Attack:.+",
         dm=True,
     )
-    atk_embed = discord.Embed(title="An unknown creature attacks with a Dagger!")
+    atk_embed = disnake.Embed(title="An unknown creature attacks with a Dagger!")
     atk_embed.add_field(name="Meta", inline=False, value=ATTACK_PATTERN)
     await dhttp.receive_message(embed=atk_embed)
 
@@ -57,13 +57,13 @@ async def test_mc(avrae, dhttp):
     avrae.message("!mc kobold acro")
     await dhttp.receive_delete()
     await dhttp.receive_message(
-        embed=discord.Embed(title="A Kobold makes an Acrobatics check!", description=D20_PATTERN)
+        embed=disnake.Embed(title="A Kobold makes an Acrobatics check!", description=D20_PATTERN)
     )
 
     avrae.message("!mc kobold acro -h")
     await dhttp.receive_delete()
     await dhttp.receive_message(
-        embed=discord.Embed(title="An unknown creature makes an Acrobatics check!", description=D20_PATTERN)
+        embed=disnake.Embed(title="An unknown creature makes an Acrobatics check!", description=D20_PATTERN)
     )
 
 
@@ -73,12 +73,12 @@ async def test_ms(avrae, dhttp):
 
     avrae.message("!ms kobold dex")
     await dhttp.receive_delete()
-    await dhttp.receive_message(embed=discord.Embed(title="A Kobold makes a Dexterity Save!", description=D20_PATTERN))
+    await dhttp.receive_message(embed=disnake.Embed(title="A Kobold makes a Dexterity Save!", description=D20_PATTERN))
 
     avrae.message("!ms kobold dex -h")
     await dhttp.receive_delete()
     await dhttp.receive_message(
-        embed=discord.Embed(title="An unknown creature makes a Dexterity Save!", description=D20_PATTERN)
+        embed=disnake.Embed(title="An unknown creature makes a Dexterity Save!", description=D20_PATTERN)
     )
 
 
@@ -90,7 +90,7 @@ async def test_mcast(avrae, dhttp):
 
     avrae.message("!mcast mage fireball")
     await dhttp.receive_delete()
-    embed = discord.Embed(title="A Mage casts Fireball!")
+    embed = disnake.Embed(title="A Mage casts Fireball!")
     embed.add_field(name="Meta", value=rf"{DAMAGE_PATTERN}\n\*\*DC\*\*: {mage.spellbook.dc}\nDEX Save")
     embed.add_field(name="Effect", value=".*")
     embed.add_field(name="Spell Slots", value="`3` ◉◉◉")

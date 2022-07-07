@@ -1,9 +1,9 @@
-import discord.utils
-from discord.ext import commands
+import disnake.utils
+from disnake.ext import commands
 
 from utils import config
-from utils.functions import natural_join
 from utils.aldclient import discord_user_to_dict
+from utils.functions import natural_join
 
 
 # The permission system of the bot is based on a "just works" basis
@@ -40,11 +40,11 @@ def _role_or_permissions(ctx, role_filter, **perms):
 
     ch = ctx.message.channel
     author = ctx.message.author
-    if isinstance(ch, discord.abc.PrivateChannel):
+    if isinstance(ch, disnake.abc.PrivateChannel):
         return False  # can't have roles in PMs
 
     try:
-        role = discord.utils.find(role_filter, author.roles)
+        role = disnake.utils.find(role_filter, author.roles)
     except:
         return False
     return role is not None

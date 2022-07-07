@@ -1,8 +1,8 @@
 import collections
 import re
 
-from discord.ext.commands import BadArgument, ExpectedClosingQuoteError
-from discord.ext.commands.view import StringView
+from disnake.ext.commands import BadArgument, ExpectedClosingQuoteError
+from disnake.ext.commands.view import StringView
 
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import list_get

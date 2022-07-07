@@ -2,7 +2,7 @@ import logging
 import re
 
 import d20
-from discord.ext import commands
+from disnake.ext import commands
 
 from cogs5e.models import embeds
 from cogs5e.models.automation.results import AttackResult, DamageResult, RollResult, SaveResult, TempHPResult

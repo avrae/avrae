@@ -4,8 +4,8 @@ import textwrap
 import traceback
 from contextlib import redirect_stdout
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from utils import checks
 from utils.functions import auth_and_chan
@@ -104,9 +104,9 @@ class REPL(commands.Cog):
                         await msg.channel.send("Content too big to be printed.")
                     else:
                         await msg.channel.send(fmt)
-            except discord.Forbidden:
+            except disnake.Forbidden:
                 pass
-            except discord.HTTPException as e:
+            except disnake.HTTPException as e:
                 await msg.channel.send("Unexpected error: `{}`".format(e))
 
     @commands.command(hidden=True, name="eval")

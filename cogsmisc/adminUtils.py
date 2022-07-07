@@ -11,9 +11,9 @@ import logging
 import re
 from math import floor
 
-import discord
-from discord.errors import NotFound
-from discord.ext import commands
+import disnake
+from disnake.errors import NotFound
+from disnake.ext import commands
 
 import cogs5e.models.sheet.action
 import utils.redisIO as redis
@@ -93,7 +93,7 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def pingall(self, ctx):
         resp = await self.pscall("ping")
-        embed = discord.Embed(title="Cluster Pings")
+        embed = disnake.Embed(title="Cluster Pings")
         for cluster, pings in sorted(resp.items(), key=lambda i: i[0]):
             pingstr = "\n".join(f"Shard {shard}: {floor(ping * 1000)}ms" for shard, ping in pings.items())
             avgping = floor((sum(pings.values()) / len(pings)) * 1000)
@@ -185,7 +185,7 @@ class AdminUtils(commands.Cog):
 
     @admin.command(hidden=True, name="su")
     @checks.is_owner()
-    async def admin_su(self, ctx, member: discord.Member, *, content):
+    async def admin_su(self, ctx, member: disnake.Member, *, content):
         msg = copy.copy(ctx.message)
         msg.author = member
         msg.content = content
@@ -200,7 +200,7 @@ class AdminUtils(commands.Cog):
 
     @admin.command(hidden=True)
     @checks.is_owner()
-    async def set_user_permissions(self, ctx, member: discord.Member, permission: str, value: bool):
+    async def set_user_permissions(self, ctx, member: disnake.Member, permission: str, value: bool):
         """
         Sets a user's global permission.
         __Current used permissions__
@@ -310,7 +310,7 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def admin_workshop_tags(self, ctx):
         """Lists all tags in the workshop."""
-        embed = discord.Embed()
+        embed = disnake.Embed()
         tags = await self.bot.mdb.workshop_tags.find().to_list(None)
         for category, c_tags in itertools.groupby(tags, lambda t: t["category"]):
             out = []
@@ -378,9 +378,9 @@ class AdminUtils(commands.Cog):
         return f"Set level of {logger} to {level}."
 
     async def _changepresence(self, status=None, msg=None):
-        statuslevel = {"online": discord.Status.online, "idle": discord.Status.idle, "dnd": discord.Status.dnd}
+        statuslevel = {"online": disnake.Status.online, "idle": disnake.Status.idle, "dnd": disnake.Status.dnd}
         status = statuslevel.get(status)
-        await self.bot.change_presence(status=status, activity=discord.Game(msg or "D&D 5e | !help"))
+        await self.bot.change_presence(status=status, activity=disnake.Game(msg or "D&D 5e | !help"))
         return "Changed presence."
 
     async def _reload_static(self):
@@ -403,7 +403,7 @@ class AdminUtils(commands.Cog):
                 guild = channel.guild
 
         try:
-            invite = (await next(c for c in guild.channels if isinstance(c, discord.TextChannel)).create_invite()).url
+            invite = (await next(c for c in guild.channels if isinstance(c, disnake.TextChannel)).create_invite()).url
         except:
             invite = None
 

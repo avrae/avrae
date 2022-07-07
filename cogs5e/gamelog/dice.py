@@ -1,4 +1,4 @@
-import discord
+import disnake
 
 import ddb.dice
 from cogs5e.utils import gamelogutils
@@ -72,7 +72,7 @@ class DiceHandler(GameLogCallbackHandler):
 
         out = f"<@!{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{final_results}"
         # the user knows they rolled - don't need to ping them in discord
-        await gctx.send(out, allowed_mentions=discord.AllowedMentions.none())
+        await gctx.send(out, allowed_mentions=disnake.AllowedMentions.none())
 
     async def _dice_roll_embed_common(self, gctx, roll_request, title_fmt: str, **fmt_kwargs):
         """
@@ -180,10 +180,10 @@ class DiceHandler(GameLogCallbackHandler):
 
         # either update the old message or post a new one
         if pending is not None:
-            partial = discord.PartialMessage(channel=await gctx.destination_channel(), id=pending.message_id)
+            partial = disnake.PartialMessage(channel=await gctx.destination_channel(), id=pending.message_id)
             try:
                 await partial.edit(embed=embed)
-            except discord.NotFound:  # original message was deleted
+            except disnake.NotFound:  # original message was deleted
                 await gctx.send(embed=embed)
         else:
             await gctx.send(embed=embed)

@@ -4,8 +4,8 @@ are registered here. The tutorial commands are also registered here, as part of 
 """
 import textwrap
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks, config
@@ -167,9 +167,9 @@ class Tutorials(commands.Cog):
         prefix = await self.bot.get_guild_prefix(guild)
         prefix_is_default = prefix == config.DEFAULT_PREFIX
 
-        embed = discord.Embed()
+        embed = disnake.Embed()
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.display_avatar.url)
-        embed.colour = discord.Colour.blurple()
+        embed.colour = disnake.Colour.blurple()
         embed.description = textwrap.dedent(
             f"""
             :wave: Hi there! Thanks for adding me to {guild.name}!

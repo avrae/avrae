@@ -5,7 +5,7 @@ Created on Jan 13, 2017
 """
 from math import sqrt
 
-from discord.ext import commands
+from disnake.ext import commands
 
 from cogs5e.models import embeds
 from utils.argparser import argparse

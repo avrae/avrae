@@ -1,4 +1,4 @@
-import discord
+import disnake
 
 
 class AliasContext:
@@ -139,7 +139,7 @@ class AliasChannel:
         self._id = channel.id
         self._topic = getattr(channel, "topic", None)
         self._category = AliasCategory(channel.category) if getattr(channel, "category", None) is not None else None
-        self._parent = AliasChannel(channel.parent) if isinstance(channel, discord.Thread) else None
+        self._parent = AliasChannel(channel.parent) if isinstance(channel, disnake.Thread) else None
 
     @property
     def name(self):

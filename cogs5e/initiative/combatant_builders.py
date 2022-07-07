@@ -43,7 +43,7 @@ async def add_builder(ctx, combat, name, modifier: int, args: ParsedArguments):
         args.last("charisma", type_=int, default=10),
     )
 
-    cr = args.last("cr", type_=int, default=0)
+    cr = args.last("cr", type_=float, default=0)
     levels = Levels({"Monster": cr})
 
     exps = resolve_check_advs(args.get("exp"))

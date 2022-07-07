@@ -159,7 +159,7 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
 
     def is_owned_by(self, user):
         """Returns whether the member owns the object.
-        :type user: :class:`discord.User`"""
+        :type user: :class:`disnake.User`"""
         return self.owner == user.id
 
     @classmethod

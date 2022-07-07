@@ -1086,7 +1086,7 @@ class Customization(commands.Cog):
     #         return await ctx.send("This gvar does not exist.")
     #     value = gvar['value']
     #     out = io.StringIO(value)
-    #     await ctx.send(file=discord.File(out, f'{address}.txt'))
+    #     await ctx.send(file=disnake.File(out, f'{address}.txt'))
 
 
 async def send_long_code_text(

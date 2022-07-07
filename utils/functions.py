@@ -414,11 +414,11 @@ def maybe_mod(val: str, base=0):
 # ==== user stuff ====
 async def user_from_id(ctx, the_id):
     """
-    Gets a :class:`discord.User` given their user id in the context. Returns member if context has data.
+    Gets a :class:`disnake.User` given their user id in the context. Returns member if context has data.
 
-    :type ctx: discord.ext.commands.Context
+    :type ctx: disnake.ext.commands.Context
     :type the_id: int
-    :rtype: discord.User
+    :rtype: disnake.User
     """
 
     async def update_known_user(the_user):

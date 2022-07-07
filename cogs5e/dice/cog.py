@@ -295,7 +295,7 @@ class Dice(commands.Cog):
 
 def embed_for_monster(monster, args, embed=None):
     if not embed:
-        embed = discord.Embed()
+        embed = disnake.Embed()
     embed.colour = random.randint(0, 0xFFFFFF)
     if not args.last("h", type_=bool) and "thumb" not in args:
         embed.set_thumbnail(url=monster.get_image_url())

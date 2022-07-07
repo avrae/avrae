@@ -263,7 +263,7 @@ class Tutorials(commands.Cog):
 
         try:
             await to_user.send(embed=embed)
-        except discord.HTTPException:
+        except disnake.HTTPException:
             pass
 
 

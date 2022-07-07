@@ -202,7 +202,7 @@ class GameLog(commands.Cog):
         """
         Send the result of a basic roll the user made, with no knowledge of character or context
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         :type result: d20.RollResult
         """
         # while roll doesn't require character, sendback to ddb does
@@ -221,7 +221,7 @@ class GameLog(commands.Cog):
 
     async def send_check(self, ctx, character, skill, rolls):
         """
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         :type character: cogs5e.models.character.Character
         :type skill: str
         :type rolls: list of d20.RollResult
@@ -238,7 +238,7 @@ class GameLog(commands.Cog):
 
     async def send_save(self, ctx, character, ability, rolls):
         """
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         :type character: cogs5e.models.character.Character
         :type ability: str
         :type rolls: list of d20.RollResult
@@ -257,7 +257,7 @@ class GameLog(commands.Cog):
         """
         Attacks, casting, etc (any result from the automation engine)
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         :type character: cogs5e.models.character.Character
         :type ability_name: str
         :type automation_result: cogs5e.models.automation.AutomationResult

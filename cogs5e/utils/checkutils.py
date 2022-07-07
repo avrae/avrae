@@ -34,7 +34,7 @@ def run_check(skill_key, caster, args, embed):
     :type skill_key: str
     :type caster: cogs5e.models.sheet.statblock.StatBlock
     :type args: utils.argparser.ParsedArguments
-    :type embed: discord.Embed
+    :type embed: disnake.Embed
     :return: The total of each check.
     :rtype: CheckResult
     """
@@ -87,7 +87,7 @@ def run_save(save_key, caster, args, embed):
     :type save_key: str
     :type caster: cogs5e.models.sheet.statblock.StatBlock
     :type args: utils.argparser.ParsedArguments
-    :type embed: discord.Embed
+    :type embed: disnake.Embed
     :return: The total of each save.
     :rtype: SaveResult
     """

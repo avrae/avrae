@@ -85,7 +85,7 @@ def parse_command_args(command):
 
 def parse_command(command):
     """
-    :type command discord.ext.commands.Command
+    :type command disnake.ext.commands.Command
     """
     subcommands = []
     if isinstance(command, Group):

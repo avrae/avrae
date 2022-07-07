@@ -45,7 +45,7 @@ class GameLogClient(BaseClient):
         """
         Creates a campaign link for the given campaign ID to the current channel.
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         :param str campaign_id: The ID of the DDB campaign to connect
         :param bool overwrite: Whether to overwrite an existing link or error.
         :rtype: CampaignLink

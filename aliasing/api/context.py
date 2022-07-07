@@ -11,7 +11,7 @@ class AliasContext:
 
     def __init__(self, ctx):
         """
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         """
         self._guild = None if ctx.guild is None else AliasGuild(ctx.guild)
         self._channel = AliasChannel(ctx.channel)
@@ -96,7 +96,7 @@ class AliasGuild:
 
     def __init__(self, guild):
         """
-        :type guild: discord.Guild
+        :type guild: disnake.Guild
         """
         self._name = guild.name
         self._id = guild.id
@@ -133,7 +133,7 @@ class AliasChannel:
 
     def __init__(self, channel):
         """
-        :type channel: discord.TextChannel or discord.DMChannel or discord.Thread
+        :type channel: disnake.TextChannel or disnake.DMChannel or disnake.Thread
         """
         self._name = str(channel)
         self._id = channel.id
@@ -200,7 +200,7 @@ class AliasAuthor:
 
     def __init__(self, author):
         """
-        :type author: discord.User
+        :type author: disnake.User
         """
         self._name = author.name
         self._id = author.id
@@ -257,7 +257,7 @@ class AliasCategory:
 
     def __init__(self, category):
         """
-        :type channel: discord.ChannelCategory
+        :type channel: disnake.ChannelCategory
         """
         self._name = str(category)
         self._id = category.id

@@ -74,7 +74,7 @@ class BeyondClient(BeyondClientBase):
 
         Returns None if the user has no DDB link.
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         :type user_id: int
         :type entity_type: str
         :rtype: set[int] or None
@@ -102,7 +102,7 @@ class BeyondClient(BeyondClientBase):
         Gets a Discord user's DDB user, communicating with the Auth Service if necessary.
         Returns None if the user has no DDB link.
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         :param int user_id: The Discord user ID to get the DDB user of. If None, defaults to ctx.author.id.
         :rtype: auth.BeyondUser or None
         """
@@ -146,7 +146,7 @@ class BeyondClient(BeyondClientBase):
 
         Returns None if the user has no DDB connection.
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         :param user_id: The Discord user ID.
         :type user_id: int
         :rtype: ddb.entitlements.UserEntitlements
@@ -181,7 +181,7 @@ class BeyondClient(BeyondClientBase):
         """
         Gets the latest entity entitlements, from cache or by communicating with DDB.
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: disnake.ext.commands.Context
         :type entity_type: str
         :rtype: list[ddb.entitlements.EntityEntitlements]
         """

@@ -218,6 +218,7 @@ intents = disnake.Intents(
     guilds=True,
     members=True,
     messages=True,
+    message_content=True,
     reactions=True,
     bans=False,
     emojis=False,

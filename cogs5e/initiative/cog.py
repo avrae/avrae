@@ -35,11 +35,11 @@ from . import (
     InitiativeEffect,
     MonsterCombatant,
     PlayerCombatant,
+    combatant_builders,
     utils,
 )
 from .buttons import ButtonHandler
 from .upenn_nlp import NLPRecorder
-from .combatant_builders import add_builder
 
 log = logging.getLogger(__name__)
 
@@ -178,12 +178,12 @@ class InitTracker(commands.Cog):
         `-thp <thp>` - Sets starting THP. Default: 0.
         `-ac <ac>` - Sets the combatant's AC. Default: None.
         `-pb <pb>` - Sets the combatant's proficiency bonus. Default: 0
-        `-str <str>` - Sets the combatant's strength score. Default: 10
-        `-dex <dex>` - Sets the combatant's dexterity score. Default: 10
-        `-con <con>` - Sets the combatant's constitution score. Default: 10
-        `-int <int>` - Sets the combatant's intelligence score. Default: 10
-        `-wis <wis>` - Sets the combatant's wisdom score. Default: 10
-        `-cha <cha>` - Sets the combatant's charisma score. Default: 10
+        `-strength <str>` - Sets the combatant's strength score. Default: 10
+        `-dexterity <dex>` - Sets the combatant's dexterity score. Default: 10
+        `-constitution <con>` - Sets the combatant's constitution score. Default: 10
+        `-intelligence <int>` - Sets the combatant's intelligence score. Default: 10
+        `-wisdom <wis>` - Sets the combatant's wisdom score. Default: 10
+        `-charisma <cha>` - Sets the combatant's charisma score. Default: 10
         `-save <ability>` - Gives the combatant proficiency in the given ability saving throw.
         `-prof <skill>` - Gives the combatant proficiency in the given skill.
         `-exp <skill>` - Gives the combatant expertise in the given skill.
@@ -200,13 +200,12 @@ class InitTracker(commands.Cog):
         if combat.get_combatant(name, True) is not None:
             await ctx.send("Combatant already exists.")
             return
-    
+
         args = argparse(args)
 
-        me, init_roll = await add_builder(ctx, combat, name, modifier, args)
+        me, init_roll = await combatant_builders.basic_combatant(ctx, combat, name, modifier, args)
 
         group = args.last("group", None)
-
         if group is None:
             combat.add_combatant(me)
             await ctx.send(f"{me.name} was added to combat with initiative {init_roll}.")

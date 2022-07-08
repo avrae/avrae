@@ -165,15 +165,19 @@ class InitTracker(commands.Cog):
     async def add(self, ctx, modifier: int, name: str, *args):
         """
         Adds a generic combatant to the initiative order.
+
         Generic combatants have a 10 in every stat and +0 to every modifier by default.
-        If a character is set up with the SheetManager module, you can use !init join instead.
-        If you are adding monsters to combat, you can use !init madd instead.
+        If you're adding multiple combatants with the `-n` argument, use "#" in the name for auto-numbering, e.g. "Boat#".
+
+        To join combat with a character, use `!init join` instead.
+        To add monsters to combat, use `!init madd` instead.
         __Valid Arguments__
+        `-n <number or dice>` - Adds multiple combatants at a time. Use "#" in the name for auto-numbering.
         `-h` - Hides HP, AC, resistances, and attack list.
         `-p <value>` - Places combatant at the given modifier, instead of rolling
-        `adv`/`dis` - Rolls the initiative check with advantage/disadvantage.
         `-controller <controller>` - Pings a different person on turn.
         `-group <group>` - Adds the combatant to a group.
+        `adv`/`dis` - Rolls the initiative check with advantage/disadvantage.
         `-hp <hp>` - Sets starting HP. Default: None.
         `-thp <thp>` - Sets starting THP. Default: 0.
         `-ac <ac>` - Sets the combatant's AC. Default: None.
@@ -193,41 +197,51 @@ class InitTracker(commands.Cog):
         `-cr <cr>` Sets the combatant's CR.
         `-type <creature type>` Sets the combatant's creature type.
         `-note <note>` - Sets the combatant's note.
-        """
+        """  # noqa E501
 
         combat = await ctx.get_combat()
-
-        if combat.get_combatant(name, True) is not None:
-            await ctx.send("Combatant already exists.")
-            return
-
         args = argparse(args)
+        msgs = []
 
-        me, init_roll = await combatant_builders.basic_combatant(ctx, combat, name, modifier, args)
+        # -n handling
+        num_combatants, roll_result = combatant_builders.resolve_n_arg(args.last("n"))
+        if roll_result is not None:
+            msgs.append(roll_result)
+        name_builder = combatant_builders.NameBuilder(name, combat, always_number_first_name=False)
 
-        group = args.last("group", None)
-        if group is None:
-            combat.add_combatant(me)
-            await ctx.send(f"{me.name} was added to combat with initiative {init_roll}.")
-        else:
-            grp = combat.get_group(group, create=me.init)
-            grp.add_combatant(me)
-            await ctx.send(f"{me.name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
+        for _ in range(num_combatants):
+            try:
+                name_one = name_builder.next()
+            except InvalidArgument as e:
+                msgs.append(str(e))
+                break
 
+            me, init_roll = await combatant_builders.basic_combatant(ctx, combat, name_one, modifier, args)
+
+            group = args.last("group", None)
+            if group is None:
+                combat.add_combatant(me)
+                msgs.append(f"{me.name} was added to combat with initiative {init_roll}.")
+            else:
+                grp = combat.get_group(group, create=me.init)
+                grp.add_combatant(me)
+                msgs.append(f"{me.name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
+
+        await ctx.send("\n".join(msgs))
         await combat.final(ctx)
 
     @init.command()
     async def madd(self, ctx, monster_name: str, *args):
         """Adds a monster to combat.
         __Valid Arguments__
-        `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
-        `-b <condition bonus>` - Adds a bonus to the combatant's initiative roll.
-        `-n <number or dice>` - Adds more than one of that monster. Supports dice.
+        `-name <name>` - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
+        `-n <number or dice>` - Adds more than one monster. Supports dice.
+        `-h` - Hides HP, AC, Resists, etc. Default: True.
         `-p <value>` - Places combatant at the given value, instead of rolling.
         `-controller <controller>` - Pings a different person on turn.
-        `-name <name>` - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
-        `-h` - Hides HP, AC, Resists, etc. Default: True.
         `-group <group>` - Adds the combatant to a group.
+        `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
+        `-b <condition bonus>` - Adds a bonus to the combatant's initiative roll.
         `-rollhp` - Rolls the monsters HP, instead of using the default value.
         `-hp <hp>` - Sets starting HP.
         `-thp <thp>` - Sets starting THP.

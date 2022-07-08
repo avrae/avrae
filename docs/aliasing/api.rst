@@ -221,13 +221,8 @@ Function Reference
 .. warning::
     It may be possible to corrupt your character data by incorrectly calling functions. Script at your own risk.
 
-All Contexts
-^^^^^^^^^^^^
-
-These functions are available in any scripting context, regardless if you have a character active or not.
-
 Python Builtins
-"""""""""""""""
+^^^^^^^^^^^^^^^
 
 .. function:: abs(x)
 
@@ -394,7 +389,7 @@ Python Builtins
     :rtype: float
 
 Draconic Functions
-""""""""""""""""""
+^^^^^^^^^^^^^^^^^^
 
 .. autofunction:: utils.argparser.argparse(args)
 
@@ -441,10 +436,6 @@ Draconic Functions
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_gvar(address)
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name)
-
-.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
-
-.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_yaml
 
 .. function:: randint(stop)
               randint(start, stop[, step])
@@ -523,318 +514,13 @@ Draconic Functions
 
 .. autofunction:: aliasing.api.functions.typeof
 
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.using
+
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.uvar_exists(name)
 
 .. autofunction:: aliasing.api.functions.vroll(rollStr, multiply=1, add=0)
 
 .. autofunction:: aliasing.api.functions.parse_coins(args: str) -> dict
-
-.. warning::
-    The following functions are deprecated and should be avoided:
-
-    .. autofunction:: aliasing.evaluators.ScriptingEvaluator.chanid()
-
-    .. autofunction:: aliasing.evaluators.ScriptingEvaluator.servid()
-
-    .. autofunction:: aliasing.evaluators.ScriptingEvaluator.set(name, value)
-
-Character Context
-^^^^^^^^^^^^^^^^^
-
-These functions are only available when a character is active in a scripting context. Otherwise, attempts to call
-these functions will raise a :exc:`FunctionRequiresCharacter` exception.
-
-.. warning::
-
-    As of v2.2.0, *all* character context functions have been deprecated and should be replaced. See each function's
-    documentation for its replacement.
-
-Custom Counters
-"""""""""""""""
-
-.. warning::
-
-    .. function:: cc_exists(name)
-
-        .. deprecated:: 2.5.0
-            Use ``character().cc_exists()`` instead.
-
-        Returns whether a custom counter exists.
-
-        :param str name: The name of the custom counter to check.
-        :returns: Whether the counter exists.
-        :rtype: bool
-
-    .. function:: cc_str(name)
-
-        .. deprecated:: 2.5.0
-            Use ``character().cc_str()`` instead.
-
-        Returns a string representing a custom counter.
-
-        :param str name: The name of the custom counter to get.
-        :returns: A string representing the current value, maximum, and minimum of the counter.
-        :rtype: str
-        :raises: :exc:`ConsumableException` if the counter does not exist.
-
-        Example:
-
-        >>> cc_str("Ki")
-        '11/17'
-        >>> cc_str("Bardic Inspiration")
-        '◉◉◉〇〇'
-
-    .. function:: create_cc(name, minVal=None, maxVal=None, reset=None, dispType=None)
-
-        .. deprecated:: 2.5.0
-            Use ``character().create_cc()`` instead.
-
-        Creates a custom counter. If a counter with the same name already exists, it will replace it.
-
-        :param str name: The name of the counter to create.
-        :param str minVal: The minimum value of the counter. Supports :ref:`cvar-table` parsing.
-        :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
-        :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
-        :param str dispType: Either ``None`` or ``'bubble'``.
-
-    .. function:: create_cc_nx(name, minVal=None, maxVal=None, reset=None, dispType=None)
-
-        .. deprecated:: 2.5.0
-            Use ``character().create_cc_nx()`` instead.
-
-        Creates a custom counter if one with the given name does not already exist.
-        Equivalent to:
-
-        >>> if not cc_exists(name):
-        >>>     create_cc(name, minVal, maxVal, reset, dispType)
-
-    .. function:: delete_cc(name)
-
-        .. deprecated:: 2.5.0
-            Use ``character().delete_cc()`` instead.
-
-        Deletes a custom counter.
-
-        :param str name: The name of the custom counter to delete.
-        :raises: :exc:`ConsumableException` if the counter does not exist.
-
-    .. function:: get_cc(name)
-
-        .. deprecated:: 2.5.0
-            Use ``character().get_cc()`` instead.
-
-        Gets the value of a custom counter.
-
-        :param str name: The name of the custom counter to get.
-        :returns: The current value of the counter.
-        :rtype: int
-        :raises: :exc:`ConsumableException` if the counter does not exist.
-
-
-    .. function:: get_cc_max(name)
-
-        .. deprecated:: 2.5.0
-            Use ``character().get_cc_max()`` instead.
-
-        Gets the maximum value of a custom counter.
-
-        :param str name: The name of the custom counter maximum to get.
-        :returns: The maximum value of the counter. If a counter has no maximum, it will return an obscenely large number (2^31-1).
-        :rtype: int
-        :raises: :exc:`ConsumableException` if the counter does not exist.
-
-    .. function:: get_cc_min(name)
-
-        .. deprecated:: 2.5.0
-            Use ``character().get_cc_min()`` instead.
-
-        Gets the minimum value of a custom counter.
-
-        :param str name: The name of the custom counter minimum to get.
-        :returns: The minimum value of the counter. If a counter has no minimum, it will return an obscenely small number (-2^31).
-        :rtype: int
-        :raises: :exc:`ConsumableException` if the counter does not exist.
-
-    .. function:: mod_cc(name, value, strict=False)
-
-        .. deprecated:: 2.5.0
-            Use ``character().mod_cc()`` instead.
-
-        Modifies the value of a custom counter. Equivalent to ``set_cc(name, get_cc(name) + value, strict)``.
-
-    .. function:: set_cc(name, value, strict=False)
-
-        .. deprecated:: 2.5.0
-            Use ``character().set_cc()`` instead.
-
-        Sets the value of a custom counter.
-
-        :param str name: The name of the custom counter to set.
-        :param int value: The value to set the counter to.
-        :param bool strict: If ``True``, will raise a :exc:`CounterOutOfBounds` if the new value is out of bounds, otherwise silently clips to bounds.
-        :raises: :exc:`ConsumableException` if the counter does not exist.
-
-Spell Slots
-"""""""""""
-
-.. warning::
-
-    .. function:: get_slots(level)
-
-        .. deprecated:: 2.5.0
-            Use ``character().spellbook.get_slots()`` instead.
-
-        Gets the number of remaining spell slots of a given level that a character has.
-
-        :param int level: The level to get the remaining slots of.
-        :returns: The number of remaining slots of that level.
-        :rtype: int
-
-    .. function:: get_slots_max(level)
-
-        .. deprecated:: 2.5.0
-            Use ``character().spellbook.get_slots_max()`` instead.
-
-        Gets the maximum number of spell slots of a given level that a character has.
-
-        :param int level: The level to get the maximum slots of.
-        :returns: The maximum number of slots of that level.
-        :rtype: int
-
-    .. function:: set_slots(level, value)
-
-        .. deprecated:: 2.5.0
-            Use ``character().spellbook.set_slots()`` instead.
-
-        Sets how many spell slots of a given level a character has.
-
-        :param int level: The level of spell slots to set.
-        :param int value: The value to set the remaining slots to.
-        :raises: :exc:`CounterOutOfBounds` if the number of slots is invalid.
-
-    .. function:: slots_str(level)
-
-        .. deprecated:: 2.5.0
-            Use ``character().spellbook.slots_str()`` instead.
-
-        Returns a string representing how many spell slots a character has of a given level.
-
-        :param int level: The level to get the slots of.
-        :returns: A string representing the current remaining and maximum number of slots of that level.
-        :rtype: str
-
-    .. function:: use_slot(level)
-
-        .. deprecated:: 2.5.0
-            Use ``character().spellbook.use_slot()`` instead.
-
-        Uses one spell slot of a given level. Equivalent to ``set_slots(level, get_slots(level) - 1)``.
-
-Hit Points
-""""""""""
-
-.. warning::
-
-    .. function:: get_hp()
-
-        .. deprecated:: 2.5.0
-            Use ``character().hp`` instead.
-
-        :returns: The character's current hit points.
-        :rtype: int
-
-    .. function:: get_temphp()
-
-        .. deprecated:: 2.5.0
-            Use ``character().temp_hp`` instead.
-
-        :returns: The character's current temporary hit points.
-        :rtype: int
-
-    .. function:: hp_str()
-
-        .. deprecated:: 2.5.0
-            Use ``character().hp_str()`` instead.
-
-        Returns a string representing a character's current HP, max HP, and temp HP.
-
-    .. function:: mod_hp(value, overflow=True)
-
-        .. deprecated:: 2.5.0
-            Use ``character().modify_hp()`` instead.
-
-        Modifies the character's remaining hit points by *value*. If *value* is negative, will deal damage to temp HP first.
-
-        :param int value: How much to modify remaining HP by.
-        :param bool overflow: If ``False``, clips the new HP value to ``[0..hp]``.
-
-    .. function:: set_hp(value)
-
-        .. deprecated:: 2.5.0
-            Use ``character().set_hp()`` instead.
-
-        Sets the character's remaining hit points. Ignores temp HP.
-
-        :param int value: The new value for hit points.
-
-    .. function:: set_temphp(value)
-
-        .. deprecated:: 2.5.0
-            Use ``character().set_temp_hp()`` instead.
-
-        Sets the character's remaining temp HP.
-
-        :param int value: The new value for temporary hit points.
-
-Cvars
-"""""
-
-.. warning::
-
-    .. note::
-        All custom character variables are locally bound to a Draconic scope. To access their values, use them like a normal
-        name.
-
-    .. function:: delete_cvar(name)
-
-        .. deprecated:: 2.5.0
-            Use ``character().delete_cvar()`` instead.
-
-        Deletes a custom character variable. Does nothing if the cvar does not exist.
-
-        :param str name: The name of the variable to delete.
-
-    .. function:: set_cvar(name, value)
-
-        .. deprecated:: 2.5.0
-            Use ``character().set_cvar()`` instead.
-
-        Sets a custom character variable, which will be available in all scripting contexts using this character.
-
-        :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
-        :param str value: The value to set it to.
-
-    .. function:: set_cvar_nx(name, value)
-
-        .. deprecated:: 2.5.0
-            Use ``character().set_cvar_nx()`` instead.
-
-        Sets a custom character variable if it is not already set.
-
-        :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
-        :param str value: The value to set it to.
-
-Other
-"""""
-
-.. warning::
-
-    .. function:: get_raw()
-
-        .. deprecated:: 2.5.0
-            Deprecated without replacement. Use ``character()`` to get a representation of the character instead.
-
-        Returns a raw representation of character data.
 
 Variable Scopes
 ---------------
@@ -918,6 +604,87 @@ an alias' metadata on each combatant).
 Metadata can be created, retrieved, and deleted using the :meth:`.SimpleCombat.set_metadata`,
 :meth:`.SimpleCombat.get_metadata`, and :meth:`.SimpleCombat.delete_metadata` methods, respectively.
 
+.. _using-imports:
+
+Using Imports
+-------------
+
+Imports are a way for alias authors to share common code across multiple aliases, provide common libraries of code for
+other authors to write code compatible with your alias, and more!
+
+If you already have the address of a module to import, use :meth:`~aliasing.evaluators.ScriptingEvaluator.using` at the
+top of your code block in order to import the module into your namespace. For example:
+
+.. code-block:: text
+
+    !alias hello-world echo <drac2>
+    using(
+        hello="50943a96-381b-427e-adb9-eea8ebf61f27"
+    )
+    return hello.hello()
+    </drac2>
+
+Use ``!gvar 50943a96-381b-427e-adb9-eea8ebf61f27`` to take a peek at the ``hello`` module!
+
+You can also import multiple modules in the same expression:
+
+.. code-block:: text
+
+    !alias hello-world echo <drac2>
+    using(
+        hello="50943a96-381b-427e-adb9-eea8ebf61f27",
+        hello_utils="0bbddb9f-c86f-4af8-9e04-1964425b1554"
+    )
+    return f"{hello.hello('you')}\n{hello_utils.hello_to_my_character()}"
+    </drac2>
+
+The ``hello_utils`` module (``!gvar 0bbddb9f-c86f-4af8-9e04-1964425b1554``) also demonstrates how modules can import
+other modules!
+
+Each imported module is bound to a namespace that contains each of the names (constants, functions, etc) defined in the
+module. For example, the ``hello`` module (``50943a96-381b-427e-adb9-eea8ebf61f27``) defines the ``HELLO_WORLD``
+constant and ``hello()`` function, so a consumer could access these with ``hello.HELLO_WORLD`` and ``hello.hello()``,
+respectively.
+
+.. warning::
+
+    Only import modules from trusted sources! The entire contents of an imported module is executed once upon
+    import, and can do bad things like delete all of your variables.
+
+    All gvar modules are open-source by default, so it is encouraged to view the imported module using ``!gvar``.
+
+Writing Modules
+^^^^^^^^^^^^^^^
+
+Modules are easy to publish and update! Simply create a gvar that contains valid Draconic code (**without** wrapping it
+in any delimiters such as ``<drac2>``).
+
+We encourage modules to follow the following format to make them easy to read:
+
+.. code-block:: python
+
+    # recommended_module_name
+    # This is a short description about what the module does.
+    #
+    # SOME_CONSTANT: some documentation about what this constant is
+    # some_function(show, the, args): some short documentation about what this function does
+    #     and how to call it
+    #     wow, this is long! use indentation if you need multiple lines
+    #     but otherwise longer documentation should go in the function's """docstring"""
+
+    SOME_CONSTANT = 3.141592
+
+    def some_function(show, the, args):
+        """Here is where the longer documentation about the function can go."""
+        pass
+
+Use ``!gvar 50943a96-381b-427e-adb9-eea8ebf61f27`` and ``!gvar 0bbddb9f-c86f-4af8-9e04-1964425b1554`` to view
+the ``hello`` and ``hello_utils`` example modules used above for an example!
+
+.. note::
+
+    Because all gvars are public to anyone who knows the address, modules are open-source by default.
+
 See Also
 --------
 
@@ -928,6 +695,8 @@ Draconic's syntax is very similar to Python. Other Python features supported in 
 * `Operators <https://docs.python.org/3/reference/expressions.html#unary-arithmetic-and-bitwise-operations>`_ (``2 + 2``, ``"foo" in "foobar"``, etc)
 * `Assignments <https://docs.python.org/3/reference/simple_stmts.html#assignment-statements>`_ (``a = 15``)
 * `List Comprehensions <https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions>`_
+* `Functions <https://docs.python.org/3/tutorial/controlflow.html#defining-functions>`_
+* `Lambda Expressions <https://docs.python.org/3/tutorial/controlflow.html#lambda-expressions>`_
 
 Initiative Models
 -----------------
@@ -992,24 +761,6 @@ SimpleCombatant
         An int representing the combatant's initiative modifier.
 
         :type: int
-
-    .. attribute:: level
-
-        .. deprecated:: 2.5.0
-            Use ``SimpleCombatant.levels.total_level`` or ``SimpleCombatant.spellbook.caster_level`` instead.
-
-        The combatant's spellcaster level. ``0`` if the combatant is not a player or spellcaster.
-
-        :type: int
-
-    .. attribute:: resists
-
-        .. deprecated:: 2.5.0
-            Use ``SimpleCombatant.resistances`` instead.
-
-        The combatant's resistances, immunities, and vulnerabilities.
-
-        :type: :class:`~aliasing.api.statblock.AliasResistances`
 
     .. attribute:: type
 
@@ -1119,6 +870,136 @@ SimpleEffect
         Whether the effect duration ticks at the end of the combatant's turn or at the start.
 
         :type: bool
+
+.. _ieffectargs:
+
+Initiative Effect Args
+^^^^^^^^^^^^^^^^^^^^^^
+
+The *passive_effects*, *attacks*, and *buttons* arguments to ``SimpleCombatant.add_effect()`` should be a dict/list that
+follows the schema below, respectively.
+
+Some examples are provided below.
+
+.. code-block:: python
+
+    class PassiveEffects:
+        attack_advantage: Optional[enums.AdvantageType]
+        to_hit_bonus: Optional[str255]
+        damage_bonus: Optional[str255]
+        magical_damage: Optional[bool]
+        silvered_damage: Optional[bool]
+        resistances: Optional[List[str255]]
+        immunities: Optional[List[str255]]
+        vulnerabilities: Optional[List[str255]]
+        ignored_resistances: Optional[List[str255]]
+        ac_value: Optional[int]
+        ac_bonus: Optional[int]
+        max_hp_value: Optional[int]
+        max_hp_bonus: Optional[int]
+        save_bonus: Optional[str255]
+        save_adv: Optional[Set[str]]
+        save_dis: Optional[Set[str]]
+        check_bonus: Optional[str255]
+        check_adv: Optional[Set[str]]
+        check_dis: Optional[Set[str]]
+
+    class AttackInteraction:
+        attack: AttackModel  # this can be any attack built on the Avrae Dashboard
+        override_default_dc: Optional[int]
+        override_default_attack_bonus: Optional[int]
+        override_default_casting_mod: Optional[int]
+
+    class ButtonInteraction:
+        automation: Automation  # this can be any automation built on the Avrae Dashboard
+        label: str
+        verb: Optional[str255]
+        style: Optional[conint(ge=1, le=4)]
+        override_default_dc: Optional[int]
+        override_default_attack_bonus: Optional[int]
+        override_default_casting_mod: Optional[int]
+
+**Example: Passive Effects**
+
+Also see :ref:`passiveeffects` for more information.
+
+.. code-block:: python
+
+    combatant.add_effect(
+        "Some Magical Effect",
+        passive_effects={
+            "attack_advantage": 1,
+            "damage_bonus": "1d4 [fire]",
+            "magical_damage": True,
+            "resistances": ["fire", "nonmagical slashing"],
+            "ac_bonus": 2,
+            "save_adv": ["dexterity"]
+        }
+    )
+
+**Example: Granting Attacks**
+
+Also see :ref:`attackinteraction` for more information. Note that the Automation schema differs slightly from the
+aliasing API.
+
+.. code-block:: python
+
+    combatant.add_effect(
+        "Some Magical Effect",
+        attacks=[{
+            "attack": {
+                "_v": 2,
+                "name": "Magical Attack",
+                "verb": "shows off the power of",
+                "automation": [
+                    {
+                        "type": "target",
+                        "target": "each",
+                        "effects": [
+                            {
+                                "type": "attack",
+                                "hit": [
+                                    {
+                                        "type": "damage",
+                                        "damage": "1d10[fire]"
+                                    }
+                                ],
+                                "miss": []
+                            }
+                        ]
+                    }
+                ]
+            }
+        }]
+    )
+
+**Example: Granting Buttons**
+
+Also see :ref:`buttoninteraction` for more information. Note that the Automation schema differs slightly from the
+aliasing API.
+
+.. code-block:: python
+
+    combatant.add_effect(
+        "Some Magical Effect",
+        buttons=[{
+            "label": "On Fire",
+            "verb": "is burning",
+            "style": 4,
+            "automation": [
+                {
+                    "type": "target",
+                    "target": "self",
+                    "effects": [
+                        {
+                            "type": "damage",
+                            "damage": "1d6 [fire]"
+                        }
+                    ]
+                }
+            ]
+        }]
+    )
 
 SimpleRollResult
 ----------------

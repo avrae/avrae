@@ -7,6 +7,7 @@ import time
 from collections import namedtuple
 from functools import cached_property
 from math import ceil, floor, sqrt
+from types import SimpleNamespace
 from typing import Optional, Union
 
 import d20
@@ -17,7 +18,6 @@ from yaml import composer, parser, scanner
 
 import aliasing.api.character as character_api
 import aliasing.api.combat as combat_api
-import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.context import AliasContext
 from aliasing.api.functions import (
@@ -36,12 +36,11 @@ from aliasing.api.functions import (
     verify_signature,
     vroll,
 )
-from aliasing.api.legacy import LegacyRawCharacter
 from aliasing.errors import EvaluationError, FunctionRequiresCharacter
 from aliasing.personal import _CustomizationBase
 from aliasing.utils import ExecutionScope
 from aliasing.workshop import WorkshopCollectableObject
-from cogs5e.models.errors import ConsumableException, InvalidArgument
+from cogs5e.models.errors import InvalidArgument
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
 
@@ -120,36 +119,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     def __init__(self, ctx, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.builtins.update(  # fixme character-only functions, all deprecated now
-            get_cc=self.deprecated(since="v2.5.0", replacement="character().cc().value")(self.needs_char),
-            set_cc=self.deprecated(since="v2.5.0", replacement="character().cc().set()")(self.needs_char),
-            get_cc_max=self.deprecated(since="v2.5.0", replacement="character().cc().max")(self.needs_char),
-            get_cc_min=self.deprecated(since="v2.5.0", replacement="character().cc().min")(self.needs_char),
-            mod_cc=self.deprecated(since="v2.5.0", replacement="character().mod_cc()")(self.needs_char),
-            cc_exists=self.deprecated(since="v2.5.0", replacement="character().cc_exists()")(self.needs_char),
-            create_cc_nx=self.deprecated(since="v2.5.0", replacement="character().create_cc_nx()")(self.needs_char),
-            create_cc=self.deprecated(since="v2.5.0", replacement="character().create_cc()")(self.needs_char),
-            get_slots=self.deprecated(since="v2.5.0", replacement="character().spellbook.get_slots()")(self.needs_char),
-            get_slots_max=self.deprecated(since="v2.5.0", replacement="character().spellbook.get_max_slots()")(
-                self.needs_char
-            ),
-            set_slots=self.deprecated(since="v2.5.0", replacement="character().spellbook.set_slots()")(self.needs_char),
-            use_slot=self.deprecated(since="v2.5.0", replacement="character().spellbook.use_slot()")(self.needs_char),
-            get_hp=self.deprecated(since="v2.5.0", replacement="character().hp")(self.needs_char),
-            set_hp=self.deprecated(since="v2.5.0", replacement="character().set_hp()")(self.needs_char),
-            mod_hp=self.deprecated(since="v2.5.0", replacement="character().modify_hp()")(self.needs_char),
-            hp_str=self.deprecated(since="v2.5.0", replacement="character().hp_str()")(self.needs_char),
-            get_temphp=self.deprecated(since="v2.5.0", replacement="character().temp_hp")(self.needs_char),
-            set_temphp=self.deprecated(since="v2.5.0", replacement="character().set_temp_hp()")(self.needs_char),
-            set_cvar=self.deprecated(since="v2.5.0", replacement="character().set_cvar()")(self.needs_char),
-            delete_cvar=self.deprecated(since="v2.5.0", replacement="character().delete_cvar()")(self.needs_char),
-            set_cvar_nx=self.deprecated(since="v2.5.0", replacement="character().set_cvar_nx()")(self.needs_char),
-            get_raw=self.deprecated(since="v2.5.0", replacement=None)(self.needs_char),
-        )
-
         # char-agnostic globals
         self.builtins.update(
-            set=self.deprecated(since="v0.1.0", replacement="name = value")(self.set),
             exists=self.exists,
             get=self.get,
             combat=self.combat,
@@ -160,9 +131,6 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             delete_uvar=self.delete_uvar,
             set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
-            # fixme deprecated - use ctx instead
-            chanid=self.deprecated(since="v2.5.0", replacement="ctx.channel.id")(self.chanid),
-            servid=self.deprecated(since="v2.5.0", replacement="ctx.guild.id")(self.servid),
             load_json=self.load_json,
             dump_json=self.dump_json,
             load_yaml=self.load_yaml,
@@ -171,13 +139,14 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             ctx=AliasContext(ctx),
             signature=self.signature,
             verify_signature=self.verify_signature,
+            using=self.using,
         )
 
         # roll limiting
         self._roller = d20.Roller(context=PersistentRollContext(max_rolls=1_000, max_total_rolls=10_000))
         self.builtins.update(vroll=self._limited_vroll, roll=self._limited_roll)
 
-        self._cache = {"gvars": {}, "svars": {}, "uvars": {}}
+        self._cache = {"gvars": {}, "svars": {}, "uvars": {}, "imports": {}}
 
         self.ctx = ctx
         self.character_changed = False
@@ -190,6 +159,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         self._aliasing_current_node = None
         self._nodes_with_warnings = set()
         self.warnings: list[ScriptingWarning] = []
+
+        # imports
+        self._import_stack: list[str] = []
 
     @classmethod
     async def new(cls, ctx):
@@ -204,19 +176,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
     def with_character(self, character):
         self.with_statblock(character)
-
         self._cache["character"] = character_api.AliasCharacter(character, self)
-
-        # define character-specific functions
-        # fixme deprecated
-
-        # helpers
-        def _get_consumable(name):
-            name = str(name)
-            consumable = next((con for con in character.consumables if con.name == name), None)
-            if consumable is None:
-                raise ConsumableException(f"There is no counter named {name}.")
-            return consumable
 
         # funcs
         def combat():
@@ -225,168 +185,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 cmbt.func_set_character(character)
             return cmbt
 
-        @self.deprecated(since="v2.5.0", replacement="character().cc().value")
-        def get_cc(name):
-            return _get_consumable(name).value
-
-        @self.deprecated(since="v2.5.0", replacement="character().cc().max")
-        def get_cc_max(name):
-            return _get_consumable(name).get_max()
-
-        @self.deprecated(since="v2.5.0", replacement="character().cc().min")
-        def get_cc_min(name):
-            return _get_consumable(name).get_min()
-
-        @self.deprecated(since="v2.5.0", replacement="character().cc().set()")
-        def set_cc(name, value: int, strict=False):
-            _get_consumable(name).set(int(value), strict)
-            self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement="character().mod_cc()")
-        def mod_cc(name, val: int, strict=False):
-            return set_cc(name, get_cc(name) + int(val), strict)
-
-        @self.deprecated(since="v2.5.0", replacement="character().delete_cc()")
-        def delete_cc(name):
-            to_delete = _get_consumable(name)
-            character.consumables.remove(to_delete)
-            self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement="character().create_cc_nx()")
-        def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None, dispType: str = None):
-            if minVal is not None:
-                minVal = str(minVal)
-            if maxVal is not None:
-                maxVal = str(maxVal)
-            if reset is not None:
-                reset = str(reset)
-            if dispType is not None:
-                dispType = str(dispType)
-            if not cc_exists(name):
-                new_consumable = player_api.CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
-                character.consumables.append(new_consumable)
-                self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement="character().create_cc()")
-        def create_cc(name: str, *args, **kwargs):
-            name = str(name)
-            if cc_exists(name):
-                delete_cc(name)
-            create_cc_nx(name, *args, **kwargs)
-
-        @self.deprecated(since="v2.5.0", replacement="character().cc_exists()")
-        def cc_exists(name):
-            return str(name) in set(con.name for con in character.consumables)
-
-        @self.deprecated(since="v2.5.0", replacement="character().cc_str()")
-        def cc_str(name):
-            return str(_get_consumable(name))
-
-        @self.deprecated(since="v2.5.0", replacement="character().spellbook.get_slots()")
-        def get_slots(level: int):
-            return character.spellbook.get_slots(int(level))
-
-        @self.deprecated(since="v2.5.0", replacement="character().spellbook.get_max_slots()")
-        def get_slots_max(level: int):
-            return character.spellbook.get_max_slots(int(level))
-
-        @self.deprecated(since="v2.5.0", replacement="character().spellbook.slots_str()")
-        def slots_str(level: int):
-            return character.spellbook.slots_str(int(level))
-
-        @self.deprecated(since="v2.5.0", replacement="character().spellbook.set_slots()")
-        def set_slots(level: int, value: int):
-            character.spellbook.set_slots(int(level), int(value))
-            self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement="character().spellbook.use_slot()")
-        def use_slot(level: int):
-            character.spellbook.use_slot(int(level))
-            self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement="character().hp")
-        def get_hp():
-            return character.hp
-
-        @self.deprecated(since="v2.5.0", replacement="character().set_hp()")
-        def set_hp(val: int):
-            character.hp = int(val)
-            self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement="character().modify_hp()")
-        def mod_hp(val: int, overflow: bool = True):
-            val = int(val)
-            character.modify_hp(val, overflow=overflow)
-            self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement="character().hp_str()")
-        def hp_str():
-            return character.hp_str()
-
-        @self.deprecated(since="v2.5.0", replacement="character().temp_hp")
-        def get_temphp():
-            return character.temp_hp
-
-        @self.deprecated(since="v2.5.0", replacement="character().set_temp_hp()")
-        def set_temphp(val: int):
-            val = int(val)
-            character.temp_hp = val
-            self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement="character().set_cvar()")
-        def set_cvar(name, val: str):
-            name = str(name)
-            val = str(val)
-            helpers.set_cvar(character, name, val)
-            self._names[name] = val
-            self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement="character().set_cvar_nx()")
-        def set_cvar_nx(name, val: str):
-            name = str(name)
-            if name not in character.cvars:
-                set_cvar(name, val)
-
-        @self.deprecated(since="v2.5.0", replacement="character().delete_cvar()")
-        def delete_cvar(name):
-            name = str(name)
-            if name in character.cvars:
-                del character.cvars[name]
-                self.character_changed = True
-
-        @self.deprecated(since="v2.5.0", replacement=None)
-        def get_raw():
-            return LegacyRawCharacter(character).to_dict()
-
-        self.builtins.update(
-            combat=combat,
-            get_cc=get_cc,
-            set_cc=set_cc,
-            get_cc_max=get_cc_max,
-            get_cc_min=get_cc_min,
-            mod_cc=mod_cc,
-            delete_cc=delete_cc,
-            cc_exists=cc_exists,
-            create_cc_nx=create_cc_nx,
-            create_cc=create_cc,
-            cc_str=cc_str,
-            get_slots=get_slots,
-            get_slots_max=get_slots_max,
-            set_slots=set_slots,
-            use_slot=use_slot,
-            slots_str=slots_str,
-            get_hp=get_hp,
-            set_hp=set_hp,
-            mod_hp=mod_hp,
-            hp_str=hp_str,
-            get_temphp=get_temphp,
-            set_temphp=set_temphp,
-            set_cvar=set_cvar,
-            delete_cvar=delete_cvar,
-            set_cvar_nx=set_cvar_nx,
-            get_raw=get_raw,
-        )
-
+        self.builtins.update(combat=combat)
         return self
 
     async def run_commits(self):
@@ -398,24 +197,6 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             await helpers.update_uvars(self.ctx, self._cache["uvars"], self.uvars_changed)
 
     # helpers
-    def needs_char(self, *args, **kwargs):
-        raise FunctionRequiresCharacter()  # no. bad.
-
-    def set(self, name, value):  # todo
-        """
-        Sets the value of a name in the current scripting context.
-
-        .. deprecated:: 0.1.0
-            Use ``name = value`` instead.
-
-        :param name: The name to set.
-        :param value: The value to set it to.
-        """
-        name = str(name)
-        if name in self.builtins:
-            raise ValueError(f"{name} is already builtin (no shadow assignments).")
-        self._names[name] = value
-
     def exists(self, name):
         """
         Returns whether or not a name is set in the current evaluation context.
@@ -527,30 +308,6 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         if name in self._cache["uvars"]:
             del self._cache["uvars"][name]
             self.uvars_changed.add(name)
-
-    def chanid(self):
-        """
-        Returns the ID of the active Discord channel.
-
-        .. deprecated:: 2.5.0
-            Use ``ctx.channel.id`` instead.
-
-        :rtype: str
-        """
-        return str(self.ctx.channel.id)
-
-    def servid(self):
-        """
-        Returns the ID of the active Discord guild, or None if in DMs.
-
-        .. deprecated:: 2.5.0
-            Use ``ctx.guild.id`` instead.
-
-        :rtype: str
-        """
-        if self.ctx.guild:
-            return str(self.ctx.guild.id)
-        return None
 
     def get(self, name, default=None):
         """
@@ -782,9 +539,69 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         data = str(data)
         return verify_signature(self.ctx, data)
 
+    def using(self, **imports):
+        """
+        Imports Draconic global variables as modules in the current namespace. See :ref:`using-imports` for details.
+
+        Usually this should be the first statement in a code block if imports are used.
+
+        .. warning::
+
+            Only import modules from trusted sources! The entire contents of an imported module is executed once upon
+            import, and can do bad things like delete all of your variables.
+
+        >>> using(
+        ...     hello="50943a96-381b-427e-adb9-eea8ebf61f27"
+        ... )
+        >>> hello.hello()
+        "Hello world!"
+        """
+        user_ns = self._names
+        for ns, addr in imports.items():
+            # prevent circular imports: if *addr* is already on the import stack, raise an ImportError
+            if addr in self._import_stack:
+                circle = " imports\n".join(self._import_stack)
+                raise ImportError(f"Circular import detected!\n{circle} imports\n{addr}")
+            self._import_stack.append(addr)
+            try:
+                self._import_one(ns, str(addr), user_ns)
+            finally:
+                self._import_stack.pop()
+        self._names = user_ns
+
+    def _import_one(self, name: str, addr: str, user_ns: dict):
+        """Import the module at the gvar address *addr* into the *user_ns* under the name *name*"""
+        # get the module contents
+        mod_contents = self.get_gvar(addr)
+        if mod_contents is None:
+            raise ModuleNotFoundError(f"No gvar named {addr!r}")
+
+        try:
+            # if the module is in cache, return the ns from cache
+            mod_ns = self._cache["imports"][addr]
+        except KeyError:
+            # create a new for the execution
+            self._names = {}
+            # add a recursion depth to prevent super-nested imports
+            self._depth += 1
+            if self._depth > self._config.max_recursion_depth:
+                raise RecursionError("Maximum recursion depth exceeded")
+            # run the gvar
+            try:
+                self.execute_module(mod_contents, module_name=addr)
+            finally:
+                self._depth -= 1
+            # create a namespace and cache it
+            mod_ns = SimpleNamespace(**self._names)
+            self._cache["imports"][addr] = mod_ns
+
+        # bind to user's global ns
+        if name in self.builtins:
+            raise ValueError(f"{name} is already builtin (no shadow assignments).")
+        user_ns[name] = mod_ns
+
     # ==== warnings ====
     def _eval(self, node):
-        # todo comment me after removing deprecated code so we don't have a bajillion stack frames during recursion
         last_node = self._aliasing_current_node
         self._aliasing_current_node = node  # record the node currently being evaluated
         try:

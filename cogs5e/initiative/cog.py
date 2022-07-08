@@ -1,7 +1,6 @@
 import collections
 import functools
 import logging
-import traceback
 from contextlib import suppress
 
 import disnake
@@ -262,95 +261,74 @@ class InitTracker(commands.Cog):
         hp = args.last("hp", type_=int)
         thp = args.last("thp", type_=int)
         ac = args.last("ac", type_=int)
-        n = args.last("n", 1)
         note = args.last("note")
         name_template = args.last("name", f"{get_name(monster)}#")
         init_skill = monster.skills.initiative
 
         combat = await ctx.get_combat()
 
-        out = ""
-        to_pm = ""
+        msgs = []
+        to_pm = []
 
-        try:  # Attempt to get the add as a number
-            n_result = int(n)
-        except ValueError:  # if we're not a number, are we dice
-            roll_result = roll(str(n))
-            n_result = roll_result.total
-            out += f"Rolling random number of combatants: {roll_result}\n"
+        num_combatants, roll_result = combatant_builders.resolve_n_arg(args.last("n"))
+        if roll_result is not None:
+            msgs.append(roll_result)
+        name_builder = combatant_builders.NameBuilder(name_template, combat)
 
-        recursion = 25 if n_result > 25 else 1 if n_result < 1 else n_result
-
-        name_num = 1
-        for i in range(recursion):
-            name = name_template.replace("#", str(name_num))
-            raw_name = name_template
-            to_continue = False
-
-            while combat.get_combatant(name, True) and name_num < 100:  # keep increasing to avoid duplicates
-                if "#" in raw_name:
-                    name_num += 1
-                    name = raw_name.replace("#", str(name_num))
-                else:
-                    out += "Combatant already exists.\n"
-                    to_continue = True
-                    break
-
-            if to_continue:
-                continue
-
+        for _ in range(num_combatants):
             try:
-                check_roll = None  # to make things happy
-                if p is None:
-                    if b:
-                        check_roll = roll(f"{init_skill.d20(base_adv=adv)}+{b}")
-                    else:
-                        check_roll = roll(init_skill.d20(base_adv=adv))
-                    init = check_roll.total
+                name = name_builder.next()
+            except InvalidArgument as e:
+                msgs.append(str(e))
+                break
+
+            check_roll = None  # to make things happy
+            if p is None:
+                if b:
+                    check_roll = roll(f"{init_skill.d20(base_adv=adv)}+{b}")
                 else:
-                    init = int(p)
+                    check_roll = roll(init_skill.d20(base_adv=adv))
+                init = check_roll.total
+            else:
+                init = int(p)
 
-                # -controller (#1368)
-                if args.last("controller"):
-                    controller_name = args.last("controller")
-                    member = await commands.MemberConverter().convert(ctx, controller_name)
-                    controller = str(member.id) if member is not None and not member.bot else controller
+            # -controller (#1368)
+            if args.last("controller"):
+                controller_name = args.last("controller")
+                member = await commands.MemberConverter().convert(ctx, controller_name)
+                controller = str(member.id) if member is not None and not member.bot else controller
 
-                # -hp
-                rolled_hp = None
-                if rollhp:
-                    rolled_hp = roll(monster.hitdice)
-                    to_pm += f"{name} began with {rolled_hp.result} HP.\n"
-                    rolled_hp = max(rolled_hp.total, 1)
+            # -hp
+            rolled_hp = None
+            if rollhp:
+                rolled_hp = roll(monster.hitdice)
+                to_pm.append(f"{name} began with {rolled_hp.result} HP.")
+                rolled_hp = max(rolled_hp.total, 1)
 
-                me = MonsterCombatant.from_monster(
-                    monster, ctx, combat, name, controller, init, private, hp=hp or rolled_hp, ac=ac
-                )
+            me = MonsterCombatant.from_monster(
+                monster, ctx, combat, name, controller, init, private, hp=hp or rolled_hp, ac=ac
+            )
 
-                # -thp (#1142)
-                if thp and thp > 0:
-                    me.temp_hp = thp
+            # -thp (#1142)
+            if thp and thp > 0:
+                me.temp_hp = thp
 
-                # -note (#1211)
-                if note:
-                    me.notes = note
+            # -note (#1211)
+            if note:
+                me.notes = note
 
-                if group is None:
-                    combat.add_combatant(me)
-                    out += f"{name} was added to combat with initiative {check_roll.result if p is None else p}.\n"
-                else:
-                    grp = combat.get_group(group, create=init)
-                    grp.add_combatant(me)
-                    out += f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.\n"
-
-            except Exception as e:
-                log.warning("\n".join(traceback.format_exception(type(e), e, e.__traceback__)))
-                out += "Error adding combatant: {}\n".format(e)
+            if group is None:
+                combat.add_combatant(me)
+                msgs.append(f"{name} was added to combat with initiative {check_roll.result if p is None else p}.")
+            else:
+                grp = combat.get_group(group, create=init)
+                grp.add_combatant(me)
+                msgs.append(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
 
         await combat.final(ctx)
-        await ctx.send(out)
+        await ctx.send("\n".join(msgs))
         if to_pm:
-            await ctx.author.send(to_pm)
+            await ctx.author.send("\n".join(to_pm))
 
     @init.command(name="join", aliases=["cadd", "dcadd"])
     async def join(self, ctx, *, args: str = ""):

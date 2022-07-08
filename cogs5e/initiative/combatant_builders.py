@@ -13,7 +13,7 @@ from .utils import create_combatant_id
 
 
 # ==== helpers ====
-def resolve_n_arg(n: str) -> tuple[int, str | None]:
+def resolve_n_arg(n: str | None) -> tuple[int, str | None]:
     """
     Given a string, parse it as an integer or roll it as dice and return a tuple representing
     (final_int, roll_result?).
@@ -32,7 +32,7 @@ def resolve_n_arg(n: str) -> tuple[int, str | None]:
         # it was a string, but not an int
         roll_result = roll(n)
         n_result = roll_result.total
-        msg = f"Rolling random number of combatants: {roll_result}"
+        msg = f"Rolling number of combatants: {roll_result}"
 
     return min(25, max(1, n_result)), msg
 

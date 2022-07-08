@@ -7,6 +7,7 @@ import time
 from collections import namedtuple
 from functools import cached_property
 from math import ceil, floor, sqrt
+from types import SimpleNamespace
 from typing import Optional, Union
 
 import d20
@@ -138,13 +139,14 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             ctx=AliasContext(ctx),
             signature=self.signature,
             verify_signature=self.verify_signature,
+            using=self.using,
         )
 
         # roll limiting
         self._roller = d20.Roller(context=PersistentRollContext(max_rolls=1_000, max_total_rolls=10_000))
         self.builtins.update(vroll=self._limited_vroll, roll=self._limited_roll)
 
-        self._cache = {"gvars": {}, "svars": {}, "uvars": {}}
+        self._cache = {"gvars": {}, "svars": {}, "uvars": {}, "imports": {}}
 
         self.ctx = ctx
         self.character_changed = False
@@ -157,6 +159,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         self._aliasing_current_node = None
         self._nodes_with_warnings = set()
         self.warnings: list[ScriptingWarning] = []
+
+        # imports
+        self._import_stack: list[str] = []
 
     @classmethod
     async def new(cls, ctx):
@@ -533,6 +538,67 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         data = str(data)
         return verify_signature(self.ctx, data)
+
+    def using(self, **imports):
+        """
+        Imports Draconic global variables as modules in the current namespace. See :ref:`using-imports` for details.
+
+        Usually this should be the first statement in a code block if imports are used.
+
+        .. warning::
+
+            Only import modules from trusted sources! The entire contents of an imported module is executed once upon
+            import, and can do bad things like delete all of your variables.
+
+        >>> using(
+        ...     hello="50943a96-381b-427e-adb9-eea8ebf61f27"
+        ... )
+        >>> hello.hello()
+        "Hello world!"
+        """
+        user_ns = self._names
+        for ns, addr in imports.items():
+            # prevent circular imports: if *addr* is already on the import stack, raise an ImportError
+            if addr in self._import_stack:
+                circle = " imports\n".join(self._import_stack)
+                raise ImportError(f"Circular import detected!\n{circle} imports\n{addr}")
+            self._import_stack.append(addr)
+            try:
+                self._import_one(ns, str(addr), user_ns)
+            finally:
+                self._import_stack.pop()
+        self._names = user_ns
+
+    def _import_one(self, name: str, addr: str, user_ns: dict):
+        """Import the module at the gvar address *addr* into the *user_ns* under the name *name*"""
+        # get the module contents
+        mod_contents = self.get_gvar(addr)
+        if mod_contents is None:
+            raise ModuleNotFoundError(f"No gvar named {addr!r}")
+
+        try:
+            # if the module is in cache, return the ns from cache
+            mod_ns = self._cache["imports"][addr]
+        except KeyError:
+            # create a new for the execution
+            self._names = {}
+            # add a recursion depth to prevent super-nested imports
+            self._depth += 1
+            if self._depth > self._config.max_recursion_depth:
+                raise RecursionError("Maximum recursion depth exceeded")
+            # run the gvar
+            try:
+                self.execute_module(mod_contents, module_name=addr)
+            finally:
+                self._depth -= 1
+            # create a namespace and cache it
+            mod_ns = SimpleNamespace(**self._names)
+            self._cache["imports"][addr] = mod_ns
+
+        # bind to user's global ns
+        if name in self.builtins:
+            raise ValueError(f"{name} is already builtin (no shadow assignments).")
+        user_ns[name] = mod_ns
 
     # ==== warnings ====
     def _eval(self, node):

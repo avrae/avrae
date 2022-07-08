@@ -437,10 +437,6 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name)
 
-.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
-
-.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_yaml
-
 .. function:: randint(stop)
               randint(start, stop[, step])
 
@@ -499,6 +495,8 @@ Draconic Functions
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.verify_signature(data)
 
 .. autofunction:: aliasing.api.functions.typeof
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.using
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.uvar_exists(name)
 
@@ -588,6 +586,87 @@ an alias' metadata on each combatant).
 Metadata can be created, retrieved, and deleted using the :meth:`.SimpleCombat.set_metadata`,
 :meth:`.SimpleCombat.get_metadata`, and :meth:`.SimpleCombat.delete_metadata` methods, respectively.
 
+.. _using-imports:
+
+Using Imports
+-------------
+
+Imports are a way for alias authors to share common code across multiple aliases, provide common libraries of code for
+other authors to write code compatible with your alias, and more!
+
+If you already have the address of a module to import, use :meth:`~aliasing.evaluators.ScriptingEvaluator.using` at the
+top of your code block in order to import the module into your namespace. For example:
+
+.. code-block:: text
+
+    !alias hello-world echo <drac2>
+    using(
+        hello="50943a96-381b-427e-adb9-eea8ebf61f27"
+    )
+    return hello.hello()
+    </drac2>
+
+Use ``!gvar 50943a96-381b-427e-adb9-eea8ebf61f27`` to take a peek at the ``hello`` module!
+
+You can also import multiple modules in the same expression:
+
+.. code-block:: text
+
+    !alias hello-world echo <drac2>
+    using(
+        hello="50943a96-381b-427e-adb9-eea8ebf61f27",
+        hello_utils="0bbddb9f-c86f-4af8-9e04-1964425b1554"
+    )
+    return f"{hello.hello('you')}\n{hello_utils.hello_to_my_character()}"
+    </drac2>
+
+The ``hello_utils`` module (``!gvar 0bbddb9f-c86f-4af8-9e04-1964425b1554``) also demonstrates how modules can import
+other modules!
+
+Each imported module is bound to a namespace that contains each of the names (constants, functions, etc) defined in the
+module. For example, the ``hello`` module (``50943a96-381b-427e-adb9-eea8ebf61f27``) defines the ``HELLO_WORLD``
+constant and ``hello()`` function, so a consumer could access these with ``hello.HELLO_WORLD`` and ``hello.hello()``,
+respectively.
+
+.. warning::
+
+    Only import modules from trusted sources! The entire contents of an imported module is executed once upon
+    import, and can do bad things like delete all of your variables.
+
+    All gvar modules are open-source by default, so it is encouraged to view the imported module using ``!gvar``.
+
+Writing Modules
+^^^^^^^^^^^^^^^
+
+Modules are easy to publish and update! Simply create a gvar that contains valid Draconic code (**without** wrapping it
+in any delimiters such as ``<drac2>``).
+
+We encourage modules to follow the following format to make them easy to read:
+
+.. code-block:: python
+
+    # recommended_module_name
+    # This is a short description about what the module does.
+    #
+    # SOME_CONSTANT: some documentation about what this constant is
+    # some_function(show, the, args): some short documentation about what this function does
+    #     and how to call it
+    #     wow, this is long! use indentation if you need multiple lines
+    #     but otherwise longer documentation should go in the function's """docstring"""
+
+    SOME_CONSTANT = 3.141592
+
+    def some_function(show, the, args):
+        """Here is where the longer documentation about the function can go."""
+        pass
+
+Use ``!gvar 50943a96-381b-427e-adb9-eea8ebf61f27`` and ``!gvar 0bbddb9f-c86f-4af8-9e04-1964425b1554`` to view
+the ``hello`` and ``hello_utils`` example modules used above for an example!
+
+.. note::
+
+    Because all gvars are public to anyone who knows the address, modules are open-source by default.
+
 See Also
 --------
 
@@ -598,6 +677,8 @@ Draconic's syntax is very similar to Python. Other Python features supported in 
 * `Operators <https://docs.python.org/3/reference/expressions.html#unary-arithmetic-and-bitwise-operations>`_ (``2 + 2``, ``"foo" in "foobar"``, etc)
 * `Assignments <https://docs.python.org/3/reference/simple_stmts.html#assignment-statements>`_ (``a = 15``)
 * `List Comprehensions <https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions>`_
+* `Functions <https://docs.python.org/3/tutorial/controlflow.html#defining-functions>`_
+* `Lambda Expressions <https://docs.python.org/3/tutorial/controlflow.html#lambda-expressions>`_
 
 Initiative Models
 -----------------

@@ -92,9 +92,7 @@ async def basic_combatant(
     resistances = Resistances.from_dict(resists)
 
     # ac
-    ac = None
-    if args.last("ac"):
-        ac = args.last("ac", type_=int)
+    ac = args.last("ac", type_=int)
 
     # hp / thp
     hp = None

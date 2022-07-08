@@ -84,7 +84,7 @@ jobs:
           repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
           issue-number: ${{ github.event.client_payload.github.payload.issue.number }}
           body: |
-            The gamedata test workflow concluded with ${{ job.status }}.
+            The gamedata test workflow concluded with **${{ job.status }}**.
             
             [Command run output][1]
 

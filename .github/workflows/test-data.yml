@@ -13,9 +13,10 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # only run on push, dispatch, or 1st party PR
     if:
-      github.event_name != 'pull_request' ||  # push or dispatch
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)  # first-party PR
+      github.event_name != 'pull_request' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     services:
       redis: # redis://redis:6379/0
         image: redis

@@ -308,11 +308,8 @@ async def cast_spell(
         embed.set_footer(text="No spell automation found.")
 
         # commit the caster
-        if isinstance(caster, BaseCombatant):
-            caster: "Combatant"  # to make pycharm typechecking happy
-            if caster.type == CombatantType.PLAYER:
-                caster: "PlayerCombatant"  # to make pycharm typechecking happy
-                await caster.character.commit(ctx)
+        if combat:
+            await combat.final()
         elif hasattr(caster, "commit"):
             await caster.commit(ctx)
 

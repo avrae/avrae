@@ -3,11 +3,8 @@ name: Test Gamedata
 on:
   push:
   pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - labeled  # to approve 3pp PRs, add a label to the PR (like ci: approved)
+  repository_dispatch:
+    types: [ ci-approve-command ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -83,3 +80,16 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           files: ./shared/coverage.xml
+
+      - name: Create Comment (3pp PRs)
+        if: github.event_name == 'repository_dispatch' && always()
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+          issue-number: ${{ github.event.client_payload.github.payload.issue.number }}
+          body: |
+            The gamedata test workflow concluded with ${{ job.status }}.
+            
+            [Command run output][1]
+
+            [1]: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

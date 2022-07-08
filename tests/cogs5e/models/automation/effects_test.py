@@ -388,27 +388,35 @@ class TestIEffect:
         assert len(buttons) == 1
         assert [b.label for b in buttons] == ["Add Stack"]
 
+        avrae.message('!a "Stacking Test"')
+        await dhttp.drain()
+
         # check that both effects are given the correct name
-        assert all([effect.name in ["Stacked", "Stacked x1"] for effect in combatant.get_effects()])
+        assert all([effect.name in ["Stacked", "Stacked x2"] for effect in combatant.get_effects()])
 
         avrae.message('!a "Stacking Test"')
         await dhttp.drain()
 
         # checks that the stacks both have the same parent
-        stacks = [combatant.get_effect(x, strict=True) for x in ["Stacked x1", "Stacked x2"]]
+        stacks = [combatant.get_effect(x, strict=True) for x in ["Stacked x2", "Stacked x3"]]
         root = combatant.get_effect("Stacked", strict=True)
         assert all([stack.get_parent_effect() is root for stack in stacks])
 
         # tests the stacking property
-        assert (combatant.max_hp - old_hp) == 2
+        assert (combatant.max_hp - old_hp) == 3
 
         avrae.message('!a "Add Stack"')
         await dhttp.drain()
 
-        assert combatant.get_effect("Stacked x3", strict=True)
-        assert (combatant.max_hp - old_hp) == 3
+        assert combatant.get_effect("Stacked x4", strict=True)
+        assert (combatant.max_hp - old_hp) == 4
 
-        # check if removing both stacks will remove the parent
+        # make sure removing stacks doesn't affect the parent
+        avrae.message(f'!i re "{character.name}" "Stacked x4"')
+        await dhttp.drain()
+
+        assert combatant.get_effect("Stacked", strict=True)
+
         avrae.message(f'!i re "{character.name}" "Stacked x3"')
         await dhttp.drain()
 
@@ -419,7 +427,7 @@ class TestIEffect:
 
         assert combatant.get_effect("Stacked", strict=True)
 
-        avrae.message(f'!i re "{character.name}" "Stacked x1"')
+        avrae.message(f'!i re "{character.name}" "Stacked"')
         await dhttp.drain()
 
         assert not combatant.get_effect("Stacked", strict=True)
@@ -498,18 +506,20 @@ class TestIEffect:
         assert not kobolds[2].get_effect("Targeted", strict=True)
 
         assert (root_effect := combatant.get_effect("Targets Chosen", strict=True))
-        assert combatant.get_effect("Targets Chosen x1", strict=True)
-        assert root_effect is (
-            child_effect.get_parent_effect() and child_effect.get_parent_effect().get_parent_effect()
-        )
+        assert root_effect is (child_effect.get_parent_effect())
 
         avrae.message('!a "Add Target" -t KO2 -t KO3')
         await dhttp.drain()
 
-        assert kobolds[1].get_effect("Targeted", strict=True)
+        assert kobolds[0].get_effect("Targeted", strict=True)
+        assert (stack_effect := kobolds[1].get_effect("Targeted", strict=True))
         assert kobolds[2].get_effect("Targeted", strict=True)
 
         assert combatant.get_effect("Targets Chosen x2", strict=True)
+
+        assert root_effect is (
+            stack_effect.get_parent_effect() and stack_effect.get_parent_effect().get_parent_effect()
+        )
 
         avrae.message('!a "Hit All"')
         await dhttp.drain()

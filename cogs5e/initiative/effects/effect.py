@@ -400,6 +400,3 @@ class InitiativeEffect:
                 effect.remove(removed)
         if self.combatant is not None:
             self.combatant.remove_effect(self)
-        if self.stack == -1 and not any(self.get_parent_effect().get_children_effects()):
-            removed.append(self.get_parent_effect())
-            self.get_parent_effect().remove(removed)

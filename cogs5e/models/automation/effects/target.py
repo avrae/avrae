@@ -112,8 +112,8 @@ class Target(Effect):
         # build target list
         targets = []
         for idx, child_effect in enumerate(autoctx.ieffect.get_children_effects()):
-            # build list from children of children if this is the root of a stacking effect
-            if autoctx.ieffect.stack == 1:
+            # build list from children of children if child is a stacking
+            if child_effect.stack:
                 for idx, subchild_effect in enumerate(child_effect.get_children_effects()):
                     target = subchild_effect.combatant
                     if target is None:

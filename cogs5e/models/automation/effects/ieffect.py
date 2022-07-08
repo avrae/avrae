@@ -251,7 +251,6 @@ class IEffect(Effect):
         buttons = [b.resolve(autoctx) for b in self.buttons]
 
         conc_conflict = []
-        at_root = True
         if autoctx.target.combatant is not None:
             combatant = autoctx.target.combatant
             effect = init.InitiativeEffect.new(
@@ -259,13 +258,12 @@ class IEffect(Effect):
                 combatant=combatant,
                 name=self.name,
                 duration=duration,
-                passive_effects=(None if self.stacking else effects),
+                passive_effects=effects,
                 attacks=attacks,
                 buttons=buttons,
                 end_on_turn_end=self.end_on_turn_end,
                 concentration=self.concentration,
                 desc=desc,
-                stack=int(self.stacking or 0),
             )
             conc_parent = None
             stack_parent = None
@@ -290,29 +288,24 @@ class IEffect(Effect):
             if parent_effect := explicit_parent or conc_parent:
                 effect.set_parent(parent_effect)
 
-            # add
-            if at_root := (not self.stacking or not bool(combatant.get_effect(effect.name, strict=True))):
-                effect_result = combatant.add_effect(effect)
-                autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
-                root_effect = effect
-
-            # stacking
-            # find the next correct name for the effect and create a new one, without conflicting pieces
-            # preserves the root effect
+            # add the effect
             if self.stacking and (stack_parent := combatant.get_effect(effect.name, strict=True)):
-                count = 1
+                # find the next correct name for the effect and create a new one, without conflicting pieces
+                count = 2
                 new_name = f"{self.name} x{count}"
                 while combatant.get_effect(new_name, strict=True):
                     count += 1
                     new_name = f"{self.name} x{count}"
                 effect = init.InitiativeEffect.new(
-                    combat=combatant.combat, combatant=combatant, name=new_name, passive_effects=effects, stack=-1
+                    combat=combatant.combat, combatant=combatant, name=new_name, passive_effects=effects, stack=True
                 )
                 effect.set_parent(stack_parent)
-                combatant.add_effect(effect)
-                autoctx.queue(f"**Stacking Effect**: {effect.get_str(description=False)}")
+                autoctx.queue(f"**Effect Stack**: {effect.get_str(description=False)}")
+            else:
+                autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
+            effect_result = combatant.add_effect(effect)
 
-            if at_root and (conc_conflict := effect_result["conc_conflict"]):
+            if conc_conflict := effect_result["conc_conflict"]:
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
 
             # save as
@@ -334,7 +327,7 @@ class IEffect(Effect):
             root_effect = effect
             autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
 
-        return IEffectResult(effect=root_effect if at_root else effect, conc_conflict=conc_conflict)
+        return IEffectResult(effect=effect, conc_conflict=conc_conflict)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

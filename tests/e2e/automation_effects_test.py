@@ -326,9 +326,12 @@ class TestIEffect:
         avrae.message(f'!i re "{character.name}"')
         await dhttp.drain()
 
-    stack_data = textwrap.dedent(
-        """
-        name: Stacking Test
+    async def test_stacking_e2e(self, character, avrae, dhttp):
+
+        avrae.message(
+            textwrap.dedent(
+                """
+        !a import name: Stacking Test
         _v: 2
         automation:
           - type: target
@@ -364,11 +367,8 @@ class TestIEffect:
                                 effects:
                                     max_hp_bonus: "1"
         """
-    ).strip()
-
-    async def test_stacking_ieffect(self, character, avrae, dhttp):
-
-        avrae.message(f"""!a import {self.stack_data}""")
+            ).strip()
+        )
         await dhttp.drain()
 
         char = await active_character(avrae)
@@ -383,7 +383,7 @@ class TestIEffect:
         assert combatant.get_effect("Stacked", strict=True)
 
         # check the list of available buttons - should be just one Add Stack
-        buttons = combatant_interaction_components(combatant)
+        buttons = combatant_interaction_components(combatant, InteractionMessageType.TURN_MESSAGE)
         assert len(buttons) == 1
         assert [b.label for b in buttons] == ["Add Stack"]
 
@@ -431,14 +431,16 @@ class TestIEffect:
 
         assert not combatant.get_effect("Stacked", strict=True)
 
-    async def test_cleanup_stacking_ieffect(self, character, avrae, dhttp):
+    async def cleanup_stacking_ieffect(self, character, avrae, dhttp):
         # clear effects in preparation for next test
         avrae.message(f'!i re "{character.name}"')
         await dhttp.drain()
 
-    child_data = textwrap.dedent(
-        """
-        name: Target Practice
+    async def test_stack_children(self, character, avrae, dhttp):
+        avrae.message(
+            textwrap.dedent(
+                """
+        !a import name: Target Practice
         _v: 2
         automation:
           - type: target
@@ -482,10 +484,8 @@ class TestIEffect:
                 name: Targeted
                 parent: targets
         """
-    ).strip()
-
-    async def test_stack_children(self, character, avrae, dhttp):
-        avrae.message(f"""!a import {self.child_data}""")
+            ).strip()
+        )
         await dhttp.drain()
 
         char = await active_character(avrae)
@@ -540,9 +540,11 @@ class TestIEffect:
             await dhttp.drain()
             combatant.reset_hp()
 
-    parent_child_attack_data = textwrap.dedent(
-        """
-        name: Targeting
+    async def test_parent_children_target(self, character, avrae, dhttp):
+        avrae.message(
+            textwrap.dedent(
+                """
+        !a import name: Targeting
         _v: 2
         automation:
           - type: target
@@ -578,10 +580,8 @@ class TestIEffect:
                               - type: damage
                                 damage: "1"
         """
-    ).strip()
-
-    async def test_parent_children_target(self, character, avrae, dhttp):
-        avrae.message(f"""!a import {self.parent_child_attack_data}""")
+            ).strip()
+        )
         await dhttp.drain()
 
         char = await active_character(avrae)

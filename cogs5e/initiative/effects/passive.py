@@ -124,10 +124,11 @@ class InitPassiveEffect:
     If adding new passive effects, add a new classvar below.
 
     Other places to touch:
-    - cogs5e.models.initiative.cog.effect (docs)
     - cogs5e.models.automation.effects.ieffect
+    - aliasing.api.validators
+    - cogs5e.models.initiative.cog.effect (docs)
     - docs.automation_ref#ieffect (docs)
-    - any consumers of the new passive effect
+    - the implementation of the new passive effect
     - the automation-common library: validation.models.PassiveEffects (otherwise the norm step of !a import eats keys)
     """
 
@@ -293,7 +294,7 @@ def resolve_value_or_bonus(values: List[str]) -> Tuple[Optional[int], Optional[i
     return set_value, bonus
 
 
-def resolve_save_advs(values: List[str]) -> Set[str]:
+def resolve_save_advs(values: Iterable[str]) -> Set[str]:
     out = set()
     for arg in values:
         if arg is True or arg.lower() == "all" or arg == "True":
@@ -305,7 +306,7 @@ def resolve_save_advs(values: List[str]) -> Set[str]:
     return out
 
 
-def resolve_check_advs(values: List[str]) -> Set[str]:
+def resolve_check_advs(values: Iterable[str]) -> Set[str]:
     out = set()
     for arg in values:
         if arg is True or arg.lower() == "all" or arg == "True":

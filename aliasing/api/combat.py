@@ -1,5 +1,6 @@
-from typing import Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
+import pydantic
 from d20 import roll
 
 import cogs5e.initiative as init
@@ -8,6 +9,7 @@ from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
+from . import validators
 
 if TYPE_CHECKING:
     from ..evaluators import ScriptingEvaluator
@@ -400,28 +402,81 @@ class SimpleCombatant(AliasStatBlock):
         self,
         name: str,
         args: str = None,
-        duration: int = -1,
+        duration: int | None = None,
         concentration: bool = False,
-        parent=None,
+        parent: "SimpleEffect" = None,
         end: bool = False,
         desc: str = None,
+        passive_effects: dict = None,
+        attacks: list[dict] = None,
+        buttons: list[dict] = None,
     ):
         """
-        Adds an effect to the combatant.
+        Adds an effect to the combatant. Returns the added effect.
+
+        .. note::
+
+            It is recommended to pass all arguments other than *name* to this method as keyword arguments (i.e.
+            ``add_effect("On Fire", duration=10)``). This is not strictly enforced for backwards-compatibility.
+
+        .. warning::
+
+            The *args* argument is deprecated as of v4.1.0. Use *passive_effects* instead.
 
         :param str name: The name of the effect to add.
-        :param str args: The effect arguments to add (same syntax as [!init effect](https://avrae.io/commands#init-effect)).
-        :param int duration: The duration of the effect, in rounds.
+        :param str args: The effect arguments to add (same syntax as `!init effect <https://avrae.io/commands#init-effect>`_).
+        :param int duration: The duration of the effect, in rounds. Pass ``None`` for indefinite.
         :param bool concentration: Whether the effect requires concentration.
         :param parent: The parent of the effect.
         :type parent: :class:`~aliasing.api.combat.SimpleEffect`
         :param bool end: Whether the effect ends on the end of turn.
         :param str desc: A description of the effect.
+        :param passive_effects: The passive effects this effect should grant. See :ref:`ieffectargs`.
+        :param attacks: The attacks granted by this effect. See :ref:`ieffectargs`.
+        :param buttons: The buttons granted by this effect. See :ref:`ieffectargs`.
+        :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """  # noqa: E501
-        name, args, duration = str(name), str(args), int(duration)
+        # validate types
+        name = str(name)
+        if args is not None:
+            args = str(args)
+            if self._interpreter is not None:
+                self._interpreter.warn_deprecated(
+                    "SimpleCombatant.add_effect#args",
+                    since="v4.1.0",
+                    replacement="SimpleCombatant.add_effect#passive_effects",
+                )
+        if duration is not None:
+            duration = int(duration)
+        if parent is not None and not isinstance(parent, SimpleEffect):
+            raise ValueError("The parent of a SimpleEffect must be a SimpleEffect.")
         if desc is not None:
             desc = str(desc)
 
+        # parse v4.1 models (passive, attacks, buttons)
+        parsed_passive = parsed_attacks = parsed_buttons = None
+        if passive_effects:
+            normalized_passive = validators.PassiveEffects.parse_obj(passive_effects).dict(exclude_none=True)
+            parsed_passive = init.effects.InitPassiveEffect.from_dict(normalized_passive)
+        if attacks:
+            normalized_attacks = [
+                validators.AttackInteraction.parse_obj(a) for a in validators.unsafeify(attacks, self._interpreter)
+            ]
+            parsed_attacks = [
+                init.effects.AttackInteraction.from_dict(a.dict(exclude_none=True)) for a in normalized_attacks
+            ]
+        if buttons:
+            normalized_buttons = [
+                validators.ButtonInteraction.parse_obj(b) for b in validators.unsafeify(buttons, self._interpreter)
+            ]
+            parsed_buttons = [
+                init.effects.ButtonInteraction.from_dict(
+                    {**b.dict(exclude_none=True), "id": init.utils.create_button_interaction_id()}
+                )
+                for b in normalized_buttons
+            ]
+
+        # add effect
         existing = self._combatant.get_effect(name, True)
         if existing:
             existing.remove()
@@ -434,11 +489,16 @@ class SimpleCombatant(AliasStatBlock):
             end_on_turn_end=end,
             concentration=concentration,
             desc=desc,
+            passive_effects=parsed_passive,
+            attacks=parsed_attacks,
+            buttons=parsed_buttons,
         )
         if parent:
             effect_obj.set_parent(parent._effect)
         self._combatant.add_effect(effect_obj)
         self._update_effects()
+
+        return SimpleEffect(effect_obj)
 
     def remove_effect(self, name: str):
         """

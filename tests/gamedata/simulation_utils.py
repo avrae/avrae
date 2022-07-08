@@ -4,9 +4,8 @@ import logging
 import disnake
 
 from cogs5e.initiative.combatant import Combatant, MonsterCombatant, PlayerCombatant
+from cogs5e.initiative.utils import create_combatant_id
 from cogs5e.models.automation import EffectResult, IEffectResult
-from cogs5e.models.sheet.base import Skill
-from cogs5e.models.sheet.resistance import Resistances
 from gamedata import Monster, Spell, compendium
 from tests.discord_mock_data import DEFAULT_USER_ID
 from tests.utils import ContextBotProxy, requires_data
@@ -85,16 +84,13 @@ async def run_automation(automation, avrae, combat=None, targets=None, **kwargs)
 
 
 def create_basic_combatant(combat, avrae):
-    """Creates a new basic combatant, adds it to the combat, and returns it"""
-    basic_combatant = Combatant.new(
+    """Creates a new minimal basic combatant, adds it to the combat, and returns it"""
+    basic_combatant = Combatant(
+        id=create_combatant_id(),
         name="Test Combatant",
         controller_id=int(DEFAULT_USER_ID),
         init=0,
-        init_skill=Skill(0),
-        max_hp=10,
-        ac=10,
         private=False,
-        resists=Resistances(),
         ctx=ContextBotProxy(avrae),
         combat=combat,
     )

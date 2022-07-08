@@ -14,8 +14,6 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, EmbedWithColor
 from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
 from cogs5e.models.sheet.attack import Attack
-from cogs5e.models.sheet.base import Skill
-from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
@@ -33,11 +31,11 @@ from utils.functions import (
 from . import (
     Combat,
     CombatOptions,
-    Combatant,
     CombatantGroup,
     InitiativeEffect,
     MonsterCombatant,
     PlayerCombatant,
+    combatant_builders,
     utils,
 )
 from .buttons import ButtonHandler
@@ -165,67 +163,37 @@ class InitTracker(commands.Cog):
 
     @init.command()
     async def add(self, ctx, modifier: int, name: str, *args):
-        """Adds a generic combatant to the initiative order.
-        Generic combatants have a 10 in every stat and +0 to every modifier.
+        """
+        Adds a generic combatant to the initiative order.
+        Generic combatants have a 10 in every stat and +0 to every modifier by default.
         If a character is set up with the SheetManager module, you can use !init join instead.
         If you are adding monsters to combat, you can use !init madd instead.
-
         __Valid Arguments__
         `-h` - Hides HP, AC, resistances, and attack list.
-        `-p` - Places combatant at the given modifier, instead of rolling
+        `-p <value>` - Places combatant at the given modifier, instead of rolling
+        `adv`/`dis` - Rolls the initiative check with advantage/disadvantage.
         `-controller <controller>` - Pings a different person on turn.
         `-group <group>` - Adds the combatant to a group.
         `-hp <hp>` - Sets starting HP. Default: None.
         `-thp <thp>` - Sets starting THP. Default: 0.
-        `-ac <ac>` - Sets the combatant' AC. Default: None.
+        `-ac <ac>` - Sets the combatant's AC. Default: None.
+        `-pb <pb>` - Sets the combatant's proficiency bonus. Default: 0
+        `-strength <str>` - Sets the combatant's strength score. Default: 10
+        `-dexterity <dex>` - Sets the combatant's dexterity score. Default: 10
+        `-constitution <con>` - Sets the combatant's constitution score. Default: 10
+        `-intelligence <int>` - Sets the combatant's intelligence score. Default: 10
+        `-wisdom <wis>` - Sets the combatant's wisdom score. Default: 10
+        `-charisma <cha>` - Sets the combatant's charisma score. Default: 10
+        `-save <ability>` - Gives the combatant proficiency in the given ability saving throw.
+        `-prof <skill>` - Gives the combatant proficiency in the given skill.
+        `-exp <skill>` - Gives the combatant expertise in the given skill.
         `-resist` <damage type> - Gives the combatant resistance to the given damage type.
         `-immune` <damage type> - Gives the combatant immunity to the given damage type.
         `-vuln` <damage type> - Gives the combatant vulnerability to the given damage type.
-        `adv`/`dis` - Rolls the initiative check with advantage/disadvantage.
+        `-cr <cr>` Sets the combatant's CR.
+        `-type <creature type>` Sets the combatant's creature type.
         `-note <note>` - Sets the combatant's note.
         """
-        private = False
-        place = None
-        controller = ctx.author.id
-        group = None
-        hp = None
-        ac = None
-        resists = {}
-        args = argparse(args)
-        adv = args.adv(boolwise=True)
-
-        thp = args.last("thp", type_=int)
-
-        if args.last("h", type_=bool):
-            private = True
-
-        if args.get("p"):
-            try:
-                place_arg = args.last("p")
-                if place_arg is True:
-                    place = modifier
-                else:
-                    place = int(place_arg)
-            except (ValueError, TypeError):
-                place = modifier
-
-        if args.last("controller"):
-            controller_name = args.last("controller")
-            member = await commands.MemberConverter().convert(ctx, controller_name)
-            controller = member.id if member is not None and not member.bot else controller
-        if args.last("group"):
-            group = args.last("group")
-        if args.last("hp"):
-            hp = args.last("hp", type_=int)
-            if hp < 1:
-                return await ctx.send("You must pass in a positive, nonzero HP with the -hp tag.")
-        if args.last("ac"):
-            ac = args.last("ac", type_=int)
-
-        note = args.last("note")
-
-        for k in ("resist", "immune", "vuln"):
-            resists[k] = args.get(k)
 
         combat = await ctx.get_combat()
 
@@ -233,35 +201,18 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant already exists.")
             return
 
-        if place is None:
-            init_skill = Skill(modifier, adv=adv)
-            init_roll = roll(init_skill.d20())
-            init = init_roll.total
-            init_roll_skeleton = init_roll.result
-        else:
-            init_skill = Skill(0, adv=adv)
-            init = place
-            init_roll_skeleton = str(init)
+        args = argparse(args)
 
-        me = Combatant.new(
-            name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx, combat
-        )
+        me, init_roll = await combatant_builders.basic_combatant(ctx, combat, name, modifier, args)
 
-        # -thp (#1142)
-        if thp and thp > 0:
-            me.temp_hp = thp
-
-        # -note (#1211)
-        if note:
-            me.notes = note
-
+        group = args.last("group", None)
         if group is None:
             combat.add_combatant(me)
-            await ctx.send(f"{name} was added to combat with initiative {init_roll_skeleton}.")
+            await ctx.send(f"{me.name} was added to combat with initiative {init_roll}.")
         else:
-            grp = combat.get_group(group, create=init)
+            grp = combat.get_group(group, create=me.init)
             grp.add_combatant(me)
-            await ctx.send(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
+            await ctx.send(f"{me.name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
 
         await combat.final()
 

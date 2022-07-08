@@ -171,12 +171,6 @@ class BeyondClient(BeyondClientBase):
             USER_ENTITLEMENT_CACHE[user_id] = USER_ENTITLEMENTS_NONE_SENTINEL
             return None
 
-        # feature flag: is this user allowed to use entitlements?
-        enabled_ff = await ctx.bot.ldclient.variation("entitlements-enabled", user.to_ld_dict(), False)
-        if not enabled_ff:
-            log.debug(f"hit false entitlements flag - skipping user entitlements")
-            return None
-
         user_e10s = await self._fetch_user_entitlements(int(user.user_id))
         # cache entitlements
         USER_ENTITLEMENT_CACHE[user_id] = user_e10s

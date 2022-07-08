@@ -22,7 +22,14 @@ from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
 from utils.argparser import argparse
-from utils.functions import confirm, get_guild_member, search_and_select, try_delete, get_initials, get_selection
+from utils.functions import (
+    confirm,
+    get_guild_member,
+    get_initials,
+    get_selection,
+    search_and_select,
+    try_delete,
+)
 from . import (
     Combat,
     CombatOptions,
@@ -78,10 +85,20 @@ class InitTracker(commands.Cog):
     async def on_button_click(self, interaction: disnake.MessageInteraction):
         if interaction.data.custom_id.startswith(constants.B_INIT_EFFECT):
             try:
-                # ieb:<combatant_id>:<effect_id>:<button_id>
-                _, combatant_id, effect_id, button_id = interaction.data.custom_id.split(":")
+                # ieb:<combatant_id>:<effect_id>:<interaction_id>:<interaction_message_type>
+                try:
+                    _, combatant_id, effect_id, button_id, message_type_raw = interaction.data.custom_id.split(":")
+                    message_type = utils.InteractionMessageType(message_type_raw)
+                except ValueError:
+                    # interaction_message_type added v4.0.8
+                    _, combatant_id, effect_id, button_id = interaction.data.custom_id.split(":")
+                    message_type = utils.InteractionMessageType.STATUS_GROUP
                 await self.buttons.handle(
-                    interaction, combatant_id=combatant_id, effect_id=effect_id, button_id=button_id
+                    interaction,
+                    combatant_id=combatant_id,
+                    effect_id=effect_id,
+                    button_id=button_id,
+                    message_type=message_type,
                 )
             except ValueError:
                 log.exception("Failed to handle init effect button click interaction:")
@@ -416,7 +433,7 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant already exists.")
             return
 
-        me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
+        me = PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
 
         # -note (#1211)
         if note:
@@ -853,7 +870,12 @@ class InitTracker(commands.Cog):
         if private:
             await ctx.author.send(result)
         else:
-            await ctx.send(result, components=utils.combatant_interaction_components(combatant))
+            message_type = (
+                utils.InteractionMessageType.STATUS_GROUP
+                if isinstance(combatant, CombatantGroup)
+                else utils.InteractionMessageType.STATUS_INDIVIDUAL
+            )
+            await ctx.send(result, components=utils.combatant_interaction_components(combatant, message_type))
 
     @init.group(invoke_without_command=True)
     async def hp(self, ctx, name: str, *, hp: str = None):

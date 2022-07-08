@@ -1,0 +1,21 @@
+# If someone with write access comments "/ci-approve" on a pull request, emit a repository_dispatch event
+name: Approve 3rd Party PR Privileged Tests
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  approve:
+    runs-on: ubuntu-latest
+    # Only run for PRs, not issue comments
+    if: ${{ github.event.issue.pull_request }}
+    steps:
+      - name: Dispatch Command
+        uses: peter-evans/slash-command-dispatch@v3
+        with:
+          token: ${{ secrets.ORG_REPO_ACCESS_TOKEN }}
+          commands: |
+            ci-approve
+          issue-type: pull-request
+          permission: write

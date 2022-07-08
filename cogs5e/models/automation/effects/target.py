@@ -66,6 +66,9 @@ class Target(Effect):
 
     # ==== target type impls ====
     def run_self_target(self, autoctx) -> list[results.TargetIteration]:
+        # assume the caster needs a commit if something targets itself
+        # (may not be strictly true if it's only displaying text effects/etc but commits are cheap)
+        autoctx.caster_needs_commit = True
         return self.run_effects(autoctx, target=autoctx.caster)
 
     # --- action target types ---
@@ -164,6 +167,7 @@ class Target(Effect):
 
         # #1335
         autoctx.metavars["targetIteration"] = 1
+        autoctx.metavars["targetIterations"] = rr
 
         # 2 binary attributes: (rr?, target?)
         # each case must end with a push_embed_field()

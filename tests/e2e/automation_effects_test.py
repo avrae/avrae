@@ -7,12 +7,11 @@ import disnake
 import pytest
 
 from aliasing.evaluators import AutomationEvaluator
-from cogs5e.initiative.utils import combatant_interaction_components
+from cogs5e.initiative.utils import InteractionMessageType, combatant_interaction_components
 from cogs5e.models import automation
 from cogs5e.models.sheet.statblock import StatBlock
 from gamedata.compendium import compendium
-from tests.conftest import end_init, start_init
-from tests.utils import active_character, active_combat, requires_data
+from tests.utils import active_character, active_combat, end_init, requires_data, start_init
 
 log = logging.getLogger(__name__)
 pytestmark = pytest.mark.asyncio
@@ -303,7 +302,7 @@ class TestIEffect:
         assert combatant.get_effect("Child Effect", strict=True)
 
         # check the list of available buttons - should be Stand Up, Take Fire Damage, Douse, ping children, ping parent
-        buttons = combatant_interaction_components(combatant)
+        buttons = combatant_interaction_components(combatant, InteractionMessageType.TURN_MESSAGE)
         assert len(buttons) == 5
         assert [b.label for b in buttons] == ["Stand Up", "Take Fire Damage", "Douse", "ping children", "ping parent"]
         assert [b.style for b in buttons] == [

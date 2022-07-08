@@ -69,6 +69,9 @@ class AutomationContext:
         self.spell_level_override = spell_level_override  # used in Cast Spell effect
         self.conc_effect = conc_effect
 
+        self.metavars["spell_attack_bonus"] = self.ab_override or self.caster.spellbook.sab
+        self.metavars["spell_dc"] = self.dc_override or self.caster.spellbook.dc
+
         # InitiativeEffect utils
         self.ieffect = ieffect
         if ieffect is not None:

@@ -1,4 +1,5 @@
 import base64
+import enum
 import os
 import time
 import uuid
@@ -58,24 +59,43 @@ def can_see_combatant_details(author, combatant, combat) -> bool:
 
 
 # ==== interactions ====
-def combatant_interaction_components(combatant: Union["Combatant", "CombatantGroup"]) -> list[disnake.ui.Button]:
-    """Given a combatant, returns a list of components with up to 25 valid interactions for that combatant."""
+class InteractionMessageType(enum.Enum):
+    """Used to determine what kind of message a ButtonInteraction is attached to, to help with editing it later."""
+
+    TURN_MESSAGE = "t"
+    STATUS_INDIVIDUAL = "i"
+    STATUS_GROUP = "g"
+
+
+def combatant_interaction_components(
+    combatant: Union["Combatant", "CombatantGroup"], message_type: InteractionMessageType, promote_to_group=False
+) -> list[disnake.ui.Button]:
+    """
+    Given a combatant, returns a list of components with up to 25 valid interactions for that combatant.
+
+    If the given combatant is in a group and *promote_to_group* is True, returns the components for that combatant's
+    group instead.
+    """
     if combatant is None:
         return []
 
     if combatant.type == CombatantType.GROUP:
         buttons = []
         for c in combatant.get_combatants():
-            buttons.extend(_combatant_interaction_components_single(c, label_prefix=f"{c.name}: "))
+            buttons.extend(_combatant_interaction_components_single(c, message_type, label_prefix=f"{c.name}: "))
+    elif promote_to_group and (group := combatant.get_group()) is not None:
+        return combatant_interaction_components(group, message_type)
     else:
-        buttons = _combatant_interaction_components_single(combatant)
+        buttons = _combatant_interaction_components_single(combatant, message_type)
 
     if len(buttons) > 25:
         buttons = buttons[:25]
     return buttons
 
 
-def _combatant_interaction_components_single(combatant: "Combatant", label_prefix=None):
+def _combatant_interaction_components_single(
+    combatant: "Combatant", message_type: InteractionMessageType, label_prefix=None
+):
     buttons = []
     for effect in combatant.get_effects():
         for interaction in effect.buttons:
@@ -87,7 +107,7 @@ def _combatant_interaction_components_single(combatant: "Combatant", label_prefi
             interaction_button = disnake.ui.Button(
                 label=label,
                 style=interaction.style,
-                custom_id=f"{constants.B_INIT_EFFECT}{combatant.id}:{effect.id}:{interaction.id}",
+                custom_id=f"{constants.B_INIT_EFFECT}{combatant.id}:{effect.id}:{interaction.id}:{message_type.value}",
             )
             buttons.append(interaction_button)
     return buttons
@@ -109,9 +129,13 @@ def get_combatant_status_content(
     author: disnake.User,
     show_hidden_attrs: bool = False,
     max_len=2000,
+    promote_to_group=False,
 ) -> str:
     """Given a combatant, return a Markdown-formatted string to display their current status."""
-    for strategy in _turn_str_kwarg_strategies:
+    if promote_to_group and (group := combatant.get_group()) is not None:
+        return get_combatant_status_content(group, author, show_hidden_attrs, max_len)
+
+    for strategy in _status_kwarg_strategies:
         result = _get_combatant_status_inner(combatant, author, show_hidden_attrs, **strategy)
         if len(result) <= max_len:
             break
@@ -146,13 +170,23 @@ _turn_str_kwarg_strategies = [
 ]
 
 
-def get_turn_str_content(combat: "Combat", max_len=2000) -> str:
+def get_turn_str_content(combat: "Combat", max_len=2000, combatant: "Combatant" = None, promote_to_group=False) -> str:
     """
     Returns a string for the start-of-turn message for the current combat, ensuring that the total length of the string
     is less than *max_len*.
+
+    If *combatant* is passed, returns the turn str for that combatant, otherwise, returns the turn str for the current
+    turn. If the given combatant is in a group and *promote_to_group* is True, returns the turn str for that
+    combatant's group instead.
     """
+    if promote_to_group and combatant is not None and (group := combatant.get_group()) is not None:
+        return get_turn_str_content(combat, max_len, group)
+
     for strategy in _turn_str_kwarg_strategies:
-        result = combat.get_turn_str(**strategy)
+        if combatant is None:
+            result = combat.get_turn_str(**strategy)
+        else:
+            result = combat.get_turn_str_for(combatant, **strategy)
         if len(result) <= max_len:
             break
     else:
@@ -178,7 +212,7 @@ async def send_turn_message(ctx: "AvraeContext", combat: "Combat", before: list[
     if combat.current_combatant is not None:
         content = get_turn_str_content(combat, max_len=2000 - (len(before_str) + len(after_str)))
         allowed_mentions = combat.get_turn_str_mentions()
-        components = combatant_interaction_components(combat.current_combatant)
+        components = combatant_interaction_components(combat.current_combatant, InteractionMessageType.TURN_MESSAGE)
     else:
         content = combat.get_summary()
 

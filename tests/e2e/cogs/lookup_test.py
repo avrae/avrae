@@ -3,7 +3,7 @@ Simple lookup tests: look up every entry in test static data
 """
 import itertools
 
-import discord
+import disnake
 import pytest
 
 from gamedata.compendium import compendium
@@ -11,7 +11,7 @@ from tests.utils import requires_data
 
 pytestmark = pytest.mark.asyncio
 
-NOT_AVAILABLE_EMBED = discord.Embed(title="Connect your D&D Beyond account to view .+")
+NOT_AVAILABLE_EMBED = disnake.Embed(title="Connect your D&D Beyond account to view .+")
 
 
 @requires_data()

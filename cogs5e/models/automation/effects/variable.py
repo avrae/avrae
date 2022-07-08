@@ -1,7 +1,7 @@
 import draconic
 
 from . import Effect
-from ..errors import AutomationEvaluationException, AutomationException, StopExecution
+from ..errors import AutomationEvaluationException, InvalidIntExpression, StopExecution
 from ..results import SetVariableResult
 
 
@@ -35,24 +35,16 @@ class SetVariable(Effect):
 
         # parse value
         try:
-            value = autoctx.parse_annostr(level_value, is_full_expression=True)
-        except AutomationEvaluationException as e:
+            value = autoctx.parse_intexpression(level_value)
+        except (AutomationEvaluationException, InvalidIntExpression) as e:
             did_error = True
             if self.on_error is not None:
-                value = autoctx.parse_annostr(self.on_error, is_full_expression=True)
+                value = autoctx.parse_intexpression(self.on_error)
             else:
                 raise StopExecution(f"Error in SetVariable (`{self.name} = {level_value}`):\n{e}")
 
-        # cast to int
-        try:
-            final_value = int(value)
-        except (TypeError, ValueError):
-            raise AutomationException(
-                f"{value} cannot be interpreted as an integer (in `{self.name} = {level_value}`)."
-            )
-
         # bind
-        autoctx.metavars[self.name] = final_value
+        autoctx.metavars[self.name] = value
         return SetVariableResult(value=value, did_error=did_error)
 
     def build_str(self, caster, evaluator):

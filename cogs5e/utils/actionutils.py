@@ -8,6 +8,8 @@ from cogs5e.initiative import InitiativeEffect
 from cogs5e.initiative.types import BaseCombatant
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLicense
+from cogs5e.models.sheet.action import Action, Actions
+from cogs5e.models.sheet.attack import Attack, AttackList
 from gamedata import lookuputils
 from utils import constants
 from utils.enums import CritDamageType
@@ -19,8 +21,6 @@ if TYPE_CHECKING:
     from cogs5e.models.automation import AutomationResult, Automation
     from cogs5e.models.character import Character
     from cogs5e.models.sheet.statblock import StatBlock
-    from cogs5e.models.sheet.attack import Attack, AttackList
-    from cogs5e.models.sheet.action import Action, Actions
     from gamedata import Spell
     from utils.argparser import ParsedArguments
     from utils.context import AvraeContext

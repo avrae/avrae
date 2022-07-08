@@ -407,6 +407,8 @@ class NLPRecorder:
         prefix: str,
     ):
         """Called each time an alias is resolved."""
+        if ctx.guild is None:
+            return
         is_recording, combat_id = await self._recording_info(ctx.guild.id, ctx.channel.id)
         if is_recording:
             await self._record_event(
@@ -423,6 +425,8 @@ class NLPRecorder:
 
     async def on_snippet_resolve(self, ctx: "AvraeContext", snippet_name: str, snippet_body: str, content_after: str):
         """Called each time a snippet is resolved."""
+        if ctx.guild is None:
+            return
         is_recording, combat_id = await self._recording_info(ctx.guild.id, ctx.channel.id)
         if is_recording:
             await self._record_event(

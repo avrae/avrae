@@ -45,7 +45,7 @@ class Attack:
         from cogs5e.models import automation
 
         the_automation = automation.Automation.from_data(d["automation"])
-        activation_type = enums.ActivationType(d["activation_type"]) if "activation_type" in d else None
+        activation_type = enums.ActivationType(d["activation_type"]) if d.get("activation_type") is not None else None
 
         return cls(
             name=d["name"],

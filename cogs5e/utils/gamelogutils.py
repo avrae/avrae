@@ -37,7 +37,6 @@ async def action_from_roll_request(gctx, caster, roll_request):
     # noinspection PyUnresolvedReferences
     # this is a Spell
     spell = next((s for s in available_spells if s.name == action_name), None)
-    # todo do better filtering by context id if available
 
     if spell is not None:
         return spell
@@ -258,5 +257,5 @@ class PendingAttack:
 
     @staticmethod
     async def cache_key_from_ctx(gctx: GameLogEventContext, roll_request: ddb.dice.RollRequest):
-        action_name = roll_request.action  # todo maybe this can be the context instead
+        action_name = roll_request.action
         return f"gamelog.pendingattack.{gctx.discord_user_id}.{gctx.event.entity_type}.{gctx.event.entity_id}.{action_name}"

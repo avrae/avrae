@@ -6,7 +6,8 @@ coverage:
       default:
         informational: true
     patch:
-      informational: true
+      default:
+        informational: true
 # for gamedata tests, pull files out of the nested repo
 fixes:
   - "home/runner/work/avrae/avrae/::avrae/"

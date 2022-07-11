@@ -653,6 +653,11 @@ respectively.
 
     All gvar modules are open-source by default, so it is encouraged to view the imported module using ``!gvar``.
 
+.. note::
+
+    Modules do not have access to the argument parsing special syntax (i.e. ``&ARGS&``, ``%1%``, etc), and the variables
+    listed in the Cvar Table are not implicitly bound in a module's execution.
+
 Writing Modules
 ^^^^^^^^^^^^^^^
 

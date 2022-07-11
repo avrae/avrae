@@ -206,7 +206,7 @@ class InitTracker(commands.Cog):
         num_combatants, roll_result = combatant_builders.resolve_n_arg(args.last("n"))
         if roll_result is not None:
             msgs.append(roll_result)
-        name_builder = combatant_builders.NameBuilder(name, combat, always_number_first_name=False)
+        name_builder = combatant_builders.CombatantNameBuilder(name, combat, always_number_first_name=False)
 
         for _ in range(num_combatants):
             try:
@@ -273,7 +273,7 @@ class InitTracker(commands.Cog):
         num_combatants, roll_result = combatant_builders.resolve_n_arg(args.last("n"))
         if roll_result is not None:
             msgs.append(roll_result)
-        name_builder = combatant_builders.NameBuilder(name_template, combat)
+        name_builder = combatant_builders.CombatantNameBuilder(name_template, combat)
 
         for _ in range(num_combatants):
             try:

@@ -37,13 +37,14 @@ def resolve_n_arg(n: str | None) -> tuple[int, str | None]:
     return min(25, max(1, n_result)), msg
 
 
-class NameBuilder:
+class CombatantNameBuilder:
     """
     Class to generate combatant names following a given pattern for a given combat.
     This is stateful because the name number is independent from the n-th combatant added (e.g. the 3rd kobold
-    may be KO3, or KO5, or KO173), and searching for the smallest number each time is O(n). Thus adding *n* combatants
-    would be O(n^2).
-    This solution is O(n) amortized to add *n* combatants.
+    may be KO3, or KO5, or KO173),
+    Given a combat with *k* combatants, searching for the smallest number each time is O(k) in the worst case.
+    Thus adding *n* combatants would be O(nk).
+    This solution is O(n + k) to add *n* combatants.
     """
 
     def __init__(self, pattern: str, combat, *, always_number_first_name=True):

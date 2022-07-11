@@ -4,7 +4,7 @@ Unit tests to test initiative name builders (in combatant_builders).
 import d20
 import pytest
 
-from cogs5e.initiative.combatant_builders import NameBuilder, resolve_n_arg
+from cogs5e.initiative.combatant_builders import CombatantNameBuilder, resolve_n_arg
 from cogs5e.models.errors import InvalidArgument
 
 
@@ -35,49 +35,49 @@ class _MockCombat:
 
 
 def test_namebuilder_basic():
-    builder = NameBuilder("foo", _MockCombat(), always_number_first_name=False)
+    builder = CombatantNameBuilder("foo", _MockCombat(), always_number_first_name=False)
     assert builder.next() == "foo"
     assert builder.next() == "foo2"
     assert builder.next() == "foo3"
 
-    builder = NameBuilder("foo#", _MockCombat(), always_number_first_name=False)
+    builder = CombatantNameBuilder("foo#", _MockCombat(), always_number_first_name=False)
     assert builder.next() == "foo1"
     assert builder.next() == "foo2"
     assert builder.next() == "foo3"
 
-    builder = NameBuilder("one", _MockCombat(), always_number_first_name=False)
+    builder = CombatantNameBuilder("one", _MockCombat(), always_number_first_name=False)
     with pytest.raises(InvalidArgument):
         builder.next()
 
-    builder = NameBuilder("one#", _MockCombat(), always_number_first_name=False)
+    builder = CombatantNameBuilder("one#", _MockCombat(), always_number_first_name=False)
     assert builder.next() == "one2"
     assert builder.next() == "one3"
 
-    builder = NameBuilder("always", _MockCombat(), always_number_first_name=False)
+    builder = CombatantNameBuilder("always", _MockCombat(), always_number_first_name=False)
     with pytest.raises(InvalidArgument):
         builder.next()
 
-    builder = NameBuilder("always#", _MockCombat(), always_number_first_name=False)
+    builder = CombatantNameBuilder("always#", _MockCombat(), always_number_first_name=False)
     with pytest.raises(InvalidArgument):
         builder.next()
 
 
 def test_namebuilder_monster():
-    builder = NameBuilder("foo", _MockCombat(), always_number_first_name=True)
-    builder2 = NameBuilder("foo#", _MockCombat(), always_number_first_name=True)
+    builder = CombatantNameBuilder("foo", _MockCombat(), always_number_first_name=True)
+    builder2 = CombatantNameBuilder("foo#", _MockCombat(), always_number_first_name=True)
     assert builder.next() == builder2.next() == "foo1"
     assert builder.next() == builder2.next() == "foo2"
     assert builder.next() == builder2.next() == "foo3"
 
-    builder = NameBuilder("one", _MockCombat(), always_number_first_name=True)
-    builder2 = NameBuilder("one#", _MockCombat(), always_number_first_name=True)
+    builder = CombatantNameBuilder("one", _MockCombat(), always_number_first_name=True)
+    builder2 = CombatantNameBuilder("one#", _MockCombat(), always_number_first_name=True)
     assert builder.next() == builder2.next() == "one2"
     assert builder.next() == builder2.next() == "one3"
 
-    builder = NameBuilder("always", _MockCombat(), always_number_first_name=True)
+    builder = CombatantNameBuilder("always", _MockCombat(), always_number_first_name=True)
     with pytest.raises(InvalidArgument):
         builder.next()
 
-    builder = NameBuilder("always#", _MockCombat(), always_number_first_name=True)
+    builder = CombatantNameBuilder("always#", _MockCombat(), always_number_first_name=True)
     with pytest.raises(InvalidArgument):
         builder.next()

@@ -101,7 +101,7 @@ class Resistance:
     """
     Represents a conditional resistance to a damage type.
 
-    Only applied to a type token set T if :math:`dtype \in T \land \lnot (unless \cap T) \land only \subset T`.
+    Only applied to a type token set T if :math:`dtype \\in T \\land \\lnot (unless \\cap T) \\land only \\subset T`.
 
     Note: transforms all damage types given to lowercase.
     """

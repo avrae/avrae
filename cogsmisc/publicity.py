@@ -7,7 +7,7 @@ import asyncio
 import logging
 
 import aiohttp
-from discord.ext import commands
+from disnake.ext import commands
 
 from utils import config
 from cogsmisc.stats import Stats

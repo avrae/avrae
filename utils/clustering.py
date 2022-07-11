@@ -27,7 +27,7 @@ from contextlib import asynccontextmanager
 from math import ceil
 
 import aiohttp
-import discord.http
+import disnake.http
 
 from utils import config
 
@@ -60,9 +60,9 @@ async def _coordinate_shards(bot):
 
     # poll discord - how many shards, max concurrency?
     try:
-        data = await bot.http.request(discord.http.Route("GET", "/gateway/bot"))
-    except discord.HTTPException as e:
-        raise discord.GatewayNotFound() from e
+        data = await bot.http.request(disnake.http.Route("GET", "/gateway/bot"))
+    except disnake.HTTPException as e:
+        raise disnake.GatewayNotFound() from e
     recommended_shards = data["shards"]
     session_start_limit = data["session_start_limit"]
     bot.launch_max_concurrency = session_start_limit["max_concurrency"]

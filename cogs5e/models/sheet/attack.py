@@ -1,3 +1,11 @@
+from typing import Optional, TYPE_CHECKING
+
+from utils import enums
+
+if TYPE_CHECKING:
+    from cogs5e.models.automation import Automation
+
+
 class Attack:
     """
     Actually an automation script.
@@ -5,14 +13,15 @@ class Attack:
 
     def __init__(
         self,
-        name,
-        automation,
-        verb=None,
-        proper=False,
-        criton=None,
-        phrase=None,
-        thumb=None,
-        extra_crit_damage=None,
+        name: str,
+        automation: "Automation",
+        verb: str = None,
+        proper: bool = False,
+        criton: int = None,
+        phrase: str = None,
+        thumb: str = None,
+        extra_crit_damage: str = None,
+        activation_type: enums.ActivationType = None,
         **_,
     ):
         self.name = name
@@ -23,6 +32,7 @@ class Attack:
         self.phrase = phrase
         self.thumb = thumb
         self.extra_crit_damage = extra_crit_damage
+        self.activation_type = activation_type
 
     # ==== ser / deser ====
     @classmethod
@@ -34,7 +44,20 @@ class Attack:
 
         from cogs5e.models import automation
 
-        return cls(name=d.pop("name"), automation=automation.Automation.from_data(d.pop("automation")), **d)
+        the_automation = automation.Automation.from_data(d["automation"])
+        activation_type = enums.ActivationType(d["activation_type"]) if d.get("activation_type") is not None else None
+
+        return cls(
+            name=d["name"],
+            automation=the_automation,
+            verb=d.get("verb"),
+            proper=d.get("proper", False),
+            criton=d.get("criton"),
+            phrase=d.get("phrase"),
+            thumb=d.get("thumb"),
+            extra_crit_damage=d.get("extra_crit_damage"),
+            activation_type=activation_type,
+        )
 
     @classmethod
     def from_old(cls, d):
@@ -60,22 +83,26 @@ class Attack:
         for optattr in ("verb", "criton", "phrase", "thumb", "extra_crit_damage"):
             if (val := getattr(self, optattr)) is not None:
                 base[optattr] = val
+
+        if self.activation_type is not None:
+            base["activation_type"] = self.activation_type.value
         return base
 
     # ==== main ====
     @classmethod
     def new(
         cls,
-        name,
+        name: str,
         bonus_calc: str = None,
         damage_calc: str = None,
         details: str = None,
-        verb=None,
-        proper=False,
-        criton=None,
-        phrase=None,
-        thumb=None,
-        extra_crit_damage=None,
+        verb: Optional[str] = None,
+        proper: bool = False,
+        criton: Optional[int] = None,
+        phrase: Optional[str] = None,
+        thumb: Optional[str] = None,
+        extra_crit_damage: Optional[str] = None,
+        activation_type: Optional[enums.ActivationType] = None,
     ):
         """Creates a new attack for a character."""
         if bonus_calc is not None:
@@ -90,10 +117,11 @@ class Attack:
             phrase=phrase,
             thumb=thumb,
             extra_crit_damage=extra_crit_damage,
+            activation_type=activation_type,
         )
 
     @classmethod
-    def copy(cls, other):
+    def copy(cls, other: "Attack"):
         """Returns a shallow copy of an attack."""
         return cls(
             other.name,
@@ -104,6 +132,7 @@ class Attack:
             other.phrase,
             other.thumb,
             other.extra_crit_damage,
+            other.activation_type,
         )
 
     def build_str(self, caster):
@@ -136,6 +165,43 @@ class AttackList:
 
     def __str__(self):
         return "\n".join(str(atk) for atk in self.attacks)
+
+    @property
+    def no_activation_types(self):
+        """Returns an AttackList of attacks that have no defined activation type."""
+        return AttackList([a for a in self.attacks if a.activation_type is None])
+
+    @property
+    def full_actions(self):
+        """Returns an AttackList of attacks that require a full action to activate."""
+        return AttackList([a for a in self.attacks if a.activation_type == enums.ActivationType.ACTION])
+
+    @property
+    def bonus_actions(self):
+        """Returns an AttackList of attacks that require a bonus action to activate."""
+        return AttackList([a for a in self.attacks if a.activation_type == enums.ActivationType.BONUS_ACTION])
+
+    @property
+    def reactions(self):
+        """Returns an AttackList of attacks that require a reaction to activate."""
+        return AttackList([a for a in self.attacks if a.activation_type == enums.ActivationType.REACTION])
+
+    @property
+    def other_attacks(self):
+        """Returns an AttackList of attacks that do not fall into the other action categories."""
+        return AttackList(
+            [
+                a
+                for a in self.attacks
+                if a.activation_type
+                not in (
+                    enums.ActivationType.ACTION,
+                    enums.ActivationType.BONUS_ACTION,
+                    enums.ActivationType.REACTION,
+                    None,
+                )
+            ]
+        )
 
     # list compat
     def append(self, attack):

@@ -5,9 +5,11 @@ from typing import Iterable, List, Optional, TYPE_CHECKING, Union
 import disnake
 
 from cogs5e.initiative import InitiativeEffect
-from cogs5e.initiative.types import BaseCombatant, CombatantType
+from cogs5e.initiative.types import BaseCombatant
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLicense
+from cogs5e.models.sheet.action import Action, Actions
+from cogs5e.models.sheet.attack import Attack, AttackList
 from gamedata import lookuputils
 from utils import constants
 from utils.enums import CritDamageType
@@ -15,12 +17,10 @@ from utils.functions import a_or_an, confirm, maybe_http_url, natural_join, sear
 from utils.settings import ServerSettings
 
 if TYPE_CHECKING:
-    from cogs5e.initiative import Combatant, PlayerCombatant, Combat
+    from cogs5e.initiative import Combatant, Combat
     from cogs5e.models.automation import AutomationResult, Automation
     from cogs5e.models.character import Character
     from cogs5e.models.sheet.statblock import StatBlock
-    from cogs5e.models.sheet.attack import Attack, AttackList
-    from cogs5e.models.sheet.action import Action, Actions
     from gamedata import Spell
     from utils.argparser import ParsedArguments
     from utils.context import AvraeContext
@@ -309,7 +309,7 @@ async def cast_spell(
 
         # commit the caster
         if combat:
-            await combat.final()
+            await combat.final(ctx)
         elif hasattr(caster, "commit"):
             await caster.commit(ctx)
 
@@ -373,7 +373,7 @@ async def run_automation(
         # NLP: record the automation run
         if (nlp_recorder := combat.nlp_recorder) is not None:
             await nlp_recorder.on_automation_run(ctx, combat, automation, result, caster, targets)
-        await combat.final()
+        await combat.final(ctx)
     # commit character only if we have not already committed it via combat final
     if (
         (result.caster_needs_commit or always_commit_caster)
@@ -426,6 +426,10 @@ async def send_action_list(
     """
     if destination is None:
         destination = ctx
+    if attacks is None:
+        attacks = AttackList()
+    if actions is None:
+        actions = Actions()
     if embed is None:
         embed = disnake.Embed(color=caster.get_color(), title=f"{caster.get_title_name()}'s Actions")
     if args is None:
@@ -458,15 +462,16 @@ async def send_action_list(
     e10s_map = {}
     source_names = set()
 
-    # action display
-    if attacks and (display_attacks or not is_display_filtered):
-        atk_str = attacks.build_str(caster)
-        fields.append({"name": "Attacks", "value": atk_str})
-
     # since the sheet displays the description regardless of entitlements, we do here too
-    async def add_action_field(title, action_source):
+    async def add_action_field(title, action_source, attack_source=None):
         nonlocal non_automated_count, non_e10s_count  # eh
         action_texts = []
+
+        # #1833 display attacks with activation types
+        if attack_source:
+            action_texts.append(attack_source.build_str(caster))
+
+        # display actions
         for action in sorted(action_source, key=lambda a: a.name):
             has_automation = action.gamedata is not None
             has_e10s = True
@@ -498,15 +503,18 @@ async def send_action_list(
         action_text = "\n".join(action_texts)
         fields.append({"name": title, "value": action_text})
 
-    if actions is not None:
-        if actions.full_actions and (display_actions or not is_display_filtered):
-            await add_action_field("Actions", actions.full_actions)
-        if actions.bonus_actions and (display_bonus or not is_display_filtered):
-            await add_action_field("Bonus Actions", actions.bonus_actions)
-        if actions.reactions and (display_reactions or not is_display_filtered):
-            await add_action_field("Reactions", actions.reactions)
-        if actions.other_actions and (display_other or not is_display_filtered):
-            await add_action_field("Other", actions.other_actions)
+    # display
+    if display_attacks or not is_display_filtered:
+        atk_str = attacks.no_activation_types.build_str(caster)
+        fields.append({"name": "Attacks", "value": atk_str})
+    if display_actions or not is_display_filtered:
+        await add_action_field("Actions", actions.full_actions, attacks.full_actions)
+    if display_bonus or not is_display_filtered:
+        await add_action_field("Bonus Actions", actions.bonus_actions, attacks.bonus_actions)
+    if display_reactions or not is_display_filtered:
+        await add_action_field("Reactions", actions.reactions, attacks.reactions)
+    if display_other or not is_display_filtered:
+        await add_action_field("Other", actions.other_actions, attacks.other_attacks)
 
     # build embed
 

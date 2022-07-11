@@ -39,7 +39,7 @@ async def ddb_id_to_discord_user(ctx, ddb_user_id, guild=None):
     """
     Translates a DDB user ID to a Discord user.
 
-    :rtype: discord.User or None
+    :rtype: disnake.User or None
     """
     discord_id = await ddb_id_to_discord_id(ctx.bot.mdb, ddb_user_id)
     if discord_id is None:

@@ -8,9 +8,9 @@ import time
 from datetime import datetime, timedelta
 from math import floor, isfinite
 
-import discord
+import disnake
 import psutil
-from discord.ext import commands
+from disnake.ext import commands
 
 from cogs5e.models import embeds
 from cogsmisc.stats import Stats
@@ -28,7 +28,7 @@ class Core(commands.Cog):
         self.start_time = time.monotonic()
 
     @commands.command(hidden=True)
-    async def avatar(self, ctx, user: discord.Member = None):
+    async def avatar(self, ctx, user: disnake.Member = None):
         """Gets a user's avatar.
         Usage: !avatar <USER>"""
         if user is None:
@@ -77,7 +77,7 @@ class Core(commands.Cog):
             await self.bot.http.follow_webhook(
                 CHANGELOG_CHANNEL_ID, webhook_channel_id=ctx.channel.id, reason="Following Avrae Changelog"
             )
-        except discord.Forbidden:
+        except disnake.Forbidden:
             await ctx.send(
                 "I do not have permissions to edit this channel's integrations. Make sure I have "
                 "`Manage Webhooks` permissions, or you can follow the changelog yourself at "
@@ -101,7 +101,7 @@ class Core(commands.Cog):
         for k in statKeys:
             stats[k] = await Stats.get_statistic(ctx, k)
 
-        embed = discord.Embed(
+        embed = disnake.Embed(
             description=(
                 "Avrae, a bot to streamline D&D 5e online.\n"
                 "Check out the latest release notes "

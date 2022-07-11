@@ -1,6 +1,6 @@
 import random
 
-import discord
+import disnake
 
 from utils.constants import HOMEBREW_ICON
 from utils.functions import chunk_text, trim_str
@@ -8,7 +8,7 @@ from utils.functions import chunk_text, trim_str
 MAX_NUM_FIELDS = 25
 
 
-class EmbedWithColor(discord.Embed):
+class EmbedWithColor(disnake.Embed):
     """An embed with a random color."""
 
     def __init__(self, **kwargs):
@@ -35,7 +35,7 @@ class HomebrewEmbedWithAuthor(EmbedWithAuthor):
         self.set_footer(text="Homebrew content.", icon_url=HOMEBREW_ICON)
 
 
-class EmbedWithCharacter(discord.Embed):
+class EmbedWithCharacter(disnake.Embed):
     """An embed with character image and name set."""
 
     def __init__(self, character, name=True, image=True, **kwargs):
@@ -66,7 +66,7 @@ class EmbedPaginator:
         self._footer_text = None
 
         if first_embed is None:
-            first_embed = discord.Embed(**embed_options)
+            first_embed = disnake.Embed(**embed_options)
 
         self._embed_count = len(first_embed)
         self._default_embed_options = {c: getattr(first_embed, c) for c in copy_kwargs if hasattr(first_embed, c)}
@@ -172,7 +172,7 @@ class EmbedPaginator:
 
     def close_embed(self):
         """Terminate the current embed and create a new one."""
-        self._embeds.append(discord.Embed(**self._default_embed_options))
+        self._embeds.append(disnake.Embed(**self._default_embed_options))
         self._embed_count = 0
 
     def __len__(self):

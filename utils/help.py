@@ -1,7 +1,7 @@
 import itertools
 
-import discord
-from discord.ext.commands import Group, HelpCommand
+import disnake
+from disnake.ext.commands import Group, HelpCommand
 
 import aliasing.errors
 import aliasing.helpers
@@ -14,7 +14,7 @@ from utils.functions import user_from_id
 class AvraeHelp(HelpCommand):
     def __init__(self, **options):
         super().__init__(**options)
-        self.embed_paginator = EmbedPaginator(colour=discord.Colour.blurple())
+        self.embed_paginator = EmbedPaginator(colour=disnake.Colour.blurple())
         self.in_dms = True
 
     def get_ending_note(self):
@@ -47,7 +47,7 @@ class AvraeHelp(HelpCommand):
         for embed in self.embed_paginator.embeds:
             await destination.send(embed=embed)
 
-        if not isinstance(self.context.channel, discord.DMChannel) and self.in_dms:
+        if not isinstance(self.context.channel, disnake.DMChannel) and self.in_dms:
             await self.context.channel.send("I have sent help to your PMs.")
 
     def add_command_formatting(self, command):
@@ -103,7 +103,7 @@ class AvraeHelp(HelpCommand):
         if cog is not None:
             return await self.send_cog_help(cog)
 
-        maybe_coro = discord.utils.maybe_coroutine
+        maybe_coro = disnake.utils.maybe_coroutine
 
         # If it's not a cog then it's a command.
         # Since we want to have detailed errors when someone

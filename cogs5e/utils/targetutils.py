@@ -1,9 +1,14 @@
 from contextlib import suppress
+from typing import Literal, TYPE_CHECKING
 
 from cogs5e.initiative import CombatNotFound, CombatantGroup
 from cogs5e.models.character import Character
 from cogs5e.models.errors import InvalidArgument, SelectionException
-from utils.argparser import argparse
+from utils.argparser import ParsedArguments, argparse
+
+if TYPE_CHECKING:
+    from utils.context import AvraeContext
+    from cogs5e.initiative import Combat
 
 
 async def maybe_combat_caster(ctx, caster, combat=None):
@@ -53,14 +58,15 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
         return caster, targets, None
 
     # get targets as Combatants
-    targets = await definitely_combat(combat, args, allow_groups)
+    targets = await definitely_combat(ctx, combat, args, allow_groups)
 
     # get caster as Combatant if caster in combat
     caster = await maybe_combat_caster(ctx, caster, combat=combat)
     return caster, targets, combat
 
 
-async def definitely_combat(combat, args, allow_groups=True):
+async def definitely_combat(ctx: "AvraeContext", combat: "Combat", args: ParsedArguments, allow_groups: bool = True):
+    allow_groups: Literal[True, False]  # weird type-checking requirement to typehint the select_combatant overload
     target_args = args.get("t")
     targets = []
 
@@ -71,7 +77,7 @@ async def definitely_combat(combat, args, allow_groups=True):
             contextargs = argparse(contextargs)
 
         try:
-            target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=allow_groups)
+            target = await combat.select_combatant(ctx, t, f"Select target #{i + 1}.", select_group=allow_groups)
         except SelectionException:
             raise InvalidArgument(f"Target {t} not found.")
 
@@ -85,5 +91,5 @@ async def definitely_combat(combat, args, allow_groups=True):
                 args.add_context(target, contextargs)
             targets.append(target)
 
-    combat.ctx.nlp_targets = targets  # NLP: save a reference to the targets list
+    ctx.nlp_targets = targets  # NLP: save a reference to the targets list
     return targets

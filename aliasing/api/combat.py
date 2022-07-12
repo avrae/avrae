@@ -455,7 +455,8 @@ class SimpleCombatant(AliasStatBlock):
         # parse v4.1 models (passive, attacks, buttons)
         parsed_passive = parsed_attacks = parsed_buttons = None
         if passive_effects:
-            normalized_passive = validators.PassiveEffects.parse_obj(passive_effects).dict(exclude_none=True)
+            unsafeified_passive = validators.unsafeify(passive_effects, self._interpreter)
+            normalized_passive = validators.PassiveEffects.parse_obj(unsafeified_passive).dict(exclude_none=True)
             parsed_passive = init.effects.InitPassiveEffect.from_dict(normalized_passive)
         if attacks:
             normalized_attacks = [

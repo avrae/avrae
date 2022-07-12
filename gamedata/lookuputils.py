@@ -126,13 +126,13 @@ def handle_source_footer(
         icon_url = HOMEBREW_ICON
         text_pieces = text_pieces or ["Homebrew content."]
     elif book.is_ua:
-        icon_url = "https://media-waterdeep.cursecdn.com/avatars/110/171/636516074887091041.png"
+        icon_url = "https://www.dndbeyond.com/avatars/110/171/636516074887091041.png"
         text_pieces = text_pieces or ["Unearthed Arcana content."]
     elif book.is_partnered:
-        icon_url = "https://media-waterdeep.cursecdn.com/avatars/11008/904/637274855809570341.png"
+        icon_url = "https://www.dndbeyond.com/avatars/11008/904/637274855809570341.png"
         text_pieces = text_pieces or ["Partnered content."]
     elif book.is_cr:
-        icon_url = "https://media-waterdeep.cursecdn.com/avatars/105/174/636512853628516966.png"
+        icon_url = "https://www.dndbeyond.com/avatars/105/174/636512853628516966.png"
         text_pieces = text_pieces or ["Critical Role content."]
     elif book.is_noncore:
         text_pieces = text_pieces or ["Noncore content."]

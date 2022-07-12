@@ -15,18 +15,7 @@ from cogs5e.models.errors import ExternalImportError
 TOKEN_SIZE = (256, 256)
 
 
-def preprocess_url(url):
-    """
-    Does any necessary changes to the URL before downloading the image.
-
-    Current operations:
-    www.dndbeyond.com/avatars -> media-waterdeep.cursecdn.com/avatars
-    """
-    return url.replace("www.dndbeyond.com/avatars", "media-waterdeep.cursecdn.com/avatars")
-
-
 async def generate_token(img_url, is_subscriber=False, token_args=None):
-    img_url = preprocess_url(img_url)
     template = "res/template-s.png" if is_subscriber else "res/template-f.png"
     if token_args:
         border = token_args.last("border")

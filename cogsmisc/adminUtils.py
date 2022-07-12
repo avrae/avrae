@@ -5,10 +5,14 @@ Created on Sep 23, 2016
 """
 import asyncio
 import copy
+import io
 import itertools
 import json
 import logging
 import re
+import textwrap
+import traceback
+from contextlib import redirect_stdout
 from math import floor
 
 import disnake
@@ -112,6 +116,50 @@ class AdminUtils(commands.Cog):
     async def admin(self, ctx):
         """Owner-only admin commands."""
         await ctx.send("hello yes please give me a subcommand")
+
+    @admin.command(hidden=True, name="eval")
+    @checks.is_owner()
+    async def admin_eval(self, ctx, *, body: str):
+        env = {
+            "bot": self.bot,
+            "ctx": ctx,
+            "channel": ctx.message.channel,
+            "author": ctx.message.author,
+            "guild": ctx.message.guild,
+            "message": ctx.message,
+        }
+
+        env.update(globals())
+
+        body = cleanup_code(body)
+        stdout = io.StringIO()
+
+        to_compile = "async def func():\n{}".format(textwrap.indent(body, "  "))
+
+        try:
+            exec(to_compile, env)
+        except Exception as e:
+            return await ctx.send("```py\n{}: {}\n```".format(e.__class__.__name__, e))
+
+        func = env["func"]
+        try:
+            with redirect_stdout(stdout):
+                ret = await func()
+        except Exception:
+            value = stdout.getvalue()
+            await ctx.send("```py\n{}{}\n```".format(value, traceback.format_exc()))
+        else:
+            value = stdout.getvalue()
+            try:
+                await ctx.message.add_reaction("\u2705")
+            except:
+                pass
+
+            if ret is None:
+                if value:
+                    await ctx.send("```py\n{}\n```".format(value))
+            else:
+                await ctx.send("```py\n{}{}\n```".format(value, ret))
 
     @admin.command(hidden=True)
     @checks.is_owner()
@@ -482,6 +530,16 @@ class AdminUtils(commands.Cog):
         if result is not False:
             response = redis.PubSubReply.new(self.bot, reply_to=message.id, data=result)
             await self.bot.rdb.publish(COMMAND_PUBSUB_CHANNEL, response.to_json())
+
+
+def cleanup_code(content):
+    """Automatically removes code blocks from the code."""
+    # remove ```py\n```
+    if content.startswith("```") and content.endswith("```"):
+        return "\n".join(content.split("\n")[1:-1])
+
+    # remove `foo`
+    return content.strip("` \n")
 
 
 # ==== setup ====

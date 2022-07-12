@@ -159,8 +159,8 @@ class SimpleCombat:
         me._character = character  # set combatant character instance
         self.me = SimpleCombatant(me, False, interpreter=self._interpreter)
 
-    async def func_commit(self):
-        await self._combat.commit()
+    async def func_commit(self, ctx):
+        await self._combat.commit(ctx)
 
     def __str__(self):
         return str(self._combat)

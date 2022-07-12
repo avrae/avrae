@@ -581,7 +581,7 @@ class InitTracker(commands.Cog):
                 out += f"Current combat DM has been set to {member.mention}.\n"
 
         combat.options = options
-        await combat.commit()
+        await combat.commit(ctx)
         out = out if out else "No Settings Changed"
         await ctx.send(out)
 

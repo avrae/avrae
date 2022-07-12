@@ -6,6 +6,7 @@ from disnake.ext import commands
 
 from cogs5e.models.errors import AvraeException
 from tests.discord_mock_data import (
+    DEFAULT_OWNER_ID,
     DEFAULT_USER,
     DEFAULT_USER_ID,
     MESSAGE_ID,
@@ -14,7 +15,6 @@ from tests.discord_mock_data import (
     TEST_DMCHANNEL_ID,
     TEST_GUILD_ID,
 )
-from utils import config
 from utils.config import DEFAULT_PREFIX
 
 log = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ def message(self, message_content, as_owner=False, dm=False):
 def add_reaction(self, emoji, as_owner=False, dm=False):
     log.info(f"Adding reaction {emoji}")
     data = {
-        "user_id": str(DEFAULT_USER_ID) if not as_owner else str(config.OWNER_ID),
+        "user_id": str(DEFAULT_USER_ID) if not as_owner else str(DEFAULT_OWNER_ID),
         "channel_id": str(TEST_CHANNEL_ID) if not dm else str(TEST_DMCHANNEL_ID),
         "message_id": str(MESSAGE_ID),
         "emoji": {"id": None, "name": emoji},  # no custom emoji for now

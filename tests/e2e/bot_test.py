@@ -1,4 +1,5 @@
 import disnake
+import disnake.ext.commands
 import pytest
 
 pytestmark = pytest.mark.asyncio
@@ -26,3 +27,14 @@ async def test_nonexistant_commands(avrae, dhttp):
     avrae.message("hello world")
     avrae.message("spam spam spam!roll 1d20")
     assert dhttp.queue_empty()  # avrae has not responded to anything
+
+
+async def test_owner_permissions(avrae, dhttp, record_command_errors):
+    avrae.message("!admin", as_owner=False)
+    await dhttp.drain()
+    assert isinstance(record_command_errors[0], disnake.ext.commands.NotOwner)
+
+    record_command_errors.clear()
+    avrae.message("!admin", as_owner=True)
+    await dhttp.drain()
+    assert len(record_command_errors) == 0

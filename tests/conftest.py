@@ -151,3 +151,21 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.unit)
         elif "gamedata" in rel_path.parts:
             item.add_marker(pytest.mark.gamedata)
+
+
+@pytest.fixture(scope="function")
+def record_command_errors(avrae):
+    """
+    A fixture to temporarily remove the custom command error handler, to allow commands to raise handled errors.
+    Yields a reference to a list of recorded errors.
+    """
+    recorded_errors = []
+
+    async def on_command_error_rec(_, e):
+        recorded_errors.append(e)
+
+    avrae.add_listener(on_command_error_rec, "on_command_error")
+    avrae.remove_listener(on_command_error)
+    yield recorded_errors
+    avrae.remove_listener(on_command_error_rec, "on_command_error")
+    avrae.add_listener(on_command_error)

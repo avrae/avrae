@@ -1,102 +1,187 @@
 import collections
+import itertools
 import re
 
+import lark
 from disnake.ext.commands import BadArgument, ExpectedClosingQuoteError
 from disnake.ext.commands.view import StringView
 
 from cogs5e.models.errors import InvalidArgument
-from utils.functions import list_get
 
-EPHEMERAL_ARG_RE = re.compile(r"([^\s]+)(\d+)")
-QUOTE_PAIRS = {
-    '"': '"',
-    "'": "'",
-    "‘": "’",
-    "‚": "‛",
-    "“": "”",
-    "„": "‟",
-    "⹂": "⹂",
-    "「": "」",
-    "『": "』",
-    "〝": "〞",
-    "﹁": "﹂",
-    "﹃": "﹄",
-    "＂": "＂",
-    "｢": "｣",
-    "«": "»",
-    "‹": "›",
-    "《": "》",
-    "〈": "〉",
-}
-ALL_QUOTES = set(QUOTE_PAIRS.keys()) | set(QUOTE_PAIRS.values())
+EPHEMERAL_ARG_RE = re.compile(r"(\S+)(\d+)")
+
+# ==== argparse grammar ====
+grammar = r"""
+start: arg (_WS+ arg)*
+
+?arg: single_arg
+    | single_arg_exception
+    | ephemeral_single_arg
+    | flag_arg
+    | ephemeral_flag_arg
+    | junk
+
+single_arg.-2: IDENTIFIER
+single_arg_exception.2: SINGLE_ARG_EXCEPTIONS
+ephemeral_single_arg.-2: IDENTIFIER INTEGER
+
+flag_arg: FLAG_ARG_START (_WS value)?
+ephemeral_flag_arg: FLAG_ARG_START INTEGER (_WS value)?
+?value.-1: ESCAPED_STRING | /\S+/
+
+junk.-9: ESCAPED_STRING | /\S+/
+
+FLAG_ARG_START: "-"+ IDENTIFIER
+IDENTIFIER: /[a-zA-Z]\S*(?<!\d)/
+SINGLE_ARG_EXCEPTIONS: "-i" | "-h"
+INTEGER: /\d+/
+
+// handle all quote types
+_STRING_INNER: /.*?/
+_STRING_ESC_INNER: _STRING_INNER /(?<!\\)(\\\\)*?/
+
+ESCAPED_STRING: "\"" _STRING_ESC_INNER "\""
+    | "'" _STRING_ESC_INNER "'"
+    | "‘" _STRING_ESC_INNER "’"
+    | "‚" _STRING_ESC_INNER "‛"
+    | "“" _STRING_ESC_INNER "”"
+    | "„" _STRING_ESC_INNER "‟"
+    | "⹂" _STRING_ESC_INNER "⹂"
+    | "「" _STRING_ESC_INNER "」"
+    | "『" _STRING_ESC_INNER "』"
+    | "〝" _STRING_ESC_INNER "〞"
+    | "﹁" _STRING_ESC_INNER "﹂"
+    | "﹃" _STRING_ESC_INNER "﹄"
+    | "＂" _STRING_ESC_INNER "＂"
+    | "｢" _STRING_ESC_INNER "｣"
+    | "«" _STRING_ESC_INNER "»"
+    | "‹" _STRING_ESC_INNER "›"
+    | "《" _STRING_ESC_INNER "》"
+    | "〈" _STRING_ESC_INNER "〉"
+
+%import common.WS -> _WS
+"""
+
+parser = lark.Lark(grammar, propagate_positions=True)
 
 
-def argsplit(args: str):
-    view = CustomStringView(args.strip())
-    args = []
-    while not view.eof:
-        view.skip_ws()
-        args.append(view.get_quoted_word())  # _quoted_word(view))
-    return args
+class Argument:
+    def __init__(self, name: str, value, pos: int):
+        self.name = name
+        self.value = value
+        self.pos = pos
+
+    def __repr__(self):
+        return f"<{type(self).__name__} name={self.name!r} value={self.value!r} pos={self.pos}>"
 
 
-def argparse(args, character=None, splitter=argsplit):
+class EphemeralArgument(Argument):
+    def __init__(self, name: str, value, pos: int, uses: int):
+        super().__init__(name, value, pos)
+        self.uses = uses
+        self.used = 0
+
+    def has_remaining_uses(self):
+        return self.used < self.uses
+
+    def __repr__(self):
+        return (
+            f"<{type(self).__name__} name={self.name!r} value={self.value!r} pos={self.pos} uses={self.uses} "
+            f"used={self.used}>"
+        )
+
+
+@lark.v_args(inline=True, meta=True)
+class ArgumentTransformer(lark.Transformer):
+    @lark.v_args(inline=False, meta=False)
+    def start(self, children):
+        return children
+
+    @staticmethod
+    def single_arg(meta: lark.tree.Meta, identifier):
+        return Argument(name=str(identifier), value=True, pos=meta.start_pos)
+
+    @staticmethod
+    def single_arg_exception(meta: lark.tree.Meta, identifier):
+        return Argument(name=str(identifier).lstrip("-"), value=True, pos=meta.start_pos)
+
+    @staticmethod
+    def ephemeral_single_arg(meta: lark.tree.Meta, identifier, uses):
+        return EphemeralArgument(name=str(identifier), value=True, pos=meta.start_pos, uses=int(uses))
+
+    @staticmethod
+    def flag_arg(meta: lark.tree.Meta, identifier, value=True):
+        return Argument(name=str(identifier).lstrip("-"), value=str(value), pos=meta.start_pos)
+
+    @staticmethod
+    def ephemeral_flag_arg(meta: lark.tree.Meta, identifier, uses, value=True):
+        return EphemeralArgument(name=str(identifier).lstrip("-"), value=str(value), pos=meta.start_pos, uses=int(uses))
+
+    @staticmethod
+    def junk(*_):
+        return lark.visitors.Discard
+
+    # noinspection PyPep8Naming
+    @staticmethod
+    def ESCAPED_STRING(value: str):
+        close_quote = value[-1]
+        return value[1:-1].replace(rf"\{close_quote}", close_quote)
+
+
+@lark.v_args(inline=True, meta=True)
+class NoEphemeralArgumentTransformer(ArgumentTransformer):
+    @staticmethod
+    def ephemeral_single_arg(meta: lark.tree.Meta, identifier, uses):
+        return Argument(name=str(identifier) + str(uses), value=True, pos=meta.start_pos)
+
+    @staticmethod
+    def ephemeral_flag_arg(meta: lark.tree.Meta, identifier, uses, value=True):
+        return Argument(name=str(identifier).lstrip("-") + str(uses), value=str(value), pos=meta.start_pos)
+
+
+# --- main entrypoint ---
+def argparse(args: str, character=None, parse_ephem=True) -> "ParsedArguments":
     """
-    Parses arguments.
-
-    :param args: A list of arguments to parse.
-    :type args: str or Iterable
-    :return: The parsed arguments.
-    :rtype: :class:`~utils.argparser.ParsedArguments`
+    Given an argument string, returns the parsed arguments using the argument grammar.
+    If *character* is given, evaluates {}-style math inside the string before parsing.
+    If *parse_ephem* is False, arguments like ``-d1`` are saved literally rather than as an ephemeral argument.
     """
-    if isinstance(args, str):
-        args = splitter(args)
     if character:
         from aliasing.evaluators import MathEvaluator
 
         evaluator = MathEvaluator.with_character(character)
-        args = [evaluator.transformed_str(a) for a in args]
+        args = evaluator.transformed_str(args)
 
-    parsed = collections.defaultdict(lambda: [])
-    index = 0
-    for a in args:
-        if a.startswith("-"):
-            parsed[a.lstrip("-")].append(list_get(index + 1, True, args))
-        else:
-            parsed[a].append(True)
-        index += 1
+    args = args.strip()
+    if not args:
+        return ParsedArguments([])
+
+    tree = parser.parse(args)
+    if parse_ephem:
+        parsed = ArgumentTransformer().transform(tree)
+    else:
+        parsed = NoEphemeralArgumentTransformer().transform(tree)
     return ParsedArguments(parsed)
 
 
-def argquote(arg: str):
-    if " " in arg:
-        arg = arg.replace('"', '\\"')  # re.sub(r'(?<!\\)"', r'\"', arg)
-        arg = f'"{arg}"'
-    return arg
-
-
 class ParsedArguments:
-    def __init__(self, parsed):
-        self._parsed = parsed
-        self._ephemeral = collections.defaultdict(lambda: [])
-        self._parse_ephemeral(parsed)
-
-        # contextual support
-        self._original_parsed = collections.defaultdict(lambda: [])
-        self._original_ephemeral = collections.defaultdict(lambda: [])
-        self._setup_originals()
-        self._contexts = collections.defaultdict(lambda: ParsedArguments.empty_args())
+    def __init__(self, args: list[Argument]):
+        self._parsed = collections.defaultdict(lambda: [])
+        for arg in args:
+            self._parsed[arg.name].append(arg)
+        self._current_context = None
+        self._contexts = {}  # type: dict[..., ParsedArguments]
 
     @classmethod
     def from_dict(cls, d):
-        inst = cls(collections.defaultdict(lambda: []))
+        inst = cls([])
         for key, value in d.items():
             inst[key] = value
         return inst
 
     @classmethod
     def empty_args(cls):
-        return cls(collections.defaultdict(lambda: []))
+        return cls([])
 
     # basic argument getting
     def get(self, arg, default=None, type_=str, ephem=False):
@@ -105,14 +190,14 @@ class ParsedArguments:
 
         :param str arg: The name of the arg to get.
         :param default: The default value to return if the arg is not found. Not cast to type.
-        :param type_: The type that each value in the list should be returned as.
+        :param type type_: The type that each value in the list should be returned as.
         :param bool ephem: Whether to add applicable ephemeral arguments to the returned list.
         :return: The relevant argument list.
         :rtype: list
         """
         if default is None:
             default = []
-        parsed = self._get_values(arg, ephem=ephem)
+        parsed = list(self._get_values(arg, ephem=ephem))
         if not parsed:
             return default
         try:
@@ -120,14 +205,14 @@ class ParsedArguments:
         except (ValueError, TypeError):
             raise InvalidArgument(f"One or more arguments cannot be cast to {type_.__name__} (in `{arg}`)")
 
-    def last(self, arg, default=None, type_: type = str, ephem=False):
+    def last(self, arg, default=None, type_=str, ephem=False):
         """
         Gets the last value of an arg.
 
         :param str arg: The name of the arg to get.
         :param default: The default value to return if the arg is not found. Not cast to type.
-        :param type_: The type that the arg should be returned as.
-        :param ephem: Whether to return an ephemeral argument if such exists.
+        :param type type_: The type that the arg should be returned as.
+        :param bool ephem: Whether to return an ephemeral argument if such exists.
         :raises: InvalidArgument if the arg cannot be cast to the type
         :return: The relevant argument.
         """
@@ -146,7 +231,9 @@ class ParsedArguments:
         :param eadv: Whether to parse for elven accuracy.
         :param boolwise: Whether to return an integer or tribool representation.
         :param ephem: Whether to return an ephemeral argument if such exists.
-        :param custom: Dictionary of custom values to parse for. There should be a key for each value you want to overwrite. ``custom={'adv': 'custom_adv'}`` would allow you to parse for advantage if the ``custom_adv`` argument is found.
+        :param custom: Dictionary of custom values to parse for. There should be a key for each value you want to
+                       overwrite. ``custom={'adv': 'custom_adv'}`` would allow you to parse for advantage if the
+                       ``custom_adv`` argument is found.
 
         :return: -1 for dis, 0 for normal, 1 for adv, 2 for eadv
         """
@@ -221,76 +308,46 @@ class ParsedArguments:
             if k not in self and v is not None:
                 self[k] = v
 
-    # ephemeral setup
-    def _parse_ephemeral(self, argdict):
-        for key in argdict:
-            match = EPHEMERAL_ARG_RE.match(key)
-            if match:
-                arg, num = match.group(1), match.group(2)
-                self._ephemeral[arg].extend([EphemeralValue(int(num), val) for val in argdict[key]])
-
     # get helpers
     def _get_values(self, arg, ephem=False):
-        """Returns a list of arguments."""
-        if not ephem:
-            return self._parsed[arg]
-
-        out = self._parsed[arg].copy()
-        for ephem_val in self._ephemeral[arg]:
-            if ephem_val.remaining:
-                out.append(ephem_val.value)
-
-        return out
+        """Returns an iterator of arguments."""
+        iterable = self._parsed[arg]
+        if self._current_context in self._contexts:
+            iterable = itertools.chain(self._parsed[arg], self._contexts[self._current_context]._parsed[arg])
+        for value in iterable:
+            if not ephem and isinstance(value, EphemeralArgument):
+                continue
+            elif isinstance(value, EphemeralArgument):
+                if not value.has_remaining_uses():
+                    continue
+                value.used += 1
+            yield value.value
 
     def _get_last(self, arg, ephem=False):
-        """Returns the last argument."""
-        if ephem:
-            if arg in self._ephemeral:
-                for ev in reversed(self._ephemeral[arg]):
-                    if ev.remaining:
-                        return ev.value
-        if arg in self._parsed and self._parsed[arg]:  # intentionally not elif - handles when ephem exhausted
-            return self._parsed[arg][-1]
+        """Returns the last argument, or None if no valid argument is found."""
+        iterable = reversed(self._parsed[arg])
+        if self._current_context in self._contexts:
+            iterable = itertools.chain(
+                reversed(self._contexts[self._current_context]._parsed[arg]), reversed(self._parsed[arg])
+            )
+        for value in iterable:
+            if not ephem and isinstance(value, EphemeralArgument):
+                continue
+            elif isinstance(value, EphemeralArgument):
+                if not value.has_remaining_uses():
+                    continue
+                value.used += 1
+            return value.value
         return None
 
     # context helpers
-    def _setup_originals(self):
-        for arg, values in self._parsed.items():
-            self._original_parsed[arg] = values.copy()
-
-        for arg, values in self._ephemeral.items():
-            self._original_ephemeral[arg] = values.copy()
-
     def set_context(self, context):
         """
         Sets the current argument parsing context.
 
         :param context: Any hashable context.
         """
-        if context is None:
-            self._parsed = self._original_parsed
-            self._ephemeral = self._original_ephemeral
-        else:
-            # build a new parsed and ephemeral list
-            new_parsed = collections.defaultdict(lambda: [])
-            for arg, values in self._original_parsed.items():
-                new_parsed[arg].extend(values)
-
-            for arg, values in self._contexts[context]._parsed.items():
-                new_parsed[arg].extend(values)
-
-            new_ephem = collections.defaultdict(lambda: [])
-            for arg, values in self._original_ephemeral.items():
-                # new_ephem[arg] and original_ephemeral[arg] don't point to the same list
-                # but new_ephem[arg][i] and original_ephemeral[arg][i] point to the same value
-                # so that changes to the ephemeral state in a context bubble up to the global context
-                new_ephem[arg] = values.copy()
-
-            for arg, values in self._contexts[context]._ephemeral.items():
-                new_ephem[arg].extend(values.copy())
-
-            self._parsed = new_parsed
-            self._ephemeral = new_ephem
+        self._current_context = context
 
     def add_context(self, context, args):
         """
@@ -317,7 +374,7 @@ class ParsedArguments:
 
     # builtins
     def __contains__(self, item):
-        return (item in self._parsed and self._parsed[item]) or item in self._ephemeral
+        return item in self._parsed and self._parsed[item]
 
     def __len__(self):
         return len(self._parsed)
@@ -327,17 +384,16 @@ class ParsedArguments:
         :type key: str
         :type value: str or bool or list[str or bool]
         """
-        if not isinstance(value, (collections.UserList, list)):
-            value = [value]
-        self._parsed[key] = value
-        self._original_parsed[key] = value.copy()
-        # add it to ephem dict if it matches
-        match = EPHEMERAL_ARG_RE.match(key)
-        if match:
+        if isinstance(value, (collections.UserList, list)):
+            true_val = [Argument(key, v, idx) for idx, v in enumerate(value)]
+        else:
+            true_val = [Argument(key, value, 0)]
+        self._parsed[key] = true_val
+        # also parse for ephem arg
+        if match := EPHEMERAL_ARG_RE.fullmatch(key):
             arg, num = match.group(1), match.group(2)
-            evals = [EphemeralValue(int(num), val) for val in value]
-            self._ephemeral[arg].extend(evals)
-            self._original_ephemeral[arg].extend(evals.copy())
+            ephem_val = [EphemeralArgument(arg, v.value, v.pos, int(num)) for v in true_val]
+            self._parsed[arg] = ephem_val
 
     def __delitem__(self, arg):
         """
@@ -345,27 +401,59 @@ class ParsedArguments:
 
         :param arg: The argument to ignore.
         """
-        for container in (self._parsed, self._original_parsed, self._ephemeral, self._original_ephemeral):
-            if arg in container:
-                del container[arg]
+        if arg in self._parsed:
+            del self._parsed[arg]
 
     def __iter__(self):
         return iter(self._parsed.keys())
 
     def __repr__(self):
-        return f"<ParsedArguments parsed={self._parsed.items()} ephemeral={self._ephemeral.items()}>"
+        # please ignore this hack to make the repr prettier
+        return f"<ParsedArguments parsed={dict.__repr__(self._parsed)} context={self._current_context}>"
 
 
-class EphemeralValue:
-    def __init__(self, num, value):
-        self.num = num
-        self.remaining = num
-        self._value = value
+# ==== other helpers ====
+def argsplit(args: str):
+    view = CustomStringView(args.strip())
+    args = []
+    while not view.eof:
+        view.skip_ws()
+        args.append(view.get_quoted_word())  # _quoted_word(view))
+    return args
 
-    @property
-    def value(self):
-        self.remaining -= 1
-        return self._value
+
+def argjoin(args: list[str]):
+    return " ".join(args)
+
+
+def argquote(arg: str):
+    if " " in arg:
+        arg = arg.replace('"', '\\"')  # re.sub(r'(?<!\\)"', r'\"', arg)
+        arg = f'"{arg}"'
+    return arg
+
+
+QUOTE_PAIRS = {
+    '"': '"',
+    "'": "'",
+    "‘": "’",
+    "‚": "‛",
+    "“": "”",
+    "„": "‟",
+    "⹂": "⹂",
+    "「": "」",
+    "『": "』",
+    "〝": "〞",
+    "﹁": "﹂",
+    "﹃": "﹄",
+    "＂": "＂",
+    "｢": "｣",
+    "«": "»",
+    "‹": "›",
+    "《": "》",
+    "〈": "〉",
+}
+ALL_QUOTES = set(QUOTE_PAIRS.keys()) | set(QUOTE_PAIRS.values())
 
 
 class CustomStringView(StringView):

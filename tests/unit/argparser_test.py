@@ -142,7 +142,7 @@ def test_argparse_custom_adv():
 
 
 def test_argparse_ephem():
-    args = argparse("""-d5 1d6 adv1 -d 1""")
+    args = argparse("""-d 1 -d5 1d6 adv1""")
     for _ in range(4):
         assert args.join("d", "+", ephem=True) == "1+1d6"
     assert args.last("d", ephem=True) == "1d6"
@@ -160,8 +160,8 @@ def test_argparse_ephem():
     # multiple different durations
     args = argparse("""-d2 1d6 -d1 1d4 -d 1 -d3 1d8""")
     assert args.last("d", ephem=True) == "1d8"
-    assert args.join("d", "+", ephem=True) == "1+1d6+1d4+1d8"
-    assert args.join("d", "+", ephem=True) == "1+1d6+1d8"
+    assert args.join("d", "+", ephem=True) == "1d6+1d4+1+1d8"
+    assert args.join("d", "+", ephem=True) == "1d6+1+1d8"
     assert args.join("d", "+", ephem=True) == "1"
 
 
@@ -230,8 +230,8 @@ def test_contextual_ephemeral_argparse():
     args.add_context("baz", {"d1": ["3"], "phrase": ["I am baz"]})
 
     args.set_context("foo")
-    assert args.get("d", ephem=True) == ["3", "5", "1"]
-    assert args.get("d", ephem=True) == ["3", "5"]
+    assert args.get("d", ephem=True) == ["5", "3", "1"]
+    assert args.get("d", ephem=True) == ["5", "3"]
 
     args.set_context("bar")
     assert args.get("d", ephem=True) == ["5", "2"]

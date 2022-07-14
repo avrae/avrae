@@ -1,70 +1,29 @@
 import collections
 import itertools
 import re
+from typing import Iterator
 
-import lark
 from disnake.ext.commands import BadArgument, ExpectedClosingQuoteError
 from disnake.ext.commands.view import StringView
 
 from cogs5e.models.errors import InvalidArgument
 
 EPHEMERAL_ARG_RE = re.compile(r"(\S+)(\d+)")
-
-# ==== argparse grammar ====
-grammar = r"""
-start: arg (_WS+ arg)*
-
-?arg: single_arg
-    | single_arg_exception
-    | ephemeral_single_arg
-    | flag_arg
-    | ephemeral_flag_arg
-    | junk
-
-single_arg.-2: IDENTIFIER
-single_arg_exception.2: SINGLE_ARG_EXCEPTIONS
-ephemeral_single_arg.-2: IDENTIFIER INTEGER
-
-flag_arg: FLAG_ARG_START (_WS value)?
-ephemeral_flag_arg: FLAG_ARG_START INTEGER (_WS value)?
-?value.-1: ESCAPED_STRING | /\S+/
-
-junk.-9: ESCAPED_STRING | /\S+/
-
-FLAG_ARG_START: "-"+ IDENTIFIER
-IDENTIFIER: /[a-zA-Z]\S*(?<!\d)/
-SINGLE_ARG_EXCEPTIONS: "-i" | "-h"
-INTEGER: /\d+/
-
-// handle all quote types
-_STRING_INNER: /.*?/
-_STRING_ESC_INNER: _STRING_INNER /(?<!\\)(\\\\)*?/
-
-ESCAPED_STRING: "\"" _STRING_ESC_INNER "\""
-    | "'" _STRING_ESC_INNER "'"
-    | "‘" _STRING_ESC_INNER "’"
-    | "‚" _STRING_ESC_INNER "‛"
-    | "“" _STRING_ESC_INNER "”"
-    | "„" _STRING_ESC_INNER "‟"
-    | "⹂" _STRING_ESC_INNER "⹂"
-    | "「" _STRING_ESC_INNER "」"
-    | "『" _STRING_ESC_INNER "』"
-    | "〝" _STRING_ESC_INNER "〞"
-    | "﹁" _STRING_ESC_INNER "﹂"
-    | "﹃" _STRING_ESC_INNER "﹄"
-    | "＂" _STRING_ESC_INNER "＂"
-    | "｢" _STRING_ESC_INNER "｣"
-    | "«" _STRING_ESC_INNER "»"
-    | "‹" _STRING_ESC_INNER "›"
-    | "《" _STRING_ESC_INNER "》"
-    | "〈" _STRING_ESC_INNER "〉"
-
-%import common.WS -> _WS
-"""
-
-parser = lark.Lark(grammar, propagate_positions=True)
+SINGLE_ARG_RE = re.compile(r"([a-zA-Z]\S*(?<!\d))(\d+)?")  # g1: flag name g2: ephem?
+FLAG_ARG_RE = re.compile(r"-+([a-zA-Z]\S*(?<!\d))(\d+)?")  # g1: flag name g2: ephem?
+SINGLE_ARG_EXCEPTIONS = ("-i", "-h")
 
 
+def argsplit(args: str):
+    view = CustomStringView(args.strip())
+    args = []
+    while not view.eof:
+        view.skip_ws()
+        args.append(view.get_quoted_word())  # _quoted_word(view))
+    return args
+
+
+# ==== argparse ====
 class Argument:
     def __init__(self, name: str, value, pos: int):
         self.name = name
@@ -73,6 +32,9 @@ class Argument:
 
     def __repr__(self):
         return f"<{type(self).__name__} name={self.name!r} value={self.value!r} pos={self.pos}>"
+
+    def __eq__(self, other):
+        return self.name == other.name and self.value == other.value and self.pos == other.pos
 
 
 class EphemeralArgument(Argument):
@@ -90,78 +52,71 @@ class EphemeralArgument(Argument):
             f"used={self.used}>"
         )
 
-
-@lark.v_args(inline=True, meta=True)
-class ArgumentTransformer(lark.Transformer):
-    @lark.v_args(inline=False, meta=False)
-    def start(self, children):
-        return children
-
-    @staticmethod
-    def single_arg(meta: lark.tree.Meta, identifier):
-        return Argument(name=str(identifier), value=True, pos=meta.start_pos)
-
-    @staticmethod
-    def single_arg_exception(meta: lark.tree.Meta, identifier):
-        return Argument(name=str(identifier).lstrip("-"), value=True, pos=meta.start_pos)
-
-    @staticmethod
-    def ephemeral_single_arg(meta: lark.tree.Meta, identifier, uses):
-        return EphemeralArgument(name=str(identifier), value=True, pos=meta.start_pos, uses=int(uses))
-
-    @staticmethod
-    def flag_arg(meta: lark.tree.Meta, identifier, value=True):
-        return Argument(name=str(identifier).lstrip("-"), value=str(value), pos=meta.start_pos)
-
-    @staticmethod
-    def ephemeral_flag_arg(meta: lark.tree.Meta, identifier, uses, value=True):
-        return EphemeralArgument(name=str(identifier).lstrip("-"), value=str(value), pos=meta.start_pos, uses=int(uses))
-
-    @staticmethod
-    def junk(*_):
-        return lark.visitors.Discard
-
-    # noinspection PyPep8Naming
-    @staticmethod
-    def ESCAPED_STRING(value: str):
-        close_quote = value[-1]
-        return value[1:-1].replace(rf"\{close_quote}", close_quote)
+    def __eq__(self, other):
+        return (
+            self.name == other.name and self.value == other.value and self.pos == other.pos and self.uses == other.uses
+        )
 
 
-@lark.v_args(inline=True, meta=True)
-class NoEphemeralArgumentTransformer(ArgumentTransformer):
-    @staticmethod
-    def ephemeral_single_arg(meta: lark.tree.Meta, identifier, uses):
-        return Argument(name=str(identifier) + str(uses), value=True, pos=meta.start_pos)
+def _argparse_arg(name: str, ephem: str | None, value, idx: int, parse_ephem: bool) -> Argument:
+    if ephem and parse_ephem:
+        return EphemeralArgument(name=name, value=value, pos=idx, uses=int(ephem))
+    elif ephem:
+        return Argument(name=name + ephem, value=value, pos=idx)
+    else:
+        return Argument(name=name, value=value, pos=idx)
 
-    @staticmethod
-    def ephemeral_flag_arg(meta: lark.tree.Meta, identifier, uses, value=True):
-        return Argument(name=str(identifier).lstrip("-") + str(uses), value=str(value), pos=meta.start_pos)
+
+def _argparse_iterator(args: list[str], parse_ephem: bool) -> Iterator[Argument]:
+    flag_arg_state = None  # state: name, ephem?
+    idx = 0
+    for idx, arg in enumerate(args):
+        # prio: single arg exceptions, flag args, values, single args
+        if arg in SINGLE_ARG_EXCEPTIONS:
+            if flag_arg_state is not None:
+                name, ephem = flag_arg_state
+                yield _argparse_arg(name, ephem, True, idx - 1, parse_ephem)
+                flag_arg_state = None
+            yield Argument(name=arg.lstrip("-"), value=True, pos=idx)
+        elif match := FLAG_ARG_RE.fullmatch(arg):
+            if flag_arg_state is not None:
+                name, ephem = flag_arg_state
+                yield _argparse_arg(name, ephem, True, idx - 1, parse_ephem)
+            flag_arg_state = match.group(1), match.group(2)
+        elif flag_arg_state is not None:
+            name, ephem = flag_arg_state
+            yield _argparse_arg(name, ephem, arg, idx - 1, parse_ephem)
+            flag_arg_state = None
+        elif match := SINGLE_ARG_RE.fullmatch(arg):
+            name = match.group(1)
+            ephem = match.group(2)
+            yield _argparse_arg(name, ephem, True, idx, parse_ephem)
+        # else: the current element at the head is junk
+
+    if flag_arg_state is not None:
+        name, ephem = flag_arg_state
+        yield _argparse_arg(name, ephem, True, idx, parse_ephem)
 
 
 # --- main entrypoint ---
-def argparse(args: str, character=None, parse_ephem=True) -> "ParsedArguments":
+def argparse(args, character=None, splitter=argsplit, parse_ephem=True) -> "ParsedArguments":
     """
-    Given an argument string, returns the parsed arguments using the argument grammar.
+    Given an argument string, returns the parsed arguments using the argument nondeterministic finite automaton.
     If *character* is given, evaluates {}-style math inside the string before parsing.
+    If the argument is a string, uses *splitter* to split the string into args.
     If *parse_ephem* is False, arguments like ``-d1`` are saved literally rather than as an ephemeral argument.
     """
+    if isinstance(args, str):
+        args = splitter(args)
+
     if character:
         from aliasing.evaluators import MathEvaluator
 
         evaluator = MathEvaluator.with_character(character)
-        args = evaluator.transformed_str(args)
+        args = [evaluator.transformed_str(a) for a in args]
 
-    args = args.strip()
-    if not args:
-        return ParsedArguments([])
-
-    tree = parser.parse(args)
-    if parse_ephem:
-        parsed = ArgumentTransformer().transform(tree)
-    else:
-        parsed = NoEphemeralArgumentTransformer().transform(tree)
-    return ParsedArguments(parsed)
+    parsed_args = list(_argparse_iterator(args, parse_ephem))
+    return ParsedArguments(parsed_args)
 
 
 class ParsedArguments:
@@ -413,19 +368,6 @@ class ParsedArguments:
 
 
 # ==== other helpers ====
-def argsplit(args: str):
-    view = CustomStringView(args.strip())
-    args = []
-    while not view.eof:
-        view.skip_ws()
-        args.append(view.get_quoted_word())  # _quoted_word(view))
-    return args
-
-
-def argjoin(args: list[str]):
-    return " ".join(args)
-
-
 def argquote(arg: str):
     if " " in arg:
         arg = arg.replace('"', '\\"')  # re.sub(r'(?<!\\)"', r'\"', arg)

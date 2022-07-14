@@ -85,7 +85,7 @@ class SimpleCombat:
         name = str(name)
         group = self._combat.get_group(name, strict)
         if group:
-            return SimpleGroup(group)
+            return SimpleGroup(group, interpreter=self._interpreter)
         return None
 
     def set_metadata(self, k: str, v: str):
@@ -371,7 +371,7 @@ class SimpleCombatant(AliasStatBlock):
         if group is None:
             return None
 
-        return SimpleGroup(group)
+        return SimpleGroup(group, interpreter=self._interpreter)
 
     def set_note(self, note: str):
         """
@@ -521,7 +521,7 @@ class SimpleCombatant(AliasStatBlock):
 
 
 class SimpleGroup:
-    def __init__(self, group: init.CombatantGroup, interpreter: "ScriptingEvaluator" = None):
+    def __init__(self, group: init.CombatantGroup, interpreter: "ScriptingEvaluator"):
         self._group = group
         self._interpreter = interpreter
         self.type = "group"

@@ -282,7 +282,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :rtype: dict
         """
         return self._cache["uvars"]
-    
+
     def get_uvar(self, name, default=None):
         """
         Retrieves and returns the value of a uvar (user variable).

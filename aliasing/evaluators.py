@@ -193,7 +193,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         if self.character_changed and "character" in self._cache:
             await self._cache["character"].func_commit(self.ctx)
         if self.combat_changed and "combat" in self._cache and self._cache["combat"]:
-            await self._cache["combat"].func_commit()
+            await self._cache["combat"].func_commit(self.ctx)
         if self.uvars_changed and "uvars" in self._cache and self._cache["uvars"] is not None:
             await helpers.update_uvars(self.ctx, self._cache["uvars"], self.uvars_changed)
 

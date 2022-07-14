@@ -244,10 +244,10 @@ class RecordedCombatState(RecordedEvent):
     human_readable: str
 
     @classmethod
-    def from_combat(cls, combat: "Combat"):
+    def from_combat(cls, combat: "Combat", ctx: Union["AvraeContext", disnake.Interaction]):
         return cls(
             combat_id=combat.nlp_record_session_id,
-            probable_interaction_id=interaction_id(combat.ctx),
+            probable_interaction_id=interaction_id(ctx),
             data=combat.to_dict(),
             human_readable=combat.get_summary(private=True),
         )
@@ -372,16 +372,16 @@ class NLPRecorder:
                 RecordedAutomation.new(ctx, combat, automation, automation_result, caster, targets)
             )
 
-    async def on_combat_commit(self, combat: "Combat"):
+    async def on_combat_commit(self, combat: "Combat", ctx: Union["AvraeContext", disnake.Interaction]):
         """
         Called each time a combat that is being recorded is committed.
         """
         # bump the recording time to equal the combat's expiration time
         await self._update_channel_recording_until(
-            guild_id=combat.ctx.guild.id, channel_id=combat.channel_id, combat_id=combat.nlp_record_session_id
+            guild_id=ctx.guild.id, channel_id=combat.channel_id, combat_id=combat.nlp_record_session_id
         )
         # record a snapshot of the combat's human-readable and machine-readable state
-        await self._record_event(RecordedCombatState.from_combat(combat))
+        await self._record_event(RecordedCombatState.from_combat(combat, ctx))
 
     async def on_combat_end(self, combat: "Combat"):
         """

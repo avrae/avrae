@@ -1,6 +1,6 @@
 import pytest
 
-from tests.utils import active_character
+from tests.utils import active_character, end_init, start_init
 
 pytestmark = pytest.mark.asyncio
 
@@ -157,3 +157,27 @@ class TestCharacterAliases:
             f".+: {character.stats.charisma} {character.stats.prof_bonus} "
             f"{character.stats.charisma + character.stats.prof_bonus}"
         )
+
+
+@pytest.mark.usefixtures("init_fixture", "character")
+class TestCombatAliases:
+    async def test_combat_aliases_setup(cls, avrae, dhttp):
+        await start_init(avrae, dhttp)
+
+    async def test_combat_function(self, avrae, dhttp):
+        avrae.message("!test {{combat()}}")
+        await dhttp.receive_message()
+
+    async def test_combat_me(self, avrae, dhttp):
+        avrae.message("!test {{combat().me}}")
+        await dhttp.receive_message(r".+:\s*$")  # nothing after the colon, should return None
+        # character joins
+        character = await active_character(avrae)
+        avrae.message("!init join")
+        await dhttp.drain()
+
+        avrae.message("!test {{combat().me.name}}")
+        await dhttp.receive_message(f".+: {character.name}")  # should return the character's name
+
+    async def test_combat_aliases_teardown(cls, avrae, dhttp):
+        await end_init(avrae, dhttp)

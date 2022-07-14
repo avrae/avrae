@@ -1,7 +1,7 @@
 import itertools
 from typing import Callable, List, Optional, TYPE_CHECKING, TypeVar
 
-import discord
+import disnake
 
 import cogs5e.models.character
 from cogs5e.models.sheet.attack import AttackList
@@ -403,7 +403,7 @@ class Combatant(BaseCombatant, StatBlock):
             return
         try:
             await member.send(*args, **kwargs)
-        except discord.Forbidden:  # member is not accepting PMs from us, oh well
+        except disnake.Forbidden:  # member is not accepting PMs from us, oh well
             pass
 
     # hooks

@@ -311,7 +311,7 @@ def resolve_check_advs(values: Iterable[str]) -> Set[str]:
     for arg in values:
         if arg is True or arg.lower() == "all" or arg == "True":
             return set(SKILL_NAMES)
-        skill_options = [k for k in SKILL_NAMES if k.lower().startswith(arg)]
+        skill_options = [k for k in SKILL_NAMES if k.lower().startswith(arg.lower())]
         if not skill_options:
             raise InvalidArgument(f"`{arg}` is not a valid skill")
         elif len(skill_options) > 1:

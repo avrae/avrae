@@ -11,9 +11,9 @@ from collections import Counter
 from math import ceil
 
 import d20
-import discord
-from discord.ext import commands
-from discord.ext.commands import BucketType, NoPrivateMessage
+import disnake
+from disnake.ext import commands
+from disnake.ext.commands import BucketType, NoPrivateMessage
 
 import aliasing.utils
 import ui
@@ -839,7 +839,7 @@ class Customization(commands.Cog):
         Commands to manage user variables for use in snippets and aliases.
         User variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
-        See http://avrae.io/cheatsheets/aliasing for more help."""
+        See https://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
             return await self.uvar_list(ctx)
 
@@ -897,7 +897,7 @@ class Customization(commands.Cog):
 
         These are usually used to set server-wide defaults for aliases without editing the code.
 
-        See http://avrae.io/cheatsheets/aliasing for more help.
+        See https://avrae.io/cheatsheets/aliasing for more help.
         """
         if name is None:
             return await self.svar_list(ctx)
@@ -951,7 +951,7 @@ class Customization(commands.Cog):
         If run without a subcommand, shows the value of a global variable.
         Global variables are readable by all users, but only editable by the creator.
         Global variables must be accessed through scripting, with `get_gvar(gvar_id)`.
-        See http://avrae.io/cheatsheets/aliasing for more help."""
+        See https://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
             return await self.gvar_list(ctx)
 
@@ -983,7 +983,7 @@ class Customization(commands.Cog):
         await ctx.send(f"Global variable `{name}` edited.")
 
     @globalvar.command(name="editor")
-    async def gvar_editor(self, ctx, name, user: discord.Member = None):
+    async def gvar_editor(self, ctx, name, user: disnake.Member = None):
         """Toggles the editor status of a user."""
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
@@ -1086,7 +1086,7 @@ class Customization(commands.Cog):
     #         return await ctx.send("This gvar does not exist.")
     #     value = gvar['value']
     #     out = io.StringIO(value)
-    #     await ctx.send(file=discord.File(out, f'{address}.txt'))
+    #     await ctx.send(file=disnake.File(out, f'{address}.txt'))
 
 
 async def send_long_code_text(
@@ -1102,7 +1102,7 @@ async def send_long_code_text(
         await destination.send(text)
     elif len(inside_codeblock) < 5 * 10e6:
         out = io.StringIO(inside_codeblock)
-        await destination.send(f"{outside_codeblock}\n{too_long_message}", file=discord.File(out, "output.txt"))
+        await destination.send(f"{outside_codeblock}\n{too_long_message}", file=disnake.File(out, "output.txt"))
     else:
         await destination.send("This output is too large.")
 

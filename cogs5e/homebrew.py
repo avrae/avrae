@@ -1,8 +1,8 @@
 import logging
 import re
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew, NoSelectionElements, NotAllowed
@@ -173,7 +173,7 @@ class Homebrew(commands.Cog):
         async for best in Bestiary.server_bestiaries(ctx):
             sharer = await best.get_server_sharer(ctx)
             desc.append(f"{best.name} (<@{sharer}>)")
-        await ctx.send(embed=discord.Embed(title="Active Server Bestiaries", description="\n".join(desc)))
+        await ctx.send(embed=disnake.Embed(title="Active Server Bestiaries", description="\n".join(desc)))
 
     @bestiary_server.command(name="remove", aliases=["delete"])
     @commands.guild_only()
@@ -231,7 +231,7 @@ class Homebrew(commands.Cog):
         await ctx.send(f"Your available packs: {', '.join([p['name'] async for p in available_pack_names])}")
 
     @pack.command(name="editor")
-    async def pack_editor(self, ctx, user: discord.Member):
+    async def pack_editor(self, ctx, user: disnake.Member):
         """Allows another user to edit your active pack."""
         pack = await Pack.from_ctx(ctx)
         if not await can_edit_editor(pack, ctx, user):
@@ -294,7 +294,7 @@ class Homebrew(commands.Cog):
         desc = ""
         async for pack in Pack.server_active(ctx, meta_only=True):
             desc += f"{pack['name']} (<@{pack['owner']}>)\n"
-        await ctx.send(embed=discord.Embed(title="Active Server Packs", description=desc))
+        await ctx.send(embed=disnake.Embed(title="Active Server Packs", description=desc))
 
     @pack_server.command(name="remove", aliases=["delete"])
     @commands.guild_only()
@@ -354,7 +354,7 @@ class Homebrew(commands.Cog):
         await ctx.send(f"Your available tomes: {', '.join([p['name'] async for p in available_tome_names])}")
 
     @tome.command(name="editor")
-    async def tome_editor(self, ctx, user: discord.Member):
+    async def tome_editor(self, ctx, user: disnake.Member):
         """Allows another user to edit your active tome."""
         tome = await Tome.from_ctx(ctx)
         if not await can_edit_editor(tome, ctx, user):
@@ -417,7 +417,7 @@ class Homebrew(commands.Cog):
         desc = ""
         async for tome in Tome.server_active(ctx, meta_only=True):
             desc += f"{tome['name']} (<@{tome['owner']}>)\n"
-        await ctx.send(embed=discord.Embed(title="Active Server Tomes", description=desc))
+        await ctx.send(embed=disnake.Embed(title="Active Server Tomes", description=desc))
 
     @tome_server.command(name="remove", aliases=["delete"])
     @commands.guild_only()

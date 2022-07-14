@@ -1,6 +1,6 @@
 import random
 
-import discord
+import disnake
 
 import ddb.dice
 from cogs5e.models.character import Character
@@ -62,7 +62,7 @@ def default_comment_getter(roll_request):
 def embed_for_caster(caster):
     if isinstance(caster, Character):
         return EmbedWithCharacter(character=caster, name=False)
-    embed = discord.Embed()
+    embed = disnake.Embed()
     embed.colour = random.randint(0, 0xFFFFFF)
     if isinstance(caster, Monster):
         embed.set_thumbnail(url=caster.get_image_url())

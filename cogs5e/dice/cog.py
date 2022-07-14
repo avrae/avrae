@@ -1,8 +1,8 @@
 import random
 
 import d20
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from aliasing import helpers
 from cogs5e.models.errors import NoSelectionElements
@@ -101,7 +101,7 @@ class Dice(commands.Cog):
             out = f"{ctx.author.mention}  :game_die:\n{str(res)[:100]}...\n**Total**: {res.total}"
 
         await try_delete(ctx.message)
-        await ctx.send(out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
+        await ctx.send(out, allowed_mentions=disnake.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
         if gamelog := self.bot.get_cog("GameLog"):
             await gamelog.send_roll(ctx, res)
@@ -156,7 +156,7 @@ class Dice(commands.Cog):
             out = f"{header}\n{one_result}\n[{len(results) - 1} results omitted for output size.]\n{footer}"
 
         await try_delete(ctx.message)
-        await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
+        await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=disnake.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.group(
@@ -295,7 +295,7 @@ class Dice(commands.Cog):
 
 def embed_for_monster(monster, args, embed=None):
     if not embed:
-        embed = discord.Embed()
+        embed = disnake.Embed()
     embed.colour = random.randint(0, 0xFFFFFF)
     if not args.last("h", type_=bool) and "thumb" not in args:
         embed.set_thumbnail(url=monster.get_image_url())

@@ -144,7 +144,7 @@ class EditorMixin(MixinBase, abc.ABC):
     async def toggle_editor(self, ctx, user):
         """Toggles whether a user is allowed to edit the given object.
         Returns whether they can after operations.
-        :type user: :class:`discord.User`"""
+        :type user: :class:`disnake.User`"""
         if not await self.is_editor(ctx, user):
             await self.add_editor(ctx, user)
             return True

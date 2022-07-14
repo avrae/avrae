@@ -1,6 +1,6 @@
 import logging
 
-import discord
+import disnake
 
 from cogs5e.models.errors import NoCharacter
 from ddb.gamelog.errors import IgnoreEvent
@@ -22,8 +22,8 @@ class GameLogEventContext:
         :type bot: dbot.Avrae
         :type event: ddb.gamelog.event.GameLogEvent
         :type campaign: ddb.gamelog.link.CampaignLink
-        :type guild: discord.Guild
-        :type channel: discord.TextChannel
+        :type guild: disnake.Guild
+        :type channel: disnake.TextChannel
         :type discord_user_id: int
         """
         self.bot = bot
@@ -44,7 +44,7 @@ class GameLogEventContext:
         """
         Gets the Discord user associated with the event.
 
-        :rtype: discord.User or None
+        :rtype: disnake.User or None
         """
         if self._discord_user is not _sentinel:
             return self._discord_user
@@ -53,7 +53,7 @@ class GameLogEventContext:
             # optimization: we can use get_guild_member rather than user_from_id because we're operating in a guild
             user = await get_guild_member(self.guild, self.discord_user_id)
         else:
-            # technically user_from_id expects a :class:`~discord.ext.commands.Context` but GameLogEventContext has the
+            # technically user_from_id expects a :class:`~disnake.ext.commands.Context` but GameLogEventContext has the
             # necessary duck typing
             # regardless, we should probably be aware that this is happening
             log.warning(
@@ -68,7 +68,7 @@ class GameLogEventContext:
         """
         Returns the destination channel for this event.
 
-        :rtype: discord.Channel
+        :rtype: disnake.Channel
         """
         if self._destination_channel is not _sentinel:
             return self._destination_channel
@@ -102,7 +102,7 @@ class GameLogEventContext:
         destination = await self.destination_channel()
         try:
             await destination.trigger_typing()
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             log.info(f"Could not trigger typing in channel {destination!r}: {e}")
 
     async def send(self, *args, ignore_exc=True, **kwargs):
@@ -110,7 +110,7 @@ class GameLogEventContext:
         destination = await self.destination_channel()
         try:
             return await destination.send(*args, **kwargs)
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             if not ignore_exc:
                 raise
             log.info(f"Could not send message to channel {destination!r}: {e}")
@@ -161,7 +161,7 @@ class GameLogEventContext:
     # we don't ever need to use this.
 
     # @property
-    # def author(self):  # discord.ext.commands.Context compat - CombatantGroup needs this for some reason
+    # def author(self):  # disnake.ext.commands.Context compat - CombatantGroup needs this for some reason
     #     if self._discord_user is _sentinel:
     #         raise RuntimeError("you must load the author with get_discord_user() at least once before accessing")
     #     if self._discord_user is None:

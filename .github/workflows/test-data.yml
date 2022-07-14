@@ -11,16 +11,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: determine if secret is set
-        run: '[ "${{ secrets.ORG_REPO_ACCESS_TOKEN }}" ] || exit 1'
-
   test:
     runs-on: ubuntu-latest
-    needs:
-      - check
+    # only run on push, dispatch, or 1st party PR
+    if:
+      github.event_name != 'pull_request' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     services:
       redis: # redis://redis:6379/0
         image: redis
@@ -88,7 +84,7 @@ jobs:
           repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
           issue-number: ${{ github.event.client_payload.github.payload.issue.number }}
           body: |
-            The gamedata test workflow concluded with ${{ job.status }}.
+            The gamedata test workflow concluded with **${{ job.status }}**.
             
             [Command run output][1]
 

@@ -496,6 +496,24 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.verify_signature(data)
 
+    If you are building your own application and want to verify these signatures yourself, we provide an API endpoint
+    you can use to verify signatures!
+
+    Below is an example of Python code to verify a signature using the ``httpx`` (requests-like) library:
+
+    .. code-block:: python
+
+        signature = "Dc3SEuDEMKIJZ0qbasAAAQKZ2xjlQgAAAAAAAAAAAAAAAAAABQ==.B5RLdufsD9utKaDou+94LEfOgpA="
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                "https://api.avrae.io/bot/signature/verify",
+                json={"signature": signature}
+            )
+        print(r.json(indent=2))
+
+    The endpoint's response model is the same as ``verify_signature()`` sans the ``guild``, ``channel``, and ``author``
+    keys (IDs are still present).
+
 .. autofunction:: aliasing.api.functions.typeof
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.using
@@ -636,6 +654,11 @@ respectively.
     import, and can do bad things like delete all of your variables.
 
     All gvar modules are open-source by default, so it is encouraged to view the imported module using ``!gvar``.
+
+.. note::
+
+    Modules do not have access to the argument parsing special syntax (i.e. ``&ARGS&``, ``%1%``, etc), and the variables
+    listed in the Cvar Table are not implicitly bound in a module's execution.
 
 Writing Modules
 ^^^^^^^^^^^^^^^

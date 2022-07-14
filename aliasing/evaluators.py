@@ -272,7 +272,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 return default
             self._cache["svars"][name] = result["value"]
         return self._cache["svars"][name]
-    
+
     def get_uvars(self):
         """
         Retrieves and returns the dict of uvars.

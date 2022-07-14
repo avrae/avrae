@@ -264,11 +264,8 @@ class ParsedArguments:
                 self[k] = v
 
     # get helpers
-    def _get_values(self, arg, ephem=False):
-        """Returns an iterator of arguments."""
-        iterable = self._parsed[arg]
-        if self._current_context in self._contexts:
-            iterable = itertools.chain(self._parsed[arg], self._contexts[self._current_context]._parsed[arg])
+    @staticmethod
+    def _yield_from_iterable(iterable: Iterator[Argument], ephem: bool):
         for value in iterable:
             if not ephem and isinstance(value, EphemeralArgument):
                 continue
@@ -278,6 +275,13 @@ class ParsedArguments:
                 value.used += 1
             yield value.value
 
+    def _get_values(self, arg, ephem=False):
+        """Returns an iterator of arguments."""
+        iterable = self._parsed[arg]
+        if self._current_context in self._contexts:
+            iterable = itertools.chain(self._parsed[arg], self._contexts[self._current_context]._parsed[arg])
+        yield from self._yield_from_iterable(iterable, ephem)
+
     def _get_last(self, arg, ephem=False):
         """Returns the last argument, or None if no valid argument is found."""
         iterable = reversed(self._parsed[arg])
@@ -285,15 +289,7 @@ class ParsedArguments:
             iterable = itertools.chain(
                 reversed(self._contexts[self._current_context]._parsed[arg]), reversed(self._parsed[arg])
             )
-        for value in iterable:
-            if not ephem and isinstance(value, EphemeralArgument):
-                continue
-            elif isinstance(value, EphemeralArgument):
-                if not value.has_remaining_uses():
-                    continue
-                value.used += 1
-            return value.value
-        return None
+        return next((self._yield_from_iterable(iterable, ephem)), None)
 
     # context helpers
     def set_context(self, context):

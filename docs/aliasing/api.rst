@@ -439,6 +439,8 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_uvars()
 
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_uvar()
+
 .. function:: randint(stop)
               randint(start, stop[, step])
 

@@ -6,8 +6,12 @@ on:
   repository_dispatch:
     types: [ ci-approve-command ]
 
+env:
+  # push/1st party PR uses the GH context ref, repo_dispatch (3pp PR) uses the ref in the payload
+  REF_UNDER_TEST: ${{ github.event_name != 'repository_dispatch' && github.ref || ('refs/pull/' + github.event.client_payload.pull_request.number + '/merge') }}
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ env.REF_UNDER_TEST }}
   cancel-in-progress: true
 
 jobs:
@@ -43,6 +47,8 @@ jobs:
 
       - name: Checkout Avrae
         uses: actions/checkout@v3
+        with:
+          ref: ${{ env.REF_UNDER_TEST }}
 
       - name: Checkout Gamedata repo
         uses: actions/checkout@v3

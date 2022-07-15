@@ -295,6 +295,20 @@ class AliasCharacter(AliasStatBlock):
         """
         return self._character.cvars.copy()
 
+    def get_cvar(self, name, default=None):
+        """
+        Retrieves and returns the value of a cvar (character variable).
+
+        :param str name: The name of the cvar.
+        :param default: What to return if the name is not set.
+        :return: The value of the cvar, or the default value if it does not exist.
+        :rtype: str or None
+        """
+        name = str(name)
+        if name not in self._character.cvars:
+            return default
+        return self._character.cvars[name]
+
     def set_cvar(self, name, val: str):
         """
         Sets a custom character variable, which will be available in all scripting contexts using this character.

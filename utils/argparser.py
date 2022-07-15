@@ -11,7 +11,7 @@ from cogs5e.models.errors import InvalidArgument
 EPHEMERAL_ARG_RE = re.compile(r"(\S+)(\d+)")
 SINGLE_ARG_RE = re.compile(r"([a-zA-Z]\S*(?<!\d))(\d+)?")  # g1: flag name g2: ephem?
 FLAG_ARG_RE = re.compile(r"-+([a-zA-Z]\S*(?<!\d))(\d+)?")  # g1: flag name g2: ephem?
-SINGLE_ARG_EXCEPTIONS = ("-i", "-h")
+SINGLE_ARG_EXCEPTIONS = {"-i", "-h", "-v"}
 
 
 def argsplit(args: str):
@@ -105,6 +105,14 @@ def argparse(args, character=None, splitter=argsplit, parse_ephem=True) -> "Pars
     If *character* is given, evaluates {}-style math inside the string before parsing.
     If the argument is a string, uses *splitter* to split the string into args.
     If *parse_ephem* is False, arguments like ``-d1`` are saved literally rather than as an ephemeral argument.
+
+    .. note::
+
+        Arguments must begin with a letter and not end with a number (e.g. ``d``, ``e12s``, ``a!!``). Values immediately
+        following a flag argument (i.e. one that starts with ``-``) will not be parsed as arguments unless they are also
+        a flag argument.
+
+        There are three exceptions to this rule: ``-i``, ``-h``, and ``-v``, none of which take additional values.
     """
     if isinstance(args, str):
         args = splitter(args)

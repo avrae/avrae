@@ -473,14 +473,14 @@ class CollectableManagementGroup(commands.Group):
 
 
 # helpers
-def _can_edit_servaliases(ctx):
+async def _can_edit_servaliases(ctx):
     """
     Returns whether a user can edit server aliases in the current context.
     """
     return (
         ctx.author.guild_permissions.administrator
         or any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles)
-        or checks.author_is_owner(ctx)
+        or await ctx.bot.is_owner(ctx.author)
     )
 
 
@@ -492,7 +492,7 @@ async def _alias_before_edit(ctx, name=None, delete=False):
 
 # noinspection PyUnusedLocal
 async def _servalias_before_edit(ctx, name=None, delete=False):
-    if not _can_edit_servaliases(ctx):
+    if not await _can_edit_servaliases(ctx):
         raise NotAllowed(
             "You do not have permission to edit server aliases. Either __Administrator__ "
             'Discord permissions or a role named "Server Aliaser" or "Dragonspeaker" '
@@ -502,7 +502,7 @@ async def _servalias_before_edit(ctx, name=None, delete=False):
 
 
 async def _servsnippet_before_edit(ctx, name=None, delete=False):
-    if not _can_edit_servaliases(ctx):
+    if not await _can_edit_servaliases(ctx):
         raise NotAllowed(
             "You do not have permission to edit server snippets. Either __Administrator__ "
             'Discord permissions or a role named "Server Aliaser" or "Dragonspeaker" '
@@ -576,7 +576,7 @@ class Customization(commands.Cog):
                 f"`{current_prefix}roll 1d20` or by mentioning me!"
             )
 
-        if not checks._role_or_permissions(ctx, lambda r: r.name.lower() == "bot admin", manage_guild=True):
+        if not await checks.admin_or_permissions(manage_guild=True).predicate(ctx):
             return await ctx.send("You do not have permissions to change the guild prefix.")
 
         # Check for Discord Slash-command conflict
@@ -908,7 +908,7 @@ class Customization(commands.Cog):
                 return await ctx.send("This svar is not defined.")
             return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=svar)
 
-        if not _can_edit_servaliases(ctx):
+        if not await _can_edit_servaliases(ctx):
             return await ctx.send(
                 "You do not have permissions to edit server variables. Either __Administrator__ "
                 'Discord permissions or a role named "Server Aliaser" or "Dragonspeaker" '
@@ -925,7 +925,7 @@ class Customization(commands.Cog):
     @commands.guild_only()
     async def svar_remove(self, ctx, name):
         """Deletes a svar from the server."""
-        if not _can_edit_servaliases(ctx):
+        if not await _can_edit_servaliases(ctx):
             return await ctx.send(
                 "You do not have permissions to edit server variables. Either __Administrator__ "
                 'Discord permissions or a role named "Server Aliaser" or "Dragonspeaker" '

@@ -25,7 +25,7 @@ class SimpleCombat:
         self.combatants = [SimpleCombatant(c, interpreter=interpreter) for c in combat.get_combatants()]
         self.groups = [SimpleGroup(c, interpreter=interpreter) for c in combat.get_groups()]
         if me:
-            self.me = SimpleCombatant(me, False, interpreter=interpreter)
+            self.me = SimpleCombatant(me, interpreter=interpreter, hidestats=False)
         else:
             self.me = None
         self.round_num = self._combat.round_num
@@ -85,7 +85,7 @@ class SimpleCombat:
         name = str(name)
         group = self._combat.get_group(name, strict)
         if group:
-            return SimpleGroup(group)
+            return SimpleGroup(group, interpreter=self._interpreter)
         return None
 
     def set_metadata(self, k: str, v: str):
@@ -157,7 +157,7 @@ class SimpleCombat:
         if not me:
             return
         me._character = character  # set combatant character instance
-        self.me = SimpleCombatant(me, False, interpreter=self._interpreter)
+        self.me = SimpleCombatant(me, interpreter=self._interpreter, hidestats=False)
 
     async def func_commit(self, ctx):
         await self._combat.commit(ctx)
@@ -175,7 +175,7 @@ class SimpleCombatant(AliasStatBlock):
     Represents a combatant in combat.
     """
 
-    def __init__(self, combatant: init.Combatant, hidestats: bool = True, interpreter: "ScriptingEvaluator" = None):
+    def __init__(self, combatant: init.Combatant, interpreter: "ScriptingEvaluator", hidestats: bool = True):
         super().__init__(combatant)
         self._combatant = combatant
         self._hidden = hidestats and self._combatant.is_private
@@ -371,7 +371,7 @@ class SimpleCombatant(AliasStatBlock):
         if group is None:
             return None
 
-        return SimpleGroup(group)
+        return SimpleGroup(group, interpreter=self._interpreter)
 
     def set_note(self, note: str):
         """
@@ -439,12 +439,11 @@ class SimpleCombatant(AliasStatBlock):
         name = str(name)
         if args is not None:
             args = str(args)
-            if self._interpreter is not None:
-                self._interpreter.warn_deprecated(
-                    "SimpleCombatant.add_effect#args",
-                    since="v4.1.0",
-                    replacement="SimpleCombatant.add_effect#passive_effects",
-                )
+            self._interpreter.warn_deprecated(
+                "SimpleCombatant.add_effect#args",
+                since="v4.1.0",
+                replacement="SimpleCombatant.add_effect#passive_effects",
+            )
         if duration is not None:
             duration = int(duration)
         if parent is not None and not isinstance(parent, SimpleEffect):
@@ -521,7 +520,7 @@ class SimpleCombatant(AliasStatBlock):
 
 
 class SimpleGroup:
-    def __init__(self, group: init.CombatantGroup, interpreter: "ScriptingEvaluator" = None):
+    def __init__(self, group: init.CombatantGroup, interpreter: "ScriptingEvaluator"):
         self._group = group
         self._interpreter = interpreter
         self.type = "group"

@@ -62,7 +62,7 @@ def test_namebuilder_basic():
         builder.next()
 
 
-def test_namebuilder_monster():
+def test_namebuilder_always_number_first():
     builder = CombatantNameBuilder("foo", _MockCombat(), always_number_first_name=True)
     builder2 = CombatantNameBuilder("foo#", _MockCombat(), always_number_first_name=True)
     assert builder.next() == builder2.next() == "foo1"

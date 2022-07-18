@@ -44,7 +44,6 @@ COGS = (
     "cogsmisc.core",
     "cogsmisc.publicity",
     "cogsmisc.stats",
-    "cogsmisc.repl",
     "cogsmisc.adminUtils",
     "cogsmisc.tutorials",
 )

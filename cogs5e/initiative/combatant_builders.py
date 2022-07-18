@@ -47,7 +47,7 @@ class CombatantNameBuilder:
     This solution is O(n + k) to add *n* combatants.
     """
 
-    def __init__(self, pattern: str, combat, *, always_number_first_name=True):
+    def __init__(self, pattern: str, combat, *, always_number_first_name=False):
         self.pattern = pattern
         self.combat = combat
         self.always_number_first_name = always_number_first_name

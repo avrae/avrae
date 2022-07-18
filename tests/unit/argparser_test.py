@@ -3,6 +3,7 @@ from disnake.ext.commands import ExpectedClosingQuoteError
 
 from cogs5e.models.errors import InvalidArgument
 from utils.argparser import argparse, argquote, argsplit
+from utils import argparser
 from utils.enums import AdvantageType
 
 
@@ -142,7 +143,7 @@ def test_argparse_custom_adv():
 
 
 def test_argparse_ephem():
-    args = argparse("""-d5 1d6 adv1 -d 1""")
+    args = argparse("""-d 1 -d5 1d6 adv1""")
     for _ in range(4):
         assert args.join("d", "+", ephem=True) == "1+1d6"
     assert args.last("d", ephem=True) == "1d6"
@@ -160,8 +161,8 @@ def test_argparse_ephem():
     # multiple different durations
     args = argparse("""-d2 1d6 -d1 1d4 -d 1 -d3 1d8""")
     assert args.last("d", ephem=True) == "1d8"
-    assert args.join("d", "+", ephem=True) == "1+1d6+1d4+1d8"
-    assert args.join("d", "+", ephem=True) == "1+1d6+1d8"
+    assert args.join("d", "+", ephem=True) == "1d6+1d4+1+1d8"
+    assert args.join("d", "+", ephem=True) == "1d6+1+1d8"
     assert args.join("d", "+", ephem=True) == "1"
 
 
@@ -230,8 +231,8 @@ def test_contextual_ephemeral_argparse():
     args.add_context("baz", {"d1": ["3"], "phrase": ["I am baz"]})
 
     args.set_context("foo")
-    assert args.get("d", ephem=True) == ["3", "5", "1"]
-    assert args.get("d", ephem=True) == ["3", "5"]
+    assert args.get("d", ephem=True) == ["5", "3", "1"]
+    assert args.get("d", ephem=True) == ["5", "3"]
 
     args.set_context("bar")
     assert args.get("d", ephem=True) == ["5", "2"]
@@ -246,3 +247,94 @@ def test_contextual_ephemeral_argparse():
 
     args.set_context("foo")
     assert args.get("d", ephem=True) == ["3"]
+
+
+def test_argparse_random_manual_things():
+    """A random manual test case when I was building the grammar, I'm lazy so this is kind of an e2e test"""
+    expr = r"""
+    -d1 
+    -d2
+    -d1 -1d6
+    -d1 -15
+    -t d1
+    -d 
+    "-d6"
+    hello
+    world
+    t
+    -phrase "hello world"
+    -phrase "and I said \"hello world\""
+    -phrase hello
+    -i
+    -t -i
+    adv
+    -dtype fire>cold
+    adv1
+    -d1 ea2
+    "this is junk"
+    12345
+    !*&^#&(*#
+    """
+    args = argparse(expr)
+    assert args.get("d", ephem=True) == ["True", "True", "-1d6", "-15", "True", "hello", "ea2"]
+    assert args.get("t") == ["d1", "True", "True"]
+    assert args.get("phrase") == ["hello world", 'and I said "hello world"', "hello"]
+    assert args.get("i") == ["True", "True"]
+    assert args.get("adv", ephem=True) == ["True", "True"]
+    assert args.get("ea") == []
+
+
+def test_argparse_arg_yielder():
+    assert argparser._argparse_arg(name="d", ephem=None, value=True, idx=0, parse_ephem=True) == argparser.Argument(
+        "d", True, 0
+    )
+    assert argparser._argparse_arg(
+        name="d", ephem="1", value=True, idx=0, parse_ephem=True
+    ) == argparser.EphemeralArgument("d", True, 0, 1)
+    assert argparser._argparse_arg(name="d", ephem=None, value=True, idx=0, parse_ephem=False) == argparser.Argument(
+        "d", True, 0
+    )
+    assert argparser._argparse_arg(name="d", ephem="1", value=True, idx=0, parse_ephem=False) == argparser.Argument(
+        "d1", True, 0
+    )
+
+
+def test_argparse_iter_dfa():
+    """
+    The argparse iterator is a DFA: https://cdn.discordapp.com/attachments/755143872321028206/997195043666399272/36A37A81-E068-445A-A113-3639709D9D11.jpg
+    We can test it by testing each state transition.
+    """
+    # None -> None -...> EOF
+    assert list(argparser._argparse_iterator(["12345", "this is junk", "!*&^#&(*#"], True)) == []
+    # None -(emit!)-> None -...> EOF
+    assert list(argparser._argparse_iterator(["d", "d1", "adv1", "adv", "-i"], True)) == [
+        argparser.Argument("d", True, 0),
+        argparser.EphemeralArgument("d", True, 1, 1),
+        argparser.EphemeralArgument("adv", True, 2, 1),
+        argparser.Argument("adv", True, 3),
+        argparser.Argument("i", True, 4),
+    ]
+    # None -> EOF
+    assert list(argparser._argparse_iterator([], True)) == []
+    # None -> flag -> EOF
+    assert list(argparser._argparse_iterator(["-d"], True)) == [argparser.Argument("d", True, 0)]
+    assert list(argparser._argparse_iterator(["-d1"], True)) == [argparser.EphemeralArgument("d", True, 0, 1)]
+    # None -> flag -(value)-> None -> EOF
+    assert list(argparser._argparse_iterator(["-d", "5"], True)) == [argparser.Argument("d", "5", 0)]
+    assert list(argparser._argparse_iterator(["-d1", "5"], True)) == [argparser.EphemeralArgument("d", "5", 0, 1)]
+    assert list(argparser._argparse_iterator(["-d", "-1d6"], True)) == [argparser.Argument("d", "-1d6", 0)]
+    assert list(argparser._argparse_iterator(["-d1", "-1d6"], True)) == [argparser.EphemeralArgument("d", "-1d6", 0, 1)]
+    # None -> flag -(single arg)-> None -> EOF
+    assert list(argparser._argparse_iterator(["-t", "d5"], True)) == [argparser.Argument("t", "d5", 0)]
+    # None -> flag -(single arg exception)-> None -> EOF
+    assert list(argparser._argparse_iterator(["-t", "-i"], True)) == [
+        argparser.Argument("t", True, 0),
+        argparser.Argument("i", True, 1),
+    ]
+    # None -> flag -> flag -> EOF
+    assert list(argparser._argparse_iterator(["-t", "-t"], True)) == [
+        argparser.Argument("t", True, 0),
+        argparser.Argument("t", True, 1),
+    ]
+    # since we have tested every state transition, it follows by induction that the whole thing works for arbitrary
+    # length lists :D

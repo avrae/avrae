@@ -45,7 +45,6 @@
 ### docker\env file (dev)
 
     DISCORD_BOT_TOKEN=1
-    DISCORD_OWNER_USER_ID=1
     DICECLOUD_USER=b
     DICECLOUD_PASS=c
     DICECLOUD_TOKEN=d

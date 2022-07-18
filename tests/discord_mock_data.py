@@ -11,7 +11,8 @@ TEST_DMCHANNEL_ID = 271828182845904523  # e
 TEST_GUILD_ID = 112358132235579214  # fib
 MESSAGE_ID = "123456789012345678"
 DEFAULT_USER_ID = "111111111111111112"
-OWNER_USER = {"id": str(config.OWNER_ID), "username": "zhu.exe", "discriminator": "4211", "avatar": None}
+DEFAULT_OWNER_ID = "222222222222222223"
+OWNER_USER = {"id": DEFAULT_OWNER_ID, "username": "zhu.exe", "discriminator": "4211", "avatar": None}
 DEFAULT_USER = {"id": DEFAULT_USER_ID, "username": "I'm a user", "discriminator": "0001", "avatar": None}
 ME_USER = {
     "verified": True,
@@ -223,11 +224,11 @@ DUMMY_APPLICATION_INFO = {
         "id": "592425568222445573",
         "icon": None,
         "name": "Avrae Team",
-        "owner_user_id": str(config.OWNER_ID),
+        "owner_user_id": DEFAULT_OWNER_ID,
         "members": [
             {
                 "user": {
-                    "id": str(config.OWNER_ID),
+                    "id": DEFAULT_OWNER_ID,
                     "username": "zhu.exe",
                     "avatar": None,
                     "discriminator": "4211",

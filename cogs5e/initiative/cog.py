@@ -108,13 +108,15 @@ class InitTracker(commands.Cog):
 
     @init.command()
     async def begin(self, ctx, *args):
-        """Begins combat in the channel the command is invoked.
-        Usage: !init begin <ARGS (opt)>
+        """
+        Begins combat in the channel the command is invoked in.
         __Valid Arguments__
-        dyn - Dynamic initiative; Rerolls all initiatives at the start of a round.
-        turnnotif - Notifies the controller of the next combatant in initiative.
-        deathdelete - Disables deleting monsters below 0 hp.
-        -name <name> - Sets a name for the combat instance."""
+        `dyn` - Dynamic initiative; Rerolls all initiatives at the start of a round.
+        `turnnotif` - Notifies the controller of the next combatant in initiative.
+        `deathdelete` - Disables deleting monsters below 0 hp.
+        `-name <name>` - Sets a name for the combat instance.
+        `norecord` - If the server has opted in to the Natural Language Training project, omit this combat from recording.
+        """  # noqa E501
         await Combat.ensure_unique_chan(ctx)
         guild_settings = await ctx.get_server_settings()
 
@@ -129,6 +131,7 @@ class InitTracker(commands.Cog):
             options.turnnotif = True
         if "deathdelete" in args:
             options.deathdelete = False
+        norecord = "norecord" in args
 
         temp_summary_msg = await ctx.send("```Awaiting combatants...```")
 
@@ -148,7 +151,7 @@ class InitTracker(commands.Cog):
             f"If it's a 5e monster: `{ctx.clean_prefix}init madd <monster name>`\n"
             f"Otherwise: `{ctx.clean_prefix}init add <modifier> <name>`"
         )
-        if guild_settings.upenn_nlp_opt_in and await utils.nlp_feature_flag_enabled(self.bot):
+        if guild_settings.upenn_nlp_opt_in and await utils.nlp_feature_flag_enabled(self.bot) and not norecord:
             out = (
                 f"{out}\nMessages sent in this channel during combat will be recorded for research purposes. "
                 "By sending messages in this channel during this combat, you agree to participate in the Avrae NLP "
@@ -273,7 +276,7 @@ class InitTracker(commands.Cog):
         num_combatants, roll_result = combatant_builders.resolve_n_arg(args.last("n"))
         if roll_result is not None:
             msgs.append(roll_result)
-        name_builder = combatant_builders.CombatantNameBuilder(name_template, combat)
+        name_builder = combatant_builders.CombatantNameBuilder(name_template, combat, always_number_first_name=False)
 
         for _ in range(num_combatants):
             try:

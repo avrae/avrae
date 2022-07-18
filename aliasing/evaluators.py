@@ -128,6 +128,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             get_gvar=self.get_gvar,
             get_svar=self.get_svar,
             set_uvar=self.set_uvar,
+            get_uvars=self.get_uvars,
+            get_uvar=self.get_uvar,
             delete_uvar=self.delete_uvar,
             set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
@@ -271,6 +273,29 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 return default
             self._cache["svars"][name] = result["value"]
         return self._cache["svars"][name]
+
+    def get_uvars(self):
+        """
+        Retrieves and returns the dict of uvars.
+
+        :return: A dict of all uvars.
+        :rtype: dict
+        """
+        return self._cache["uvars"]
+
+    def get_uvar(self, name, default=None):
+        """
+        Retrieves and returns the value of a uvar (user variable).
+
+        :param str name: The name of the uvar.
+        :param default: What to return if the name is not set.
+        :return: The value of the uvar, or the default value if it does not exist.
+        :rtype: str or None
+        """
+        name = str(name)
+        if name not in self._cache["uvars"]:
+            return default
+        return self._cache["uvars"][name]
 
     def set_uvar(self, name: str, value: str):
         """

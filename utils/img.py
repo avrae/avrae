@@ -2,7 +2,6 @@
 Image processing utilities.
 """
 import asyncio
-import enum
 import hashlib
 import os
 from io import BytesIO
@@ -11,11 +10,22 @@ import aiohttp
 from PIL import Image, ImageChops
 
 from cogs5e.models.errors import ExternalImportError
+from utils import config
 
 TOKEN_SIZE = (256, 256)
 
 
+def preprocess_url(url):
+    """
+    Does any necessary changes to the URL before downloading the image.
+    Current operations:
+    www.dndbeyond.com/avatars -> ${DDB_MEDIA_BUCKET_DOMAIN}/avatars
+    """
+    return url.replace("www.dndbeyond.com/avatars", f"{config.DDB_MEDIA_S3_BUCKET_DOMAIN}/avatars")
+
+
 async def generate_token(img_url, is_subscriber=False, token_args=None):
+    img_url = preprocess_url(img_url)
     template = "res/template-s.png" if is_subscriber else "res/template-f.png"
     if token_args:
         border = token_args.last("border")

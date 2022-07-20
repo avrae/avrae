@@ -41,7 +41,7 @@ def can_edit_serverbrew():
         try:
             return await real_predicate(ctx)
         except commands.CheckFailure:
-            commands.CheckFailure(
+            raise commands.CheckFailure(
                 "You do not have permission to manage server homebrew. Either __Manage Server__ "
                 'Discord permissions or a role named "Server Brewer" or "Dragonspeaker" '
                 "is required."

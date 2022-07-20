@@ -26,7 +26,7 @@ def admin_or_permissions(**perms):
     return commands.check(predicate)
 
 
-BREWER_ROLES = ("server brewer", "dragonspeaker")
+BREWER_ROLES = ("Server Brewer", "Dragonspeaker")
 
 
 def can_edit_serverbrew():

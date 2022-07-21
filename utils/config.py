@@ -12,14 +12,7 @@ RELOAD_INTERVAL = os.getenv("RELOAD_INTERVAL", "0")  # compendium static data re
 ECS_METADATA_ENDPT = os.getenv("ECS_CONTAINER_METADATA_URI")  # set by ECS
 MONSTER_TOKEN_ENDPOINT = os.getenv("MONSTER_TOKEN_ENDPOINT")  # S3: monster tokens
 # slash command test guilds - these only apply in development anyway, so hardcoded
-COMMAND_TEST_GUILD_IDS = (
-    [
-        269275778867396608,  # Avrae Development
-        783776775670726661,  # Avrae Constants Guild
-    ]
-    if TESTING
-    else None
-)
+COMMAND_TEST_GUILD_IDS = None  # app commands backend v2 means instant sync, so we just use global commands
 # secret for the draconic signature() function
 DRACONIC_SIGNATURE_SECRET = os.getenv("DRACONIC_SIGNATURE_SECRET", "secret").encode()
 

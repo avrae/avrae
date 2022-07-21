@@ -21,7 +21,7 @@ class EmbedWithAuthor(EmbedWithColor):
 
     def __init__(self, ctx, **kwargs):
         """
-        :type ctx: utils.context.AvraeContext
+        :type ctx: utils.context.AvraeContext or disnake.Interaction
         """
         super().__init__(**kwargs)
         self.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)

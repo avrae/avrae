@@ -40,6 +40,47 @@ class Tutorials(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    # ==== slash commands ====
+    @commands.slash_command(name="help")
+    async def slash_help(self, inter: disnake.ApplicationCommandInteraction):
+        """View information about how to use Avrae."""
+        if inter.guild is not None:
+            guild_prefix = await self.bot.get_guild_prefix(inter.guild)
+        else:
+            guild_prefix = config.DEFAULT_PREFIX
+
+        embed = EmbedWithAuthor(inter, title="Avrae", description=self.bot.description)
+        embed.add_field(
+            name="Using Slash Commands With Avrae",
+            value=(
+                "It looks like you're trying to use slash commands! Due to the complexity of certain Avrae commands,"
+                " Avrae does not support Discord's slash command framework. To use Avrae commands, add a *prefix*"
+                f" before the command you want to use - like `{guild_prefix}roll 1d20`."
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Next Steps",
+            value=(
+                "To get started with Avrae, try out our interactive tutorials! You can list the available tutorials"
+                f" with `{guild_prefix}tutorial`, and start one with `{guild_prefix}tutorial <name>`. If it's your"
+                f" first time using Avrae, we recommend trying out the Quickstart tutorial with `{guild_prefix}tutorial"
+                f" quickstart`! You can also view the full command list with `{guild_prefix}help`."
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Disabling Slash Command Suggestions",
+            value=(
+                "When using prefixed Avrae commands, you might see recommendations from Discord for other bots' slash"
+                " commands. To disable these suggestions from Discord, right-click on your message bar, hover over"
+                ' "Suggestions", and make sure that "Slash Commands" is unchecked.'
+            ),
+            inline=False,
+        )
+        embed.set_image(url="https://media.avrae.io/tutorial-assets/disable-slash-command-suggestions.png")
+        await inter.send(embed=embed)
+
     # ==== commands ====
     @commands.group(invoke_without_command=True)
     @checks.feature_flag("command.tutorial.enabled")

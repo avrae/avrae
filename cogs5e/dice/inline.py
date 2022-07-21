@@ -8,7 +8,6 @@ import utils.settings
 from cogs5e.models import embeds
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter
 from utils import constants
-from utils.aldclient import discord_user_to_dict
 from utils.dice import PersistentRollContext
 from utils.functions import camel_to_title, verbose_stat
 from .utils import string_search_adv
@@ -29,8 +28,8 @@ class InlineRoller:
             return
 
         # inline rolling feature flag
-        if not await self.bot.ldclient.variation(
-            "cog.dice.inline_rolling.enabled", user=discord_user_to_dict(message.author), default=False
+        if not await self.bot.ldclient.variation_for_discord_user(
+            "cog.dice.inline_rolling.enabled", user=message.author, default=False
         ):
             return
 
@@ -72,8 +71,8 @@ class InlineRoller:
             return
 
         # inline rolling feature flag
-        if not await self.bot.ldclient.variation(
-            "cog.dice.inline_rolling.enabled", user=discord_user_to_dict(message.author), default=False
+        if not await self.bot.ldclient.variation_for_discord_user(
+            "cog.dice.inline_rolling.enabled", user=message.author, default=False
         ):
             return
 

@@ -7,11 +7,10 @@ from typing import List, Optional, TYPE_CHECKING, TypeVar
 import d20
 import disnake
 
-from utils.aldclient import discord_user_to_dict
 from utils.constants import STAT_ABBREVIATIONS
 from utils.enums import CritDamageType
 from utils.functions import natural_join
-from utils.settings.guild import InlineRollingType, ServerSettings, RandcharRule, LegacyPreference
+from utils.settings.guild import InlineRollingType, LegacyPreference, RandcharRule, ServerSettings
 from .menu import MenuBase
 
 _AvraeT = TypeVar("_AvraeT", bound=disnake.Client)
@@ -34,8 +33,8 @@ class ServerSettingsMenuBase(MenuBase, abc.ABC):
         await self.settings.commit(self.bot.mdb)
 
     async def get_inline_rolling_desc(self) -> str:
-        flag_enabled = await self.bot.ldclient.variation(
-            "cog.dice.inline_rolling.enabled", user=discord_user_to_dict(self.owner), default=False
+        flag_enabled = await self.bot.ldclient.variation_for_discord_user(
+            "cog.dice.inline_rolling.enabled", user=self.owner, default=False
         )
         if not flag_enabled:
             return "Inline rolling is currently **globally disabled** for all users. Check back soon!"
@@ -113,8 +112,8 @@ class ServerSettingsUI(ServerSettingsMenuBase):
         )
 
         nlp_enabled_description = ""
-        nlp_feature_flag = await self.bot.ldclient.variation(
-            "cog.initiative.upenn_nlp.enabled", user=discord_user_to_dict(self.owner), default=False
+        nlp_feature_flag = await self.bot.ldclient.variation_for_discord_user(
+            "cog.initiative.upenn_nlp.enabled", user=self.owner, default=False
         )
         if nlp_feature_flag:
             nlp_enabled_description = f"\n**Contribute Message Data to NLP Training**: {self.settings.upenn_nlp_opt_in}"
@@ -400,8 +399,8 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
             self.toggle_upenn_nlp_opt_in: disnake.ui.Button
 
         # nlp feature flag
-        flag_enabled = await self.bot.ldclient.variation(
-            "cog.initiative.upenn_nlp.enabled", user=discord_user_to_dict(self.owner), default=False
+        flag_enabled = await self.bot.ldclient.variation_for_discord_user(
+            "cog.initiative.upenn_nlp.enabled", user=self.owner, default=False
         )
         if not flag_enabled:
             self.remove_item(self.toggle_upenn_nlp_opt_in)
@@ -437,8 +436,8 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
             inline=False,
         )
 
-        nlp_feature_flag = await self.bot.ldclient.variation(
-            "cog.initiative.upenn_nlp.enabled", user=discord_user_to_dict(self.owner), default=False
+        nlp_feature_flag = await self.bot.ldclient.variation_for_discord_user(
+            "cog.initiative.upenn_nlp.enabled", user=self.owner, default=False
         )
         if nlp_feature_flag:
             embed.add_field(

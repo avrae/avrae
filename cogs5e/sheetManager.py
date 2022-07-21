@@ -749,11 +749,9 @@ class SheetManager(commands.Cog):
 async def send_ddb_ctas(ctx, character):
     """Sends relevant CTAs after a DDB character is imported. Only show a CTA 1/24h to not spam people."""
     ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
-    if ddb_user is not None:
-        ld_dict = ddb_user.to_ld_dict()
-    else:
-        ld_dict = {"key": str(ctx.author.id), "anonymous": True}
-    gamelog_flag = await ctx.bot.ldclient.variation("cog.gamelog.cta.enabled", ld_dict, False)
+    gamelog_flag = await ctx.bot.ldclient.variation_for_ddb_user(
+        "cog.gamelog.cta.enabled", ddb_user, False, discord_id=ctx.author.id
+    )
 
     # get server settings for whether to pull up campaign settings
     if ctx.guild is not None:

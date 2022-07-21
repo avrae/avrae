@@ -186,7 +186,9 @@ class GameLog(commands.Cog):
         if ddb_user is None:
             return campaign_id, None
         # and they must be allowed to use game log send by feature flag
-        flag = await self.bot.ldclient.variation("cog.gamelog.roll_send.enabled", ddb_user.to_ld_dict(), False)
+        flag = await self.bot.ldclient.variation_for_ddb_user(
+            "cog.gamelog.roll_send.enabled", ddb_user, False, discord_id=ctx.author.id
+        )
         if not flag:
             return campaign_id, None
         return campaign_id, ddb_user

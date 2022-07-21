@@ -25,7 +25,7 @@ from ddb.gamelog import GameLogClient
 from gamedata.compendium import compendium
 from gamedata.lookuputils import handle_required_license
 from utils import clustering, config, context
-from utils.aldclient import AsyncLaunchDarklyClient
+from utils.feature_flags import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
 

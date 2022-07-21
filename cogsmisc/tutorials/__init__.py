@@ -9,7 +9,6 @@ from disnake.ext import commands
 
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks, config
-from utils.aldclient import discord_user_to_dict
 from utils.functions import confirm, get_guild_member, search_and_select
 from .ddblink import DDBLink
 from .init_dm import DMInitiative
@@ -159,8 +158,8 @@ class Tutorials(commands.Cog):
         if to_user is None:
             return
 
-        flag_on = await self.bot.ldclient.variation(
-            "cog.tutorials.guild_join.enabled", discord_user_to_dict(to_user), default=False
+        flag_on = await self.bot.ldclient.variation_for_discord_user(
+            "cog.tutorials.guild_join.enabled", to_user, default=False
         )
         if not flag_on:
             return

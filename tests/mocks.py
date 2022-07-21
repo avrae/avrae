@@ -183,5 +183,10 @@ class MockAsyncLaunchDarklyClient:
     async def variation(self, key, user, default):
         return self.flag_store.get(key, default)
 
+    variation_for_discord_user = variation
+
+    async def variation_for_ddb_user(self, key, user, default, *__, **___):
+        return await self.variation(key, user, default)
+
     def close(self):
         pass

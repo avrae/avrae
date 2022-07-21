@@ -62,8 +62,7 @@ class Avrae(commands.AutoShardedBot):
             prefix,
             help_command=help_command,
             description=description,
-            test_guilds=config.COMMAND_TEST_GUILD_IDS,
-            sync_commands=False,
+            sync_commands=False,  # this is set by launch_shard below, to prevent multiple clusters racing
             sync_commands_debug=config.TESTING,
             **options,
         )

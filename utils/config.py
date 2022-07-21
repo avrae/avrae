@@ -11,8 +11,6 @@ NUM_SHARDS = int(os.getenv("NUM_SHARDS")) if "NUM_SHARDS" in os.environ else Non
 RELOAD_INTERVAL = os.getenv("RELOAD_INTERVAL", "0")  # compendium static data reload interval
 ECS_METADATA_ENDPT = os.getenv("ECS_CONTAINER_METADATA_URI")  # set by ECS
 MONSTER_TOKEN_ENDPOINT = os.getenv("MONSTER_TOKEN_ENDPOINT")  # S3: monster tokens
-# slash command test guilds - these only apply in development anyway, so hardcoded
-COMMAND_TEST_GUILD_IDS = None  # app commands backend v2 means instant sync, so we just use global commands
 # secret for the draconic signature() function
 DRACONIC_SIGNATURE_SECRET = os.getenv("DRACONIC_SIGNATURE_SECRET", "secret").encode()
 

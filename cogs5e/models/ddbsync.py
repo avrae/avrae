@@ -106,8 +106,8 @@ class DDBSheetSync(LiveIntegration):
         self._ddb_user = ddb_user
         if ddb_user is None:
             return
-        flag = await ctx.bot.ldclient.variation(
-            "cog.sheetmanager.sync.send.enabled", ddb_user.to_ld_dict(), default=False
+        flag = await ctx.bot.ldclient.variation_for_ddb_user(
+            "cog.sheetmanager.sync.send.enabled", ddb_user, default=False, discord_id=ctx.author.id
         )
         if not flag:
             return

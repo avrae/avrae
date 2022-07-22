@@ -1,6 +1,5 @@
 from disnake.ext import commands
 
-from utils.aldclient import discord_user_to_dict
 from utils.functions import natural_join
 
 is_owner = commands.is_owner
@@ -54,14 +53,12 @@ def feature_flag(flag_name, use_ddb_user=False, default=False):
     async def predicate(ctx):
         if use_ddb_user:
             ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
-            if ddb_user is None:
-                user = {"key": str(ctx.author.id), "anonymous": True}
-            else:
-                user = ddb_user.to_ld_dict()
+            flag_on = await ctx.bot.ldclient.variation_for_ddb_user(
+                flag_name, user=ddb_user, default=default, discord_id=ctx.author.id
+            )
         else:
-            user = discord_user_to_dict(ctx.author)
+            flag_on = await ctx.bot.ldclient.variation_for_discord_user(flag_name, user=ctx.author, default=default)
 
-        flag_on = await ctx.bot.ldclient.variation(flag_name, user, default)
         if flag_on:
             return True
 

@@ -188,7 +188,9 @@ class Core(commands.Cog):
             f"on D&D Beyond are available in Avrae."
         )
 
-        desc = await self.bot.ldclient.variation("command.ddb.desc", ddb_user.to_ld_dict(), default_desc)
+        desc = await self.bot.ldclient.variation_for_ddb_user(
+            "command.ddb.desc", ddb_user, default_desc, discord_id=ctx.author.id
+        )
         embed.description = desc
 
         if ddb_user.is_staff:

@@ -237,7 +237,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :rtype: bool
         """
         name = str(name)
-        return self.exists(name) and name in self._cache["uvars"]
+        return name in self._cache["uvars"]
 
     def get_gvar(self, address):
         """
@@ -320,7 +320,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :param str value: The value to set it to.
         """
         name = str(name)
-        if not name in self.names:
+        if not name in self._cache["uvars"]:
             self.set_uvar(name, value)
 
     def delete_uvar(self, name):

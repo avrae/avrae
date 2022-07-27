@@ -29,7 +29,7 @@ from utils.functions import smart_trim
 log = logging.getLogger(__name__)
 
 ENDPOINT = config.DDB_CHAR_COMPUTATION_ENDPT
-if config.ENVIRONMENT == "development":
+if config.ENVIRONMENT in ("development", "staging"):
     DDB_URL_RE = re.compile(
         r"(?:https?://)?(?:stg\.dndbeyond\.com|www\.dndbeyond\.com|ddb\.ac)(?:/profile/.+)?/characters/(\d+)/?"
     )

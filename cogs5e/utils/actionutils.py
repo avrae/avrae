@@ -448,11 +448,43 @@ async def send_action_list(
     display_bonus = "bonus" in args
     display_reactions = "reaction" in args
     display_other = "other" in args
-    is_display_filtered = any((display_attacks, display_actions, display_bonus, display_reactions, display_other))
+    display_legendary = "legendary" in args
+    display_mythic = "mythic" in args
+    display_lair = "lair" in args
+    is_display_filtered = any(
+        (
+            display_attacks,
+            display_actions,
+            display_bonus,
+            display_reactions,
+            display_other,
+            display_legendary,
+            display_mythic,
+            display_lair,
+        )
+    )
     filtered_action_type_strs = list(
         itertools.compress(
-            ("attacks", "actions", "bonus actions", "reactions", "other actions"),
-            (display_attacks, display_actions, display_bonus, display_reactions, display_other),
+            (
+                "attacks",
+                "actions",
+                "bonus actions",
+                "reactions",
+                "other actions",
+                "legendary actions",
+                "mythic actions",
+                "lair actions",
+            ),
+            (
+                display_attacks,
+                display_actions,
+                display_bonus,
+                display_reactions,
+                display_other,
+                display_legendary,
+                display_mythic,
+                display_lair,
+            ),
         )
     )
 
@@ -515,6 +547,12 @@ async def send_action_list(
         await add_action_field("Reactions", actions.reactions, attacks.reactions)
     if display_other or not is_display_filtered:
         await add_action_field("Other", actions.other_actions, attacks.other_attacks)
+    if display_legendary or not is_display_filtered:
+        await add_action_field("Legendary Actions", actions.legendary_actions, attacks.legendary_actions)
+    if display_mythic or not is_display_filtered:
+        await add_action_field("Mythic Actions", actions.mythic_actions, attacks.mythic_actions)
+    if display_lair or not is_display_filtered:
+        await add_action_field("Lair Actions", actions.lair_actions, attacks.lair_actions)
 
     # build embed
 

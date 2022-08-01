@@ -32,12 +32,35 @@ class Actions:
         return [a for a in self.actions if a.activation_type == ActivationType.REACTION]
 
     @property
+    def legendary_actions(self):
+        """Returns a list of actions that require a legendary action to activate."""
+        return [a for a in self.actions if a.activation_type == ActivationType.LEGENDARY]
+
+    @property
+    def mythic_actions(self):
+        """Returns a list of actions that require a legendary action to activate."""
+        return [a for a in self.actions if a.activation_type == ActivationType.MYTHIC]
+
+    @property
+    def lair_actions(self):
+        """Returns a list of actions that require a lair action to activate."""
+        return [a for a in self.actions if a.activation_type == ActivationType.LAIR]
+
+    @property
     def other_actions(self):
         """Returns a list of actions that do not fall into the other action categories."""
         return [
             a
             for a in self.actions
-            if a.activation_type not in (ActivationType.ACTION, ActivationType.BONUS_ACTION, ActivationType.REACTION)
+            if a.activation_type
+            not in (
+                ActivationType.ACTION,
+                ActivationType.BONUS_ACTION,
+                ActivationType.REACTION,
+                ActivationType.LEGENDARY,
+                ActivationType.MYTHIC,
+                ActivationType.LAIR,
+            )
         ]
 
     def __iter__(self):

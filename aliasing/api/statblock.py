@@ -406,6 +406,40 @@ class AliasAttack:
         return self._attack.proper
 
     @property
+    def activation_type(self):
+        """
+        The activation type of the action (e.g. action, bonus, etc).
+
+        +------------------+-------+
+        | Action Type      | Value |
+        +==================+=======+
+        | Action           | 1     |
+        +------------------+-------+
+        | No Action        | 2     |
+        +------------------+-------+
+        | Bonus Action     | 3     |
+        +------------------+-------+
+        | Reaction         | 4     |
+        +------------------+-------+
+        | Minute           | 6     |
+        +------------------+-------+
+        | Hour             | 7     |
+        +------------------+-------+
+        | Special          | 8     |
+        +------------------+-------+
+        | Legendary Action | 9     |
+        +------------------+-------+
+        | Mythic Action    | 10    |
+        +------------------+-------+
+        | Lair Action      | 11    |
+        +------------------+-------+
+
+        :rtype: int
+        """
+        if self._attack.activation_type is not None:
+            return self._attack.activation_type.value
+
+    @property
     def raw(self):  # since we don't expose Automation models (yet)
         """
         A dict representing the raw value of this attack.

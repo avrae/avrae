@@ -94,6 +94,9 @@ class SheetManager(commands.Cog):
         action - Only displays the available actions.
         bonus - Only displays the available bonus actions.
         reaction - Only displays the available reactions.
+        legendary - Only displays the available legendary actions.
+        mythic - Only displays the available mythic actions.
+        lair - Only displays the available lair actions.
         other - Only displays the available actions that have another activation time.
         """
         char: Character = await ctx.get_character()

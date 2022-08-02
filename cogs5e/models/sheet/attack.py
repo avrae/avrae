@@ -187,6 +187,21 @@ class AttackList:
         return AttackList([a for a in self.attacks if a.activation_type == enums.ActivationType.REACTION])
 
     @property
+    def legendary_actions(self):
+        """Returns an AttackList that require a legendary action to activate."""
+        return AttackList([a for a in self.attacks if a.activation_type == enums.ActivationType.LEGENDARY])
+
+    @property
+    def mythic_actions(self):
+        """Returns an AttackList that require a legendary action to activate."""
+        return AttackList([a for a in self.attacks if a.activation_type == enums.ActivationType.MYTHIC])
+
+    @property
+    def lair_actions(self):
+        """Returns a AttackList of actions that require a lair action to activate."""
+        return AttackList([a for a in self.attacks if a.activation_type == enums.ActivationType.LAIR])
+
+    @property
     def other_attacks(self):
         """Returns an AttackList of attacks that do not fall into the other action categories."""
         return AttackList(
@@ -198,6 +213,9 @@ class AttackList:
                     enums.ActivationType.ACTION,
                     enums.ActivationType.BONUS_ACTION,
                     enums.ActivationType.REACTION,
+                    enums.ActivationType.LEGENDARY,
+                    enums.ActivationType.MYTHIC,
+                    enums.ActivationType.LAIR,
                     None,
                 )
             ]

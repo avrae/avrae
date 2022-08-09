@@ -1072,6 +1072,7 @@ class InitTracker(commands.Cog):
         return await self._attack_list(ctx, combatant, *args)
 
     @init.command(
+        name="offturnattack",
         aliases=["aoo", "offturnaction", "oa"],
         help=f"""
         Rolls an attack as another combatant.
@@ -1080,7 +1081,7 @@ class InitTracker(commands.Cog):
         -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
         """,
     )
-    async def offturnattack(self, ctx, combatant_name, atk_name=None, *, args=""):
+    async def aoo(self, ctx, combatant_name, atk_name=None, *, args=""):
         combat = await ctx.get_combat()
         try:
             combatant = await combat.select_combatant(ctx, combatant_name, "Select the attacker.")
@@ -1292,6 +1293,7 @@ class InitTracker(commands.Cog):
         return await self._cast(ctx, None, spell_name, args)
 
     @init.command(
+        name="offturncast",
         aliases=["rc", "reactcast"],
         help=f"""
         Casts a spell as another combatant.
@@ -1301,7 +1303,7 @@ class InitTracker(commands.Cog):
         {VALID_AUTOMATION_ARGS}
         """,
     )
-    async def offturncast(self, ctx, combatant_name, spell_name, *, args=""):
+    async def reactcast(self, ctx, combatant_name, spell_name, *, args=""):
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     async def _cast(self, ctx, combatant_name, spell_name, args):

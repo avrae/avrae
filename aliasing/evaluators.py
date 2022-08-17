@@ -440,6 +440,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 yaml.composer.Composer.__init__(self)
                 DraconicConstructor.__init__(self)
                 yaml.resolver.Resolver.__init__(self)
+                self.inf_value = float('inf')
 
         return DraconicLoader
 

@@ -256,7 +256,7 @@ class CustomCounter:
         if self.reset_to is None:
             return None
         return self._character.evaluate_math(self.reset_to)
-    
+
     def get_reset_by(self):
         if self.reset_by is None:
             return None

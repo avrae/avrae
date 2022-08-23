@@ -183,7 +183,7 @@ class AliasCharacter(AliasStatBlock):
         :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
         :param str dispType: Either ``None`` or ``'bubble'``.
         :param str reset_to: The value the counter should reset to. Supports :ref:`cvar-table` parsing.
-        :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
+        :param str reset_by: How much the counter should change by on a reset. Supports annotated dice strings.
         :param str title: The title of the counter.
         :param str desc: The description of the counter.
         :param str initial_value: The initial value of the counter.
@@ -219,7 +219,7 @@ class AliasCharacter(AliasStatBlock):
         :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
         :param str dispType: Either ``None`` or ``'bubble'``.
         :param str reset_to: The value the counter should reset to. Supports :ref:`cvar-table` parsing.
-        :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
+        :param str reset_by: How much the counter should change by on a reset. Supports annotated dice strings.
         :param str title: The title of the counter.
         :param str desc: The description of the counter.
         :param str new_name: The new name of the counter.
@@ -532,7 +532,7 @@ class AliasCustomCounter:
         :return: The amount the cc changes by. Guaranteed to be a rollable string.
         :rtype: str or None
         """
-        return self._cc.reset_by
+        return self._cc.get_reset_by()
 
     def set(self, new_value, strict=False):
         """

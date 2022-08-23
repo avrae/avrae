@@ -606,7 +606,7 @@ class GameTrack(commands.Cog):
         `-value <value>` - The initial value for the counter.
         `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers.
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
-        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
+        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports annotated dice strings.
         """  # noqa: E501
         character: Character = await ctx.get_character()
 
@@ -665,7 +665,7 @@ class GameTrack(commands.Cog):
         `-min <min value>` - The minimum value of the counter.
         `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers.
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
-        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
+        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports annotated dice strings.
         """  # noqa: E501
         character: Character = await ctx.get_character()
         counter = await character.select_consumable(ctx, name)

@@ -191,7 +191,7 @@ class CustomCounter:
 
         if reset_by is not None:
             try:
-                d20.parse(str(reset_by))
+                d20.parse(character.evaluate_annostr(str(reset_by)))
             except d20.RollSyntaxError:
                 raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
 
@@ -256,6 +256,11 @@ class CustomCounter:
         if self.reset_to is None:
             return None
         return self._character.evaluate_math(self.reset_to)
+    
+    def get_reset_by(self):
+        if self.reset_by is None:
+            return None
+        return self._character.evaluate_annostr(self.reset_by)
 
     @property
     def value(self):
@@ -298,7 +303,7 @@ class CustomCounter:
 
         # reset by: modify current value
         elif self.reset_by is not None:
-            roll_result = d20.roll(self.reset_by)
+            roll_result = d20.roll(self.get_reset_by())
             target_value = old_value + roll_result.total
             new_value = self.set(target_value)
             delta = f"+{roll_result.result}"

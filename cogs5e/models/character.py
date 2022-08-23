@@ -4,6 +4,8 @@ from collections import namedtuple
 import cachetools
 from disnake.ext.commands import NoPrivateMessage
 
+import re
+
 import aliasing.evaluators
 from cogs5e.models.ddbsync import DDBSheetSync
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
@@ -295,6 +297,19 @@ class Character(StatBlock):
 
         try:
             return int(evaluator.eval(varstr))
+        except Exception as e:
+            raise InvalidArgument(f"Cannot evaluate {varstr}: {e}")
+        
+    def evaluate_annostr(self, varstr):
+        """
+        Evaluates annotated string using AutomationEvaluator with character.
+        :param varstr - the string to search and replace.
+        :returns str - the string with annotations evaluated
+        """
+        evaluator = aliasing.evaluators.AutomationEvaluator.with_character(self)
+                
+        try:
+            return evaluator.transformed_str(varstr)
         except Exception as e:
             raise InvalidArgument(f"Cannot evaluate {varstr}: {e}")
 

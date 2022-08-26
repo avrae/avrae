@@ -32,7 +32,7 @@ from ddb.gamelog.errors import NoCampaignLink
 from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete
+from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title
 from utils.settings.character import CHARACTER_SETTINGS
 
 log = logging.getLogger(__name__)
@@ -257,7 +257,7 @@ class SheetManager(commands.Cog):
     )
     async def check(self, ctx, check, *args):
         char: Character = await ctx.get_character()
-        skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
+        skill_key = await search_and_select(ctx, SKILL_NAMES, check, camel_to_title)
         args = await self.new_arg_stuff(args, ctx, char)
 
         hide = args.last("h", type_=bool)

@@ -26,6 +26,7 @@ from utils.functions import (
     get_selection,
     search_and_select,
     try_delete,
+    camel_to_title,
 )
 from . import (
     Combat,
@@ -1218,7 +1219,7 @@ class InitTracker(commands.Cog):
         if isinstance(combatant, CombatantGroup):
             return await ctx.send("Groups cannot make checks.")
 
-        skill_key = await search_and_select(ctx, constants.SKILL_NAMES, check, lambda s: s)
+        skill_key = await search_and_select(ctx, constants.SKILL_NAMES, check, camel_to_title)
         embed = disnake.Embed(color=combatant.get_color())
 
         args = await helpers.parse_snippets(args, ctx)

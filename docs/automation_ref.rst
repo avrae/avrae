@@ -641,6 +641,7 @@ Roll
         higher?: {int: string};
         cantripScale?: boolean;
         hidden?: boolean;
+        displayName?: string;
     }
 
 Rolls some dice and saves the result in a variable. Displays the roll and its name in a Meta field, unless
@@ -668,6 +669,10 @@ Rolls some dice and saves the result in a variable. Displays the roll and its na
 
         *optional* - If ``true``, won't display the roll in the Meta field, or apply any bonuses from the ``-d``
         argument.
+
+    .. attribute:: displayName
+
+        The name to display in the Meta field. If left blank, it will use the saved name.
 
 **Variables**
 
@@ -896,6 +901,7 @@ Cast Spell
         dc?: IntExpression;
         attackBonus?: IntExpression;
         castingMod?: IntExpression;
+        parent?: string;
     }
 
 Executes the given spell's automation as if it were immediately cast. Does not use a spell
@@ -928,6 +934,11 @@ This is usually used in features that cast spells using alternate resources (i.e
 
         *optional* - The spellcasting modifier to use when casting the spell. If not provided, defaults to the caster's
         default spellcasting modifier.
+
+    .. attribute:: parent
+
+        *optional, default None* - If supplied, sets the spells created effect's parent to the given effect. This must be the
+        name of an existing :class:`IEffectMetaVar`. Useful for handling concentration.
 
 **Variables**
 

@@ -70,7 +70,7 @@ class Roll(Effect):
         rolled = d20.roll(dice_ast)
         if not self.hidden:
             name_out = self.displayName
-            if name_out is None:
+            if not name_out:
                 name_out = self.name.title()
             autoctx.meta_queue(f"**{name_out}**: {rolled.result}")
 

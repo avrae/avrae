@@ -12,7 +12,14 @@ from ..results import RollResult
 
 class Roll(Effect):
     def __init__(
-        self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, hidden: bool = False, **kwargs
+        self,
+        dice: str,
+        name: str,
+        higher: dict = None,
+        cantripScale: bool = None,
+        hidden: bool = False,
+        displayName: str = None,
+        **kwargs,
     ):
         super().__init__("roll", **kwargs)
         self.dice = dice
@@ -20,6 +27,7 @@ class Roll(Effect):
         self.higher = higher
         self.cantripScale = cantripScale
         self.hidden = hidden
+        self.displayName = displayName
 
     def to_dict(self):
         out = super().to_dict()
@@ -61,7 +69,10 @@ class Roll(Effect):
 
         rolled = d20.roll(dice_ast)
         if not self.hidden:
-            autoctx.meta_queue(f"**{self.name.title()}**: {rolled.result}")
+            name_out = self.displayName
+            if not name_out:
+                name_out = self.name.title()
+            autoctx.meta_queue(f"**{name_out}**: {rolled.result}")
 
         simplified_expr = copy.deepcopy(rolled.expr)
         d20.utils.simplify_expr(simplified_expr)

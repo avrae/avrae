@@ -14,7 +14,7 @@ from gamedata.lookuputils import handle_source_footer, select_monster_full, sele
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.dice import PersistentRollContext, VerboseMDStringifier
-from utils.functions import search_and_select, try_delete
+from utils.functions import search_and_select, try_delete, camel_to_title
 from .inline import InlineRoller
 from .utils import string_search_adv
 
@@ -211,7 +211,7 @@ class Dice(commands.Cog):
         monster: Monster = await select_monster_full(ctx, monster_name)
         args = await helpers.parse_snippets(args, ctx, statblock=monster)
         args = argparse(args)
-        skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
+        skill_key = await search_and_select(ctx, SKILL_NAMES, check, camel_to_title)
 
         embed = embed_for_monster(monster, args)
 

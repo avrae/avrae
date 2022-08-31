@@ -167,6 +167,8 @@ class AliasStatBlock:
         :param int amount: The amount of HP to add/remove.
         :param bool ignore_temp: If *amount* is negative, whether to damage temp HP first or ignore temp.
         :param bool overflow: If *amount* is positive, whether to allow overhealing or cap at the creature's max HP.
+        :return: A string describing the creature's current, max, and temp HP after the change.
+        :rtype: str
         """
         return self._statblock.modify_hp(int(amount), ignore_temp, overflow)
 

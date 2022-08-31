@@ -551,7 +551,8 @@ class Combat:
         mentions = self.get_turn_str_mentions_for(self.current_combatant)
         if self.options.turnnotif and self.next_combatant is not None:
             next_combatant = self.get_turn_str_mentions_for(self.next_combatant)
-            mentions = mentions.merge(disnake.AllowedMentions(users=next_combatant.users + mentions.users))
+            merged_users = set(next_combatant.users).union(mentions.users)
+            mentions = mentions.merge(disnake.AllowedMentions(users=list(merged_users)))
         return mentions
 
     def get_turn_str_mentions_for(self, combatant) -> disnake.AllowedMentions:

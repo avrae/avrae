@@ -66,7 +66,7 @@ class Save(Effect):
         elif autoctx.dc_override is not None:
             dc = autoctx.dc_override
 
-        if "dc" in autoctx.args:
+        if autoctx.args.last("dc") is not None:
             dc = maybe_mod(autoctx.args.last("dc"), dc)
 
         if dc is None:

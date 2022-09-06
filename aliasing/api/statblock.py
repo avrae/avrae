@@ -651,6 +651,34 @@ class AliasResistances:
         """
         return self._resistances.neutral
 
+    def is_resistant(self, damage_type: str) -> bool:
+        """
+        Whether or not this AliasResistances contains any resistances that apply to the given damage type string.
+
+        If the AliasResistances contains both a neutral and a resistance that applies, returns False.
+        """
+        return self._resistances.is_resistant(str(damage_type))
+
+    def is_immune(self, damage_type: str) -> bool:
+        """
+        Whether or not this AliasResistances contains any immunities that apply to the given damage type string.
+
+        If the AliasResistances contains both a neutral and an immunity that applies, returns False.
+        """
+        return self._resistances.is_immune(str(damage_type))
+
+    def is_vulnerable(self, damage_type: str) -> bool:
+        """
+        Whether or not this AliasResistances contains any vulnerabilities that apply to the given damage type string.
+
+        If the AliasResistances contains both a neutral and a vulnerability that applies, returns False.
+        """
+        return self._resistances.is_vulnerable(str(damage_type))
+
+    def is_neutral(self, damage_type: str) -> bool:
+        """Whether or not this AliasResistances contains any neutrals that apply to the given damage type string."""
+        return self._resistances.is_neutral(str(damage_type))
+
     def __str__(self):
         return str(self._resistances)
 

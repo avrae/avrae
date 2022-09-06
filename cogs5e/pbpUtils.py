@@ -80,7 +80,8 @@ class PBPUtils(commands.Cog):
     async def br(self, ctx):
         """Prints a scene break."""
         await try_delete(ctx.message)
-        await ctx.send("```\n \n```")
+        # There is a zero-width space between the \n's, to ensure the code block displays properly on mobile
+        await ctx.send("```\n​\n```")
 
     @commands.command(hidden=True)
     async def pythag(self, ctx, num1: int, num2: int):

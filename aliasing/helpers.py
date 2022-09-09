@@ -388,9 +388,8 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
             if isinstance(the_snippet, WorkshopSnippet):
                 await workshop_entitlements_check(ctx, the_snippet)
 
-            the_snippet.code = the_snippet.code.replace("&ARGS&", str(original_args))
-
             if the_snippet:
+                the_snippet.code = the_snippet.code.replace("&ARGS&", str(original_args))
                 # enter the evaluator
                 execution_scope = ExecutionScope.SERVER_SNIPPET if server_invoker else ExecutionScope.PERSONAL_SNIPPET
                 args[index] = await evaluator.transformed_str_async(

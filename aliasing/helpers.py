@@ -366,6 +366,8 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
     if not isinstance(args, list):
         args = list(args)
 
+    original_args = args[:]
+
     # set up the evaluator
     evaluator = await evaluators.ScriptingEvaluator.new(ctx)
     if character is not None:
@@ -385,6 +387,8 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
 
             if isinstance(the_snippet, WorkshopSnippet):
                 await workshop_entitlements_check(ctx, the_snippet)
+
+            the_snippet.code = the_snippet.code.replace("&ARGS&", str(original_args))
 
             if the_snippet:
                 # enter the evaluator

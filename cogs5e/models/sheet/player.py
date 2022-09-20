@@ -172,14 +172,14 @@ class CustomCounter:
         min_value = None
         if minv is not None:
             min_value = character.evaluate_math(minv)
+            if display_type == "bubble" and (min_value < 0):
+                raise InvalidArgument("Bubble display requires a min value of >= 0.")
 
         max_value = None
         if maxv is not None:
             max_value = character.evaluate_math(maxv)
             if min_value is not None and max_value < min_value:
                 raise InvalidArgument("Max value is less than min value.")
-            if max_value == 0:
-                raise InvalidArgument("Max value cannot be 0.")
 
         reset_to_value = None
         if reset_to is not None:

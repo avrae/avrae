@@ -103,8 +103,10 @@ async def run_action(
     else:
         name = "An unknown creature"
 
+    verb = args.last("verb", "uses")
+
     if args.last("title") is not None:
-        embed.title = args.last("title").replace("[name]", name).replace("[aname]", action.name)
+        embed.title = args.last("title").replace("[name]", name).replace("[aname]", action.name).replace("[verb]", verb)
     else:
         embed.title = f"{name} uses {action.name}!"
 

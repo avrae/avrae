@@ -160,8 +160,6 @@ class CustomCounter:
             raise InvalidArgument("Invalid character in CC name.")
         if display_type == "bubble" and (maxv is None or minv is None):
             raise InvalidArgument("Bubble display requires a max and min value.")
-        if display_type == "bubble" and (minv < 0):
-            raise InvalidArgument("Bubble display min value of >= 0.")
 
         # sanity checks
         if reset not in ("none", None) and (maxv is None and reset_to is None and reset_by is None):
@@ -174,6 +172,8 @@ class CustomCounter:
         min_value = None
         if minv is not None:
             min_value = character.evaluate_math(minv)
+            if display_type == "bubble" and (min_value < 0):
+                raise InvalidArgument("Bubble display requires a min value of >= 0.")
 
         max_value = None
         if maxv is not None:

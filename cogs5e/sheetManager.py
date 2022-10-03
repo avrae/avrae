@@ -48,8 +48,8 @@ class SheetManager(commands.Cog):
         self.bot = bot
 
     @staticmethod
-    async def new_arg_stuff(args, ctx, character):
-        args = await helpers.parse_snippets(args, ctx, character=character)
+    async def new_arg_stuff(args, ctx, character, base_args=None):
+        args = await helpers.parse_snippets(args, ctx, character=character, base_args=base_args)
         args = argparse(args)
         return args
 
@@ -67,7 +67,7 @@ class SheetManager(commands.Cog):
             return await self.action_list(ctx)
 
         char: Character = await ctx.get_character()
-        args = await self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char, base_args=[atk_name])
         hide = args.last("h", type_=bool)
         embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
@@ -250,7 +250,7 @@ class SheetManager(commands.Cog):
 
         char: Character = await ctx.get_character()
 
-        args = await self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char, base_args=[skill])
 
         hide = args.last("h", type_=bool)
 
@@ -277,7 +277,7 @@ class SheetManager(commands.Cog):
     async def check(self, ctx, check, *args):
         char: Character = await ctx.get_character()
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, camel_to_title)
-        args = await self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char, base_args=[check])
 
         hide = args.last("h", type_=bool)
 

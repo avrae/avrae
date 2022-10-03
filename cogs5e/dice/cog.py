@@ -179,7 +179,7 @@ class Dice(commands.Cog):
         attacks = monster.attacks
 
         attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name)
-        args = await helpers.parse_snippets(args, ctx, statblock=monster)
+        args = await helpers.parse_snippets(args, ctx, statblock=monster, base_args=[monster_name, atk_name])
         args = argparse(args)
 
         embed = embed_for_monster(monster, args)
@@ -209,7 +209,7 @@ class Dice(commands.Cog):
     async def monster_check(self, ctx, monster_name, check, *args):
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
-        args = await helpers.parse_snippets(args, ctx, statblock=monster)
+        args = await helpers.parse_snippets(args, ctx, statblock=monster, base_args=[monster_name, check])
         args = argparse(args)
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, camel_to_title)
 
@@ -232,7 +232,7 @@ class Dice(commands.Cog):
     async def monster_save(self, ctx, monster_name, save_stat, *args):
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
-        args = await helpers.parse_snippets(args, ctx, statblock=monster)
+        args = await helpers.parse_snippets(args, ctx, statblock=monster, base_args=[monster_name, save_stat])
         args = argparse(args)
 
         embed = embed_for_monster(monster, args)
@@ -257,7 +257,7 @@ class Dice(commands.Cog):
     async def monster_cast(self, ctx, monster_name, spell_name, *args):
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
-        args = await helpers.parse_snippets(args, ctx, statblock=monster)
+        args = await helpers.parse_snippets(args, ctx, statblock=monster, base_args=[monster_name, spell_name])
         args = argparse(args)
 
         if not args.last("i", type_=bool):

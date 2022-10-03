@@ -793,7 +793,7 @@ class GameTrack(commands.Cog):
 
         char: Character = await ctx.get_character()
 
-        args = await helpers.parse_snippets(args, ctx, character=char)
+        args = await helpers.parse_snippets(args, ctx, character=char, base_args=[spell_name])
         args = argparse(args)
 
         if not args.last("i", type_=bool):

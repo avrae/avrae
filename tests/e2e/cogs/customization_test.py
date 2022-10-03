@@ -23,7 +23,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     avrae.message("!snippet adv adv")
     await dhttp.receive_message(
         "**Warning:** Creating a snippet named `adv` will prevent you from using "
-        "the built-in `adv` argument in Avrae commands.\nAre you sure you want to "
+        "a built-in argument `adv` if one exists.\nAre you sure you want to "
         "create this snippet? (Reply with yes/no)",
         regex=False,
     )
@@ -33,7 +33,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     avrae.message("!snippet adv adv")
     await dhttp.receive_message(
         "**Warning:** Creating a snippet named `adv` will prevent you from using "
-        "the built-in `adv` argument in Avrae commands.\nAre you sure you want to "
+        "a built-in argument `adv` if one exists.\nAre you sure you want to "
         "create this snippet? (Reply with yes/no)",
         regex=False,
     )
@@ -43,7 +43,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     avrae.message("!snippet str adv")
     await dhttp.receive_message(
         "**Warning:** Creating a snippet named `str` will prevent you from using "
-        "the built-in `str` argument in Avrae commands.\nAre you sure you want to "
+        "a built-in argument `str` if one exists.\nAre you sure you want to "
         "create this snippet? (Reply with yes/no)",
         regex=False,
     )
@@ -69,7 +69,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     avrae.message("!serversnippet adv adv", as_owner=True)
     await dhttp.receive_message(
         "**Warning:** Creating a snippet named `adv` will prevent you from using "
-        "the built-in `adv` argument in Avrae commands.\nAre you sure you want to "
+        "a built-in argument `adv` if one exists.\nAre you sure you want to "
         "create this snippet? (Reply with yes/no)",
         regex=False,
     )
@@ -95,7 +95,7 @@ async def test_snippet_before_edit(avrae, dhttp):
     avrae.message("!snippet rename do adv")
     await dhttp.receive_message(
         "**Warning:** Creating a snippet named `adv` will prevent you from using "
-        "the built-in `adv` argument in Avrae commands.\nAre you sure you want to "
+        "a built-in argument `adv` if one exists.\nAre you sure you want to "
         "create this snippet? (Reply with yes/no)",
         regex=False,
     )

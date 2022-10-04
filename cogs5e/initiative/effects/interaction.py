@@ -95,7 +95,9 @@ class AttackInteraction(InitEffectInteraction):
         return attack
 
     def __str__(self):
-        return f"Attack: {self.inner_attack.name}"
+        if not (activation_type := self.inner_attack.activation_type):
+            activation_type = "Attack"
+        return f"{activation_type}: {self.inner_attack.name}"
 
 
 class ButtonInteraction(InitEffectInteraction):

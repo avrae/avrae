@@ -521,8 +521,8 @@ async def _snippet_before_edit(ctx, name=None, delete=False):
     name = name.lower()
     if name in SPECIAL_ARGS or name.startswith("-"):
         confirmation = (
-            f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument"
-            " in Avrae commands.\nAre you sure you want to create this snippet? (Reply with yes/no)"
+            f"**Warning:** Creating a snippet named `{name}` will prevent you from using a built-in argument `{name}`"
+            " if one exists.\nAre you sure you want to create this snippet? (Reply with yes/no)"
         )
     # roll string checking
     try:

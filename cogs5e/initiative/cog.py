@@ -1125,9 +1125,13 @@ class InitTracker(commands.Cog):
         # argument parsing
         is_player = isinstance(combatant, PlayerCombatant)
         if is_player and combatant.character_owner == str(ctx.author.id):
-            args = await helpers.parse_snippets(unparsed_args, ctx, character=combatant.character)
+            args = await helpers.parse_snippets(
+                unparsed_args, ctx, character=combatant.character, base_args=[combatant.name, atk_name]
+            )
         else:
-            args = await helpers.parse_snippets(unparsed_args, ctx, statblock=combatant)
+            args = await helpers.parse_snippets(
+                unparsed_args, ctx, statblock=combatant, base_args=[combatant.name, atk_name]
+            )
         args = argparse(args)
 
         # attack selection/caster handling
@@ -1222,7 +1226,7 @@ class InitTracker(commands.Cog):
         skill_key = await search_and_select(ctx, constants.SKILL_NAMES, check, camel_to_title)
         embed = disnake.Embed(color=combatant.get_color())
 
-        args = await helpers.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx, base_args=[combatant_name, check])
         args = argparse(args)
 
         result = checkutils.run_check(skill_key, combatant, args, embed)
@@ -1270,7 +1274,7 @@ class InitTracker(commands.Cog):
             return await ctx.send("Groups cannot make saves.")
 
         embed = disnake.Embed(color=combatant.get_color())
-        args = await helpers.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx, base_args=[combatant_name, save])
         args = argparse(args)
 
         result = checkutils.run_save(save, combatant, args, embed)
@@ -1327,9 +1331,11 @@ class InitTracker(commands.Cog):
 
         is_character = isinstance(combatant, PlayerCombatant)
         if is_character and combatant.character_owner == str(ctx.author.id):
-            args = await helpers.parse_snippets(args, ctx, character=combatant.character)
+            args = await helpers.parse_snippets(
+                args, ctx, character=combatant.character, base_args=[combatant_name, spell_name]
+            )
         else:
-            args = await helpers.parse_snippets(args, ctx, statblock=combatant)
+            args = await helpers.parse_snippets(args, ctx, statblock=combatant, base_args=[combatant_name, spell_name])
         args = argparse(args)
 
         if not args.last("i", type_=bool):

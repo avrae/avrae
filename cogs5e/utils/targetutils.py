@@ -77,7 +77,11 @@ async def definitely_combat(ctx: "AvraeContext", combat: "Combat", args: ParsedA
             contextargs = argparse(contextargs)
 
         try:
-            target = await combat.select_combatant(ctx, t, f"Select target #{i + 1}.", select_group=allow_groups)
+            target = await combat.select_combatant(
+                t,
+                f"Pick your {i+1}{['th','st','nd','rd','th'][(n // 10 % 10 != 1) * min(n % 10, 4)]} target.",
+                select_group=allow_groups,
+            )
         except SelectionException:
             raise InvalidArgument(f"Target {t} not found.")
 

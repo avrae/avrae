@@ -996,7 +996,11 @@ class InitTracker(commands.Cog):
         targets = []
 
         for i, t in enumerate([target_name] + args.get("t")):
-            target = await combat.select_combatant(ctx, t, f"Select target #{i + 1}.", select_group=True)
+            target = await combat.select_combatant(
+                t,
+                f"Pick your {i+1}{['th','st','nd','rd','th'][(n // 10 % 10 != 1) * min(n % 10, 4)]} target.",
+                select_group=True,
+            )
             if isinstance(target, CombatantGroup):
                 targets.extend(target.get_combatants())
             else:

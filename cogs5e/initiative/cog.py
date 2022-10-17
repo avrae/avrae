@@ -524,6 +524,7 @@ class InitTracker(commands.Cog):
         Rerolls initiative for all combatants, and starts a new round of combat.
         __Valid Arguments__
         `-restart` - Resets the round counter (effectively restarting initiative).
+        `-effects` - Removes all effects from all combatants
         """
         combat = await ctx.get_combat()
         a = argparse(args)
@@ -534,6 +535,11 @@ class InitTracker(commands.Cog):
         # -restart (#1053)
         if a.last("restart"):
             combat.round_num = 0
+
+        # -reset (#1867)
+        if a.last("effects"):
+            [combatant.remove_all_effects() for combatant in combat.combatants]
+            await ctx.send("Removed effects from all combatants.")
 
         # repost summary message
         old_summary = combat.get_summary_msg()

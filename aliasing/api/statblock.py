@@ -782,7 +782,7 @@ class AliasSpellbook:
         """
         return self._spellbook.max_pact_slots
 
-    def get(self, spell_name: str):
+    def find(self, spell_name: str):
         """
         Returns a list of the spells of the given name in the spellbook, case-insensitive.
 

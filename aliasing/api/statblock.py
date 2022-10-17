@@ -697,6 +697,7 @@ class AliasSpellbook:
         """
         self._spellbook = spellbook
         self._spells = None
+        self._spell_dict = None
 
     @property
     def dc(self):
@@ -781,6 +782,19 @@ class AliasSpellbook:
         :rtype: int or None
         """
         return self._spellbook.max_pact_slots
+
+    def get(self, spell_name: str):
+        """
+        Returns the spell of the given name, case-insensitive, if it's in the spellbook, or None if it is not.
+
+        :rtype: AliasSpellbookSpell or None
+        """
+        if self._spell_dict is None:
+            if self._spells is None:
+                self._spells = [AliasSpellbookSpell(s) for s in self._spellbook.spells]
+            self._spell_dict = {spell.name.lower(): spell for spell in self._spells}
+
+        return self._spell_dict.get(spell_name.lower())
 
     def slots_str(self, level):
         """

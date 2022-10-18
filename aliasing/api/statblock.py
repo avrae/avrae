@@ -782,6 +782,17 @@ class AliasSpellbook:
         """
         return self._spellbook.max_pact_slots
 
+    def find(self, spell_name: str):
+        """
+        Returns a list of the spells of the given name in the spellbook, case-insensitive.
+
+        :rtype: List[AliasSpellbookSpell]
+        """
+        if self._spells is None:
+            self._spells = [AliasSpellbookSpell(s) for s in self._spellbook.spells]
+
+        return [spell for spell in self._spells if spell_name.lower() == spell.name.lower()]
+
     def slots_str(self, level):
         """
         :param int level: The level of spell slot to return.

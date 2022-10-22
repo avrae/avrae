@@ -324,7 +324,6 @@ class IEffect(Effect):
                 concentration=self.concentration,
                 desc=desc,
             )
-            root_effect = effect
             autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
 
         return IEffectResult(effect=effect, conc_conflict=conc_conflict)

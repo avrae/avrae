@@ -58,6 +58,7 @@ class AutomationContext:
             # caster, targets as default (#1335)
             "caster": aliasing.api.statblock.AliasStatBlock(caster),
             "targets": [maybe_alias_statblock(t) for t in targets],
+            "choice": self.args.last("choice", "").lower(),
         }
 
         # spellcasting utils

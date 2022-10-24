@@ -109,6 +109,7 @@ nopact - Uses a normal spell slot instead of a Pact Magic slot, if applicable.
 *cpass/cfail* - Target automatically succeeds or fails the ability check if a DC is given.
 
 **Other**
+-choice <choice> - Provides input to the attack. Not all attacks will utilize this argument.
 -h - Hides rolled values.
 -phrase <phrase> - Adds flavor text.
 -title <title> - Changes the title of the attack. Replaces [name] with the caster's name, [aname] with the action's name, and [verb] with the action's verb.

@@ -454,6 +454,15 @@ class Character(StatBlock):
         spell_in_book = next(s for s in self.spellbook.spells if s.name == sb_spell.name)
         self.spellbook.spells.remove(spell_in_book)
 
+    def remove_all_known_spells(self):
+        """
+        Removes all spells from the character's spellbook overrides.
+        """
+        for spell_to_remove in self.overrides.spells:
+            spell_in_book = next(s for s in self.spellbook.spells if s.name == spell_to_remove.name)
+            self.spellbook.spells.remove(spell_in_book)
+        self.overrides.spells = []
+
     # ---------- CUSTOM COUNTERS ----------
     async def select_consumable(self, ctx, name):
         return await search_and_select(ctx, self.consumables, name, lambda ctr: ctr.name)

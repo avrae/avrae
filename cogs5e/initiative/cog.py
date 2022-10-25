@@ -341,9 +341,15 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
         `-b <condition bonus>` - Adds a bonus to the combatants' Initiative roll.
+        `-p <value>` - Places combatant at the given value, instead of rolling.
+        `-mc <minimum roll>` - Sets the minimum roll on the dice (e.g. Reliable Talent, Glibness)
+        `str`/`dex`/`con`/`int`/`wis`/`cha` - Rolls using a different stat base
+
+        `-title <title>` - Changes the title of the attack. Replaces [name] with caster's name and [cname] with the check's name.
+        `-f "Field Title|Field Text"` - Creates a field with the given title and text (see `!help embed`).
         `-phrase <phrase>` - Adds flavor text.
         `-thumb <thumbnail URL>` - Adds flavor image.
-        `-p <value>` - Places combatant at the given value, instead of rolling.
+
         `-h` - Hides HP, AC, Resists, etc.
         `-group <group>` - Adds the combatant to a group.
         `-note <note>` - Sets the combatant's note.

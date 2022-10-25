@@ -515,6 +515,29 @@ class GameTrack(commands.Cog):
         await character.commit(ctx)
         await ctx.send(f"{spell_to_remove.name} removed from spellbook override.")
 
+    @spellbook.command(name="remove_all", aliases=["removeall"])
+    async def spellbook_remove_all(self, ctx):
+        """
+        Removes all spell overrides from the spellbook.
+        """
+        character: Character = await ctx.get_character()
+
+        num_to_remove = len(character.overrides.spells)
+        if not num_to_remove:
+            return await ctx.send("You have no spellbook overrides.")
+
+        if not await confirm(
+            ctx,
+            f"This will remove {num_to_remove} override{'s' if num_to_remove>1 else ''} from your spellbook. "
+            "Are you *absolutely sure* you want to continue?",
+        ):
+            return await ctx.send("Unconfirmed. Aborting.")
+
+        character.remove_all_known_spells()
+
+        await character.commit(ctx)
+        await ctx.send(f"{num_to_remove} spells removed from spellbook override.")
+
     @commands.group(invoke_without_command=True, name="customcounter", aliases=["cc"])
     async def customcounter(self, ctx, name=None, *, modifier=None):
         """Commands to implement custom counters.

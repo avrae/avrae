@@ -431,6 +431,24 @@ class AliasCharacter(AliasStatBlock):
             self._coinpurse = AliasCoinpurse(self._character.coinpurse, self._character)
         return self._coinpurse
 
+    @property
+    def description(self):
+        """
+        The description of the character.
+
+        :rtype: str or None
+        """
+        return self._character.description
+
+    @property
+    def image(self):
+        """
+        The image url for the character.
+
+        :rtype: str
+        """
+        return self._character.image
+
     # --- private helpers ----
     async def func_commit(self, ctx):
         await self._character.commit(ctx)

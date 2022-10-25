@@ -145,7 +145,7 @@ class Damage(Effect):
             if ">" in dtype:
                 *froms, to = dtype.split(">")
                 for frm in froms:
-                    transforms[frm.strip()] = to.strip()
+                    transforms[frm.strip().lower()] = to.strip().lower()
             else:
                 transforms[None] = dtype
         # display damage transforms (#1103)

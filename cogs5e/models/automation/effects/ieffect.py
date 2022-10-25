@@ -306,8 +306,11 @@ class IEffect(Effect):
                         f"Could not set IEffect parent: The variable `{self.parent}` is not an initiative effect "
                         f"(expected SimpleEffect, got `{type(parent_ref).__name__}`)."
                     )
-                # noinspection PyProtectedMember
-                explicit_parent = parent_ref.parent._effect
+
+                # parent_ref.parent is None in data tests
+                if parent_ref.parent:
+                    # noinspection PyProtectedMember
+                    explicit_parent = parent_ref.parent._effect
 
             if parent_effect := stack_parent or explicit_parent or conc_parent:
                 effect.set_parent(parent_effect)

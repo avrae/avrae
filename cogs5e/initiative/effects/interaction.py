@@ -95,7 +95,7 @@ class AttackInteraction(InitEffectInteraction):
             spell=spell,
             spell_level_override=self.granting_spell_cast_level,
             ieffect=self.effect,
-            choice=self.granting_choice,
+            granting_choice=self.granting_choice,
         )
         return attack
 

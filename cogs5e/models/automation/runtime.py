@@ -41,7 +41,7 @@ class AutomationContext:
         allow_caster_ieffects: bool = True,
         allow_target_ieffects: bool = True,
         from_button: bool = False,
-        granted_choice: str = "",
+        granting_choice: str = "",
     ):
         # runtime options
         self.ctx = ctx
@@ -59,7 +59,7 @@ class AutomationContext:
             # caster, targets as default (#1335)
             "caster": aliasing.api.statblock.AliasStatBlock(caster),
             "targets": [maybe_alias_statblock(t) for t in targets],
-            "choice": self.args.last("choice", granted_choice).lower(),
+            "choice": self.args.last("choice", granting_choice).lower(),
         }
 
         # spellcasting utils

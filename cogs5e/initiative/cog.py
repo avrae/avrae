@@ -544,7 +544,8 @@ class InitTracker(commands.Cog):
 
         # -reset (#1867)
         if a.last("effects"):
-            [combatant.remove_all_effects() for combatant in combat.combatants]
+            for combatant in combat.get_combatants(groups=True):
+                combatant.remove_all_effects()
             await ctx.send("Removed effects from all combatants.")
 
         # repost summary message

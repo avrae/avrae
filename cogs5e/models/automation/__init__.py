@@ -53,7 +53,7 @@ class Automation:
         allow_caster_ieffects: bool = True,
         allow_target_ieffects: bool = True,
         from_button: bool = False,
-        granting_choice: str = "",
+        original_choice: str = "",
     ) -> AutomationResult:
         """
         Runs automation.
@@ -79,7 +79,7 @@ class Automation:
         :param allow_target_ieffects: Whether effects granted by ieffects on a target (usually defensive like
                                       -sb, sadv, -ac, -resist, etc) are considered during execution.
         :param from_button: Whether this automation is being run from a button or not
-        :param granting_choice: The -choice arg as granted from a parent ieffect to a ButtonInteraction or AttackInteraction
+        :param original_choice: The -choice arg as granted from a parent ieffect to a ButtonInteraction or AttackInteraction
         """
         if not targets:
             targets = []
@@ -101,7 +101,7 @@ class Automation:
             allow_caster_ieffects=allow_caster_ieffects,
             allow_target_ieffects=allow_target_ieffects,
             from_button=from_button,
-            granting_choice=granting_choice,
+            original_choice=original_choice,
         )
 
         automation_results = []

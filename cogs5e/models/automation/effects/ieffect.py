@@ -494,7 +494,7 @@ class _AttackInteractionWrapper:
             override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
             granting_spell_id=autoctx.spell.entity_id if autoctx.is_spell else None,
             granting_spell_cast_level=autoctx.get_cast_level(),
-            granting_choice=autoctx.metavars["choice"],
+            original_choice=autoctx.metavars["choice"],
         )
 
 
@@ -576,7 +576,7 @@ class _ButtonInteractionWrapper:
             override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
             granting_spell_id=autoctx.spell.entity_id if autoctx.is_spell else None,
             granting_spell_cast_level=autoctx.get_cast_level(),
-            granting_choice=autoctx.metavars["choice"],
+            original_choice=autoctx.metavars["choice"],
         )
 
 

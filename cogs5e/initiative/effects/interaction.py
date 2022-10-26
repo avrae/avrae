@@ -42,7 +42,7 @@ class AttackInteraction(InitEffectInteraction):
         override_default_casting_mod: Optional[int] = None,
         granting_spell_id: Optional[int] = None,
         granting_spell_cast_level: Optional[int] = None,
-        granting_choice: str = "",
+        original_choice: str = "",
     ):
         self.inner_attack = attack
         self.override_default_dc = override_default_dc
@@ -50,7 +50,7 @@ class AttackInteraction(InitEffectInteraction):
         self.override_default_casting_mod = override_default_casting_mod
         self.granting_spell_id = granting_spell_id
         self.granting_spell_cast_level = granting_spell_cast_level
-        self.granting_choice = granting_choice
+        self.original_choice = original_choice
 
     @classmethod
     def from_dict(cls, data):
@@ -61,7 +61,7 @@ class AttackInteraction(InitEffectInteraction):
             override_default_casting_mod=data.get("override_default_casting_mod"),
             granting_spell_id=data.get("granting_spell_id"),
             granting_spell_cast_level=data.get("granting_spell_cast_level"),
-            granting_choice=data.get("granting_choice", ""),
+            original_choice=data.get("original_choice", ""),
         )
 
     def to_dict(self):
@@ -72,7 +72,7 @@ class AttackInteraction(InitEffectInteraction):
             "override_default_casting_mod": self.override_default_casting_mod,
             "granting_spell_id": self.granting_spell_id,
             "granting_spell_cast_level": self.granting_spell_cast_level,
-            "granting_choice": self.granting_choice,
+            "original_choice": self.original_choice,
         }
 
     @property
@@ -95,7 +95,7 @@ class AttackInteraction(InitEffectInteraction):
             spell=spell,
             spell_level_override=self.granting_spell_cast_level,
             ieffect=self.effect,
-            granting_choice=self.granting_choice,
+            original_choice=self.original_choice,
         )
         return attack
 
@@ -121,7 +121,7 @@ class ButtonInteraction(InitEffectInteraction):
         override_default_casting_mod: Optional[int] = None,
         granting_spell_id: Optional[int] = None,
         granting_spell_cast_level: Optional[int] = None,
-        granting_choice: str = "",
+        original_choice: str = "",
     ):
         self.id = id
         self.automation = automation
@@ -133,7 +133,7 @@ class ButtonInteraction(InitEffectInteraction):
         self.override_default_casting_mod = override_default_casting_mod
         self.granting_spell_id = granting_spell_id
         self.granting_spell_cast_level = granting_spell_cast_level
-        self.granting_choice = granting_choice
+        self.original_choice = original_choice
 
     @classmethod
     def new(
@@ -148,7 +148,7 @@ class ButtonInteraction(InitEffectInteraction):
         override_default_casting_mod: Optional[int] = None,
         granting_spell_id: Optional[int] = None,
         granting_spell_cast_level: Optional[int] = None,
-        granting_choice: str = "",
+        original_choice: str = "",
     ):
         return cls(
             id=create_button_interaction_id(),
@@ -161,7 +161,7 @@ class ButtonInteraction(InitEffectInteraction):
             override_default_casting_mod=override_default_casting_mod,
             granting_spell_id=granting_spell_id,
             granting_spell_cast_level=granting_spell_cast_level,
-            granting_choice=granting_choice,
+            original_choice=original_choice,
         )
 
     @classmethod
@@ -179,7 +179,7 @@ class ButtonInteraction(InitEffectInteraction):
             override_default_casting_mod=data.get("override_default_casting_mod"),
             granting_spell_id=data.get("granting_spell_id"),
             granting_spell_cast_level=data.get("granting_spell_cast_level"),
-            granting_choice=data.get("granting_choice", ""),
+            original_choice=data.get("original_choice", ""),
         )
 
     def to_dict(self):
@@ -194,7 +194,7 @@ class ButtonInteraction(InitEffectInteraction):
             "override_default_casting_mod": self.override_default_casting_mod,
             "granting_spell_id": self.granting_spell_id,
             "granting_spell_cast_level": self.granting_spell_cast_level,
-            "granting_choice": self.granting_choice,
+            "original_choice": self.original_choice,
         }
 
     def __str__(self):

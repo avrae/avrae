@@ -1178,6 +1178,7 @@ class InitTracker(commands.Cog):
                     attack = await actionutils.select_action(
                         ctx, atk_name, attacks=combatant.attacks, message="Select your attack."
                     )
+            ctx.nlp_caster = caster
         except SelectionException:
             return await ctx.send("Attack not found.")
 
@@ -1341,6 +1342,7 @@ class InitTracker(commands.Cog):
             combatant = await get_selection(
                 ctx, combatant.get_combatants(), key=lambda com: com.name, message="Select the caster."
             )
+        ctx.nlp_caster = combatant
 
         is_character = isinstance(combatant, PlayerCombatant)
         if is_character and combatant.character_owner == str(ctx.author.id):

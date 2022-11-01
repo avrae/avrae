@@ -102,6 +102,7 @@ class ButtonHandler:
             spell=spell,
             spell_level_override=button_interaction.granting_spell_cast_level,
             from_button=True,
+            original_choice=button_interaction.original_choice,
         )
 
         # and send the result

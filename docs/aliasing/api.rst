@@ -391,7 +391,24 @@ Python Builtins
 Draconic Functions
 ^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: utils.argparser.argparse(args)
+.. function:: argparse(args, parse_ephem=True)
+
+    Given an argument string or list, returns the parsed arguments using the argument nondeterministic finite automaton.
+
+    If *parse_ephem* is False, arguments like ``-d1`` are saved literally rather than as an ephemeral argument.
+
+    .. note::
+
+        Arguments must begin with a letter and not end with a number (e.g. ``d``, ``e12s``, ``a!!``). Values immediately
+        following a flag argument (i.e. one that starts with ``-``) will not be parsed as arguments unless they are also
+        a flag argument.
+
+        There are three exceptions to this rule: ``-i``, ``-h``, and ``-v``, none of which take additional values.
+
+    :param args: A list or string of arguments.
+    :param bool parse_ephem:  Whether to treat args like ``-d1`` as ephemeral arguments or literal ones.
+    :return: The parsed arguments
+    :rtype: :class:`~utils.argparser.ParsedArguments()`
 
     >>> args = argparse("adv -rr 2 -b 1d4[bless]")
     >>> args.adv()

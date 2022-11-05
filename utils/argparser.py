@@ -106,6 +106,8 @@ def argparse(args, character=None, splitter=argsplit, parse_ephem=True) -> "Pars
     If the argument is a string, uses *splitter* to split the string into args.
     If *parse_ephem* is False, arguments like ``-d1`` are saved literally rather than as an ephemeral argument.
 
+    Draconic docs for this are not linked, and will have to be manually updated if this function changes.
+
     .. note::
 
         Arguments must begin with a letter and not end with a number (e.g. ``d``, ``e12s``, ``a!!``). Values immediately

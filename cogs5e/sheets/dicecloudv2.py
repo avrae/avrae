@@ -65,6 +65,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         sheet_type = "dicecloudv2"
         import_version = SHEET_VERSION
         name = self.character_data["creatures"][0]["name"].strip()
+        description = None #TODO
         image = self.character_data["characters"][0]["picture"]
         
         for prop in self.character_data['creatureProperties']:
@@ -74,7 +75,65 @@ class DicecloudV2Parser(SheetLoaderABC):
         
         stats = self.get_stats()
         levels = self.get_levels()
-        actions, attacks = self.get_attacks()
+        actions, attacks = self.get_attacks() #TODO: parser unfinished
+        
+        skills, saves = self.get_skills_and_saves() #TODO
+
+        coinpurse = self.get_coinpurse() #TODO
+
+        resistances = self.get_resistances() #TODO
+        ac = self.get_ac() #TODO
+        max_hp = None #TODO
+        hp = max_hp
+        temp_hp = 0 #TODO 
+
+        cvars = {}
+        overrides = {}
+        death_saves = {}
+
+        consumables = []
+        if not args.last("nocc"):
+            consumables = self.get_custom_counters() #TODO
+
+        spellbook = self.get_spellbook() #TODO
+        live = self.is_live() #TODO
+        race = None #TODO
+        background = None #TODO
+        actions += self.get_actions() #TODO
+        
+        actions = Actions(actions)
+
+        character = Character(
+            owner_id,
+            upstream,
+            active,
+            sheet_type,
+            import_version,
+            name,
+            description,
+            image,
+            stats,
+            levels,
+            attacks,
+            skills,
+            resistances,
+            saves,
+            ac,
+            max_hp,
+            hp,
+            temp_hp,
+            cvars,
+            overrides,
+            consumables,
+            death_saves,
+            spellbook,
+            live,
+            race,
+            background,
+            actions=actions,
+            coinpurse=coinpurse,
+        )
+        return character
         
     async def get_character(self):
         """Saves the character JSON data to this object."""

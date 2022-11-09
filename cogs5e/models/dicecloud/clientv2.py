@@ -5,7 +5,7 @@ import urllib.parse
 
 from utils import config
 from .errors import InsertFailure, LoginFailure
-from .http import DicecloudV2HTTP
+from .httpv2 import DicecloudV2HTTP
 
 API_BASE = "https://beta.dicecloud.com/api"
 

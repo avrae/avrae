@@ -218,7 +218,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions = []
         consumables = []
         atk_names = set()
-        for attack in self._by_type.get("actions", {}).values():
+        for attack in self._by_type.get("action", {}).values():
             if not attack.get("inactive"):
                 if (g_actions := get_actions_for_name(attack["name"])) and len(g_actions) <= 20:
                     for g_action in g_actions:

@@ -70,9 +70,9 @@ class DicecloudV2Parser(SheetLoaderABC):
         active = False
         sheet_type = "dicecloudv2"
         import_version = SHEET_VERSION
-        name = self.character_data["creatures"][0]["name"].strip()
+        name = self.character_data["creatures"][0].get("name",'').strip()
         description = None  # TODO
-        image = self.character_data["creatures"][0]["picture"]
+        image = self.character_data["creatures"][0].get("picture", '')
 
         for prop in self.character_data["creatureProperties"]:
             if prop.get("removed"):
@@ -106,7 +106,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         spellbook = self.get_spellbook()  # TODO
         live = None  # TODO: implement live character
-        race = None  # TODO
+        race = next((filler['name'] for filler in self._by_type['slotFiller'].values() if 'race' in filler['tags']), None)
         background = None  # TODO
         actions += self.get_actions()
 
@@ -250,7 +250,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         return actions, consumables, attacks
     
     def get_skills_and_saves(self) -> (Skills, Saves):
-        return Skills({}), Saves({})
+        return Skills.default(self.stats), Saves.default(self.stats)
     
     def get_resistances(self) -> Resistances:
         return Resistances.from_dict({})

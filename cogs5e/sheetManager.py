@@ -496,7 +496,7 @@ class SheetManager(commands.Cog):
         url = old_character.upstream
         args = argparse(args)
 
-        prefixes = "dicecloud-", "google-", "beyond-"
+        prefixes = "dicecloud-", "google-", "beyond-", "dicecloudv2-"
         _id = url[:]
         for p in prefixes:
             if url.startswith(p):
@@ -506,6 +506,9 @@ class SheetManager(commands.Cog):
         if sheet_type == "dicecloud":
             parser = DicecloudParser(_id)
             loading = await ctx.send("Updating character data from Dicecloud...")
+        elif sheet_type == "dicecloudv2":
+            parser = DicecloudV2Parser(_id)
+            loading = await ctx.send("Updating character data from Dicecloud V2...")
         elif sheet_type == "google":
             parser = GoogleSheet(_id)
             loading = await ctx.send("Updating character data from Google...")

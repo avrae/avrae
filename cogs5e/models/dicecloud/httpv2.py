@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import dateutil.parser as dtparser
-import datetime
+import time
 
 import aiohttp
 
@@ -75,7 +75,7 @@ class DicecloudV2HTTP:
         )  # we did 10 loops and never got 200, so we must have 429ed
 
     async def get_auth(self):
-        if not self.auth_token or self.expiration <= datetime.utcnow():
+        if not self.auth_token or self.expiration <= time.time():
             data = await self.try_until_max("POST", "/login", {"username": self.username, "password": self.password})
             self.auth_token = data["token"]
             self.user_id = data["id"]

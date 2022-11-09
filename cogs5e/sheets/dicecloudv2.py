@@ -73,7 +73,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                 continue
             self._by_type[prop['type']][prop['id']] = self._all[prop['id']] = prop
         
-        stats = self.get_stats()
+        max_hp, ac, stats = self.get_stats()
         levels = self.get_levels()
         actions, attacks = self.get_attacks() #TODO: parser unfinished
         
@@ -82,10 +82,8 @@ class DicecloudV2Parser(SheetLoaderABC):
         coinpurse = self.get_coinpurse() #TODO
 
         resistances = self.get_resistances() #TODO
-        ac = self.get_ac() #TODO
-        max_hp = None #TODO
         hp = max_hp
-        temp_hp = 0 #TODO 
+        temp_hp = 0 #TODO: not in SRD, implement anyways?
 
         cvars = {}
         overrides = {}
@@ -148,8 +146,8 @@ class DicecloudV2Parser(SheetLoaderABC):
             raise Exception("You must call get_character() first.")
         if self.stats:
             return self.stats
-        stats = ("proficiencyBonus", "strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma")
-        stat_dict = {attr['variableName']: attr['value'] for attr in self._by_type['attribute'] if attr['variableName'] in stats}
+        stats = ("proficiencyBonus", "strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma", "armor", "hitPoints")
+        stat_dict = {attr['variableName']: attr['total'] for attr in self._by_type['attribute'] if attr['variableName'] in stats}
 
         stats = BaseStats(
             stat_dict["proficiencyBonus"],
@@ -162,7 +160,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         )
 
         self.stats = stats
-        return stats
+        return stat_dict['hitPoints'], stat_dict['armor'], stats
     
     def get_levels(self) -> Levels:
         """Returns a dict with the character's level and class levels."""

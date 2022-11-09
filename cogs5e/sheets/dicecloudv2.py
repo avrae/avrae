@@ -70,9 +70,9 @@ class DicecloudV2Parser(SheetLoaderABC):
         active = False
         sheet_type = "dicecloudv2"
         import_version = SHEET_VERSION
-        name = self.character_data["creatures"][0].get("name",'').strip()
+        name = self.character_data["creatures"][0].get("name", "").strip()
         description = None  # TODO
-        image = self.character_data["creatures"][0].get("picture", '')
+        image = self.character_data["creatures"][0].get("picture", "")
 
         for prop in self.character_data["creatureProperties"]:
             if prop.get("removed"):
@@ -106,7 +106,17 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         spellbook = self.get_spellbook()  # TODO
         live = None  # TODO: implement live character
-        race = next((filler['name'] for filler in self._by_type['slotFiller'].values() if 'race' in filler['tags']), None)
+        race = next(
+            (filler["name"] for filler in self._by_type["slotFiller"].values() if "race" in filler["tags"]), None
+        )
+        subrace = next(
+            (filler["name"] for filler in self._by_type["slotFiller"].values() if "subrace" in filler["tags"]), ""
+        )
+        if subrace and race in subrace:
+            race = subrace
+        elif subrace:
+            race = subrace + " " + race
+
         background = None  # TODO
         actions += self.get_actions()
 
@@ -169,7 +179,9 @@ class DicecloudV2Parser(SheetLoaderABC):
             "hitPoints",
         )
         stat_dict = {
-            attr["variableName"]: attr["total"] for attr in self._by_type["attribute"].values() if attr["variableName"] in stats
+            attr["variableName"]: attr["total"]
+            for attr in self._by_type["attribute"].values()
+            if attr["variableName"] in stats
         }
 
         stats = BaseStats(
@@ -205,7 +217,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         level_obj = Levels(out)
         self.levels = level_obj
         return level_obj
-    
+
     def get_coinpurse(self):
         return Coinpurse(0, 0, 0, 0, 0)
 
@@ -235,7 +247,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                             )
                         )
                     continue
-                continue #TODO: remove once attack parser is done
+                continue  # TODO: remove once attack parser is done
                 atk = self.parse_attack(attack)
 
                 # unique naming
@@ -248,10 +260,10 @@ class DicecloudV2Parser(SheetLoaderABC):
 
                 attacks.append(atk)
         return actions, consumables, attacks
-    
+
     def get_skills_and_saves(self) -> (Skills, Saves):
         return Skills.default(self.stats), Saves.default(self.stats)
-    
+
     def get_resistances(self) -> Resistances:
         return Resistances.from_dict({})
 
@@ -261,8 +273,8 @@ class DicecloudV2Parser(SheetLoaderABC):
 
     def get_custom_counters(self):  # TODO: get counters
         return []
-    
-    def get_spellbook(self): #TODO: get spellbook
+
+    def get_spellbook(self):  # TODO: get spellbook
         return Spellbook()
 
     # helper functions

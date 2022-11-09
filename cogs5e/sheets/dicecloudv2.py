@@ -17,7 +17,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.clientv2 import DicecloudV2Client
 from cogs5e.models.dicecloud.errors import DicecloudException
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet.action import Actions
+from cogs5e.models.sheet.action import Action, Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances

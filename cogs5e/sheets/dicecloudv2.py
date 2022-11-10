@@ -204,7 +204,7 @@ class DicecloudV2Parser(SheetLoaderABC):
             "hitPoints",
         )
 
-        slots = {}
+        slots = {str(i): 0 for i in range(1, 10)} | {"pact": {}}
         stat_dict = {}
         base_checks = {}
         try:
@@ -218,7 +218,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                     if attr["variableName"] == "pactSlot":
                         slots["pact"] = {"num": attr["total"], "level": attr["spellSlotLevel"]["value"]}
                     else:
-                        slots[str(attr["spellSlotLevel"]["value"])] = attr["total"]
+                        slots[str(attr["spellSlotLevel"]["value"])] += attr["total"]
         except KeyError as e:
             if e.args[0] == "total":
                 raise ExternalImportError(f"{attr_name} is missing a spell count")
@@ -386,7 +386,7 @@ class DicecloudV2Parser(SheetLoaderABC):
             raise Exception("You must call get_character() first.")
         potential_spells = list(self._by_type["spell"].values())
 
-        pact = slots.pop("pact")
+        pact = slots.pop("pact") if "pact" in slots else {}
 
         spell_lists = {}  # list_id: (name, ab, dc, scam)
         for sl in self._by_type["spellList"].values():
@@ -464,7 +464,16 @@ class DicecloudV2Parser(SheetLoaderABC):
         smod = max(mods, key=mods.count, default=None)
 
         spellbook = Spellbook(
-            slots, slots, spells, dc, sab, self.get_levels().total_level, smod, pact["level"], pact["num"], pact["num"]
+            slots,
+            slots,
+            spells,
+            dc,
+            sab,
+            self.get_levels().total_level,
+            smod,
+            pact.get("level"),
+            pact.get("num"),
+            pact.get("num"),
         )
 
         log.debug(f"Completed parsing spellbook: {spellbook.to_dict()}")

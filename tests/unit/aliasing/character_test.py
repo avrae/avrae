@@ -41,8 +41,16 @@ class TestAliasCharacterCounter:
 
         # Lower Bound
         with pytest.raises(CounterOutOfBounds):
-            alias_char.mod_cc("Test", -1)
+            alias_char.mod_cc("Test", -1, strict=True)
+
+        alias_char.mod_cc("Test", -1)
+        assert alias_char.get_cc("Test") == 0
 
         # Upper Bound
         with pytest.raises(CounterOutOfBounds):
-            alias_char.mod_cc("Test", +11)
+            alias_char.mod_cc("Test", +11, strict=True)
+
+        alias_char.mod_cc("Test", +11)
+        assert alias_char.get_cc("Test") == 10
+
+        alias_char.delete_cc("Test")

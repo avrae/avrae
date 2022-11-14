@@ -561,7 +561,7 @@ class AliasCustomCounter:
         :return: The cc's new value.
         :rtype: int
         """
-        return self._cc.set(self.value + value, strict)
+        return self.set(self.value + value, strict)
 
     def set(self, new_value, strict=False):
         """

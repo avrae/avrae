@@ -554,7 +554,7 @@ class AliasCustomCounter:
 
     def mod(self, value, strict=False):
         """
-        Modifies the value of a custom counter.
+        Modifies the value of the custom counter.
 
         :param int value: The value to modify the custom counter by.
         :param bool strict: Whether to error when going out of bounds (true) or to clip silently (false).

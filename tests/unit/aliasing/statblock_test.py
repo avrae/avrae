@@ -32,6 +32,7 @@ def test_alias_base_stats():
     assert alias_stats.get("charisma") == 10
     assert alias_stats.get_mod("charisma") == 0
 
+
 # TODO: AliasLevels tests
 # TODO: AliasAttack tests
 # TODO: AliasSkill tests

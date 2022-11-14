@@ -37,7 +37,7 @@ class TestAliasCharacterCounter:
         character = await active_character(avrae)
         alias_char = AliasCharacter(character)
 
-        alias_char.create_cc_nx(name="Test", maxVal="10", minVal="0")
+        alias_char.create_cc_nx(name="Test", maxVal=10, minVal=0)
 
         # Lower Bound
         with pytest.raises(CounterOutOfBounds):

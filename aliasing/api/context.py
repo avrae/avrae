@@ -19,6 +19,7 @@ class AliasContext:
         self._prefix = ctx.prefix
         self._alias = ctx.invoked_with
         self._message_id = ctx.message.id
+        self._full_command = ctx.command.qualified_name if ctx.command else None
 
     @property
     def guild(self):
@@ -68,7 +69,17 @@ class AliasContext:
 
         :rtype: str
         """
+
         return self._alias
+
+    @property
+    def command(self):
+        """
+        The full command string the alias was invoked with.
+
+        :rtype: str or None
+        """
+        return self._full_command
 
     @property
     def message_id(self):
@@ -138,8 +149,16 @@ class AliasChannel:
         self._name = str(channel)
         self._id = channel.id
         self._topic = getattr(channel, "topic", None)
-        self._category = AliasCategory(channel.category) if getattr(channel, "category", None) is not None else None
-        self._parent = AliasChannel(channel.parent) if isinstance(channel, disnake.Thread) else None
+        self._category = (
+            AliasCategory(channel.category)
+            if getattr(channel, "category", None) is not None
+            else None
+        )
+        self._parent = (
+            AliasChannel(channel.parent)
+            if isinstance(channel, disnake.Thread)
+            else None
+        )
 
     @property
     def name(self):

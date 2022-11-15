@@ -56,7 +56,7 @@ class Damage(Effect):
         crit_damage_type = autoctx.crit_type
 
         # character-specific arguments
-        if autoctx.character and "critdice" not in args:
+        if autoctx.character and args.last("critdice") is None:
             critdice = autoctx.character.options.extra_crit_dice
 
         # combat-specific arguments
@@ -145,7 +145,7 @@ class Damage(Effect):
             if ">" in dtype:
                 *froms, to = dtype.split(">")
                 for frm in froms:
-                    transforms[frm.strip()] = to.strip()
+                    transforms[frm.strip().lower()] = to.strip().lower()
             else:
                 transforms[None] = dtype
         # display damage transforms (#1103)

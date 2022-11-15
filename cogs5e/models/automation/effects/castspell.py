@@ -1,14 +1,23 @@
+import aliasing.api.combat
 import gamedata
 import gamedata.lookuputils
-from cogs5e.models.errors import RequiresLicense
+from cogs5e.models.errors import RequiresLicense, InvalidArgument
 from utils.functions import smart_trim
 from . import Effect
+from .ieffect import IEffectMetaVar
 from ..results import CastSpellResult
 
 
 class CastSpell(Effect):
     def __init__(
-        self, id: int, level: int = None, dc: str = None, attackBonus: str = None, castingMod: str = None, **kwargs
+        self,
+        id: int,
+        level: int = None,
+        dc: str = None,
+        attackBonus: str = None,
+        castingMod: str = None,
+        parent: str = None,
+        **kwargs,
     ):
         super().__init__("spell", **kwargs)
         self.id = id
@@ -16,6 +25,7 @@ class CastSpell(Effect):
         self.dc = dc
         self.attack_bonus = attackBonus
         self.casting_mod = castingMod
+        self.parent = parent
 
     def to_dict(self):
         out = super().to_dict()
@@ -26,6 +36,7 @@ class CastSpell(Effect):
                 "dc": self.dc,
                 "attackBonus": self.attack_bonus,
                 "castingMod": self.casting_mod,
+                "parent": self.parent,
             }
         )
         return out
@@ -62,6 +73,19 @@ class CastSpell(Effect):
             old_dc_override = autoctx.dc_override
             old_spell_override = autoctx.evaluator.builtins.get("spell")
             old_level_override = autoctx.spell_level_override
+
+            # parenting
+            explicit_parent = None
+            if self.parent is not None and (parent_ref := autoctx.metavars.get(self.parent, None)) is not None:
+                if not isinstance(parent_ref, (IEffectMetaVar, aliasing.api.combat.SimpleEffect)):
+                    raise InvalidArgument(
+                        f"Could not set IEffect parent: The variable `{self.parent}` is not an IEffectMetaVar "
+                        f"(got `{type(parent_ref).__name__}`)."
+                    )
+                # noinspection PyProtectedMember
+                explicit_parent = parent_ref._effect
+
+            autoctx.conc_effect = explicit_parent
 
             # run the spell using the given values
             if self.attack_bonus is not None:

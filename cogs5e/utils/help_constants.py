@@ -15,7 +15,7 @@ __Valid Arguments__
 str/dex/con/int/wis/cha - Rolls using a different skill base (e.g. Strength (Intimidation))
 
 -phrase <phrase> - Adds flavor text.
--title <title> - Changes the title of the attack. Replaces [name] with caster's name and [cname] with the check's name.
+-title <title> - Changes the title of the check. Replaces [name] with caster's name and [cname] with the check's name.
 -f "Field Title|Field Text" - Creates a field with the given title and text (see `!help embed`).
 -thumb <url> - Adds a thumbnail to the result.
 -h - Hides the name and image of the caster.
@@ -34,7 +34,7 @@ __Valid Arguments__
 -rr <iterations> - How many saves to roll (does not apply to Death Saves).
 
 -phrase <phrase> - Adds flavor text.
--title <title> - Changes the title of the attack. Replaces [name] with caster's name and [sname] with the save's name.
+-title <title> - Changes the title of the save. Replaces [name] with caster's name and [sname] with the save's name.
 -f "Field Title|Field Text" - Creates a field with the given title and text (see `!help embed`).
 -thumb <url> - Adds a thumbnail to the result.
 -h - Hides the name and image of the caster.
@@ -109,6 +109,7 @@ nopact - Uses a normal spell slot instead of a Pact Magic slot, if applicable.
 *cpass/cfail* - Target automatically succeeds or fails the ability check if a DC is given.
 
 **Other**
+-choice <choice> - Provides input to the attack. Not all attacks will utilize this argument.
 -h - Hides rolled values.
 -phrase <phrase> - Adds flavor text.
 -title <title> - Changes the title of the attack. Replaces [name] with the caster's name, [aname] with the action's name, and [verb] with the action's verb.

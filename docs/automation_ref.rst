@@ -40,6 +40,7 @@ All Automation runs provide the following variables:
   targeted by this automation (i.e. the ``-t`` argument).
 - ``spell_attack_bonus`` (:class:`int` or None) - The attack bonus for the spell, or the caster's default attack bonus.
 - ``spell_dc`` (:class:`int` or None) - The DC for the spell, or the caster's default DC.
+- ``choice`` (:class:`str`) - The input provided by the ``-choice`` argument, always lowercase. If the arg was not used, it will be an empty string.
 
 Additionally, runs triggered by an initiative effect (such as automation provided in a :ref:`ButtonInteraction`) provide
 the following variables:
@@ -641,6 +642,7 @@ Roll
         higher?: {int: string};
         cantripScale?: boolean;
         hidden?: boolean;
+        displayName?: string;
     }
 
 Rolls some dice and saves the result in a variable. Displays the roll and its name in a Meta field, unless
@@ -668,6 +670,10 @@ Rolls some dice and saves the result in a variable. Displays the roll and its na
 
         *optional* - If ``true``, won't display the roll in the Meta field, or apply any bonuses from the ``-d``
         argument.
+
+    .. attribute:: displayName
+
+        The name to display in the Meta field. If left blank, it will use the saved name.
 
 **Variables**
 
@@ -896,6 +902,7 @@ Cast Spell
         dc?: IntExpression;
         attackBonus?: IntExpression;
         castingMod?: IntExpression;
+        parent?: string;
     }
 
 Executes the given spell's automation as if it were immediately cast. Does not use a spell
@@ -928,6 +935,11 @@ This is usually used in features that cast spells using alternate resources (i.e
 
         *optional* - The spellcasting modifier to use when casting the spell. If not provided, defaults to the caster's
         default spellcasting modifier.
+
+    .. attribute:: parent
+
+        *optional, default None* - If supplied, sets the spells created effect's parent to the given effect. This must be the
+        name of an existing :class:`IEffectMetaVar`. Useful for handling concentration.
 
 **Variables**
 

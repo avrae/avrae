@@ -350,7 +350,7 @@ async def update_gvar(ctx, gid, value):
 
 
 # snippets
-async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
+async def parse_snippets(args, ctx, statblock=None, character=None, base_args=None) -> str:
     """
     Parses user and server snippets, including any inline scripting.
 
@@ -358,6 +358,7 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
     :param ctx: The Context.
     :param statblock: The statblock to populate locals from.
     :param character: If passed, provides the base character to use character-scoped functions against.
+    :param base_args: The args to pass through to the snippet code via &ARGS&
     :return: The string, with snippets replaced.
     """
     # make args a list of str
@@ -365,6 +366,10 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
         args = argsplit(args)
     if not isinstance(args, list):
         args = list(args)
+
+    original_args = args[:]
+    if base_args is not None:
+        original_args = base_args + original_args
 
     # set up the evaluator
     evaluator = await evaluators.ScriptingEvaluator.new(ctx)
@@ -387,6 +392,7 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
                 await workshop_entitlements_check(ctx, the_snippet)
 
             if the_snippet:
+                the_snippet.code = the_snippet.code.replace("&ARGS&", str(original_args))
                 # enter the evaluator
                 execution_scope = ExecutionScope.SERVER_SNIPPET if server_invoker else ExecutionScope.PERSONAL_SNIPPET
                 args[index] = await evaluator.transformed_str_async(

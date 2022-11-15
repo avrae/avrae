@@ -391,7 +391,24 @@ Python Builtins
 Draconic Functions
 ^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: utils.argparser.argparse(args)
+.. function:: argparse(args, parse_ephem=True)
+
+    Given an argument string or list, returns the parsed arguments using the argument nondeterministic finite automaton.
+
+    If *parse_ephem* is False, arguments like ``-d1`` are saved literally rather than as an ephemeral argument.
+
+    .. note::
+
+        Arguments must begin with a letter and not end with a number (e.g. ``d``, ``e12s``, ``a!!``). Values immediately
+        following a flag argument (i.e. one that starts with ``-``) will not be parsed as arguments unless they are also
+        a flag argument.
+
+        There are three exceptions to this rule: ``-i``, ``-h``, and ``-v``, none of which take additional values.
+
+    :param args: A list or string of arguments.
+    :param bool parse_ephem:  Whether to treat args like ``-d1`` as ephemeral arguments or literal ones.
+    :return: The parsed arguments
+    :rtype: :class:`~utils.argparser.ParsedArguments()`
 
     >>> args = argparse("adv -rr 2 -b 1d4[bless]")
     >>> args.adv()
@@ -693,6 +710,32 @@ the ``hello`` and ``hello_utils`` example modules used above for an example!
 .. note::
 
     Because all gvars are public to anyone who knows the address, modules are open-source by default.
+
+Catching Exceptions
+-------------------
+
+Draconic supports a modified version of Python's exception handling ("try-except") syntax, the most significant
+difference being that exceptions must be caught explicitly by passing the *exact name* of the exception type to the
+``except`` clause as a string or tuple of strings. A bare ``except`` may also be used to catch any exception in the
+``try`` block.
+
+For example, to cast an arbitrary string to an integer and catch errors raised by ``int()``:
+
+.. code-block:: text
+
+    !test <drac2>
+    some_string = "123"
+    try:
+        return int(some_string)
+    except ("ValueError", "TypeError"):
+        return "I couldn't parse an int!"
+    </drac2>
+
+.. note::
+
+    Unlike Python, only the exact exception type given by a string will be matched, without subclass checking.
+
+Draconic ``try`` statements also support ``else`` and ``finally`` blocks, similar to Python.
 
 See Also
 --------

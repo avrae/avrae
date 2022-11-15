@@ -299,6 +299,18 @@ class IEffect(Effect):
                     )
                 # noinspection PyProtectedMember
                 explicit_parent = parent_ref._effect
+            # explicit support for parenting to the parent of this ieffect's parent
+            elif self.parent == "ieffect.parent" and (parent_ref := autoctx.metavars.get("ieffect", None)) is not None:
+                if not isinstance(parent_ref, aliasing.api.combat.SimpleEffect):
+                    raise InvalidArgument(
+                        f"Could not set IEffect parent: The variable `{self.parent}` is not an initiative effect "
+                        f"(expected SimpleEffect, got `{type(parent_ref).__name__}`)."
+                    )
+
+                # parent_ref.parent is None in data tests
+                if parent_ref.parent:
+                    # noinspection PyProtectedMember
+                    explicit_parent = parent_ref.parent._effect
 
             if parent_effect := stack_parent or explicit_parent or conc_parent:
                 effect.set_parent(parent_effect)
@@ -482,6 +494,7 @@ class _AttackInteractionWrapper:
             override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
             granting_spell_id=autoctx.spell.entity_id if autoctx.is_spell else None,
             granting_spell_cast_level=autoctx.get_cast_level(),
+            original_choice=autoctx.metavars["choice"],
         )
 
 
@@ -563,6 +576,7 @@ class _ButtonInteractionWrapper:
             override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
             granting_spell_id=autoctx.spell.entity_id if autoctx.is_spell else None,
             granting_spell_cast_level=autoctx.get_cast_level(),
+            original_choice=autoctx.metavars["choice"],
         )
 
 

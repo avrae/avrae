@@ -32,7 +32,8 @@ from ddb.gamelog.errors import NoCampaignLink
 from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete
+from utils.enums import ActivationType
+from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title
 from utils.settings.character import CHARACTER_SETTINGS
 
 log = logging.getLogger(__name__)
@@ -47,8 +48,8 @@ class SheetManager(commands.Cog):
         self.bot = bot
 
     @staticmethod
-    async def new_arg_stuff(args, ctx, character):
-        args = await helpers.parse_snippets(args, ctx, character=character)
+    async def new_arg_stuff(args, ctx, character, base_args=None):
+        args = await helpers.parse_snippets(args, ctx, character=character, base_args=base_args)
         args = argparse(args)
         return args
 
@@ -66,7 +67,7 @@ class SheetManager(commands.Cog):
             return await self.action_list(ctx)
 
         char: Character = await ctx.get_character()
-        args = await self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char, base_args=[atk_name])
         hide = args.last("h", type_=bool)
         embed = embeds.EmbedWithCharacter(char, name=False, image=not hide)
 
@@ -123,9 +124,26 @@ class SheetManager(commands.Cog):
         -phrase <text> - Some flavor text to add to each attack with this attack.
         -thumb <image url> - The attack's image.
         -c <extra crit damage> - How much extra damage (beyond doubling dice) this attack does on a crit.
+        -activation <value> - The activation type of the action (e.g. action, bonus, etc).```
+        | Action Type  | Value |
+        +==============+=======+
+        | Action       | 1     |
+        | No Action    | 2     |
+        | Bonus Action | 3     |
+        | Reaction     | 4     |
+        | Minute       | 6     |
+        | Hour         | 7     |
+        | Special      | 8     |
+        | Legendary    | 9     |
+        | Mythic       | 10    |
+        | Lair         | 11    |```
         """
         character: Character = await ctx.get_character()
         parsed = argparse(args)
+
+        activation = parsed.last("activation", type_=int)
+        if activation is not None:
+            activation = ActivationType(activation)
 
         attack = Attack.new(
             name,
@@ -138,6 +156,7 @@ class SheetManager(commands.Cog):
             phrase=parsed.join("phrase", "\n"),
             thumb=parsed.last("thumb"),
             extra_crit_damage=parsed.last("c"),
+            activation_type=activation,
         )
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
@@ -231,7 +250,7 @@ class SheetManager(commands.Cog):
 
         char: Character = await ctx.get_character()
 
-        args = await self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char, base_args=[skill])
 
         hide = args.last("h", type_=bool)
 
@@ -257,8 +276,8 @@ class SheetManager(commands.Cog):
     )
     async def check(self, ctx, check, *args):
         char: Character = await ctx.get_character()
-        skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
-        args = await self.new_arg_stuff(args, ctx, char)
+        skill_key = await search_and_select(ctx, SKILL_NAMES, check, camel_to_title)
+        args = await self.new_arg_stuff(args, ctx, char, base_args=[check])
 
         hide = args.last("h", type_=bool)
 

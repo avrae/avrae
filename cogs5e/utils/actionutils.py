@@ -103,8 +103,10 @@ async def run_action(
     else:
         name = "An unknown creature"
 
+    verb = args.last("verb", "uses")
+
     if args.last("title") is not None:
-        embed.title = args.last("title").replace("[name]", name).replace("[aname]", action.name)
+        embed.title = args.last("title").replace("[name]", name).replace("[aname]", action.name).replace("[verb]", verb)
     else:
         embed.title = f"{name} uses {action.name}!"
 
@@ -245,8 +247,10 @@ async def cast_spell(
         ab_override = mod + prof_bonus
         spell_override = mod
     elif with_arg is not None:
-        if with_arg not in constants.STAT_ABBREVIATIONS:
+        abbr_with = with_arg[:3].lower()
+        if abbr_with not in constants.STAT_ABBREVIATIONS:
             raise InvalidArgument(f"{with_arg} is not a valid stat to cast with.")
+        with_arg = abbr_with
         mod = caster.stats.get_mod(with_arg)
         dc_override = 8 + mod + caster.stats.prof_bonus
         ab_override = mod + caster.stats.prof_bonus

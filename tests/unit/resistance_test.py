@@ -1,4 +1,4 @@
-from cogs5e.models.sheet.resistance import Resistance
+from cogs5e.models.sheet.resistance import Resistance, Resistances
 
 
 def test_simple_resistance():
@@ -62,3 +62,23 @@ def test_resistance_from_str():
     assert Resistance("fire", unless=["abc"], only=["def"]) == Resistance.from_str("nonabc def fire")
     assert Resistance("fire", only=["cold"]) == Resistance.from_str("cold fire")
     assert Resistance("cold", only=["fire"]) == Resistance.from_str("fire cold")
+
+
+def test_resistances_util_methods():
+    r = Resistances(
+        resist=[Resistance.from_str("resist"), Resistance.from_str("resist neutral")],
+        immune=[Resistance.from_str("immune"), Resistance.from_str("immune neutral")],
+        vuln=[Resistance.from_str("vuln"), Resistance.from_str("vuln neutral")],
+        neutral=[Resistance("neutral")],
+    )
+    assert r.is_resistant("resist")
+    assert not r.is_resistant("resist neutral")
+    assert r.is_immune("immune")
+    assert not r.is_immune("immune neutral")
+    assert r.is_vulnerable("vuln")
+    assert not r.is_vulnerable("vuln neutral")
+    assert r.is_neutral("neutral")
+    assert r.is_neutral("resist neutral")
+    assert r.is_neutral("immune neutral")
+    assert r.is_neutral("vuln neutral")
+    assert not r.is_neutral("foo")

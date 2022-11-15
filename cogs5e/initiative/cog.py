@@ -26,6 +26,7 @@ from utils.functions import (
     get_selection,
     search_and_select,
     try_delete,
+    camel_to_title,
 )
 from . import (
     Combat,
@@ -340,9 +341,15 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
         `-b <condition bonus>` - Adds a bonus to the combatants' Initiative roll.
+        `-p <value>` - Places combatant at the given value, instead of rolling.
+        `-mc <minimum roll>` - Sets the minimum roll on the dice (e.g. Reliable Talent, Glibness)
+        `str`/`dex`/`con`/`int`/`wis`/`cha` - Rolls using a different stat base
+
+        `-title <title>` - Changes the title of the attack. Replaces [name] with caster's name and [cname] with the check's name.
+        `-f "Field Title|Field Text"` - Creates a field with the given title and text (see `!help embed`).
         `-phrase <phrase>` - Adds flavor text.
         `-thumb <thumbnail URL>` - Adds flavor image.
-        `-p <value>` - Places combatant at the given value, instead of rolling.
+
         `-h` - Hides HP, AC, Resists, etc.
         `-group <group>` - Adds the combatant to a group.
         `-note <note>` - Sets the combatant's note.
@@ -523,6 +530,7 @@ class InitTracker(commands.Cog):
         Rerolls initiative for all combatants, and starts a new round of combat.
         __Valid Arguments__
         `-restart` - Resets the round counter (effectively restarting initiative).
+        `-effects` - Removes all effects from all combatants
         """
         combat = await ctx.get_combat()
         a = argparse(args)
@@ -533,6 +541,12 @@ class InitTracker(commands.Cog):
         # -restart (#1053)
         if a.last("restart"):
             combat.round_num = 0
+
+        # -reset (#1867)
+        if a.last("effects"):
+            for combatant in combat.get_combatants(groups=True):
+                combatant.remove_all_effects()
+            await ctx.send("Removed effects from all combatants.")
 
         # repost summary message
         old_summary = combat.get_summary_msg()
@@ -1124,9 +1138,13 @@ class InitTracker(commands.Cog):
         # argument parsing
         is_player = isinstance(combatant, PlayerCombatant)
         if is_player and combatant.character_owner == str(ctx.author.id):
-            args = await helpers.parse_snippets(unparsed_args, ctx, character=combatant.character)
+            args = await helpers.parse_snippets(
+                unparsed_args, ctx, character=combatant.character, base_args=[combatant.name, atk_name]
+            )
         else:
-            args = await helpers.parse_snippets(unparsed_args, ctx, statblock=combatant)
+            args = await helpers.parse_snippets(
+                unparsed_args, ctx, statblock=combatant, base_args=[combatant.name, atk_name]
+            )
         args = argparse(args)
 
         # attack selection/caster handling
@@ -1160,6 +1178,7 @@ class InitTracker(commands.Cog):
                     attack = await actionutils.select_action(
                         ctx, atk_name, attacks=combatant.attacks, message="Select your attack."
                     )
+            ctx.nlp_caster = caster
         except SelectionException:
             return await ctx.send("Attack not found.")
 
@@ -1218,10 +1237,10 @@ class InitTracker(commands.Cog):
         if isinstance(combatant, CombatantGroup):
             return await ctx.send("Groups cannot make checks.")
 
-        skill_key = await search_and_select(ctx, constants.SKILL_NAMES, check, lambda s: s)
+        skill_key = await search_and_select(ctx, constants.SKILL_NAMES, check, camel_to_title)
         embed = disnake.Embed(color=combatant.get_color())
 
-        args = await helpers.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx, base_args=[combatant_name, check])
         args = argparse(args)
 
         result = checkutils.run_check(skill_key, combatant, args, embed)
@@ -1269,7 +1288,7 @@ class InitTracker(commands.Cog):
             return await ctx.send("Groups cannot make saves.")
 
         embed = disnake.Embed(color=combatant.get_color())
-        args = await helpers.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx, base_args=[combatant_name, save])
         args = argparse(args)
 
         result = checkutils.run_save(save, combatant, args, embed)
@@ -1323,12 +1342,15 @@ class InitTracker(commands.Cog):
             combatant = await get_selection(
                 ctx, combatant.get_combatants(), key=lambda com: com.name, message="Select the caster."
             )
+        ctx.nlp_caster = combatant
 
         is_character = isinstance(combatant, PlayerCombatant)
         if is_character and combatant.character_owner == str(ctx.author.id):
-            args = await helpers.parse_snippets(args, ctx, character=combatant.character)
+            args = await helpers.parse_snippets(
+                args, ctx, character=combatant.character, base_args=[combatant_name, spell_name]
+            )
         else:
-            args = await helpers.parse_snippets(args, ctx, statblock=combatant)
+            args = await helpers.parse_snippets(args, ctx, statblock=combatant, base_args=[combatant_name, spell_name])
         args = argparse(args)
 
         if not args.last("i", type_=bool):

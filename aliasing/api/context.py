@@ -76,6 +76,8 @@ class AliasContext:
     def command(self):
         """
         The full command string the alias was invoked with.
+        This will be None when called inside an Alias, as the command string cannot be determined until after the alias
+        is run.
 
         :rtype: str or None
         """

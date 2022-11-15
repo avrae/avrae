@@ -144,6 +144,11 @@ class ContextBotProxy:
     def author(self):
         return self.guild.get_member(int(DEFAULT_USER_ID))
 
+    @property
+    def command(self):
+        # 1878, used in AvraeContext
+        return None
+
 
 class MessageProxy:
     def __init__(self):

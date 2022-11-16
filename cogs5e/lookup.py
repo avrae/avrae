@@ -1023,35 +1023,20 @@ class Lookup(commands.Cog):
         available_entities = await entity_source(ctx)
         # Items have 4 entity types and as such return a dict
         if isinstance(available_entities, dict):
-            converted_entities = []
-            for e_type, entities in available_entities.items():
-                converted_entities.extend(
-                    [
-                        CachedSourced(
-                            name=e.name,
-                            entity_type=e_type,
-                            source=e.source,
-                            homebrew=e.homebrew,
-                            entity_id=e.entity_id,
-                            is_free=e.is_free,
-                            is_legacy=e.is_legacy,
-                        )
-                        for e in entities
-                    ]
-                )
-        else:
-            converted_entities = [
-                CachedSourced(
-                    name=e.name,
-                    entity_type=entity_type,
-                    source=e.source,
-                    homebrew=e.homebrew,
-                    entity_id=e.entity_id,
-                    is_free=e.is_free,
-                    is_legacy=e.is_legacy,
-                )
-                for e in available_entities
-            ]
+            available_entities = list(itertools.chain.from_iterable(available_entities.values()))
+
+        converted_entities = [
+            CachedSourced(
+                name=e.name,
+                entity_type=e.entity_type,
+                source=e.source,
+                homebrew=e.homebrew,
+                entity_id=e.entity_id,
+                is_free=e.is_free,
+                is_legacy=e.is_legacy,
+            )
+            for e in available_entities
+        ]
 
         # cache monsters
         ENTITY_CACHE[key] = converted_entities

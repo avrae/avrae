@@ -6,6 +6,7 @@ Created on Nov 29, 2016
 import itertools
 import logging
 
+import cachetools
 import disnake
 from disnake.ext import commands
 
@@ -19,12 +20,15 @@ from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
 from gamedata.lookuputils import create_selectkey, lookup_converter
 from gamedata.race import RaceFeature
+from gamedata.shared import CachedSourced
 from utils import checks, img
 from utils.argparser import argparse
 from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str, try_delete, search
 from utils.settings import ServerSettings
 
 LARGE_THRESHOLD = 200
+ENTITY_TTL = 15 * 60
+ENTITY_CACHE = cachetools.TTLCache(64, ENTITY_TTL)
 
 log = logging.getLogger(__name__)
 
@@ -552,7 +556,7 @@ class Lookup(commands.Cog):
 
     @slash_monster.autocomplete("name")
     async def slash_monster_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
-        choices = await lookuputils.get_monster_choices(inter)
+        choices = await self._get_entities(inter, "monster", lookuputils.get_monster_choices)
 
         available_ids = {"monster": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "monster")}
         select_key = create_selectkey(available_ids)
@@ -819,7 +823,7 @@ class Lookup(commands.Cog):
 
     @slash_spell.autocomplete("name")
     async def slash_spell_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
-        choices = await lookuputils.get_spell_choices(inter)
+        choices = await self._get_entities(inter, "spell", lookuputils.get_spell_choices)
 
         available_ids = {"spell": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "spell")}
         select_key = create_selectkey(available_ids)
@@ -910,12 +914,18 @@ class Lookup(commands.Cog):
 
     @slash_item.autocomplete("name")
     async def slash_item_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
-        choices = await lookuputils.get_item_entitlement_choice_map(inter)
+        choices = await self._get_entities(inter, "item", lookuputils.get_item_entitlement_choice_map)
 
-        available_ids = {k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in choices}
+        choice_dict = {}
+        for choice in choices:
+            if choice.entity_type not in choice_dict:
+                choice_dict[choice.entity_type] = []
+            choice_dict[choice.entity_type].append(choice)
+
+        available_ids = {k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in choice_dict}
 
         select_key = create_selectkey(available_ids)
-        result, strict = search(list(itertools.chain.from_iterable(choices.values())), user_input, lambda e: e.name, 25)
+        result, strict = search(choices, user_input, lambda e: e.name, 25)
         if strict:
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
@@ -987,6 +997,66 @@ class Lookup(commands.Cog):
         if guild_settings is None:
             return ctx
         return ctx.author if guild_settings.lookup_pm_result else ctx
+
+    async def _get_entities(self, ctx, entity_type, entity_source):
+        """
+        Caches a minimal version of each entity of a given type available to a user for a particular context
+        """
+        if ctx.guild is None:
+            key = f"{entity_type}.{ctx.author.id}"
+        else:
+            key = f"{entity_type}.{ctx.guild.id}.{ctx.author.id}"
+
+        # L1: Memory
+        l1_entity_cache = ENTITY_CACHE.get(key)
+        if l1_entity_cache is not None:
+            log.debug("found available entities in l1 (memory) cache")
+            return l1_entity_cache
+
+        # L2: Redis
+        l2_entity_cache = await ctx.bot.rdb.jget(key)
+        if l2_entity_cache is not None:
+            log.debug("found available entities in l2 (redis) cache")
+            return [CachedSourced.from_dict(e) for e in l2_entity_cache]
+
+        # fetch it all
+        available_entities = await entity_source(ctx)
+        # Items have 4 entity types and as such return a dict
+        if isinstance(available_entities, dict):
+            converted_entities = []
+            for e_type, entities in available_entities.items():
+                converted_entities.extend(
+                    [
+                        CachedSourced(
+                            name=e.name,
+                            entity_type=e_type,
+                            source=e.source,
+                            homebrew=e.homebrew,
+                            entity_id=e.entity_id,
+                            is_free=e.is_free,
+                            is_legacy=e.is_legacy,
+                        )
+                        for e in entities
+                    ]
+                )
+        else:
+            converted_entities = [
+                CachedSourced(
+                    name=e.name,
+                    entity_type=entity_type,
+                    source=e.source,
+                    homebrew=e.homebrew,
+                    entity_id=e.entity_id,
+                    is_free=e.is_free,
+                    is_legacy=e.is_legacy,
+                )
+                for e in available_entities
+            ]
+
+        # cache monsters
+        ENTITY_CACHE[key] = converted_entities
+        await self.bot.rdb.jsetex(key, [m.to_dict() for m in converted_entities], ENTITY_TTL)
+        return converted_entities
 
     # ==== listeners ====
     @commands.Cog.listener()

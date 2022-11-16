@@ -1,6 +1,6 @@
 import abc
 
-__all__ = ("Sourced", "Trait", "LimitedUse")
+__all__ = ("Sourced", "Trait", "LimitedUse", "CachedSourced")
 
 
 class Sourced(abc.ABC):
@@ -116,3 +116,42 @@ class LimitedUse(Sourced):
             entitlement_entity_id=parent.entitlement_entity_id,
             entitlement_entity_type=parent.entitlement_entity_type,
         )
+
+
+class CachedSourced(Sourced):
+    def __init__(self, name, entity_type, **kwargs):
+        self.name = name
+        self.entity_type = entity_type
+        Sourced.__init__(
+            self,
+            homebrew=kwargs["homebrew"],
+            source=kwargs["source"],
+            entity_id=kwargs.get("entity_id"),
+            page=kwargs.get("page"),
+            url=kwargs.get("url"),
+            is_free=kwargs.get("is_free"),
+            is_legacy=kwargs.get("is_legacy"),
+        )
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(
+            d["name"],
+            d["entity_type"],
+            homebrew=d["homebrew"],
+            source=d["source"],
+            entity_id=d["entity_id"],
+            is_free=d["is_free"],
+            is_legacy=d["is_legacy"],
+        )
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "entity_type": self.entity_type,
+            "homebrew": self.homebrew,
+            "source": self.source,
+            "entity_id": self.entity_id,
+            "is_free": self.is_free,
+            "is_legacy": self.is_legacy,
+        }

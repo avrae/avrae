@@ -260,8 +260,9 @@ async def on_resumed():
     log.info("resumed.")
 
 
-@bot.event
-async def on_command_error(ctx, error):
+@bot.listen("on_command_error")
+@bot.listen("on_slash_command_error")
+async def command_errors(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         return
 

@@ -336,7 +336,10 @@ async def command_errors(ctx, error):
         "Please join <https://support.avrae.io> and let us know about the error!"
     )
 
-    log.warning("Error caused by message: `{}`".format(ctx.message.content))
+    if hasattr(ctx, "message"):
+        log.warning("Error caused by message: `{}`".format(ctx.message.content))
+    else:
+        log.warning("Error caused by slash command: `/{}` with options: {}".format(ctx.data.name, ctx.options))
     for line in traceback.format_exception(type(error), error, error.__traceback__):
         log.warning(line)
 

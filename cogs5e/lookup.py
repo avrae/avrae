@@ -14,11 +14,12 @@ import gamedata
 import ui
 import utils.settings
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
+from cogs5e.models.errors import RequiresLicense
 from cogsmisc.stats import Stats
 from gamedata import lookuputils
 from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
-from gamedata.lookuputils import create_selectkey, lookup_converter
+from gamedata.lookuputils import create_selectkey, lookup_converter, can_access
 from gamedata.race import RaceFeature
 from gamedata.shared import CachedSourced
 from utils import checks, img
@@ -44,8 +45,8 @@ class Lookup(commands.Cog):
         pass
 
     # ==== rules/references ====
-    @staticmethod
-    async def _show_reference_options(ctx, destination):
+    async def _show_reference_options(self, ctx):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = "Rules"
         categories = ", ".join(a["type"] for a in compendium.rule_references)
@@ -61,8 +62,8 @@ class Lookup(commands.Cog):
 
         await destination.send(embed=embed)
 
-    @staticmethod
-    async def _show_action_options(ctx, actiontype, destination):
+    async def _show_action_options(self, ctx, actiontype):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = actiontype["fullName"]
 
@@ -76,32 +77,29 @@ class Lookup(commands.Cog):
     @commands.command(aliases=["status"])
     async def condition(self, ctx, *, name: str = None):
         """Looks up a condition."""
-        destination = await self._get_destination(ctx)
         if not name:
             name = "condition"
         else:
             name = f"Condition: {name}"
-        await self._rule(ctx, name, destination)
+        await self._rule(ctx, name)
 
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
-        destination = await self._get_destination(ctx)
-
         if name is None:
-            return await self._show_reference_options(ctx, destination)
+            return await self._show_reference_options(ctx)
 
         options = []
         for actiontype in compendium.rule_references:
             if name == actiontype["type"]:
-                return await self._show_action_options(ctx, actiontype, destination)
+                return await self._show_action_options(ctx, actiontype)
             else:
                 options.extend(actiontype["items"])
 
         result, metadata = await search_and_select(ctx, options, name, lambda e: e["fullName"], return_metadata=True)
         await lookuputils.add_training_data(self.bot.mdb, "reference", name, result["fullName"], metadata=metadata)
 
-        return await self._rule(ctx, result, await self._get_destination(ctx))
+        return await self._rule(ctx, result)
 
     @slash_lookup.sub_command(name="rule", description="Looks up a rule or condition.")
     async def slash_rule(
@@ -116,7 +114,7 @@ class Lookup(commands.Cog):
                 await inter.send("Rule not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._rule(inter, name, inter)
+        return await self._rule(inter, name)
 
     @slash_rule.autocomplete("name")
     async def slash_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -129,8 +127,8 @@ class Lookup(commands.Cog):
             return [result["fullName"]]
         return [r["fullName"] for r in result][:25]
 
-    @staticmethod
-    async def _rule(ctx, rule, destination):
+    async def _rule(self, ctx, rule):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = rule["fullName"]
         embed.description = f"*{rule['short']}*"
@@ -144,7 +142,7 @@ class Lookup(commands.Cog):
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
         result: gamedata.Feat = await lookuputils.search_entities(ctx, {"feat": compendium.feats}, name)
-        return await self._feat(ctx, result, await self._get_destination(ctx))
+        return await self._feat(ctx, result)
 
     @slash_lookup.sub_command(name="feat", description="Looks up a feat.")
     async def slash_feat(
@@ -159,7 +157,8 @@ class Lookup(commands.Cog):
                 await inter.send("Feat not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._feat(inter, name, inter)
+        await self._check_access(inter, name, ["feat"])
+        return await self._feat(inter, name)
 
     @slash_feat.autocomplete("name")
     async def slash_feat_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -171,8 +170,8 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    @staticmethod
-    async def _feat(ctx, result: gamedata.feat, destination):
+    async def _feat(self, ctx, result: gamedata.feat):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
@@ -189,7 +188,7 @@ class Lookup(commands.Cog):
         result: RaceFeature = await lookuputils.search_entities(
             ctx, {"race": compendium.rfeats, "subrace": compendium.subrfeats}, name, "racefeat"
         )
-        return await self._racefeat(ctx, result, await self._get_destination(ctx))
+        return await self._racefeat(ctx, result)
 
     @slash_lookup.sub_command(name="racefeat", description="Looks up a racial feature.")
     async def slash_racefeat(
@@ -204,7 +203,8 @@ class Lookup(commands.Cog):
                 await inter.send("Racial feature not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._racefeat(inter, name, inter)
+        await self._check_access(inter, name, ["race", "subrace"])
+        return await self._racefeat(inter, name)
 
     @slash_racefeat.autocomplete("name")
     async def slash_racefeat_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -218,8 +218,8 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    @staticmethod
-    async def _racefeat(ctx, result: RaceFeature, destination):
+    async def _racefeat(self, ctx, result: RaceFeature):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
@@ -233,7 +233,7 @@ class Lookup(commands.Cog):
         result: gamedata.Race = await lookuputils.search_entities(
             ctx, {"race": compendium.races, "subrace": compendium.subraces}, name, "race"
         )
-        return await self._race(ctx, result, await self._get_destination(ctx))
+        return await self._race(ctx, result)
 
     @slash_lookup.sub_command(name="race", description="Looks up a race.")
     async def slash_race(
@@ -248,7 +248,8 @@ class Lookup(commands.Cog):
                 await inter.send("Race not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._race(inter, name, inter)
+        await self._check_access(inter, name, ["race"])
+        return await self._race(inter, name)
 
     @slash_race.autocomplete("name")
     async def slash_race_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -262,8 +263,8 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    @staticmethod
-    async def _race(ctx, result: gamedata.race, destination):
+    async def _race(self, ctx, result: gamedata.race):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
@@ -281,7 +282,7 @@ class Lookup(commands.Cog):
         result: ClassFeature = await lookuputils.search_entities(
             ctx, {"class": compendium.cfeats, "class-feature": compendium.optional_cfeats}, name, query_type="classfeat"
         )
-        return await self._classfeat(ctx, result, await self._get_destination(ctx))
+        return await self._classfeat(ctx, result)
 
     @slash_lookup.sub_command(name="classfeat", description="Looks up a class feature.")
     async def slash_classfeat(
@@ -296,7 +297,8 @@ class Lookup(commands.Cog):
                 await inter.send("Class feature not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._classfeat(inter, name, inter)
+        await self._check_access(inter, name, ["class", "class-feature"])
+        return await self._classfeat(inter, name)
 
     @slash_classfeat.autocomplete("name")
     async def slash_classfeat_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -311,8 +313,8 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    @staticmethod
-    async def _classfeat(ctx, result: ClassFeature, destination):
+    async def _classfeat(self, ctx, result: ClassFeature):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
@@ -327,7 +329,7 @@ class Lookup(commands.Cog):
             return await ctx.send("Invalid level.")
 
         result: gamedata.Class = await lookuputils.search_entities(ctx, {"class": compendium.classes}, name)
-        return await self._class(ctx, result, level, await self._get_destination(ctx))
+        return await self._class(ctx, result, level)
 
     @slash_lookup.sub_command(name="class", description="Looks up a class, or all features of a certain level.")
     async def slash_class(
@@ -347,7 +349,8 @@ class Lookup(commands.Cog):
                 await inter.send("Class not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._class(inter, name, level, inter)
+        await self._check_access(inter, name, ["class"])
+        return await self._class(inter, name, level)
 
     @slash_class.autocomplete("name")
     async def slash_class_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -358,7 +361,8 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    async def _class(self, ctx, result: gamedata.Class, level, destination):
+    async def _class(self, ctx, result: gamedata.Class, level):
+        destination = await self._get_destination(ctx)
         prefix = (await self.bot.get_prefix(ctx))[-1]
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -418,7 +422,7 @@ class Lookup(commands.Cog):
         result: gamedata.Subclass = await lookuputils.search_entities(
             ctx, {"class": compendium.subclasses}, name, query_type="subclass"
         )
-        return await self._subclass(ctx, result, await self._get_destination(ctx))
+        return await self._subclass(ctx, result)
 
     @slash_lookup.sub_command(name="subclass", description="Looks up a subclass.")
     async def slash_subclass(
@@ -433,7 +437,8 @@ class Lookup(commands.Cog):
                 await inter.send("Subclass not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._subclass(inter, name, inter)
+        await self._check_access(inter, name, ["subclass"])
+        return await self._subclass(inter, name)
 
     @slash_subclass.autocomplete("name")
     async def slash_subclass_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -444,8 +449,8 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    async def _subclass(self, ctx, result: gamedata.Subclass, destination):
-
+    async def _subclass(self, ctx, result: gamedata.Subclass):
+        destination = await self._get_destination(ctx)
         prefix = (await self.bot.get_prefix(ctx))[-1]
 
         embed = EmbedWithAuthor(ctx)
@@ -471,7 +476,7 @@ class Lookup(commands.Cog):
         result: gamedata.Background = await lookuputils.search_entities(
             ctx, {"background": compendium.backgrounds}, name
         )
-        return await self._background(ctx, result, await self._get_destination(ctx))
+        return await self._background(ctx, result)
 
     @slash_lookup.sub_command(name="background", description="Looks up a background.")
     async def slash_background(
@@ -486,7 +491,8 @@ class Lookup(commands.Cog):
                 await inter.send("Background not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._background(inter, name, inter)
+        await self._check_access(inter, name, ["background"])
+        return await self._background(inter, name)
 
     @slash_background.autocomplete("name")
     async def slash_background_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -497,8 +503,8 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    @staticmethod
-    async def _background(ctx, result: gamedata.Background, destination):
+    async def _background(self, ctx, result: gamedata.Background):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
         embed.title = result.name
@@ -534,7 +540,7 @@ class Lookup(commands.Cog):
         choices = await lookuputils.get_monster_choices(ctx)
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=pm_lookup)
 
-        return await self._monster(ctx, monster, hide_name, await self._get_destination(ctx))
+        return await self._monster(ctx, monster, hide_name)
 
     @slash_lookup.sub_command(name="monster", description="Looks up a monster.")
     async def slash_monster(
@@ -552,7 +558,8 @@ class Lookup(commands.Cog):
                 await inter.send("Monster not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._monster(inter, name, hide_name, inter)
+        await self._check_access(inter, name, ["monster"])
+        return await self._monster(inter, name, hide_name)
 
     @slash_monster.autocomplete("name")
     async def slash_monster_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -565,8 +572,8 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    @staticmethod
-    async def _monster(ctx, monster: gamedata.Monster, hide_name, destination):
+    async def _monster(self, ctx, monster: gamedata.Monster, hide_name):
+        destination = await self._get_destination(ctx)
         if ctx.guild is not None:
             if hasattr(ctx, "get_server_settings"):
                 guild_settings = await ctx.get_server_settings()
@@ -804,7 +811,7 @@ class Lookup(commands.Cog):
         choices = await lookuputils.get_spell_choices(ctx)
         spell = await lookuputils.search_entities(ctx, {"spell": choices}, name)
 
-        return await self._spell(ctx, spell, await self._get_destination(ctx))
+        return await self._spell(ctx, spell)
 
     @slash_lookup.sub_command(name="spell", description="Looks up a spell.")
     async def slash_spell(
@@ -819,7 +826,8 @@ class Lookup(commands.Cog):
                 await inter.send("Spell not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._spell(inter, name, inter)
+        await self._check_access(inter, name, ["spell"])
+        return await self._spell(inter, name)
 
     @slash_spell.autocomplete("name")
     async def slash_spell_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -833,10 +841,8 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    @staticmethod
-    async def _spell(ctx, spell: gamedata.spell, destination):
-        """Looks up a spell."""
-
+    async def _spell(self, ctx, spell: gamedata.spell):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.url = spell.url
         color = embed.colour
@@ -895,7 +901,7 @@ class Lookup(commands.Cog):
         choices = await lookuputils.get_item_entitlement_choice_map(ctx)
         item = await lookuputils.search_entities(ctx, choices, name, query_type="item")
 
-        return await self._item(ctx, item, await self._get_destination(ctx))
+        return await self._item(ctx, item)
 
     @slash_lookup.sub_command(name="item", description="Looks up an item.")
     async def slash_item(
@@ -910,7 +916,8 @@ class Lookup(commands.Cog):
                 await inter.send("Item not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._item(inter, name, inter)
+        await self._check_access(inter, name, ["adventuring-gear", "armor", "magic-item", "weapons"])
+        return await self._item(inter, name)
 
     @slash_item.autocomplete("name")
     async def slash_item_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
@@ -930,9 +937,9 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
-    @staticmethod
-    async def _item(ctx, item: gamedata.item, destination):
+    async def _item(self, ctx, item: gamedata.item):
         """Looks up an item."""
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
 
         embed.title = item.name
@@ -993,10 +1000,24 @@ class Lookup(commands.Cog):
     # ==== helpers ====
     @staticmethod
     async def _get_destination(ctx):
-        guild_settings = await ctx.get_server_settings()
+        if hasattr(ctx, "get_server_settings"):
+            guild_settings = await ctx.get_server_settings()
+            slash_command = False
+        else:
+            guild_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+            slash_command = True
         if guild_settings is None:
             return ctx
+        if slash_command and guild_settings.lookup_pm_result:
+            await ctx.send("Result sent to messages.", ephemeral=True)
         return ctx.author if guild_settings.lookup_pm_result else ctx
+
+    async def _check_access(self, inter, entity: "Sourced", entity_choices: list[str]):
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in entity_choices
+        }
+        if not can_access(entity, available_ids[entity.entitlement_entity_type]):
+            raise RequiresLicense(entity, available_ids[entity.entitlement_entity_type] is not None)
 
     async def _get_entities(self, ctx, entity_type, entity_source):
         """

@@ -21,7 +21,7 @@ from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
 from gamedata.lookuputils import create_selectkey, lookup_converter, can_access
 from gamedata.race import RaceFeature
-from gamedata.shared import CachedSourced
+from gamedata.shared import CachedSourced, Sourced
 from utils import checks, img
 from utils.argparser import argparse
 from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str, try_delete, search
@@ -1012,7 +1012,7 @@ class Lookup(commands.Cog):
             await ctx.send("Result sent to messages.", ephemeral=True)
         return ctx.author if guild_settings.lookup_pm_result else ctx
 
-    async def _check_access(self, inter, entity: "Sourced", entity_choices: list[str]):
+    async def _check_access(self, inter, entity: Sourced, entity_choices: list[str]):
         available_ids = {
             k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in entity_choices
         }

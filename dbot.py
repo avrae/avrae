@@ -13,6 +13,7 @@ import motor.motor_asyncio
 import psutil
 import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
+from disnake import ApplicationCommandInteraction
 from disnake.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from disnake.ext import commands
 from disnake.ext.commands.errors import CommandInvokeError
@@ -260,8 +261,9 @@ async def on_resumed():
     log.info("resumed.")
 
 
-@bot.event
-async def on_command_error(ctx, error):
+@bot.listen("on_command_error")
+@bot.listen("on_slash_command_error")
+async def command_errors(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         return
 
@@ -335,7 +337,10 @@ async def on_command_error(ctx, error):
         "Please join <https://support.avrae.io> and let us know about the error!"
     )
 
-    log.warning("Error caused by message: `{}`".format(ctx.message.content))
+    if isinstance(ctx, ApplicationCommandInteraction):
+        log.warning(f"Error caused by slash command: `/{ctx.data.name}` with options: {ctx.options}")
+    else:
+        log.warning(f"Error caused by message: `{ctx.message.content}`")
     for line in traceback.format_exception(type(error), error, error.__traceback__):
         log.warning(line)
 

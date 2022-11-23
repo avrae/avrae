@@ -437,7 +437,7 @@ class Lookup(commands.Cog):
                 await inter.send("Subclass not found.", ephemeral=True)
                 return
             name = name[0]
-        await self._check_access(inter, name, ["subclass"])
+        await self._check_access(inter, name, ["class"])
         return await self._subclass(inter, name)
 
     @slash_subclass.autocomplete("name")

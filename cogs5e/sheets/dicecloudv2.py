@@ -16,6 +16,7 @@ from cogs5e.models.sheet.coinpurse import Coinpurse
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.clientv2 import DicecloudV2Client
 from cogs5e.models.dicecloud.errors import DicecloudException
+from cogs5e.models.dicecloud.autoparser import DCV2AutoParser
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.action import Action, Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
@@ -55,13 +56,15 @@ ADV_INT_MAP = {-1: False, 0: None, 1: True}
 class DicecloudV2Parser(SheetLoaderABC):
     def __init__(self, url):
         super(DicecloudV2Parser, self).__init__(url)
-        self.stats = None
+        self.parsed_attrs = None
         self.levels = None
         self.args = None
         self.coinpurse = None
-        self._by_type = collections.defaultdict(lambda: {})
-        self._all = {}
+        self._by_type = collections.defaultdict(lambda: [])
+        self._by_id = {}
         self._seen_action_names = set()
+        self._seen_consumables = set()
+        self._attr_by_name = {}
 
     async def load_character(self, ctx, args):
         """
@@ -82,14 +85,15 @@ class DicecloudV2Parser(SheetLoaderABC):
         import_version = SHEET_VERSION
         name = self.character_data["creatures"][0].get("name", "").strip()
         desc_note = next(
-            (note for note in self._by_type["note"].values() if "description" in note.get("name", "").lower()), {}
+            (note for note in self._by_type["note"] if "description" in note.get("name", "").lower()), {}
         )
         description = desc_note.get("summary", {}).get("value", "") or desc_note.get("description", {}).get("value", "")
         image = self.character_data["creatures"][0].get("picture", "")
 
-        max_hp, ac, slots, stats, base_checks = self.get_stats()
+        max_hp, ac, slots, stats, base_checks, consumables = self._parse_attributes()
         levels = self.get_levels()
-        actions, consumables, attacks = self.get_attacks()  # TODO: parser unfinished
+        actions, attack_consumables, attacks = self.get_attacks()  # TODO: parser unfinished
+        consumables += attack_consumables
 
         skills, saves = self.get_skills_and_saves(base_checks)
 
@@ -103,9 +107,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         overrides = {}
         death_saves = {}
 
-        if not args.last("nocc"):
-            consumables += self.get_custom_counters()
-        else:
+        if args.last("nocc"):
             consumables = []
 
         spellbook, spell_consumables = self.get_spellbook(slots)  # TODO: add spell attack parser
@@ -115,7 +117,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         subrace = ""
         background = ""
         filled = 0
-        for filler in self._by_type["slotFiller"].values():
+        for filler in self._by_type["slotFiller"]:
             if race == "Unknown" and "race" in filler["tags"]:
                 race = filler["name"]
                 filled += 1
@@ -180,15 +182,19 @@ class DicecloudV2Parser(SheetLoaderABC):
                 continue
             prop_type = prop["type"]
             prop_id = prop["_id"]
-            self._by_type[prop_type][prop_id] = self._all[prop_id] = prop
+            self._by_id[prop_id] = prop
+            self._by_type[prop_type].append(prop)
 
         return character
+    
+    def get_stats(self) -> BaseStats:
+       return self._parse_attributes()[3] 
 
-    def get_stats(self) -> (int, int, {str: int}, BaseStats):
+    def _parse_attributes(self) -> (int, int, {str: int}, BaseStats, [Skill], [dict]):
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
-        if self.stats:
-            return self.stats
+        if self.parsed_attrs:
+            return self.parsed_attrs
         base_stats = (
             "strength",
             "dexterity",
@@ -207,18 +213,37 @@ class DicecloudV2Parser(SheetLoaderABC):
         slots = {str(i): 0 for i in range(1, 10)} | {"pact": {}}
         stat_dict = {}
         base_checks = {}
+        consumables = []
         try:
-            for attr in self._by_type["attribute"].values():
-                attr_name = attr["variableName"]
-                if attr_name in base_stats:
-                    base_checks[attr_name] = Skill(attr["modifier"], 0, None)
-                if attr_name in stats + base_stats:
-                    stat_dict[attr_name] = attr["total"]
-                if attr["attributeType"] == "spellSlot":
-                    if attr["variableName"] == "pactSlot":
-                        slots["pact"] = {"num": attr["total"], "level": attr["spellSlotLevel"]["value"]}
-                    else:
-                        slots[str(attr["spellSlotLevel"]["value"])] += attr["total"]
+            for attr in self._by_type["attribute"]:
+                if not attr.get("inactive"):
+                    self._attr_by_name[prop["variableName"]] = prop
+                    attr_name = attr["variableName"]
+                    if attr_name in base_stats:
+                        base_checks[attr_name] = Skill(attr["modifier"], 0, None)
+                    if attr_name in stats + base_stats:
+                        stat_dict[attr_name] = attr["total"]
+                    if attr["attributeType"] == "spellSlot":
+                        if attr["variableName"] == "pactSlot":
+                            slots["pact"] = {"num": attr["total"], "level": attr["spellSlotLevel"]["value"]}
+                        else:
+                            slots[str(attr["spellSlotLevel"]["value"])] += attr["total"]
+                    if attr["attributeType"] == "resource":
+                        log.debug(f"Found resource named: {attr['name']}")
+                        self._seen_consumables.add(attr['_id'])
+                        uses = attr["total"]
+                        display_type = "bubble" if uses < 30 else None
+                        consumables.append(
+                            {
+                                "name": attr['name'],
+                                "value": attr.get("value", uses),
+                                "minv": "0",
+                                "maxv": str(uses),
+                                "reset": RESET_DICT[attr.get("reset")],
+                                "display_type": display_type,
+                            }
+                        )
+
         except KeyError as e:
             if e.args[0] == "total":
                 raise ExternalImportError(f"{attr_name} is missing a spell count")
@@ -239,8 +264,8 @@ class DicecloudV2Parser(SheetLoaderABC):
             stat_dict["charisma"],
         )
 
-        self.stats = stats
-        return stat_dict["hitPoints"], stat_dict["armor"], slots, stats, base_checks
+        self.parsed_attrs = (stat_dict["hitPoints"], stat_dict["armor"], slots, stats, base_checks, consumables)
+        return stat_dict["hitPoints"], stat_dict["armor"], slots, stats, base_checks, consumables
 
     def get_levels(self) -> Levels:
         """Returns a dict with the character's level and class levels."""
@@ -250,7 +275,7 @@ class DicecloudV2Parser(SheetLoaderABC):
             return self.levels
 
         levels = collections.defaultdict(lambda: 0)
-        for level in [Class for Class in self._by_type["class"].values()]:
+        for level in [Class for Class in self._by_type["class"]]:
             level_name = level["variableName"].title()
             levels[level_name] += level["level"]
 
@@ -272,7 +297,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         coins = {"pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0}
 
-        for i in self._by_type["item"].values():
+        for i in self._by_type["item"]:
             if re.fullmatch(
                 r"^((plat(inum)?|gold|electrum|silver|copper)( coins?| pieces?)?|(pp|gp|ep|sp|cp))",
                 i["name"],
@@ -294,7 +319,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions = []
         consumables = []
         atk_names = set()
-        for attack in self._by_type["action"].values():
+        for attack in self._by_type["action"]:
             if not attack.get("inactive"):
                 aname = attack["name"]
                 if attack.get("uses", None):
@@ -303,13 +328,15 @@ class DicecloudV2Parser(SheetLoaderABC):
                     consumables.append(
                         {
                             "name": aname,
-                            "value": attack.get("usesLeft", 0),
+                            "value": attack.get("usesLeft", uses),
                             "minv": "0",
                             "maxv": str(uses),
                             "reset": RESET_DICT[attack.get("reset")],
                             "display_type": display_type,
                         }
                     )
+                consumables += self._consumables_from_resources(attack['resources'])
+                            
                 if atk_actions := self.persist_actions_for_name(aname):
                     actions += atk_actions
                     continue
@@ -334,7 +361,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         saves = {}
 
         # calculate skills and saves from skill properties
-        for skill in self._by_type["skill"].values():
+        for skill in self._by_type["skill"]:
             if not skill.get("inactive"):
                 vname = skill["variableName"]
                 skill_obj = Skill(skill["value"], prof=skill["proficiency"], adv=ADV_INT_MAP[skill.get("advantage", 0)])
@@ -352,7 +379,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
         out = {"resist": set(), "immune": set(), "vuln": set()}
-        for dmg_mult in self._by_type["damageMultiplier"].values():
+        for dmg_mult in self._by_type["damageMultiplier"]:
             if not dmg_mult.get("inactive"):
                 for dmg_type in dmg_mult["damageTypes"]:
                     if dmg_type in DAMAGE_TYPES:
@@ -372,7 +399,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
     def get_actions(self):
         actions = []
-        for f in self._by_type["feature"].values():
+        for f in self._by_type["feature"]:
             if not f.get("inactive"):
                 actions += self.persist_actions_for_name(f.get("name"))
 
@@ -384,12 +411,12 @@ class DicecloudV2Parser(SheetLoaderABC):
     def get_spellbook(self, slots):  # TODO: get spellbook
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
-        potential_spells = list(self._by_type["spell"].values())
+        potential_spells = list(self._by_type["spell"])
 
         pact = slots.pop("pact") if "pact" in slots else {}
 
         spell_lists = {}  # list_id: (name, ab, dc, scam)
-        for sl in self._by_type["spellList"].values():
+        for sl in self._by_type["spellList"]:
             try:
                 ab = sl.get("attackRollBonus", {})
                 ab_calc = ab.get("calculation", "").lower()
@@ -436,8 +463,10 @@ class DicecloudV2Parser(SheetLoaderABC):
                         "display_type": display_type,
                     }
                 )
+            
+            consumables += self._consumables_from_resources(spell['resources'])
 
-                # TODO: add attack parsing to spells that can use counters
+            # TODO: add attack parsing to spells that can use counters
 
             if spell_prepared:
                 if spell_ab is not None:
@@ -483,23 +512,19 @@ class DicecloudV2Parser(SheetLoaderABC):
     # helper functions
 
     # parse attack into automation TODO
-    def parse_attack(self, atk_dict) -> Attack:
+    def parse_attack(self, atk_prop) -> Attack:
         """Calculates and returns a dict."""
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
 
-        log.debug(f"Processing attack {atk_dict.get('name')}")
-
-        auto = parse_children(atk_dict)
+        log.debug(f"Processing attack {atk_prop.get('name')}")
+        auto = DCV2AutoParser(self).get_automation(atk_prop)
 
         name = atk_dict["name"]
         activation = ACTIVATION_DICT[atk_dict["actionType"]]
         attack = Attack(name, auto, activation_type=activation)
 
         return attack
-
-    def parse_children(prop):
-        pass
 
     def persist_actions_for_name(self, name):
         actions = []
@@ -518,3 +543,24 @@ class DicecloudV2Parser(SheetLoaderABC):
                     )
                 )
         return actions
+    
+    def _consumables_from_resources(self, resources):
+        attrs = resources['attributesConsumed']
+        consumables = []
+        for attr in attrs:
+            full_attr = self._attr_by_name[attr['variableName']]
+            if full_attr['_id'] not in self._seen_consumables:
+                self._seen_consumables.add(full_attr['_id'])
+                uses = full_attr["total"]
+                display_type = "bubble" if uses < 30 else None
+                consumables.append(
+                    {
+                        "name": full_attr['name'],
+                        "value": full_attr.get("value", uses),
+                        "minv": "0",
+                        "maxv": str(uses),
+                        "reset": RESET_DICT[full_attr.get("reset")],
+                        "display_type": display_type,
+                    }
+                )
+        return consumables

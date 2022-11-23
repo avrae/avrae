@@ -363,7 +363,6 @@ class Lookup(commands.Cog):
 
     async def _class(self, ctx, result: gamedata.Class, level):
         destination = await self._get_destination(ctx)
-        prefix = (await self.bot.get_prefix(ctx))[-1]
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
         if level is None:
@@ -392,7 +391,7 @@ class Lookup(commands.Cog):
             embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
 
             lookuputils.handle_source_footer(
-                embed, result, f"Use {prefix}classfeat to look up a feature.", add_source_str=False
+                embed, result, f"Use /lookup classfeat to look up a feature.", add_source_str=False
             )
         else:
             embed.title = f"{result.name}, Level {level}"
@@ -406,12 +405,12 @@ class Lookup(commands.Cog):
             for f in level_features:
                 embed.add_field(
                     name=f.name,
-                    value=smart_trim(f.text, 1024, f"> Use `{prefix}classfeat {f.name}` to view full text"),
+                    value=smart_trim(f.text, 1024, f"> Use `/lookup classfeat name:{f.name}` to view full text"),
                     inline=False,
                 )
 
             lookuputils.handle_source_footer(
-                embed, result, f"Use {prefix}classfeat to look up a feature if it is cut off.", add_source_str=False
+                embed, result, f"Use /lookup classfeat to look up a feature if it is cut off.", add_source_str=False
             )
 
         await destination.send(embed=embed)
@@ -451,7 +450,6 @@ class Lookup(commands.Cog):
 
     async def _subclass(self, ctx, result: gamedata.Subclass):
         destination = await self._get_destination(ctx)
-        prefix = (await self.bot.get_prefix(ctx))[-1]
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -460,11 +458,13 @@ class Lookup(commands.Cog):
 
         for level in result.levels:
             for feature in level:
-                text = smart_trim(feature.text, 1024, f"> Use `{prefix}classfeat {feature.name}` to view full text")
+                text = smart_trim(
+                    feature.text, 1024, f"> Use `/lookup classfeat name:{feature.name}` to view full text"
+                )
                 embed.add_field(name=feature.name, value=text, inline=False)
 
         lookuputils.handle_source_footer(
-            embed, result, f"Use {prefix}classfeat to look up a feature if it is cut off", add_source_str=True
+            embed, result, f"Use /lookup classfeat to look up a feature if it is cut off", add_source_str=True
         )
 
         await destination.send(embed=embed)
@@ -713,11 +713,11 @@ class Lookup(commands.Cog):
 
         embed_queue[0].set_thumbnail(url=monster.get_image_url())
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
-        for embed in embed_queue:
-            if pm or (visible and pm_dm and req_dm_monster):
-                await ctx.author.send(embed=embed)
-            else:
-                await destination.send(embed=embed)
+
+        if pm or (visible and pm_dm and req_dm_monster):
+            await ctx.author.send(embeds=embed_queue)
+        else:
+            await destination.send(embeds=embed_queue)
 
     @commands.command()
     async def monimage(self, ctx, *, name: str):
@@ -891,8 +891,7 @@ class Lookup(commands.Cog):
             embed_queue[0].set_thumbnail(url=spell.image)
 
         await Stats.increase_stat(ctx, "spells_looked_up_life")
-        for embed in embed_queue:
-            await destination.send(embed=embed)
+        await destination.send(embeds=embed_queue)
 
     # ==== items ====
     @commands.command(name="item")
@@ -1009,7 +1008,9 @@ class Lookup(commands.Cog):
         if guild_settings is None:
             return ctx
         if slash_command and guild_settings.lookup_pm_result:
-            await ctx.send("Result sent to messages.", ephemeral=True)
+            await ctx.send(
+                f"Result sent to your [Direct Messages]({await ctx.author.create_dm().jump_url})", ephemeral=True
+            )
         return ctx.author if guild_settings.lookup_pm_result else ctx
 
     async def _check_access(self, inter, entity: Sourced, entity_choices: list[str]):

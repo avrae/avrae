@@ -441,7 +441,7 @@ class Lookup(commands.Cog):
 
     @slash_subclass.autocomplete("name")
     async def slash_subclass_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
-        available_ids = {"class": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "subclass")}
+        available_ids = {"class": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "class")}
         select_key = create_selectkey(available_ids)
         result, strict = search(compendium.subclasses, user_input, lambda e: e.name, 25)
         if strict:
@@ -1008,9 +1008,8 @@ class Lookup(commands.Cog):
         if guild_settings is None:
             return ctx
         if slash_command and guild_settings.lookup_pm_result:
-            await ctx.send(
-                f"Result sent to your [Direct Messages]({await ctx.author.create_dm().jump_url})", ephemeral=True
-            )
+            dm_link = await ctx.author.create_dm()
+            await ctx.send(f"Result sent to your [Direct Messages]({dm_link.jump_url})", ephemeral=True)
         return ctx.author if guild_settings.lookup_pm_result else ctx
 
     async def _check_access(self, inter, entity: Sourced, entity_choices: list[str]):

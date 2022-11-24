@@ -4,7 +4,6 @@ Created on Nov 08, 2022
 @author: lazydope
 """
 
-import ast
 import collections
 import logging
 import re
@@ -65,6 +64,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         self._seen_action_names = set()
         self._seen_consumables = set()
         self._attr_by_name = {}
+        self.atk_names = set()
 
     async def load_character(self, ctx, args):
         """
@@ -92,7 +92,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         max_hp, ac, slots, stats, base_checks, consumables = self._parse_attributes()
         levels = self.get_levels()
-        actions, attack_consumables, attacks = self.get_attacks()  # TODO: parser unfinished
+        actions, attack_consumables, attacks = self.get_attacks()
         consumables += attack_consumables
 
         skills, saves = self.get_skills_and_saves(base_checks)
@@ -110,8 +110,9 @@ class DicecloudV2Parser(SheetLoaderABC):
         if args.last("nocc"):
             consumables = []
 
-        spellbook, spell_consumables = self.get_spellbook(slots)  # TODO: add spell attack parser
+        spellbook, spell_consumables, spell_attacks = self.get_spellbook(slots)
         consumables += spell_consumables
+        attacks.extend(spell_attacks)
         live = None  # TODO: implement live character
         race = "Unknown"
         subrace = ""
@@ -137,6 +138,8 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions += self.get_actions()
 
         actions = Actions(actions)
+        
+        log.debug(f"Parsed character: {name}")
 
         character = Character(
             owner_id,
@@ -176,14 +179,29 @@ class DicecloudV2Parser(SheetLoaderABC):
         character = await DicecloudV2Client.getInstance().get_character(url)
         character["_id"] = url
         self.character_data = character
-
+        
+        orphans = collections.defaultdict(lambda: []) # :'(
         for prop in self.character_data["creatureProperties"]:
             if prop.get("removed"):
                 continue
             prop_type = prop["type"]
             prop_id = prop["_id"]
+            prop['children'] = []
             self._by_id[prop_id] = prop
             self._by_type[prop_type].append(prop)
+            if prop['parent']['id'] != self.url:
+                if prop['parent']['id'] in self._by_id:
+                    self._by_id[prop['parent']['id']]['children'].append(prop_id)
+                else:
+                    orphans[prop['parent']['id']].append(prop_id)
+                    log.debug(f"Oops, {prop.get('name') or prop.get('variableName') or prop['_id']} was ophaned!")
+                    
+        for prop_id, children in orphans.items():
+            if prop_id in self._by_id:
+                self._by_id[prop['parent']['id']]['children'].extend(children)
+            else:
+                log.debug(f"Oops, {prop.get('name') or prop.get('variableName') or prop['_id']} was still ophaned!")
+                    
 
         return character
     
@@ -217,7 +235,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         try:
             for attr in self._by_type["attribute"]:
                 if not attr.get("inactive"):
-                    self._attr_by_name[prop["variableName"]] = prop
+                    self._attr_by_name[attr["variableName"]] = attr
                     attr_name = attr["variableName"]
                     if attr_name in base_stats:
                         base_checks[attr_name] = Skill(attr["modifier"], 0, None)
@@ -318,7 +336,6 @@ class DicecloudV2Parser(SheetLoaderABC):
         attacks = AttackList()
         actions = []
         consumables = []
-        atk_names = set()
         for attack in self._by_type["action"]:
             if not attack.get("inactive"):
                 aname = attack["name"]
@@ -340,16 +357,15 @@ class DicecloudV2Parser(SheetLoaderABC):
                 if atk_actions := self.persist_actions_for_name(aname):
                     actions += atk_actions
                     continue
-                continue  # TODO: remove once attack parser is done
                 atk = self.parse_attack(attack)
 
                 # unique naming
                 atk_num = 2
-                if atk.name in atk_names:
-                    while f"{atk.name}{atk_num}" in atk_names:
+                if atk.name in self.atk_names:
+                    while f"{atk.name} {atk_num}" in self.atk_names:
                         atk_num += 1
-                    atk.name = f"{atk.name}{atk_num}"
-                atk_names.add(atk.name)
+                    atk.name = f"{atk.name} {atk_num}"
+                self.atk_names.add(atk.name)
 
                 attacks.append(atk)
         return actions, consumables, attacks
@@ -411,7 +427,6 @@ class DicecloudV2Parser(SheetLoaderABC):
     def get_spellbook(self, slots):  # TODO: get spellbook
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
-        potential_spells = list(self._by_type["spell"])
 
         pact = slots.pop("pact") if "pact" in slots else {}
 
@@ -437,7 +452,9 @@ class DicecloudV2Parser(SheetLoaderABC):
         sabs = []
         dcs = []
         mods = []
-        for spell in potential_spells:
+        attacks = []
+        for spell in self._by_type["spell"]:
+            spell_consumables = []
             log.debug(f"Got spell with ancestors: {[spell['parent']['id']] + [k['id'] for k in spell['ancestors']]}")
             sl_name, spell_ab, spell_dc, spell_mod = spell_lists.get(spell["parent"]["id"]) or next(
                 (
@@ -447,13 +464,14 @@ class DicecloudV2Parser(SheetLoaderABC):
                 ),
                 (None, None, None, None),
             )
+            spell['spellListName'] = sl_name
             spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
 
             if "uses" in spell:
                 uses = spell["uses"]["value"]
                 display_type = "bubble" if uses < 30 else None
-                action_name = sl_name + ": " + spell["name"] if sl_name else spell["name"]
-                consumables.append(
+                action_name = f"{sl_name}: {spell['name']}" if sl_name else spell["name"]
+                spell_consumables.append(
                     {
                         "name": action_name,
                         "value": spell.get("usesLeft", 0),
@@ -464,9 +482,22 @@ class DicecloudV2Parser(SheetLoaderABC):
                     }
                 )
             
-            consumables += self._consumables_from_resources(spell['resources'])
-
-            # TODO: add attack parsing to spells that can use counters
+            spell_consumables += self._consumables_from_resources(spell['resources'])
+            
+            if spell_consumables:
+                atk = self.parse_attack(spell)
+                
+                # unique naming
+                atk_num = 2
+                if atk.name in self.atk_names:
+                    while f"{atk.name} {atk_num}" in self.atk_names:
+                        atk_num += 1
+                    atk.name = f"{atk.name} {atk_num}"
+                self.atk_names.add(atk.name)
+                
+                attacks.append(atk)
+                
+            consumables += spell_consumables
 
             if spell_prepared:
                 if spell_ab is not None:
@@ -507,21 +538,23 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         log.debug(f"Completed parsing spellbook: {spellbook.to_dict()}")
 
-        return spellbook, consumables
+        return spellbook, consumables, attacks
 
     # helper functions
 
-    # parse attack into automation TODO
+    # parse attack into automation
     def parse_attack(self, atk_prop) -> Attack:
-        """Calculates and returns a dict."""
+        """Calculates and returns an Attack given a property."""
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
 
         log.debug(f"Processing attack {atk_prop.get('name')}")
         auto = DCV2AutoParser(self).get_automation(atk_prop)
+        if auto is None:
+            log.debug(f"Oops! Automation is None!")
 
-        name = atk_dict["name"]
-        activation = ACTIVATION_DICT[atk_dict["actionType"]]
+        name = atk_prop["name"]
+        activation = ACTIVATION_DICT[atk_prop["actionType"]]
         attack = Attack(name, auto, activation_type=activation)
 
         return attack

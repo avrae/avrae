@@ -84,9 +84,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         sheet_type = "dicecloudv2"
         import_version = SHEET_VERSION
         name = self.character_data["creatures"][0].get("name", "").strip()
-        desc_note = next(
-            (note for note in self._by_type["note"] if "description" in note.get("name", "").lower()), {}
-        )
+        desc_note = next((note for note in self._by_type["note"] if "description" in note.get("name", "").lower()), {})
         description = desc_note.get("summary", {}).get("value", "") or desc_note.get("description", {}).get("value", "")
         image = self.character_data["creatures"][0].get("picture", "")
 
@@ -138,7 +136,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions += self.get_actions()
 
         actions = Actions(actions)
-        
+
         log.debug(f"Parsed character: {name}")
 
         character = Character(
@@ -179,34 +177,33 @@ class DicecloudV2Parser(SheetLoaderABC):
         character = await DicecloudV2Client.getInstance().get_character(url)
         character["_id"] = url
         self.character_data = character
-        
-        orphans = collections.defaultdict(lambda: []) # :'(
+
+        orphans = collections.defaultdict(lambda: [])  # :'(
         for prop in self.character_data["creatureProperties"]:
             if prop.get("removed"):
                 continue
             prop_type = prop["type"]
             prop_id = prop["_id"]
-            prop['children'] = []
+            prop["children"] = []
             self._by_id[prop_id] = prop
             self._by_type[prop_type].append(prop)
-            if prop['parent']['id'] != self.url:
-                if prop['parent']['id'] in self._by_id:
-                    self._by_id[prop['parent']['id']]['children'].append(prop_id)
+            if prop["parent"]["id"] != self.url:
+                if prop["parent"]["id"] in self._by_id:
+                    self._by_id[prop["parent"]["id"]]["children"].append(prop_id)
                 else:
-                    orphans[prop['parent']['id']].append(prop_id)
+                    orphans[prop["parent"]["id"]].append(prop_id)
                     log.debug(f"Oops, {prop.get('name') or prop.get('variableName') or prop['_id']} was ophaned!")
-                    
+
         for prop_id, children in orphans.items():
             if prop_id in self._by_id:
-                self._by_id[prop['parent']['id']]['children'].extend(children)
+                self._by_id[prop["parent"]["id"]]["children"].extend(children)
             else:
                 log.debug(f"Oops, {prop.get('name') or prop.get('variableName') or prop['_id']} was still ophaned!")
-                    
 
         return character
-    
+
     def get_stats(self) -> BaseStats:
-       return self._parse_attributes()[3] 
+        return self._parse_attributes()[3]
 
     def _parse_attributes(self) -> (int, int, {str: int}, BaseStats, [Skill], [dict]):
         if self.character_data is None:
@@ -248,12 +245,12 @@ class DicecloudV2Parser(SheetLoaderABC):
                             slots[str(attr["spellSlotLevel"]["value"])] += attr["total"]
                     if attr["attributeType"] == "resource":
                         log.debug(f"Found resource named: {attr['name']}")
-                        self._seen_consumables.add(attr['_id'])
+                        self._seen_consumables.add(attr["_id"])
                         uses = attr["total"]
                         display_type = "bubble" if uses < 30 else None
                         consumables.append(
                             {
-                                "name": attr['name'],
+                                "name": attr["name"],
                                 "value": attr.get("value", uses),
                                 "minv": "0",
                                 "maxv": str(uses),
@@ -352,8 +349,8 @@ class DicecloudV2Parser(SheetLoaderABC):
                             "display_type": display_type,
                         }
                     )
-                consumables += self._consumables_from_resources(attack['resources'])
-                            
+                consumables += self._consumables_from_resources(attack["resources"])
+
                 if atk_actions := self.persist_actions_for_name(aname):
                     actions += atk_actions
                     continue
@@ -464,7 +461,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                 ),
                 (None, None, None, None),
             )
-            spell['spellListName'] = sl_name
+            spell["spellListName"] = sl_name
             spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
 
             if "uses" in spell:
@@ -481,12 +478,12 @@ class DicecloudV2Parser(SheetLoaderABC):
                         "display_type": display_type,
                     }
                 )
-            
-            spell_consumables += self._consumables_from_resources(spell['resources'])
-            
+
+            spell_consumables += self._consumables_from_resources(spell["resources"])
+
             if spell_consumables:
                 atk = self.parse_attack(spell)
-                
+
                 # unique naming
                 atk_num = 2
                 if atk.name in self.atk_names:
@@ -494,9 +491,9 @@ class DicecloudV2Parser(SheetLoaderABC):
                         atk_num += 1
                     atk.name = f"{atk.name} {atk_num}"
                 self.atk_names.add(atk.name)
-                
+
                 attacks.append(atk)
-                
+
             consumables += spell_consumables
 
             if spell_prepared:
@@ -576,19 +573,19 @@ class DicecloudV2Parser(SheetLoaderABC):
                     )
                 )
         return actions
-    
+
     def _consumables_from_resources(self, resources):
-        attrs = resources['attributesConsumed']
+        attrs = resources["attributesConsumed"]
         consumables = []
         for attr in attrs:
-            full_attr = self._attr_by_name[attr['variableName']]
-            if full_attr['_id'] not in self._seen_consumables:
-                self._seen_consumables.add(full_attr['_id'])
+            full_attr = self._attr_by_name[attr["variableName"]]
+            if full_attr["_id"] not in self._seen_consumables:
+                self._seen_consumables.add(full_attr["_id"])
                 uses = full_attr["total"]
                 display_type = "bubble" if uses < 30 else None
                 consumables.append(
                     {
-                        "name": full_attr['name'],
+                        "name": full_attr["name"],
                         "value": full_attr.get("value", uses),
                         "minv": "0",
                         "maxv": str(uses),

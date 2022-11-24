@@ -23,7 +23,6 @@ class DicecloudV2HTTP:
         self.expiration = None
 
     async def request(self, method, endpoint, body, headers=None, query=None):
-
         if headers is None:
             headers = {}
         if query is None:

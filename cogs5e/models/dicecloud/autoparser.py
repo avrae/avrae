@@ -110,7 +110,6 @@ class DCV2AutoParser:
                     self.self_effects.saves.append(
                         {
                             "id": prop["_id"],
-                            "name": prop["name"],
                             "dc": prop.get("dc", {}).get("value", 10),
                             "stat": prop["stat"],
                         }
@@ -119,7 +118,6 @@ class DCV2AutoParser:
                     self.target_effects.saves.append(
                         {
                             "id": prop["_id"],
-                            "name": prop["name"],
                             "dc": prop.get("dc", {}).get("value", 10),
                             "stat": prop["stat"],
                         }

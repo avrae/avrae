@@ -188,6 +188,11 @@ class DicecloudV2Parser(SheetLoaderABC):
             self._by_id[prop_id] = prop
             self._by_type[prop_type].append(prop)
             if prop["parent"]["id"] != self.url:
+                log.debug(
+                    "Parent for"
+                    f" {prop.get('name') or prop.get('variableName') or (prop.get('damageType') or '') + prop['type']} ({prop['type']},"
+                    f" {prop_id}): {prop['parent']['id']}"
+                )
                 if prop["parent"]["id"] in self._by_id:
                     self._by_id[prop["parent"]["id"]]["children"].append(prop_id)
                 else:
@@ -196,7 +201,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         for prop_id, children in orphans.items():
             if prop_id in self._by_id:
-                self._by_id[prop["parent"]["id"]]["children"].extend(children)
+                self._by_id[prop_id]["children"].extend(children)
             else:
                 log.debug(f"Oops, {prop.get('name') or prop.get('variableName') or prop['_id']} was still ophaned!")
 

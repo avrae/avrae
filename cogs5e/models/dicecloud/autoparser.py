@@ -1,10 +1,12 @@
 import collections
 import logging
+import re
 
 from cogs5e.models.automation import Automation
 from utils.constants import STAT_ABBREVIATIONS
 
 Effects = collections.namedtuple("Effects", ["damage", "saves", "save_damage"])
+NO_DICE_COUNT = re.compile(r"(?<!\d)d")
 
 log = logging.getLogger(__name__)
 
@@ -126,12 +128,17 @@ class DCV2AutoParser:
             case "damage":
                 magical = "magical" in prop["tags"]
                 healing = prop["damageType"] == "healing"
+                damage = re.sub(
+                    NO_DICE_COUNT,
+                    "1d",
+                    f"{'-1*(' if healing else ''}{prop['amount']['value']}{')' if healing else ''}".lower(),
+                )
                 effects = (
                     self.self_effects if self.meta.get("self") or prop.get("target") == "self" else self.target_effects
                 )
                 damage = {
                     "id": prop["_id"],
-                    "damage": f"{'-1*(' if healing else ''}{prop['amount']['value']}{')' if healing else ''}",
+                    "damage": damage,
                     "type": prop["damageType"],
                 }
                 log.debug(f"Parsing damage: {damage}")

@@ -128,10 +128,14 @@ class DCV2AutoParser:
             case "damage":
                 magical = "magical" in prop["tags"]
                 healing = prop["damageType"] == "healing"
+                effects = [str(effect["amount"]["value"]).strip() for effect in prop["amount"].get("effects", [])]
+                damage_dice = prop["amount"]["value"] + "".join(
+                    effect if effect[0] in "+-" else f"+{effect}" for effect in effects
+                )
                 damage = re.sub(
                     NO_DICE_COUNT,
                     "1d",
-                    f"{'-1*(' if healing else ''}{prop['amount']['value']}{')' if healing else ''}".lower(),
+                    f"{'-1*(' if healing else ''}{damage_dice}{')' if healing else ''}".lower(),
                 )
                 effects = (
                     self.self_effects if self.meta.get("self") or prop.get("target") == "self" else self.target_effects

@@ -28,7 +28,9 @@ SENTRY_DSN = os.getenv("SENTRY_DSN")
 DD_SERVICE = os.getenv("DD_SERVICE")
 
 # ---- character sheets ---
-NO_DICECLOUD = os.environ.get("NO_DICECLOUD", "DICECLOUD_USER" not in os.environ and "DICECLOUDV2_USER" not in os.environ)
+NO_DICECLOUD = os.environ.get(
+    "NO_DICECLOUD", "DICECLOUD_USER" not in os.environ and "DICECLOUDV2_USER" not in os.environ
+)
 DICECLOUD_USER = os.getenv("DICECLOUD_USER")
 DICECLOUD_PASS = os.getenv("DICECLOUD_PASS", "").encode()
 DICECLOUD_API_KEY = os.getenv("DICECLOUD_TOKEN")

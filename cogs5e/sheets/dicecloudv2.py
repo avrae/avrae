@@ -112,7 +112,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         consumables += spell_consumables
         attacks.extend(spell_attacks)
         live = None  # TODO: implement live character
-        
+
         # get race, subrace, and background from slot fillers and notes
         race = None
         subrace = None
@@ -130,12 +130,12 @@ class DicecloudV2Parser(SheetLoaderABC):
                 filled += 1
             if filled == 3:
                 break
-            
+
         # defaults if any were still None
         race = race or "Unknown"
         subrace = subrace or ""
         background = background or ""
-        
+
         if subrace and race in subrace:
             race = subrace
         elif subrace:

@@ -46,6 +46,7 @@ class DicecloudV2HTTP:
 
     async def try_until_max(self, method, endpoint, data={}, headers={}, params={}):
         async with aiohttp.ClientSession() as session:
+            reauthed = False
             for _ in range(MAX_TRIES):
                 try:
                     async with session.request(
@@ -60,7 +61,12 @@ class DicecloudV2HTTP:
                             await asyncio.sleep(timeout["timeToReset"] / 1000)  # rate-limited, wait and try again
                         elif 400 <= resp.status < 600:
                             if resp.status == 403:
-                                raise Forbidden(resp.reason)
+                                data = await resp.json(encoding="utf-8")
+                                if not reauthed and data.get('reason') == 'Invalid authentication token':
+                                    self.get_auth(force_reauth = True)
+                                    reauthed = True
+                                else:
+                                    raise Forbidden(resp.reason)
                             elif resp.status == 404:
                                 raise NotFound(resp.reason)
                             else:
@@ -73,8 +79,8 @@ class DicecloudV2HTTP:
             f"Dicecloud failed to respond after {MAX_TRIES} tries. Please try again."
         )  # we did 10 loops and never got 200, so we must have 429ed
 
-    async def get_auth(self):
-        if not self.auth_token or self.expiration <= time.time():
+    async def get_auth(self, *, force_reauth = False):
+        if force_reauth or not self.auth_token or self.expiration <= time.time():
             data = await self.try_until_max("POST", "/login", {"username": self.username, "password": self.password})
             self.auth_token = data["token"]
             self.user_id = data["id"]

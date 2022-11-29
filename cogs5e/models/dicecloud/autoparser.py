@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 
 class DCV2AutoParser:
-    def __init__(self, parser: "DicecloudV2Parser"):
+    def __init__(self, parser):
         self.parser = parser
         self.self_effects = Effects([], [], [])
         self.target_effects = Effects([], [], [])

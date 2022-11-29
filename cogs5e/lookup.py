@@ -546,6 +546,9 @@ class Lookup(commands.Cog):
         choices = await lookuputils.get_monster_choices(ctx)
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=pm_lookup)
 
+        if hide_name:
+            await try_delete(ctx.message)
+
         return await self._monster(ctx, monster, hide_name)
 
     @slash_lookup.sub_command(name="monster", description="Looks up a monster.")
@@ -567,19 +570,6 @@ class Lookup(commands.Cog):
         await self._check_access(inter, name, ["monster"])
         return await self._monster(inter, name, hide_name)
 
-    @slash_monster.autocomplete("name")
-    async def slash_monster_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
-        choices = await self._get_entities(inter, "monster", lookuputils.get_monster_choices)
-
-        available_ids = {"monster": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "monster")}
-        select_key = create_selectkey(available_ids)
-        result, strict = search(
-            choices, user_input, lambda e: f"{e.name} {e.source} {'homebrew' if e.homebrew else ''}", 25
-        )
-        if strict:
-            return [select_key(result, True)]
-        return [select_key(r, True) for r in result][:25]
-
     async def _monster(self, ctx, monster: gamedata.Monster, hide_name):
         destination = await self._get_destination(ctx)
         if ctx.guild is not None:
@@ -597,14 +587,12 @@ class Lookup(commands.Cog):
             req_dm_monster = False
             visible = True
 
-        if hide_name:
-            visible = False
-            await try_delete(ctx.message)
-
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
 
-        if not hide_name:
+        if hide_name:
+            visible = False
+        else:
             embed_queue[-1].title = monster.name
         embed_queue[-1].url = monster.url
 
@@ -743,6 +731,26 @@ class Lookup(commands.Cog):
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
+        await self._monimage(monster, hide_name)
+
+    @slash_lookup.sub_command(name="monimage", description="Shows a monster's image.")
+    async def slash_monimage(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.Monster = commands.Param(
+            description="The monster you want to look up", converter=lookup_converter("monster")
+        ),
+        hide_name: bool = commands.Param(description="Hides the monster statblock name.", default=False),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Monster not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["monster"])
+        return await self._monimage(inter, name, hide_name)
+
+    async def _monimage(self, ctx, monster: gamedata.Monster, hide_name):
         url = monster.get_image_url()
         embed = EmbedWithAuthor(ctx)
         if not hide_name:
@@ -761,6 +769,7 @@ class Lookup(commands.Cog):
         Shows a monster or your character's token.
         __Valid Arguments__
         -border <plain|none (player token only)> - Overrides the token border.
+        -h - Hides the monster statblock name.
         """
         if name is None or name.startswith("-"):
             token_cmd = self.bot.get_command("playertoken")
@@ -772,6 +781,7 @@ class Lookup(commands.Cog):
 
         # select monster
         token_args = argparse(args)
+        plain_border = token_args.last("border") == "plain"
         hide_name = token_args.get("h", False, bool)
         if hide_name:
             await try_delete(ctx.message)
@@ -780,6 +790,46 @@ class Lookup(commands.Cog):
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
+        await self._token(ctx, monster, plain_border, hide_name)
+
+    @slash_lookup.sub_command(name="token", description="Shows a monster token.")
+    async def slash_token(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.Monster = commands.Param(
+            description="The monster you want to look up", converter=lookup_converter("monster")
+        ),
+        plain_border: bool = commands.Param(
+            description="Show the plain border instead of the subscriber border, if available.", default=False
+        ),
+        hide_name: bool = commands.Param(
+            description="Shows the obfuscated stat block, even if you can see the full stat block.", default=False
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Monster not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["monster"])
+        return await self._token(inter, name, plain_border, hide_name)
+
+    @slash_monster.autocomplete("name")
+    @slash_monimage.autocomplete("name")
+    @slash_token.autocomplete("name")
+    async def slash_monster_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        choices = await self._get_entities(inter, "monster", lookuputils.get_monster_choices)
+
+        available_ids = {"monster": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "monster")}
+        select_key = create_selectkey(available_ids)
+        result, strict = search(
+            choices, user_input, lambda e: f"{e.name} {e.source} {'homebrew' if e.homebrew else ''}"
+        )
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _token(self, ctx, monster: gamedata.Monster, plain_border, hide_name):
         # select border
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         is_subscriber = ddb_user and ddb_user.is_subscriber
@@ -789,13 +839,17 @@ class Lookup(commands.Cog):
             if not monster.get_image_url():
                 return await ctx.send("This monster has no image.")
             try:
+                token_args = None
+                # Not the cleanest but leaves it open to additional args in the future
+                if plain_border:
+                    token_args = "-border plain"
                 image = await img.generate_token(monster.get_image_url(), is_subscriber, token_args)
             except Exception as e:
                 return await ctx.send(f"Error generating token: {e}")
         else:
             # official monsters
             token_url = monster.get_token_url(is_subscriber)
-            if token_args.last("border") == "plain":
+            if plain_border:
                 token_url = monster.get_token_url(False)
 
             if not token_url:

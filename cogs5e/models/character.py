@@ -682,6 +682,7 @@ class Character(StatBlock):
             "beyond": "https://ddb.ac/characters/",
             "dicecloud": "https://dicecloud.com/character/",
             "google": "https://docs.google.com/spreadsheets/d/",
+            "dicecloudv2": "https://beta.dicecloud.com/character/",
         }
         if self.sheet_type in base_urls:
             return f"{base_urls[self.sheet_type]}{self.upstream_id}"

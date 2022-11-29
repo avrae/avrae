@@ -284,6 +284,16 @@ class AliasBaseStats:
         """
         return self._stats.get_mod(str(stat))
 
+    def get(self, stat):
+        """
+        Get the integer value of a stat (case sensitive, lowercase. strength, dexterity, etc).
+
+        :param str stat: The stat to look up
+        :return: The integer value of the stat.
+        :rtype: int
+        """
+        return self._stats.__getitem__(stat)
+
     def __str__(self):
         return str(self._stats)
 

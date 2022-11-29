@@ -552,6 +552,17 @@ class AliasCustomCounter:
         """
         return self._cc.reset_by
 
+    def mod(self, value, strict=False):
+        """
+        Modifies the value of the custom counter.
+
+        :param int value: The value to modify the custom counter by.
+        :param bool strict: Whether to error when going out of bounds (true) or to clip silently (false).
+        :return: The cc's new value.
+        :rtype: int
+        """
+        return self.set(self.value + value, strict)
+
     def set(self, new_value, strict=False):
         """
         Sets the cc's value to a new value.
@@ -731,9 +742,9 @@ class AliasAction:
         | Lair Action      | 11    |
         +------------------+-------+
 
-        :rtype: int
+        :rtype: int or None
         """
-        return self._action.activation_type.value
+        return self.activation_type.value if self.activation_type is not None else None
 
     @property
     def activation_type_name(self):

@@ -141,7 +141,7 @@ class DCV2AutoParser:
                 damage = {
                     "id": prop["_id"],
                     "damage": damage,
-                    "type": prop["damageType"],
+                    "type": ("magical " if magical else "") + prop["damageType"],
                 }
                 log.debug(f"Parsing damage: {damage}")
                 if save:

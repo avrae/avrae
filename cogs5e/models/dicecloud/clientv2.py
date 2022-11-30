@@ -20,7 +20,7 @@ class DicecloudV2Client:
 
     @classmethod
     def getInstance(cls):
-        if cls.instance is None and not config.NO_DICECLOUD:
+        if cls.instance is None and not config.NO_DICECLOUDV2:
             try:
                 cls.instance = cls(debug=config.TESTING)
             except Exception as e:

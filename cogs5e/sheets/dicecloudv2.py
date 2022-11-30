@@ -388,7 +388,9 @@ class DicecloudV2Parser(SheetLoaderABC):
         for skill in self._by_type["skill"]:
             if not skill.get("inactive"):
                 vname = skill["variableName"]
-                skill_obj = Skill(skill["value"], prof=skill["proficiency"], adv=ADV_INT_MAP[skill.get("advantage", 0)])
+                skill_obj = Skill(
+                    skill["value"], prof=round(skill["proficiency"], 1), adv=ADV_INT_MAP[skill.get("advantage", 0)]
+                )
                 match skill["skillType"]:
                     case "save":
                         if vname in SAVE_NAMES:

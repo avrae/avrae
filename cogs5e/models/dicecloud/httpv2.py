@@ -13,10 +13,11 @@ log = logging.getLogger(__name__)
 
 
 class DicecloudV2HTTP:
-    def __init__(self, api_base, username, password, debug=False):
+    def __init__(self, api_base, username, password, no_auth, debug=False):
         self.base = api_base
         self.username = username
         self.password = password
+        self.no_auth = no_auth
         self.debug = debug
         self.auth_token = None
         self.user_id = None
@@ -39,14 +40,15 @@ class DicecloudV2HTTP:
             print(f"{method} {endpoint}: {body}")
 
         auth_token = await self.get_auth()
-        headers["Authorization"] = "Bearer " + auth_token
+        if auth_token:
+            headers["Authorization"] = "Bearer " + auth_token
         data = await self.try_until_max(method, endpoint, body, headers, query)
 
         return data
 
     async def try_until_max(self, method, endpoint, data={}, headers={}, params={}):
         async with aiohttp.ClientSession() as session:
-            reauthed = False
+            reauthed = self.no_auth
             for _ in range(MAX_TRIES):
                 try:
                     async with session.request(
@@ -63,7 +65,9 @@ class DicecloudV2HTTP:
                             if resp.status == 403:
                                 data = await resp.json(encoding="utf-8")
                                 if not reauthed and data.get("reason") == "Invalid authentication token":
-                                    self.get_auth(force_reauth=True)
+                                    auth_token = await self.get_auth(force_reauth=True)
+                                    if auth_token:
+                                        headers["Authorization"] = "Bearer " + auth_token
                                     reauthed = True
                                 else:
                                     raise Forbidden(resp.reason)
@@ -80,7 +84,7 @@ class DicecloudV2HTTP:
         )  # we did 10 loops and never got 200, so we must have 429ed
 
     async def get_auth(self, *, force_reauth=False):
-        if force_reauth or not self.auth_token or self.expiration <= time.time():
+        if not self.no_auth and (force_reauth or not self.auth_token or self.expiration <= time.time()):
             data = await self.try_until_max("POST", "/login", {"username": self.username, "password": self.password})
             self.auth_token = data["token"]
             self.user_id = data["id"]

@@ -464,70 +464,75 @@ class DicecloudV2Parser(SheetLoaderABC):
         mods = []
         attacks = []
         for spell in self._by_type["spell"]:
-            spell_consumables = []
-            log.debug(f"Got spell with ancestors: {[spell['parent']['id']] + [k['id'] for k in spell['ancestors']]}")
-            sl_name, spell_ab, spell_dc, spell_mod = spell_lists.get(spell["parent"]["id"]) or next(
-                (
-                    spell_lists[k["id"]]
-                    for k in spell["ancestors"]
-                    if k["collection"] == "creatureProperties" and k["id"] in spell_lists
-                ),
-                (None, None, None, None),
-            )
-            spell["spellListName"] = sl_name
-            spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
-
-            if "uses" in spell:
-                uses = spell["uses"]["value"]
-                display_type = "bubble" if uses < 30 else None
-                action_name = f"{sl_name}: {spell['name']}" if sl_name else spell["name"]
-                spell_consumables.append(
-                    {
-                        "name": action_name,
-                        "value": spell.get("usesLeft", 0),
-                        "minv": "0",
-                        "maxv": str(uses),
-                        "reset": RESET_DICT[spell.get("reset")],
-                        "display_type": display_type,
-                    }
+            if not (spell.get("deactivatedByAncestor") or spell.get("deactivatedByToggle")):
+                spell_consumables = []
+                log.debug(
+                    f"Got spell with ancestors: {[spell['parent']['id']] + [k['id'] for k in spell['ancestors']]}"
                 )
-
-            spell_consumables += self._consumables_from_resources(spell["resources"])
-
-            if spell_consumables:
-                atk = self.parse_attack(spell)
-
-                # unique naming
-                atk_num = 2
-                if atk.name in self.atk_names:
-                    while f"{atk.name} {atk_num}" in self.atk_names:
-                        atk_num += 1
-                    atk.name = f"{atk.name} {atk_num}"
-                self.atk_names.add(atk.name)
-
-                attacks.append(atk)
-
-            consumables += spell_consumables
-
-            if spell_prepared:
-                if spell_ab is not None:
-                    sabs.append(spell_ab)
-                if spell_dc is not None:
-                    dcs.append(spell_dc)
-                if spell_mod is not None:
-                    mods.append(spell_mod)
-
-            result, strict = search(compendium.spells, spell["name"].strip(), lambda sp: sp.name, strict=True)
-            if result and strict:
-                spells.append(
-                    SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared)
+                sl_name, spell_ab, spell_dc, spell_mod = spell_lists.get(spell["parent"]["id"]) or next(
+                    (
+                        spell_lists[k["id"]]
+                        for k in spell["ancestors"]
+                        if k["collection"] == "creatureProperties" and k["id"] in spell_lists
+                    ),
+                    (None, None, None, None),
                 )
-            else:
-                spells.append(
-                    SpellbookSpell(
-                        spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                spell["spellListName"] = sl_name
+                spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
+
+                if "uses" in spell:
+                    uses = spell["uses"]["value"]
+                    display_type = "bubble" if uses < 30 else None
+                    action_name = f"{sl_name}: {spell['name']}" if sl_name else spell["name"]
+                    spell_consumables.append(
+                        {
+                            "name": action_name,
+                            "value": spell.get("usesLeft", 0),
+                            "minv": "0",
+                            "maxv": str(uses),
+                            "reset": RESET_DICT[spell.get("reset")],
+                            "display_type": display_type,
+                        }
                     )
-                )
+
+                spell_consumables += self._consumables_from_resources(spell["resources"])
+
+                if spell_consumables:
+                    atk = self.parse_attack(spell)
+
+                    # unique naming
+                    atk_num = 2
+                    if atk.name in self.atk_names:
+                        while f"{atk.name} {atk_num}" in self.atk_names:
+                            atk_num += 1
+                        atk.name = f"{atk.name} {atk_num}"
+                    self.atk_names.add(atk.name)
+
+                    attacks.append(atk)
+
+                consumables += spell_consumables
+
+                if spell_prepared:
+                    if spell_ab is not None:
+                        sabs.append(spell_ab)
+                    if spell_dc is not None:
+                        dcs.append(spell_dc)
+                    if spell_mod is not None:
+                        mods.append(spell_mod)
+
+                result, strict = search(compendium.spells, spell["name"].strip(), lambda sp: sp.name, strict=True)
+                if result and strict:
+                    spells.append(
+                        SpellbookSpell.from_spell(
+                            result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                        )
+                    )
+                else:
+                    spells.append(
+                        SpellbookSpell(
+                            spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                        )
+                    )
 
         dc = max(dcs, key=dcs.count, default=None)
         sab = max(sabs, key=sabs.count, default=None)

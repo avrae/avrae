@@ -4,6 +4,7 @@ import re
 
 from cogs5e.models.automation import Automation
 from utils.constants import STAT_ABBREVIATIONS
+from utils.functions import chunk_text
 
 Effects = collections.namedtuple("Effects", ["damage", "saves", "save_damage"])
 NO_DICE_COUNT = re.compile(r"(?<!\d)d")
@@ -18,11 +19,15 @@ class DCV2AutoParser:
         self.target_effects = Effects([], [], [])
         self.resources = []
         self.meta = {}
+        self.text = []
 
     def get_automation(self, prop):
         self.parse(prop)
 
         auto = []
+        desc = prop.get("summary", {}).get("value") or prop.get("description", {}).get("value")
+        if desc is not None:
+            self.text.insert(0, desc)
         for resource, amt in self.resources:
             auto.append({"type": "counter", "counter": resource, "amount": str(amt)})
 
@@ -75,6 +80,8 @@ class DCV2AutoParser:
                 stack[-1].append(
                     {"type": "damage", "damage": f"{damage['damage']}[{damage['type']}]", "overheal": False}
                 )
+        for text in self.text:
+            auto.extend({"type": "text", "text": chunk} for chunk in chunk_text(text))
 
         log.debug(
             f"Damage for {prop['name']}: {self.target_effects.damage}, {self.target_effects.save_damage},"
@@ -157,6 +164,11 @@ class DCV2AutoParser:
             case "branch":
                 if prop["branchType"] in ("index", "random"):
                     return
+                self.parse_children(prop["children"], save=save)
+            case "note":
+                desc = prop.get("summary")
+                if desc is not None:
+                    self.text.append(desc)
                 self.parse_children(prop["children"], save=save)
             case _:
                 self.parse_children(prop["children"], save=save)

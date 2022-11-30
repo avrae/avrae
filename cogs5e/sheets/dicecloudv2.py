@@ -7,9 +7,7 @@ Created on Nov 08, 2022
 import collections
 import logging
 import re
-from math import ceil, floor
 
-import draconic
 from cogs5e.models.sheet.coinpurse import Coinpurse
 
 from cogs5e.models.character import Character
@@ -22,12 +20,12 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
-from cogs5e.sheets.utils import get_actions_for_names, get_actions_for_name
 from gamedata.compendium import compendium
-from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
+from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from utils.enums import ActivationType
 from .abc import SHEET_VERSION, SheetLoaderABC
+from .utils import get_actions_for_name
 
 log = logging.getLogger(__name__)
 
@@ -108,9 +106,10 @@ class DicecloudV2Parser(SheetLoaderABC):
         if args.last("nocc"):
             consumables = []
 
-        spellbook, spell_consumables, spell_attacks = self.get_spellbook(slots)
+        spellbook, spell_consumables, spell_attacks, spell_actions = self.get_spellbook(slots)
         consumables += spell_consumables
         attacks.extend(spell_attacks)
+        actions += spell_actions
         live = None  # TODO: implement live character
 
         # get race, subrace, and background from slot fillers and notes
@@ -463,9 +462,12 @@ class DicecloudV2Parser(SheetLoaderABC):
         dcs = []
         mods = []
         attacks = []
+        actions = []
         for spell in self._by_type["spell"]:
             if not (spell.get("deactivatedByAncestor") or spell.get("deactivatedByToggle")):
                 spell_consumables = []
+                spell_actions = self.persist_actions_for_name(spell["name"])
+                actions += spell_actions
                 log.debug(
                     f"Got spell with ancestors: {[spell['parent']['id']] + [k['id'] for k in spell['ancestors']]}"
                 )
@@ -478,7 +480,6 @@ class DicecloudV2Parser(SheetLoaderABC):
                     (None, None, None, None),
                 )
                 spell["spellListName"] = sl_name
-                spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
 
                 if "uses" in spell:
                     uses = spell["uses"]["value"]
@@ -496,43 +497,44 @@ class DicecloudV2Parser(SheetLoaderABC):
                     )
 
                 spell_consumables += self._consumables_from_resources(spell["resources"])
-
-                if spell_consumables:
-                    atk = self.parse_attack(spell)
-
-                    # unique naming
-                    atk_num = 2
-                    if atk.name in self.atk_names:
-                        while f"{atk.name} {atk_num}" in self.atk_names:
-                            atk_num += 1
-                        atk.name = f"{atk.name} {atk_num}"
-                    self.atk_names.add(atk.name)
-
-                    attacks.append(atk)
-
                 consumables += spell_consumables
 
-                if spell_prepared:
-                    if spell_ab is not None:
-                        sabs.append(spell_ab)
-                    if spell_dc is not None:
-                        dcs.append(spell_dc)
-                    if spell_mod is not None:
-                        mods.append(spell_mod)
+                if not spell_actions:
+                    if spell_consumables:
+                        atk = self.parse_attack(spell)
 
-                result, strict = search(compendium.spells, spell["name"].strip(), lambda sp: sp.name, strict=True)
-                if result and strict:
-                    spells.append(
-                        SpellbookSpell.from_spell(
-                            result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                        # unique naming
+                        atk_num = 2
+                        if atk.name in self.atk_names:
+                            while f"{atk.name} {atk_num}" in self.atk_names:
+                                atk_num += 1
+                            atk.name = f"{atk.name} {atk_num}"
+                        self.atk_names.add(atk.name)
+
+                        attacks.append(atk)
+
+                    spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
+                    if spell_prepared:
+                        if spell_ab is not None:
+                            sabs.append(spell_ab)
+                        if spell_dc is not None:
+                            dcs.append(spell_dc)
+                        if spell_mod is not None:
+                            mods.append(spell_mod)
+
+                    result, strict = search(compendium.spells, spell["name"].strip(), lambda sp: sp.name, strict=True)
+                    if result and strict:
+                        spells.append(
+                            SpellbookSpell.from_spell(
+                                result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                            )
                         )
-                    )
-                else:
-                    spells.append(
-                        SpellbookSpell(
-                            spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                    else:
+                        spells.append(
+                            SpellbookSpell(
+                                spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                            )
                         )
-                    )
 
         dc = max(dcs, key=dcs.count, default=None)
         sab = max(sabs, key=sabs.count, default=None)
@@ -553,7 +555,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         log.debug(f"Completed parsing spellbook: {spellbook.to_dict()}")
 
-        return spellbook, consumables, attacks
+        return spellbook, consumables, attacks, actions
 
     # helper functions
 
@@ -566,11 +568,13 @@ class DicecloudV2Parser(SheetLoaderABC):
         log.debug(f"Processing attack {atk_prop.get('name')}")
         auto = DCV2AutoParser(self).get_automation(atk_prop)
         if auto is None:
-            log.debug(f"Oops! Automation is None!")
+            log.debug("Oops! Automation is None!")
 
         name = atk_prop["name"]
+        verb, proper = ("casts", True) if atk_prop["type"] == "spell" else (None, False)
+        log.debug(f"Parsing {atk_prop['type']}")
         activation = ACTIVATION_DICT[atk_prop["actionType"]]
-        attack = Attack(name, auto, activation_type=activation)
+        attack = Attack(name, auto, verb=verb, proper=proper, activation_type=activation)
 
         return attack
 
@@ -596,8 +600,8 @@ class DicecloudV2Parser(SheetLoaderABC):
         attrs = resources["attributesConsumed"]
         consumables = []
         for attr in attrs:
-            full_attr = self._attr_by_name[attr["variableName"]]
-            if full_attr["_id"] not in self._seen_consumables:
+            full_attr = self._attr_by_name.get(attr["variableName"])
+            if full_attr and full_attr["_id"] not in self._seen_consumables:
                 self._seen_consumables.add(full_attr["_id"])
                 uses = full_attr["total"]
                 display_type = "bubble" if uses < 30 else None

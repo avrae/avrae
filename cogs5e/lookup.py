@@ -1077,11 +1077,13 @@ class Lookup(commands.Cog):
     # ==== helpers ====
     @staticmethod
     async def _get_destination(ctx):
+        guild_settings = None
         if hasattr(ctx, "get_server_settings"):
             guild_settings = await ctx.get_server_settings()
             slash_command = False
         else:
-            guild_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+            if ctx.guild is not None:
+                guild_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
             slash_command = True
         if guild_settings is None:
             return ctx

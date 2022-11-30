@@ -119,9 +119,11 @@ class LimitedUse(Sourced):
 
 
 class CachedSourced(Sourced):
-    def __init__(self, name, entity_type, **kwargs):
+    def __init__(self, name, entity_type, has_image=False, has_token=False, **kwargs):
         self.name = name
         self.entity_type = entity_type
+        self.has_image = has_image
+        self.has_token = has_token
         Sourced.__init__(
             self,
             homebrew=kwargs["homebrew"],
@@ -138,6 +140,8 @@ class CachedSourced(Sourced):
         return cls(
             d["name"],
             d["entity_type"],
+            d.get("has_image", False),
+            d.get("has_token", False),
             homebrew=d["homebrew"],
             source=d["source"],
             entity_id=d["entity_id"],
@@ -149,6 +153,8 @@ class CachedSourced(Sourced):
         return {
             "name": self.name,
             "entity_type": self.entity_type,
+            "has_image": self.has_image,
+            "has_token": self.has_token,
             "homebrew": self.homebrew,
             "source": self.source,
             "entity_id": self.entity_id,

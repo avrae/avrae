@@ -738,7 +738,8 @@ class Lookup(commands.Cog):
         self,
         inter: disnake.ApplicationCommandInteraction,
         name: gamedata.Monster = commands.Param(
-            description="The monster you want to look up", converter=lookup_converter("monster")
+            description="The monster you want to look up. (Excludes monsters without images)",
+            converter=lookup_converter("monster"),
         ),
         hide_name: bool = commands.Param(description="Hides the monster statblock name.", default=False),
     ):
@@ -797,7 +798,8 @@ class Lookup(commands.Cog):
         self,
         inter: disnake.ApplicationCommandInteraction,
         name: gamedata.Monster = commands.Param(
-            description="The monster you want to look up", converter=lookup_converter("monster")
+            description="The monster you want to look up. (Excludes monsters without images)",
+            converter=lookup_converter("monster"),
         ),
         plain_border: bool = commands.Param(
             description="Show the plain border instead of the subscriber border, if available.", default=False
@@ -819,6 +821,13 @@ class Lookup(commands.Cog):
     @slash_token.autocomplete("name")
     async def slash_monster_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         choices = await self._get_entities(inter, "monster", lookuputils.get_monster_choices)
+
+        # If this autocomplete is for token or monimage, filter out monsters without tokens or images
+        lookup_command = list(inter.options)[0]
+        if lookup_command == "token":
+            choices = list(filter(lambda x: x.has_token, choices))
+        elif lookup_command == "monimage":
+            choices = list(filter(lambda x: x.has_image, choices))
 
         available_ids = {"monster": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "monster")}
         select_key = create_selectkey(available_ids)
@@ -1108,6 +1117,7 @@ class Lookup(commands.Cog):
 
         # fetch it all
         available_entities = await entity_source(ctx)
+
         # Items have 4 entity types and as such return a dict
         if isinstance(available_entities, dict):
             available_entities = list(itertools.chain.from_iterable(available_entities.values()))
@@ -1116,6 +1126,8 @@ class Lookup(commands.Cog):
             CachedSourced(
                 name=e.name,
                 entity_type=e.entity_type,
+                has_image=False if entity_type != "monster" else bool(e.image_url),
+                has_token=False if entity_type != "monster" else bool(e.token_free_fp or e.token_sub_fp),
                 source=e.source,
                 homebrew=e.homebrew,
                 entity_id=e.entity_id,

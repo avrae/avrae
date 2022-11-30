@@ -258,7 +258,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                         log.debug(f"Found resource named: {attr['name']}")
                         self._seen_consumables.add(attr["_id"])
                         uses = attr["total"]
-                        display_type = "bubble" if uses < 30 else None
+                        display_type = "bubble" if uses < 10 else None
                         consumables.append(
                             {
                                 "name": attr["name"],
@@ -348,7 +348,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                 aname = attack["name"]
                 if attack.get("uses", None):
                     uses = attack["uses"]["value"]
-                    display_type = "bubble" if uses < 30 else None
+                    display_type = "bubble" if uses < 10 else None
                     consumables.append(
                         {
                             "name": aname,
@@ -483,7 +483,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
                 if "uses" in spell:
                     uses = spell["uses"]["value"]
-                    display_type = "bubble" if uses < 30 else None
+                    display_type = "bubble" if uses < 10 else None
                     action_name = f"{sl_name}: {spell['name']}" if sl_name else spell["name"]
                     spell_consumables.append(
                         {
@@ -604,7 +604,7 @@ class DicecloudV2Parser(SheetLoaderABC):
             if full_attr and full_attr["_id"] not in self._seen_consumables:
                 self._seen_consumables.add(full_attr["_id"])
                 uses = full_attr["total"]
-                display_type = "bubble" if uses < 30 else None
+                display_type = "bubble" if uses < 10 else None
                 consumables.append(
                     {
                         "name": full_attr["name"],

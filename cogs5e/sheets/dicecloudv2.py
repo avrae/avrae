@@ -254,8 +254,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                     if attr["attributeType"] == "spellSlot":
                         if attr["variableName"] == "pactSlot":
                             slots["pact"] = {"num": attr["total"], "level": attr["spellSlotLevel"]["value"]}
-                        else:
-                            slots[str(attr["spellSlotLevel"]["value"])] += attr["total"]
+                        slots[str(attr["spellSlotLevel"]["value"])] += attr["total"]
                     if attr["attributeType"] == "resource":
                         log.debug(f"Found resource named: {attr['name']}")
                         self._seen_consumables.add(attr["_id"])
@@ -342,7 +341,6 @@ class DicecloudV2Parser(SheetLoaderABC):
         """Returns a list of dicts of all of the character's attacks."""
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
-        character = self.character_data
         attacks = AttackList()
         actions = []
         consumables = []
@@ -434,7 +432,7 @@ class DicecloudV2Parser(SheetLoaderABC):
     def get_custom_counters(self):  # TODO: get counters
         return []
 
-    def get_spellbook(self, slots):  # TODO: get spellbook
+    def get_spellbook(self, slots):
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
 

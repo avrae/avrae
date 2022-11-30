@@ -154,6 +154,10 @@ class DCV2AutoParser:
             case "toggle":
                 if prop["condition"]["value"]:
                     self.parse_children(prop["children"], save=save)
+            case "branch":
+                if prop["branchType"] in ("index", "random"):
+                    return
+                self.parse_children(prop["children"], save=save)
             case _:
                 self.parse_children(prop["children"], save=save)
 

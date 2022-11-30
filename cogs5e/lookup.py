@@ -752,6 +752,7 @@ class Lookup(commands.Cog):
         return await self._monimage(inter, name, hide_name)
 
     async def _monimage(self, ctx, monster: gamedata.Monster, hide_name):
+        destination = await self._get_destination(ctx)
         url = monster.get_image_url()
         embed = EmbedWithAuthor(ctx)
         if not hide_name:
@@ -762,7 +763,7 @@ class Lookup(commands.Cog):
             return await ctx.channel.send("This monster has no image.")
 
         embed.set_image(url=url)
-        await ctx.send(embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def token(self, ctx, name=None, *args):
@@ -839,6 +840,8 @@ class Lookup(commands.Cog):
         return [select_key(r, True) for r in result][:25]
 
     async def _token(self, ctx, monster: gamedata.Monster, plain_border, hide_name):
+        destination = await self._get_destination(ctx)
+
         # select border
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         is_subscriber = ddb_user and ddb_user.is_subscriber
@@ -846,7 +849,7 @@ class Lookup(commands.Cog):
         if monster.homebrew:
             # homebrew: generate token
             if not monster.get_image_url():
-                return await ctx.send("This monster has no image.")
+                return await destination.send("This monster has no image.")
             try:
                 token_args = None
                 # Not the cleanest but leaves it open to additional args in the future

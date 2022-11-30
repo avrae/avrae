@@ -6,7 +6,6 @@ import time
 
 import aiohttp
 
-from utils import config
 from .errors import Forbidden, HTTPException, NotFound, Timeout
 
 MAX_TRIES = 10
@@ -14,10 +13,11 @@ log = logging.getLogger(__name__)
 
 
 class DicecloudV2HTTP:
-    def __init__(self, api_base, username, password, debug=False):
+    def __init__(self, api_base, username, password, no_auth, debug=False):
         self.base = api_base
         self.username = username
         self.password = password
+        self.no_auth = no_auth
         self.debug = debug
         self.auth_token = None
         self.user_id = None
@@ -48,7 +48,7 @@ class DicecloudV2HTTP:
 
     async def try_until_max(self, method, endpoint, data={}, headers={}, params={}):
         async with aiohttp.ClientSession() as session:
-            reauthed = config.DCV2_NO_AUTH
+            reauthed = self.no_auth
             for _ in range(MAX_TRIES):
                 try:
                     async with session.request(
@@ -84,7 +84,7 @@ class DicecloudV2HTTP:
         )  # we did 10 loops and never got 200, so we must have 429ed
 
     async def get_auth(self, *, force_reauth=False):
-        if not config.DCV2_NO_AUTH and (force_reauth or not self.auth_token or self.expiration <= time.time()):
+        if not self.no_auth and (force_reauth or not self.auth_token or self.expiration <= time.time()):
             data = await self.try_until_max("POST", "/login", {"username": self.username, "password": self.password})
             self.auth_token = data["token"]
             self.user_id = data["id"]

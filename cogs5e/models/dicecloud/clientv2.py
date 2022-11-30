@@ -16,7 +16,7 @@ class DicecloudV2Client:
     instance = None
 
     def __init__(self, debug=False):
-        self.http = DicecloudV2HTTP(API_BASE, config.DICECLOUDV2_USER, config.DICECLOUDV2_PASS, debug=debug)
+        self.http = DicecloudV2HTTP(API_BASE, config.DICECLOUDV2_USER, config.DICECLOUDV2_PASS, config.DCV2_NO_AUTH, debug=debug)
 
     @classmethod
     def getInstance(cls):

@@ -857,7 +857,7 @@ class Lookup(commands.Cog):
                     token_args = "-border plain"
                 image = await img.generate_token(monster.get_image_url(), is_subscriber, token_args)
             except Exception as e:
-                return await ctx.send(f"Error generating token: {e}")
+                return await destination.send(f"Error generating token: {e}")
         else:
             # official monsters
             token_url = monster.get_token_url(is_subscriber)
@@ -865,7 +865,7 @@ class Lookup(commands.Cog):
                 token_url = monster.get_token_url(False)
 
             if not token_url:
-                return await ctx.send("This monster has no image.")
+                return await destination.send("This monster has no image.")
 
             image = await img.fetch_monster_image(token_url)
 
@@ -876,7 +876,7 @@ class Lookup(commands.Cog):
 
         file = disnake.File(image, filename="image.png")
         embed.set_image(url="attachment://image.png")
-        await ctx.send(embed=embed, file=file)
+        await destination.send(embed=embed, file=file)
 
     # ==== spells ====
     @commands.command()

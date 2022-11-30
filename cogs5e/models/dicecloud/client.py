@@ -9,8 +9,8 @@ from utils import config
 from .errors import InsertFailure, LoginFailure
 from .http import DicecloudHTTP
 
-API_BASE = "https://dicecloud.com"
-SOCKET_BASE = "wss://dicecloud.com/websocket"
+API_BASE = "https://v1.dicecloud.com"
+SOCKET_BASE = "wss://v1.dicecloud.com/websocket"
 
 log = logging.getLogger(__name__)
 

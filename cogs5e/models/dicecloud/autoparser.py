@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 
 class DCV2AutoParser:
-    def __init__(self, parser: "DicecloudV2Parser"):
+    def __init__(self, parser):
         self.parser = parser
         self.self_effects = Effects([], [], [])
         self.target_effects = Effects([], [], [])
@@ -141,7 +141,7 @@ class DCV2AutoParser:
                 damage = {
                     "id": prop["_id"],
                     "damage": damage,
-                    "type": prop["damageType"],
+                    "type": ("magical " if magical else "") + prop["damageType"],
                 }
                 log.debug(f"Parsing damage: {damage}")
                 if save:

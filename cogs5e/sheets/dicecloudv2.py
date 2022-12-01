@@ -507,8 +507,8 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         return actions
 
-    def get_custom_counters(self):  # TODO: get counters
-        return []
+    def get_custom_counters(self):
+        return self._parse_attributes()[5]
 
     def get_spellbook(self, slots):
         if self.character_data is None:

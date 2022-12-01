@@ -7,7 +7,7 @@ from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import chunk_text
 
 Effects = collections.namedtuple("Effects", ["damage", "saves", "save_damage"])
-NO_DICE_COUNT = re.compile(r"(?<!\d)d")
+NO_DICE_COUNT = re.compile(r"(?<!\d)d(?=\d)")
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +20,7 @@ class DCV2AutoParser:
         self.resources = []
         self.meta = {}
         self.text = []
+        self.rolls = {}
 
     def get_automation(self, prop):
         self.parse(prop)
@@ -47,7 +48,13 @@ class DCV2AutoParser:
             for save in self.target_effects.saves:
                 if (stat := save["stat"][:3].lower()) in STAT_ABBREVIATIONS:
                     stack[-1].append(
-                        {"type": "save", "stat": stat, "fail": stack.append([]) or stack[-1], "success": []}
+                        {
+                            "type": "save",
+                            "stat": stat,
+                            "fail": stack.append([]) or stack[-1],
+                            "success": [],
+                            "dc": save["dc"],
+                        }
                     )
             for damage in self.target_effects.save_damage:
                 stack[-1].append(
@@ -74,7 +81,13 @@ class DCV2AutoParser:
             for save in self.self_effects.saves:
                 if (stat := save["stat"][:3].lower()) in STAT_ABBREVIATIONS:
                     stack[-1].append(
-                        {"type": "save", "stat": stat, "fail": stack.append([]) and stack[-1], "success": []}
+                        {
+                            "type": "save",
+                            "stat": stat,
+                            "fail": stack.append([]) and stack[-1],
+                            "success": [],
+                            "dc": save["dc"],
+                        }
                     )
             for damage in self.self_effects.save_damage:
                 stack[-1].append(
@@ -118,7 +131,7 @@ class DCV2AutoParser:
                         {
                             "id": prop["_id"],
                             "dc": prop.get("dc", {}).get("value", 10),
-                            "stat": prop["stat"],
+                            "stat": prop.get("stat", ""),
                         }
                     )
                 else:
@@ -126,7 +139,7 @@ class DCV2AutoParser:
                         {
                             "id": prop["_id"],
                             "dc": prop.get("dc", {}).get("value", 10),
-                            "stat": prop["stat"],
+                            "stat": prop.get("stat", ""),
                         }
                     )
                 self.parse_children(prop["children"], save=True)

@@ -3,6 +3,7 @@ import logging
 import re
 
 from cogs5e.models.automation import Automation
+from cogs5e.models.dicecloud.errors import AutoParserException
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import chunk_text
 
@@ -130,98 +131,103 @@ class DCV2AutoParser:
 
     def parse(self, prop, *, initial=True, save=False):
         # most types have unique effects under an action
-        match prop["type"]:
-            case "action" | "spell":
-                if initial:
-                    # check if target is self
-                    self.meta["self"] = prop["target"] == "self"
+        try:
+            match prop["type"]:
+                case "action" | "spell":
+                    if initial:
+                        # check if target is self
+                        self.meta["self"] = prop["target"] == "self"
 
-                    # get attack bonus
-                    if atk_roll := prop.get("attackRoll"):
-                        self.meta["bonus"] = atk_roll["value"]
+                        # get attack bonus
+                        if atk_roll := prop.get("attackRoll"):
+                            self.meta["bonus"] = atk_roll["value"]
 
-                    # get names for custom counters
-                    if prop.get("uses", None):
-                        sl_name = prop.get("spellListName")
-                        self.resources.append((f"{sl_name}: {prop['name']}" if sl_name else prop["name"], 1))
-                    if attrs := prop["resources"]["attributesConsumed"]:
-                        for attr in attrs:
-                            self.resources.append((attr["statName"], attr["quantity"]["value"]))
+                        # get names for custom counters
+                        if prop.get("uses", None):
+                            sl_name = prop.get("spellListName")
+                            self.resources.append((f"{sl_name}: {prop['name']}" if sl_name else prop["name"], 1))
+                        if attrs := prop["resources"]["attributesConsumed"]:
+                            for attr in attrs:
+                                self.resources.append((attr["statName"], attr["quantity"]["value"]))
 
-                    self.parse_children(prop["children"], save=save)
+                        self.parse_children(prop["children"], save=save)
 
-            case "savingThrow":
-                if self.meta.get("self") or prop.get("target") == "self":
-                    self.self_effects.saves.append(
-                        {
-                            "id": prop["_id"],
-                            "dc": prop.get("dc", {}).get("value", 10),
-                            "stat": prop.get("stat", ""),
-                        }
+                case "savingThrow":
+                    if self.meta.get("self") or prop.get("target") == "self":
+                        self.self_effects.saves.append(
+                            {
+                                "id": prop["_id"],
+                                "dc": prop.get("dc", {}).get("value", 10),
+                                "stat": prop.get("stat", ""),
+                            }
+                        )
+                    else:
+                        self.target_effects.saves.append(
+                            {
+                                "id": prop["_id"],
+                                "dc": prop.get("dc", {}).get("value", 10),
+                                "stat": prop.get("stat", ""),
+                            }
+                        )
+                    self.parse_children(prop["children"], save=True)
+                case "damage":
+                    # all the checks for what exactly we're doing here
+                    magical = "magical" in prop["tags"]
+                    healing = prop["damageType"] == "healing"
+                    effects = [str(effect["amount"]["value"]).strip() for effect in prop["amount"].get("effects", [])]
+                    damage_dice = str(prop["amount"]["value"]) + "".join(
+                        effect if effect[0] in "+-" else f"+{effect}" for effect in effects
                     )
-                else:
-                    self.target_effects.saves.append(
-                        {
-                            "id": prop["_id"],
-                            "dc": prop.get("dc", {}).get("value", 10),
-                            "stat": prop.get("stat", ""),
-                        }
+                    damage_dice = f"{'-1*(' if healing else ''}{damage_dice}{')' if healing else ''}"
+                    # handle all the annotated string stuff, as well as a few funcs
+                    damage = self.convert_to_annostr(damage_dice)
+                    effects = (
+                        self.self_effects
+                        if self.meta.get("self") or prop.get("target") == "self"
+                        else self.target_effects
                     )
-                self.parse_children(prop["children"], save=True)
-            case "damage":
-                # all the checks for what exactly we're doing here
-                magical = "magical" in prop["tags"]
-                healing = prop["damageType"] == "healing"
-                effects = [str(effect["amount"]["value"]).strip() for effect in prop["amount"].get("effects", [])]
-                damage_dice = str(prop["amount"]["value"]) + "".join(
-                    effect if effect[0] in "+-" else f"+{effect}" for effect in effects
-                )
-                damage_dice = f"{'-1*(' if healing else ''}{damage_dice}{')' if healing else ''}"
-                # handle all the annotated string stuff, as well as a few funcs
-                damage = self.convert_to_annostr(damage_dice)
-                effects = (
-                    self.self_effects if self.meta.get("self") or prop.get("target") == "self" else self.target_effects
-                )
-                damage = {
-                    "id": prop["_id"],
-                    "damage": damage,
-                    "type": ("magical " if magical else "") + prop["damageType"],
-                }
-                log.debug(f"Parsing damage: {damage}")
-                if save:
-                    effects.save_damage.append(damage)
-                else:
-                    effects.damage.append(damage)
-                self.parse_children(prop["children"], save=save)
-            case "buff":
-                pass  # maybe someday we can convert these into ieffects
-            case "toggle":
-                # since all properties under actions are inactive, we have to check the toggles
-                if prop["condition"]["value"]:
+                    damage = {
+                        "id": prop["_id"],
+                        "damage": damage,
+                        "type": ("magical " if magical else "") + prop["damageType"],
+                    }
+                    log.debug(f"Parsing damage: {damage}")
+                    if save:
+                        effects.save_damage.append(damage)
+                    else:
+                        effects.damage.append(damage)
                     self.parse_children(prop["children"], save=save)
-            case "branch":
-                # these branch types specifically are banned
-                if prop["branchType"] in ("index", "random"):
-                    return
-                self.parse_children(prop["children"], save=save)
-            case "note":
-                # we only use the summary here, since it's all DC would display
-                desc = prop.get("summary")
-                if desc is not None:
-                    self.text.append(desc)
-                self.parse_children(prop["children"], save=save)
-            # rolls, pretty straight forward
-            case "roll":
-                if name := prop.get("variableName"):
-                    roll = {"dice": prop.get("roll", {}).get("value")}
-                    if roll["dice"]:
-                        roll["dice"] = self.convert_to_annostr(roll["dice"])
-                        if d_name := prop.get("name"):
-                            roll["displayName"] = d_name
-                        self.rolls[name] = roll
-            # everything else does nothing and just runs its children
-            case _:
-                self.parse_children(prop["children"], save=save)
+                case "buff":
+                    pass  # maybe someday we can convert these into ieffects
+                case "toggle":
+                    # since all properties under actions are inactive, we have to check the toggles
+                    if prop["condition"]["value"]:
+                        self.parse_children(prop["children"], save=save)
+                case "branch":
+                    # these branch types specifically are banned
+                    if prop["branchType"] in ("index", "random"):
+                        return
+                    self.parse_children(prop["children"], save=save)
+                case "note":
+                    # we only use the summary here, since it's all DC would display
+                    desc = prop.get("summary")
+                    if desc is not None:
+                        self.text.append(desc)
+                    self.parse_children(prop["children"], save=save)
+                # rolls, pretty straight forward
+                case "roll":
+                    if name := prop.get("variableName"):
+                        roll = {"dice": prop.get("roll", {}).get("value")}
+                        if roll["dice"]:
+                            roll["dice"] = self.convert_to_annostr(roll["dice"])
+                            if d_name := prop.get("name"):
+                                roll["displayName"] = d_name
+                            self.rolls[name] = roll
+                # everything else does nothing and just runs its children
+                case _:
+                    self.parse_children(prop["children"], save=save)
+        except Exception as e:
+            raise AutoParserException(prop, "Auto Parser encounter an error parsing a property") from e
 
     def parse_children(self, children, *, save=False):
         for child_id in children:

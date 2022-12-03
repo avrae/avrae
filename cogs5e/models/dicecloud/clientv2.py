@@ -7,7 +7,7 @@ from utils import config
 from .errors import InsertFailure, LoginFailure
 from .httpv2 import DicecloudV2HTTP
 
-API_BASE = "https://beta.dicecloud.com/api"
+API_BASE = "https://dicecloud.com/api"
 
 log = logging.getLogger(__name__)
 

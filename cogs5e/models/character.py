@@ -680,7 +680,7 @@ class Character(StatBlock):
         """
         base_urls = {
             "beyond": "https://ddb.ac/characters/",
-            "dicecloud": "https://dicecloud.com/character/",
+            "dicecloud": "https://v1.dicecloud.com/character/",
             "google": "https://docs.google.com/spreadsheets/d/",
             "dicecloudv2": "https://beta.dicecloud.com/character/",
         }

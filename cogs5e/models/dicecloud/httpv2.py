@@ -55,26 +55,26 @@ class DicecloudV2HTTP:
                         method, f"{self.base}{endpoint}", data=data, headers=headers, params=params
                     ) as resp:
                         log.info(f"Dicecloud V2 returned {resp.status} ({endpoint})")
+                        data = await resp.json(encoding="utf-8")
                         if resp.status == 200:
-                            return await resp.json(encoding="utf-8")
+                            return data
                         elif resp.status == 429:
-                            timeout = await resp.json(encoding="utf-8")
+                            timeout = data
                             log.warning(f"Dicecloud V2 ratelimit hit ({endpoint}) - resets in {timeout}ms")
                             await asyncio.sleep(timeout["timeToReset"] / 1000)  # rate-limited, wait and try again
                         elif 400 <= resp.status < 600:
                             if resp.status == 403:
-                                data = await resp.json(encoding="utf-8")
                                 if not reauthed and data.get("reason") == "Invalid authentication token":
                                     auth_token = await self.get_auth(force_reauth=True)
                                     if auth_token:
                                         headers["Authorization"] = "Bearer " + auth_token
                                     reauthed = True
                                 else:
-                                    raise Forbidden(resp.reason)
+                                    raise Forbidden(data.get("reason") or resp.reason)
                             elif resp.status == 404:
-                                raise NotFound(resp.reason)
+                                raise NotFound(data.get("reason") or resp.reason)
                             else:
-                                raise HTTPException(resp.status, resp.reason)
+                                raise HTTPException(resp.status, data.get("reason") or resp.reason)
                         else:
                             log.warning(f"Unknown response from Dicecloud: {resp.status}")
                 except aiohttp.ServerDisconnectedError:

@@ -631,8 +631,8 @@ class SheetManager(commands.Cog):
         """
         Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
-            [Dicecloud](https://dicecloud.com/)
-            [Dicecloud V2](https://beta.dicecloud.com/)
+            [Dicecloud v1](https://v1.dicecloud.com/)
+            [Dicecloud v2](https://dicecloud.com/)
             [GSheet v2.1](https://gsheet2.avrae.io) (auto)
             [GSheet v1.4](https://gsheet.avrae.io) (manual)
 

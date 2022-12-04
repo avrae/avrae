@@ -4,21 +4,21 @@
 
 - [Docker Compose](https://docs.docker.com/compose/install/).
 - [Discord](https://discordapp.com/) account.
-- [Dicecloud](https://www.dicecloud.com) account - do NOT register with Google, create a normal account.
-- [Dicecloud V2](https://beta.dicecloud.com) account - do NOT register with Google, create a normal account.
+- [Dicecloud v1](https://v1.dicecloud.com) account - do NOT register with Google, create a normal account.
+- [Dicecloud v2](https://dicecloud.com) account - do NOT register with Google, create a normal account.
 - [Google Drive Service Account](https://gspread.readthedocs.io/en/latest/oauth2.html).
     - Follow steps 1-7 in the **For Bots: Using Service Account** portion. The contents of this JSON file is
       your `GOOGLE_SERVICE_ACCOUNT` env var.
     - Alternatively, save that json file in the root project directory as `avrae-google.json`.
 
-### Dicecloud
+### Dicecloud v1
 
 - Click Username in top left top open Account page
 - `DICECLOUD_USER` is the login username
 - `DICECLOUD_PASS` is your password (recommended to use a dedicated bot account with a random generated password)
 - `DICECLOUD_TOKEN` is the `API KEY` revealed by `SHOW`
 
-### Dicecloud V2
+### Dicecloud v2
 
 - Click gear in top left top open Account page
 - `DICECLOUDV2_USER` is the login username

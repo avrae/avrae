@@ -14,7 +14,9 @@ Effects = collections.namedtuple("Effects", ["damage", "saves", "save_damage"])
 NO_DICE_COUNT = re.compile(r"(?=\s|^)d(?=[\d{])")
 THE_DICE_D = re.compile(r"(?=^|\b)([\d}]+)d([\d{]+)(?=$|\b)")
 IF_TRUE_FALSE = re.compile(r"([^?(]*)\?([^:]*):([^)]*)")
-MAGIC_ANNOSTR_REGEX = re.compile(r"(\s*)(\(?\s*?(?:(?<!\w)\d+(?!\d*d\d+(?=\s|$|\b)).*?)?(?:(?:[a-ce-zA-Z_]|d(?!\d+(?=\s|$|\b)))\w*).*?\)?)(?=$|\s*[+\-*/]?[+\-*/(\d\s]*(?:\d*d\d+))")
+MAGIC_ANNOSTR_REGEX = re.compile(
+    r"(\s*)(\(?\s*?(?:(?<!\w)\d+(?!\d*d\d+(?=\s|$|\b)).*?)?(?:(?:[a-ce-zA-Z_]|d(?!\d+(?=\s|$|\b)))\w*).*?\)?)(?=$|\s*[+\-*/]?[+\-*/(\d\s]*(?:\d*d\d+))"
+)
 SPECIAL_FUNCS = (
     (re.compile(r"\btrunc\b"), "int"),
     (re.compile(r"sign\(([^\)]*)\)"), r"((\1) and round((\1)/abs(\1)))"),

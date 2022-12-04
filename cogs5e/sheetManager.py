@@ -20,6 +20,7 @@ import ui
 from aliasing import helpers
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
+from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import ExternalImportError, NoCharacter
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
@@ -461,12 +462,20 @@ class SheetManager(commands.Cog):
         if not user_characters:
             return await ctx.send("You have no characters.")
         character_chunks = chunk_text(
-            "Your characters:\n{}".format(", ".join(sorted(c["name"] for c in user_characters))),
-            max_chunk_size=2000,
+            ", ".join(sorted(c["name"] for c in user_characters)),
+            max_chunk_size=4096,
             chunk_on=(", ",),
         )
-        for chunk in character_chunks:
-            await ctx.send(chunk)
+        embed_queue = [EmbedWithAuthor(ctx)]
+        color = embed_queue[-1].colour
+        embed_queue[-1].title = "Your characters"
+        embed_queue[-1].description = character_chunks[0]
+
+        for chunk in character_chunks[1:]:
+            embed_queue.append(disnake.Embed(colour=color, description=chunk))
+
+        for embed in embed_queue:
+            await ctx.send(embed=embed)
 
     @character.command(name="delete")
     async def character_delete(self, ctx, *, name):

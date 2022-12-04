@@ -33,7 +33,7 @@ from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.enums import ActivationType
-from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title
+from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title, chunk_text
 from utils.settings.character import CHARACTER_SETTINGS
 
 log = logging.getLogger(__name__)
@@ -460,7 +460,13 @@ class SheetManager(commands.Cog):
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}, ["name"]).to_list(None)
         if not user_characters:
             return await ctx.send("You have no characters.")
-        await ctx.send("Your characters:\n{}".format(", ".join(sorted(c["name"] for c in user_characters))))
+        character_chunks = chunk_text(
+            "Your characters:\n{}".format(", ".join(sorted(c["name"] for c in user_characters))),
+            max_chunk_size=2000,
+            chunk_on=(", ",),
+        )
+        for chunk in character_chunks:
+            await ctx.send(chunk)
 
     @character.command(name="delete")
     async def character_delete(self, ctx, *, name):

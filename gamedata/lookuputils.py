@@ -231,17 +231,21 @@ async def add_training_data(mdb, lookup_type, query, result_name, metadata=None,
     await mdb.nn_training.insert_one(data)
 
 
+def slash_match_key(entity):
+    return f"{entity.name} {entity.source} {'homebrew' if entity.homebrew else ''}"
+
+
 def lookup_converter(entity_type: str) -> Callable:
     async def monster_converter(inter: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.monster:
         choices = await get_monster_choices(inter)
-        result: gamedata.monster = search(choices, arg, lambda e: e.name)[0]
+        result: gamedata.monster = search(choices, arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That monster doesn't exist")
         return result
 
     async def item_converter(inter: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.item:
         choices = await get_item_entitlement_choice_map(inter)
-        result: gamedata.monster = search(list(itertools.chain.from_iterable(choices.values())), arg, lambda e: e.name)[
+        result: gamedata.monster = search(list(itertools.chain.from_iterable(choices.values())), arg, slash_match_key)[
             0
         ]
         if result is None:
@@ -250,7 +254,7 @@ def lookup_converter(entity_type: str) -> Callable:
 
     async def spell_converter(inter: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.spell:
         choices = await get_spell_choices(inter)
-        result: gamedata.spell = search(choices, arg, lambda e: e.name)[0]
+        result: gamedata.spell = search(choices, arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That spell doesn't exist")
         return result
@@ -265,43 +269,43 @@ def lookup_converter(entity_type: str) -> Callable:
         return result
 
     def background_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.Background:
-        result: gamedata.Background = search(compendium.backgrounds, arg, lambda e: e.name)[0]
+        result: gamedata.Background = search(compendium.backgrounds, arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That background doesn't exist")
         return result
 
     def feat_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.feat:
-        result: gamedata.feat = search(compendium.feats, arg, lambda e: e.name)[0]
+        result: gamedata.feat = search(compendium.feats, arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That feat doesn't exist")
         return result
 
     def race_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.race:
-        result: gamedata.race = search(compendium.races + compendium.subraces, arg, lambda e: e.name)[0]
+        result: gamedata.race = search(compendium.races + compendium.subraces, arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That race doesn't exist")
         return result
 
     def racefeat_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> RaceFeature:
-        result: RaceFeature = search(compendium.rfeats + compendium.subrfeats, arg, lambda e: e.name)[0]
+        result: RaceFeature = search(compendium.rfeats + compendium.subrfeats, arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That racial feature doesn't exist")
         return result
 
     def class_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.Class:
-        result: gamedata.Class = search(compendium.classes, arg, lambda e: e.name)[0]
+        result: gamedata.Class = search(compendium.classes, arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That class doesn't exist")
         return result
 
     def subclass_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.Subclass:
-        result: gamedata.Subclass = search(compendium.subclasses, arg, lambda e: e.name)[0]
+        result: gamedata.Subclass = search(compendium.subclasses, arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That class doesn't exist")
         return result
 
     def classfeat_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> ClassFeature:
-        result: ClassFeature = search(compendium.cfeats + compendium.optional_cfeats, arg, lambda e: e.name)[0]
+        result: ClassFeature = search(compendium.cfeats + compendium.optional_cfeats, arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That class feature doesn't exist")
         return result

@@ -19,7 +19,7 @@ from cogsmisc.stats import Stats
 from gamedata import lookuputils
 from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
-from gamedata.lookuputils import create_selectkey, lookup_converter, can_access
+from gamedata.lookuputils import create_selectkey, lookup_converter, can_access, slash_match_key
 from gamedata.race import RaceFeature
 from gamedata.shared import CachedSourced, Sourced
 from utils import checks, img
@@ -165,7 +165,7 @@ class Lookup(commands.Cog):
         available_ids = {"feat": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "feat")}
         select_key = create_selectkey(available_ids)
 
-        result, strict = search(compendium.feats, user_input, lambda e: f"{e.name} {e.source}", 25)
+        result, strict = search(compendium.feats, user_input, slash_match_key, 25)
         if strict:
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
@@ -213,9 +213,7 @@ class Lookup(commands.Cog):
         }
         select_key = create_selectkey(available_ids)
 
-        result, strict = search(
-            compendium.rfeats + compendium.subrfeats, user_input, lambda e: f"{e.name} {e.source}", 25
-        )
+        result, strict = search(compendium.rfeats + compendium.subrfeats, user_input, slash_match_key, 25)
         if strict:
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
@@ -260,9 +258,7 @@ class Lookup(commands.Cog):
         }
         select_key = create_selectkey(available_ids)
 
-        result, strict = search(
-            compendium.races + compendium.subraces, user_input, lambda e: f"{e.name} {e.source}", 25
-        )
+        result, strict = search(compendium.races + compendium.subraces, user_input, slash_match_key, 25)
         if strict:
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
@@ -311,9 +307,7 @@ class Lookup(commands.Cog):
         }
         select_key = create_selectkey(available_ids)
 
-        result, strict = search(
-            compendium.cfeats + compendium.optional_cfeats, user_input, lambda e: f"{e.name} {e.source}", 25
-        )
+        result, strict = search(compendium.cfeats + compendium.optional_cfeats, user_input, slash_match_key, 25)
 
         if strict:
             return [select_key(result, True)]
@@ -362,7 +356,7 @@ class Lookup(commands.Cog):
     async def slash_class_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         available_ids = {"class": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "class")}
         select_key = create_selectkey(available_ids)
-        result, strict = search(compendium.classes, user_input, lambda e: f"{e.name} {e.source}", 25)
+        result, strict = search(compendium.classes, user_input, slash_match_key, 25)
         if strict:
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
@@ -449,7 +443,7 @@ class Lookup(commands.Cog):
     async def slash_subclass_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         available_ids = {"class": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "class")}
         select_key = create_selectkey(available_ids)
-        result, strict = search(compendium.subclasses, user_input, lambda e: f"{e.name} {e.source}", 25)
+        result, strict = search(compendium.subclasses, user_input, slash_match_key, 25)
         if strict:
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
@@ -504,7 +498,7 @@ class Lookup(commands.Cog):
     async def slash_background_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         available_ids = {"background": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "background")}
         select_key = create_selectkey(available_ids)
-        result, strict = search(compendium.backgrounds, user_input, lambda e: f"{e.name} {e.source}", 25)
+        result, strict = search(compendium.backgrounds, user_input, slash_match_key, 25)
         if strict:
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
@@ -832,9 +826,7 @@ class Lookup(commands.Cog):
 
         available_ids = {"monster": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "monster")}
         select_key = create_selectkey(available_ids)
-        result, strict = search(
-            choices, user_input, lambda e: f"{e.name} {e.source} {'homebrew' if e.homebrew else ''}"
-        )
+        result, strict = search(choices, user_input, slash_match_key)
         if strict:
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
@@ -909,9 +901,7 @@ class Lookup(commands.Cog):
 
         available_ids = {"spell": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "spell")}
         select_key = create_selectkey(available_ids)
-        result, strict = search(
-            choices, user_input, lambda e: f"{e.name} {e.source} {'homebrew' if e.homebrew else ''}", 25
-        )
+        result, strict = search(choices, user_input, slash_match_key, 25)
 
         if strict:
             return [select_key(result, True)]
@@ -1007,9 +997,7 @@ class Lookup(commands.Cog):
         available_ids = {k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in choice_dict}
 
         select_key = create_selectkey(available_ids)
-        result, strict = search(
-            choices, user_input, lambda e: f"{e.name} {e.source} {'homebrew' if e.homebrew else ''}", 25
-        )
+        result, strict = search(choices, user_input, slash_match_key, 25)
         if strict:
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]

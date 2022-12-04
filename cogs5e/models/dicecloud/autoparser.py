@@ -12,7 +12,7 @@ Effects = collections.namedtuple("Effects", ["damage", "saves", "save_damage"])
 
 # various regex for annotated strings
 NO_DICE_COUNT = re.compile(r"(?=\s|^)d(?=[\d{])")
-THE_DICE_D = re.compile(r"(?=^|\b)(?:[\d}]+)d(?:[\d{]+)(?=$|\b)")
+THE_DICE_D = re.compile(r"(?=^|\b)([\d}]+)d([\d{]+)(?=$|\b)")
 IF_TRUE_FALSE = re.compile(r"([^?(]*)\?([^:]*):([^)]*)")
 MAGIC_ANNOSTR_REGEX = re.compile(r"(\s*)(\(?\s*?(?:(?<!\w)\d+(?!\d*d\d+(?=\s|$|\b)).*?)?(?:(?:[a-ce-zA-Z_]|d(?!\d+(?=\s|$|\b)))\w*).*?\)?)(?=$|\s*[+\-*/]?[+\-*/(\d\s]*(?:\d*d\d+))")
 SPECIAL_FUNCS = (
@@ -239,7 +239,7 @@ class DCV2AutoParser:
         string = re.sub(IF_TRUE_FALSE, r"(\2) if (\1) else (\3)", string, re.IGNORECASE)
         string = re.sub(MAGIC_ANNOSTR_REGEX, r"\1{\2}", string)
         string = re.sub(NO_DICE_COUNT, "1d", string, re.IGNORECASE)
-        string = re.sub(THE_DICE_D, "d", string, re.IGNORECASE)
+        string = re.sub(THE_DICE_D, r"\1d\2", string, re.IGNORECASE)
         for patt, rep in SPECIAL_FUNCS:
             string = re.sub(patt, rep, string)
         return string

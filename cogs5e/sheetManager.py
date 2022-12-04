@@ -458,11 +458,22 @@ class SheetManager(commands.Cog):
     @character.command(name="list")
     async def character_list(self, ctx):
         """Lists your characters."""
-        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}, ["name"]).to_list(None)
+        user_characters = await self.bot.mdb.characters.find(
+            {"owner": str(ctx.author.id)}, ["name", "upstream"]
+        ).to_list(None)
         if not user_characters:
             return await ctx.send("You have no characters.")
+        user_characters = {c["upstream"]: c["name"] for c in user_characters}
+
+        try:
+            char = await Character.from_ctx(ctx, ignore_guild=False)
+            user_characters[char.upstream] = f"**__{char.name}__**"
+        except NoCharacter:
+            pass
+
+        character_names = sorted(user_characters.values())
         character_chunks = chunk_text(
-            ", ".join(sorted(c["name"] for c in user_characters)),
+            ", ".join(character_names),
             max_chunk_size=4096,
             chunk_on=(", ",),
         )

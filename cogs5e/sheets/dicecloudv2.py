@@ -30,7 +30,7 @@ from .utils import get_actions_for_name
 log = logging.getLogger(__name__)
 
 API_BASE = "https://dicecloud.com/character/"
-DICECLOUDV2_URL_RE = re.compile(r"(?:https?://)?((beta|app|www)\.)?dicecloud\.com/character/([\d\w]+)/?")
+DICECLOUDV2_URL_RE = re.compile(r"(?:https?://)?(?:(?:beta|app|www)\.)?dicecloud\.com/character/([\d\w]+)/?")
 
 ACTIVATION_MAP = {
     "action": ActivationType.ACTION,

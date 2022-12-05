@@ -467,20 +467,21 @@ class SheetManager(commands.Cog):
 
         try:
             char = await Character.from_ctx(ctx, ignore_guild=False)
-            user_characters[char.upstream] = f"**__{char.name}__**"
+            char_out = f"**Active Character**: {char.name}\n\n"
+            user_characters.pop(char.upstream)
         except NoCharacter:
-            pass
+            char_out = ""
 
         character_names = sorted(user_characters.values())
         character_chunks = chunk_text(
             ", ".join(character_names),
-            max_chunk_size=4096,
+            max_chunk_size=4096 - len(char_out),
             chunk_on=(", ",),
         )
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
         embed_queue[-1].title = "Your characters"
-        embed_queue[-1].description = character_chunks[0]
+        embed_queue[-1].description = char_out + character_chunks[0]
 
         for chunk in character_chunks[1:]:
             embed_queue.append(disnake.Embed(colour=color, description=chunk))

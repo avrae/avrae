@@ -278,9 +278,9 @@ class BeyondClient(BeyondClientBase):
         sentinel = lek = object()
         while lek is not None:
             if lek is sentinel:
-                response = await self._dynamo.query(**kwargs)
+                response = await self._dynamo.query(Limit=1000, **kwargs)
             else:
-                response = await self._dynamo.query(ExclusiveStartKey=lek, **kwargs)
+                response = await self._dynamo.query(Limit=1000, ExclusiveStartKey=lek, **kwargs)
 
             lek = response.get("LastEvaluatedKey")
             for obj in response["Items"]:

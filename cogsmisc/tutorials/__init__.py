@@ -53,8 +53,8 @@ class Tutorials(commands.Cog):
             name="Using Slash Commands With Avrae",
             value=(
                 "It looks like you're trying to use slash commands! Due to the complexity of certain Avrae commands,"
-                " Avrae does not support Discord's slash command framework. To use Avrae commands, add a *prefix*"
-                f" before the command you want to use - like `{guild_prefix}roll 1d20`."
+                " Avrae does not support Discord's slash command framework for every command. To use most of Avrae's "
+                f"commands, add a *prefix* before the command you want to use - like `{guild_prefix}roll 1d20`."
             ),
             inline=False,
         )

@@ -645,7 +645,7 @@ class SheetManager(commands.Cog):
             Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
 
         Dicecloud:
-            Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
+            Share your character with `avrae` on Dicecloud to import private sheets. In v1, give `avrae` edit permissions for live updates.
 
         Gsheet:
             The sheet must be shared with directly with Avrae or be publicly viewable to anyone with the link.

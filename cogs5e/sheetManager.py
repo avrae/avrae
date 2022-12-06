@@ -20,6 +20,7 @@ import ui
 from aliasing import helpers
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
+from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import ExternalImportError, NoCharacter
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
@@ -34,7 +35,7 @@ from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.enums import ActivationType
-from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title
+from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title, chunk_text
 from utils.settings.character import CHARACTER_SETTINGS
 
 log = logging.getLogger(__name__)
@@ -458,10 +459,36 @@ class SheetManager(commands.Cog):
     @character.command(name="list")
     async def character_list(self, ctx):
         """Lists your characters."""
-        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}, ["name"]).to_list(None)
+        user_characters = await self.bot.mdb.characters.find(
+            {"owner": str(ctx.author.id)}, ["name", "upstream"]
+        ).to_list(None)
         if not user_characters:
             return await ctx.send("You have no characters.")
-        await ctx.send("Your characters:\n{}".format(", ".join(sorted(c["name"] for c in user_characters))))
+        user_characters = {c["upstream"]: c["name"] for c in user_characters}
+
+        try:
+            char = await Character.from_ctx(ctx, ignore_guild=False)
+            char_out = f"**Active Character**: {char.name}\n\n"
+            user_characters.pop(char.upstream)
+        except NoCharacter:
+            char_out = ""
+
+        character_names = sorted(user_characters.values())
+        character_chunks = chunk_text(
+            ", ".join(character_names),
+            max_chunk_size=4096 - len(char_out),
+            chunk_on=(", ",),
+        )
+        embed_queue = [EmbedWithAuthor(ctx)]
+        color = embed_queue[-1].colour
+        embed_queue[-1].title = "Your characters"
+        embed_queue[-1].description = char_out + character_chunks[0]
+
+        for chunk in character_chunks[1:]:
+            embed_queue.append(disnake.Embed(colour=color, description=chunk))
+
+        for embed in embed_queue:
+            await ctx.send(embed=embed)
 
     @character.command(name="delete")
     async def character_delete(self, ctx, *, name):

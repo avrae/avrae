@@ -387,7 +387,7 @@ class AliasCharacter(AliasStatBlock):
     @property
     def sheet_type(self):
         """
-        Returns the sheet type of this character (beyond, dicecloud, google).
+        Returns the sheet type of this character (beyond, dicecloud, dicecloudv2, google).
 
         :rtype: str
         """

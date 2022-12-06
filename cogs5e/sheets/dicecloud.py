@@ -46,7 +46,7 @@ CLASS_RESOURCE_RESETS = {
     "superiorityDice": "short",
 }
 API_BASE = "https://v1.dicecloud.com/character/"
-DICECLOUD_URL_RE = re.compile(r"(?:https?://)?(?:v1\.)?dicecloud\.com/character/([\d\w]+)/?")
+DICECLOUD_URL_RE = re.compile(r"(?:https?://)?v1\.dicecloud\.com/character/([\d\w]+)/?")
 
 
 class DicecloudParser(SheetLoaderABC):

@@ -30,8 +30,8 @@ Help will give you examples of commands you can use and information about them.
 Step 2: Add a Character
 -----------------------
 Once you have your stats, think of what character you want to play and make them a sheet on
-`D&D Beyond <https://www.dndbeyond.com/>`_, `Dicecloud <https://dicecloud.com/>`_,
-or `Google Sheets <https://gsheet2.avrae.io/>`_!
+`D&D Beyond <https://www.dndbeyond.com/>`_, `Dicecloud v1 <https://v1.dicecloud.com/>`_,
+`Dicecloud v2 <https://dicecloud.com/>`_, or `Google Sheets <https://gsheet2.avrae.io/>`_!
 
 Once you're done making your character, make sure it's publicly viewable (Avrae needs to be able to see your sheet),
 grab the sharing URL, and follow the steps below depending on what sheet system you chose to use.
@@ -47,14 +47,20 @@ To add a character from D&D Beyond, use the following command::
     If you link your D&D Beyond and Discord accounts and your DM links your campaign to a channel, your character's
     rolls made on D&D Beyond or the Player App will appear in Discord!
 
-Dicecloud
-^^^^^^^^^
+Dicecloud v1
+^^^^^^^^^^^^
 To add a character from Dicecloud, use the following command::
 
-  !import https://dicecloud.com/character/...
+  !import https://v1.dicecloud.com/character/...
 
 .. note::
     Avrae can update your HP and consumables live on Dicecloud - share the sheet with edit permissions with ``avrae``.
+    
+Dicecloud v2
+^^^^^^^^^^^^
+To add a character from Dicecloud V2, use the following command::
+
+  !import https://dicecloud.com/character/...
 
 Google Sheets
 ^^^^^^^^^^^^^

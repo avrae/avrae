@@ -24,6 +24,7 @@ from cogs5e.models.errors import ExternalImportError, NoCharacter
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DICECLOUD_URL_RE, DicecloudParser
+from cogs5e.sheets.dicecloudv2 import DICECLOUDV2_URL_RE, DicecloudV2Parser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
@@ -495,7 +496,7 @@ class SheetManager(commands.Cog):
         url = old_character.upstream
         args = argparse(args)
 
-        prefixes = "dicecloud-", "google-", "beyond-"
+        prefixes = "dicecloud-", "google-", "beyond-", "dicecloudv2-"
         _id = url[:]
         for p in prefixes:
             if url.startswith(p):
@@ -505,6 +506,9 @@ class SheetManager(commands.Cog):
         if sheet_type == "dicecloud":
             parser = DicecloudParser(_id)
             loading = await ctx.send("Updating character data from Dicecloud...")
+        elif sheet_type == "dicecloudv2":
+            parser = DicecloudV2Parser(_id)
+            loading = await ctx.send("Updating character data from Dicecloud V2...")
         elif sheet_type == "google":
             parser = GoogleSheet(_id)
             loading = await ctx.send("Updating character data from Google...")
@@ -628,6 +632,7 @@ class SheetManager(commands.Cog):
         Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
             [Dicecloud v1](https://v1.dicecloud.com/)
+            [Dicecloud v2](https://dicecloud.com/)
             [GSheet v2.1](https://gsheet2.avrae.io) (auto)
             [GSheet v1.4](https://gsheet.avrae.io) (manual)
 
@@ -640,7 +645,7 @@ class SheetManager(commands.Cog):
             Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.
 
         Dicecloud:
-            Share your character with `avrae` on Dicecloud (edit permissions) for live updates.
+            Share your character with `avrae` on Dicecloud to import private sheets. In v1, give `avrae` edit permissions for live updates.
 
         Gsheet:
             The sheet must be shared with directly with Avrae or be publicly viewable to anyone with the link.
@@ -660,6 +665,11 @@ class SheetManager(commands.Cog):
             url = dicecloud_match.group(1)
             prefix = "dicecloud"
             parser = DicecloudParser(url)
+        elif dicecloudv2_match := DICECLOUDV2_URL_RE.match(url):
+            loading = await ctx.send("Loading character data from Dicecloud V2...")
+            url = dicecloudv2_match.group(1)
+            prefix = "dicecloudv2"
+            parser = DicecloudV2Parser(url)
         else:
             try:
                 url = extract_gsheet_id_from_url(url)

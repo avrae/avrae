@@ -33,6 +33,11 @@ DICECLOUD_USER = os.getenv("DICECLOUD_USER")
 DICECLOUD_PASS = os.getenv("DICECLOUD_PASS", "").encode()
 DICECLOUD_API_KEY = os.getenv("DICECLOUD_TOKEN")
 
+DCV2_NO_AUTH = os.getenv("DCV2_NO_AUTH", "DICECLOUDV2_USER" not in os.environ)
+NO_DICECLOUDV2 = os.environ.get("NO_DICECLOUDV2")
+DICECLOUDV2_USER = os.getenv("DICECLOUDV2_USER")
+DICECLOUDV2_PASS = os.getenv("DICECLOUDV2_PASS", "")
+
 GOOGLE_SERVICE_ACCOUNT = os.getenv("GOOGLE_SERVICE_ACCOUNT")  # optional - if not supplied, uses avrae-google.json
 
 # ---- ddb entitlements ----

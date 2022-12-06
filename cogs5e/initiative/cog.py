@@ -245,7 +245,7 @@ class InitTracker(commands.Cog):
         `-group <group>` - Adds the combatant to a group.
         `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
         `-b <condition bonus>` - Adds a bonus to the combatant's initiative roll.
-        `-rollhp` - Rolls the monsters HP, instead of using the default value.
+        `rollhp` - Rolls the monsters HP, instead of using the default value.
         `-hp <hp>` - Sets starting HP.
         `-thp <thp>` - Sets starting THP.
         `-ac <ac>` - Sets the combatant's starting AC.

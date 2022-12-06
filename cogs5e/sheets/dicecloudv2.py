@@ -317,7 +317,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                                 "value": int(attr.get("value", uses)),
                                 "minv": "0",
                                 "maxv": str(uses),
-                                "reset": RESET_MAP[attr.get("reset")],
+                                "reset": RESET_MAP.get(attr.get("reset")),
                                 "display_type": display_type,
                             }
                         )
@@ -420,7 +420,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                             "value": attack.get("usesLeft", uses),
                             "minv": "0",
                             "maxv": str(uses),
-                            "reset": RESET_MAP[attack.get("reset")],
+                            "reset": RESET_MAP.get(attack.get("reset")),
                             "display_type": display_type,
                         }
                     )
@@ -572,7 +572,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                             "value": spell.get("usesLeft", 0),
                             "minv": "0",
                             "maxv": str(uses),
-                            "reset": RESET_MAP[spell.get("reset")],
+                            "reset": RESET_MAP.get(spell.get("reset")),
                             "display_type": display_type,
                         }
                     )
@@ -656,12 +656,12 @@ class DicecloudV2Parser(SheetLoaderABC):
             node = e.node
             if isinstance(e.__cause__, KeyError):
                 raise ExternalImportError(
-                    f"{node['type']} {node.get('name') or node.get('variableName') or node['_id']} could not get key"
-                    f" {e.__cause__.args[0]}"
+                    f"{node['type']} {node.get('name') or node.get('variableName') or node['_id']} in"
+                    f" {atk_prop.get('name') or atk_prop['id']} could not get key {e.__cause__.args[0]}"
                 )
             raise ExternalImportError(
-                f"{node['type']} {node.get('name') or node.get('variableName') or node['_id']} could not import"
-                " properly"
+                f"{node['type']} {node.get('name') or node.get('variableName') or node['_id']} in"
+                f" {atk_prop.get('name') or atk_prop['id']} could not import properly"
             ) from e
         if auto is None:
             log.debug("Oops! Automation is None!")
@@ -709,7 +709,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                         "value": full_attr.get("value", uses),
                         "minv": "0",
                         "maxv": str(uses),
-                        "reset": RESET_MAP[full_attr.get("reset")],
+                        "reset": RESET_MAP.get(full_attr.get("reset")),
                         "display_type": display_type,
                     }
                 )

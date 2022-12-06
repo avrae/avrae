@@ -725,7 +725,7 @@ class Lookup(commands.Cog):
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
-        await self._monimage(monster, hide_name)
+        await self._monimage(ctx, monster, hide_name)
 
     @slash_lookup.sub_command(name="monimage", description="Shows a monster's image.")
     async def slash_monimage(

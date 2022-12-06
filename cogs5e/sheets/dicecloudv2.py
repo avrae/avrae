@@ -404,8 +404,9 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions = []
         consumables = []
         for attack in self._by_type["action"]:
+            tags = attack["tags"]
             # we don't want to parse inactive actions
-            if not attack.get("inactive"):
+            if not attack.get("inactive") and "avrae:no_import" not in tags:
                 try:
                     aname = attack["name"]
                 except KeyError:
@@ -428,7 +429,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                 consumables += self._consumables_from_resources(attack["resources"])
 
                 # don't bother parsing if a compendium action is found
-                if atk_actions := self.persist_actions_for_name(aname):
+                if "avrae:parse_only" not in tags and (atk_actions := self.persist_actions_for_name(aname)):
                     actions += atk_actions
                     continue
                 atk = self.parse_attack(attack)

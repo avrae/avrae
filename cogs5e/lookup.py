@@ -81,7 +81,7 @@ class Lookup(commands.Cog):
             name = "condition"
         else:
             name = f"Condition: {name}"
-        await self._rule(ctx, name)
+        await self.rule(ctx, name=name)
 
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):

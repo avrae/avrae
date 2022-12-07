@@ -229,6 +229,8 @@ class DCV2AutoParser:
                 case _:
                     self.parse_children(prop["children"], save=save)
         except Exception as e:
+            if isinstance(e, AutoParserException):
+                raise e
             raise AutoParserException(prop, "Auto Parser encounter an error parsing a property") from e
 
     def parse_children(self, children, *, save=False):

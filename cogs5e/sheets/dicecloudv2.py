@@ -38,7 +38,6 @@ ACTIVATION_MAP = {
     "attack": None,
     "reaction": ActivationType.REACTION,
     "free": ActivationType.NO_ACTION,
-    "long": ActivationType.SPECIAL,
 }
 
 RESET_MAP = {
@@ -670,7 +669,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         name = atk_prop["name"]
         verb, proper = ("casts", True) if atk_prop["type"] == "spell" else (None, False)
         log.debug(f"Parsing {atk_prop['type']}")
-        activation = ACTIVATION_MAP[atk_prop["actionType"]]
+        activation = ACTIVATION_MAP.get(atk_prop["actionType"], ActivationType.SPECIAL)
         attack = Attack(name, auto, verb=verb, proper=proper, activation_type=activation)
 
         return attack

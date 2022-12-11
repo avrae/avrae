@@ -651,7 +651,7 @@ class DicecloudV2Parser(SheetLoaderABC):
             pact.get("num"),
             pact.get("num"),
         )
-# get readable identifier utility
+        # get readable identifier utility
         log.debug(f"Completed parsing spellbook: {spellbook.to_dict()}")
 
         return spellbook, consumables, attacks, actions
@@ -671,17 +671,14 @@ class DicecloudV2Parser(SheetLoaderABC):
             node = e.node
             if isinstance(e.__cause__, KeyError):
                 raise ExternalImportError(
-                    f"{node['type']} {get_ident(node)} in"
-                    f" {get_ident(atk_prop)} could not get key {e.__cause__.args[0]}"
+                    f"{node['type']} {get_ident(node)} in {get_ident(atk_prop)} could not get key {e.__cause__.args[0]}"
                 )
             if e.__cause__ is None:
                 raise ExternalImportError(
-                    f"{node['type']} {get_ident(node)} in"
-                    f" {get_ident(atk_prop)} encountered an error: {e.args[0]}"
+                    f"{node['type']} {get_ident(node)} in {get_ident(atk_prop)} encountered an error: {e.args[0]}"
                 )
             raise ExternalImportError(
-                f"{node['type']} {get_ident(node)} in"
-                f" {get_ident(node)} could not import properly due to {e.__cause__}"
+                f"{node['type']} {get_ident(node)} in {get_ident(node)} could not import properly due to {e.__cause__}"
             ) from e
         if auto is None:
             log.debug("Oops! Automation is None!")
@@ -738,4 +735,4 @@ class DicecloudV2Parser(SheetLoaderABC):
 
 # get readable identifier utility
 def get_ident(attr, *, incl_id=True):
-    return attr.get('name') or attr.get('variableName') or (attr['_id'] if incl_id else None)
+    return attr.get("name") or attr.get("variableName") or (attr["_id"] if incl_id else None)

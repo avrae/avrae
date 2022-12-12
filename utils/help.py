@@ -66,6 +66,8 @@ class AvraeHelp(HelpCommand):
             self.embed_paginator.extend_field(command.description)
 
         if command.help:
+            # Strip left spaces (but not tabs) from help docs, as Discord inconsistently does this based on device
+            command.help = "\n".join([line.lstrip(" ") for line in command.help.splitlines()])
             try:
                 self.embed_paginator.extend_field(command.help)
             except ValueError:

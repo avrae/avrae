@@ -744,7 +744,7 @@ class AliasAction:
 
         :rtype: int or None
         """
-        return self.activation_type.value if self.activation_type is not None else None
+        return self._action.activation_type.value if self._action.activation_type is not None else None
 
     @property
     def activation_type_name(self):

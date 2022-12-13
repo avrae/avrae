@@ -217,14 +217,17 @@ def add_fields_from_args(embed, _fields):
     return embed
 
 
-def get_long_field_args(text, title, inline=False, chunk_size=1024):
+def get_long_field_args(text, title, inline=False, chunk_size=1019):
     """Returns a list of dicts (to pass as kwargs) given a long text."""
     chunks = chunk_text(text, chunk_size)
     if not chunks:
         return []
-    out = [{"name": title, "value": chunks[0].strip(), "inline": inline}]
+    opened_block = chunks[0].count("```") % 2
+    out = [{"name": title, "value": chunks[0].strip() + ("\n```" * opened_block), "inline": inline}]
     for chunk in chunks[1:]:
-        out.append({"name": "** **", "value": chunk.strip(), "inline": inline})
+        chunk = ("```\n" * opened_block) + chunk
+        opened_block = chunk.count("```") % 2
+        out.append({"name": "** **", "value": chunk.strip() + ("\n```" * opened_block), "inline": inline})
     return out
 
 

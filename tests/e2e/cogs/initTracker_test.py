@@ -169,10 +169,10 @@ class TestYourStandardInitiative:
             await dhttp.drain()
 
             avrae.message(f'!i hp "{combatant}" set 100')
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foo] silvered')
+            avrae.message(f'!i a test -t "{combatant}" hit custom -d 10[foo] silvered')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foo]')
+            avrae.message(f'!i a test -t "{combatant}" hit custom -d 10[foo]')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
 
@@ -183,10 +183,10 @@ class TestYourStandardInitiative:
             await dhttp.drain()
 
             avrae.message(f'!i hp "{combatant}" set 100')
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[bar] magical')
+            avrae.message(f'!i a test -t "{combatant}" hit custom -d 10[bar] magical')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[bar]')
+            avrae.message(f'!i a test -t "{combatant}" hit custom -d 10[bar]')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
 

@@ -470,6 +470,17 @@ class DicecloudV2Parser(SheetLoaderABC):
                         if vname in SKILL_NAMES:
                             skills[vname] = skill_obj
 
+        if missing_skills := set(SKILL_NAMES) - set(skills):
+            raise ExternalImportError(
+                f"Your sheet is missing the following skill{'s' if len(missing_skills)>1 else ''}:"
+                f" {', '.join(missing_skills)}"
+            )
+        if missing_saves := set(SAVE_NAMES) - set(saves):
+            raise ExternalImportError(
+                f"Your sheet is missing the following save{'s' if len(missing_saves)>1 else ''}:"
+                f" {', '.join(missing_saves)}"
+            )
+
         return Skills(skills), Saves(saves)
 
     def get_resistances(self) -> Resistances:
@@ -676,7 +687,8 @@ class DicecloudV2Parser(SheetLoaderABC):
         return attack
 
     def persist_actions_for_name(self, name):
-        """Since compendium actions can be found in spells, actions, and features, we need to keep track of what we've seen"""
+        """Since compendium actions can be found in spells, actions, and features, we need to keep track of what we've seen
+        """
         actions = []
         if (g_actions := get_actions_for_name(name)) and len(g_actions) <= 20:
             for g_action in g_actions:

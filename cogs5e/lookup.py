@@ -248,7 +248,7 @@ class Lookup(commands.Cog):
                 await inter.send("Race not found.", ephemeral=True)
                 return
             name = name[0]
-        await self._check_access(inter, name, ["race"])
+        await self._check_access(inter, name, ["race", "subrace"])
         return await self._race(inter, name)
 
     @slash_race.autocomplete("name")

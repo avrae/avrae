@@ -123,55 +123,86 @@ class RollEffectMetaVar:
         return bool(self._total)
 
     def __eq__(self, other):
-        return self._bin_op(other, "==")
+        return self._lbin_op(other, "==")
 
     def __lt__(self, other):
-        return self._bin_op(other, "<")
+        return self._lbin_op(other, "<")
 
     def __le__(self, other):
-        return self._bin_op(other, "<=")
+        return self._lbin_op(other, "<=")
 
     def __ne__(self, other):
-        return self._bin_op(other, "!=")
+        return self._lbin_op(other, "!=")
 
     def __gt__(self, other):
-        return self._bin_op(other, ">")
+        return self._lbin_op(other, ">")
 
     def __ge__(self, other):
-        return self._bin_op(other, ">=")
+        return self._lbin_op(other, ">=")
 
     def __floor__(self):
+        if self._total % 1:
+            return self // 1
         return self
 
     def __ceil__(self):
+        if diff := (self._total % 1):
+            return self + (1 - diff)
         return self
 
     def __add__(self, other):
-        return self._bin_op(other, "+")
+        return self._lbin_op(other, "+")
 
     def __sub__(self, other):
-        return self._bin_op(other, "-")
+        return self._lbin_op(other, "-")
 
     def __mul__(self, other):
-        return self._bin_op(other, "*")
+        return self._lbin_op(other, "*")
 
     def __floordiv__(self, other):
-        return self._bin_op(other, "/")
+        return self._lbin_op(other, "//")
 
     def __truediv__(self, other):
-        return self._bin_op(other, "/")
+        return self._lbin_op(other, "/")
 
     def __mod__(self, other):
-        return self._bin_op(other, "%")
+        return self._lbin_op(other, "%")
 
-    def _bin_op(self, other, op):
+    def __radd__(self, other):
+        return self._rbin_op(other, "+")
+
+    def __rsub__(self, other):
+        return self._rbin_op(other, "-")
+
+    def __rmul__(self, other):
+        return self._rbin_op(other, "*")
+
+    def __rfloordiv__(self, other):
+        return self._rbin_op(other, "//")
+
+    def __rtruediv__(self, other):
+        return self._rbin_op(other, "/")
+
+    def __rmod__(self, other):
+        return self._rbin_op(other, "%")
+
+    def _lbin_op(self, other, op):
         if isinstance(other, (int, float)):
             return RollEffectMetaVar(d20.Expression(d20.BinOp(self._expr, op, d20.Literal(other)), self._expr.comment))
         elif isinstance(other, d20.Number):
             return RollEffectMetaVar(d20.Expression(d20.BinOp(self._expr, op, other), self._expr.comment))
         elif isinstance(other, RollEffectMetaVar):
             return RollEffectMetaVar(d20.Expression(d20.BinOp(self._expr, op, other._expr), self._expr.comment))
-        raise TypeError("Rolls cannot operate with this type")
+        raise NotImplementedError
+
+    def _rbin_op(self, other, op):
+        if isinstance(other, (int, float)):
+            return RollEffectMetaVar(d20.Expression(d20.BinOp(d20.Literal(other), op, self._expr), self._expr.comment))
+        elif isinstance(other, d20.Number):
+            return RollEffectMetaVar(d20.Expression(d20.BinOp(other, op, self._expr), self._expr.comment))
+        elif isinstance(other, RollEffectMetaVar):
+            return RollEffectMetaVar(d20.Expression(d20.BinOp(other._expr, op, self._expr), self._expr.comment))
+        raise NotImplementedError
 
     def __pos__(self):
         return RollEffectMetaVar(d20.Expression(d20.UnOp("+", self._expr), self._expr.comment))

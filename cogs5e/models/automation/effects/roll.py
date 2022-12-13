@@ -119,5 +119,62 @@ class RollEffectMetaVar:
     def __float__(self):
         return float(self._total)
 
+    def __bool__(self):
+        return bool(self._total)
+
     def __eq__(self, other):
-        return self._total == other
+        return self._bin_op(other, "==")
+
+    def __lt__(self, other):
+        return self._bin_op(other, "<")
+
+    def __le__(self, other):
+        return self._bin_op(other, "<=")
+
+    def __ne__(self, other):
+        return self._bin_op(other, "!=")
+
+    def __gt__(self, other):
+        return self._bin_op(other, ">")
+
+    def __ge__(self, other):
+        return self._bin_op(other, ">=")
+
+    def __floor__(self):
+        return self
+
+    def __ceil__(self):
+        return self
+
+    def __add__(self, other):
+        return self._bin_op(other, "+")
+
+    def __sub__(self, other):
+        return self._bin_op(other, "-")
+
+    def __mul__(self, other):
+        return self._bin_op(other, "*")
+
+    def __floordiv__(self, other):
+        return self._bin_op(other, "/")
+
+    def __truediv__(self, other):
+        return self._bin_op(other, "/")
+
+    def __mod__(self, other):
+        return self._bin_op(other, "%")
+
+    def _bin_op(self, other, op):
+        if isinstance(other, (int, float)):
+            return RollEffectMetaVar(d20.Expression(d20.BinOp(self._expr, op, d20.Literal(other)), self._expr.comment))
+        elif isinstance(other, d20.Number):
+            return RollEffectMetaVar(d20.Expression(d20.BinOp(self._expr, op, other), self._expr.comment))
+        elif isinstance(other, RollEffectMetaVar):
+            return RollEffectMetaVar(d20.Expression(d20.BinOp(self._expr, op, other._expr), self._expr.comment))
+        raise TypeError("Rolls cannot operate with this type")
+
+    def __pos__(self):
+        return RollEffectMetaVar(d20.Expression(d20.UnOp("+", self._expr), self._expr.comment))
+
+    def __neg__(self):
+        return RollEffectMetaVar(d20.Expression(d20.UnOp("-", self._expr), self._expr.comment))

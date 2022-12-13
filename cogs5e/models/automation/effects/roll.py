@@ -3,6 +3,7 @@ from functools import cached_property
 
 import d20
 import draconic
+import math
 
 from utils.dice import RerollableStringifier
 from . import Effect
@@ -141,14 +142,10 @@ class RollEffectMetaVar:
         return self._lbin_op(other, ">=")
 
     def __floor__(self):
-        if self._total % 1:
-            return self // 1
-        return self
+        return math.floor(self._total)
 
     def __ceil__(self):
-        if self._total % 1:
-            return self // 1 + 1
-        return self
+        return math.ceil(self._total)
 
     def __add__(self, other):
         return self._lbin_op(other, "+")

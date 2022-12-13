@@ -150,7 +150,10 @@ class DCV2AutoParser:
                             self.resources.append((f"{sl_name}: {prop['name']}" if sl_name else prop["name"], 1))
                         if attrs := prop["resources"]["attributesConsumed"]:
                             for attr in attrs:
-                                self.resources.append((attr["statName"], attr["quantity"]["value"]))
+                                if "statName" in attr:
+                                    self.resources.append((attr["statName"], attr["quantity"]["value"]))
+                                else:
+                                    raise AutoParserException(prop, "Resource is not tied to a specfic attribute.")
 
                         self.parse_children(prop["children"], save=save)
 

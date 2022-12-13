@@ -189,8 +189,6 @@ class RollEffectMetaVar:
     def _lbin_op(self, other, op):
         if isinstance(other, (int, float)):
             return RollEffectMetaVar(d20.Expression(d20.BinOp(self._expr, op, d20.Literal(other)), self._expr.comment))
-        elif isinstance(other, d20.Number):
-            return RollEffectMetaVar(d20.Expression(d20.BinOp(self._expr, op, other), self._expr.comment))
         elif isinstance(other, RollEffectMetaVar):
             return RollEffectMetaVar(d20.Expression(d20.BinOp(self._expr, op, other._expr), self._expr.comment))
         raise NotImplementedError
@@ -198,8 +196,6 @@ class RollEffectMetaVar:
     def _rbin_op(self, other, op):
         if isinstance(other, (int, float)):
             return RollEffectMetaVar(d20.Expression(d20.BinOp(d20.Literal(other), op, self._expr), self._expr.comment))
-        elif isinstance(other, d20.Number):
-            return RollEffectMetaVar(d20.Expression(d20.BinOp(other, op, self._expr), self._expr.comment))
         elif isinstance(other, RollEffectMetaVar):
             return RollEffectMetaVar(d20.Expression(d20.BinOp(other._expr, op, self._expr), self._expr.comment))
         raise NotImplementedError

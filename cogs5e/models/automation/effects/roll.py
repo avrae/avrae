@@ -146,8 +146,8 @@ class RollEffectMetaVar:
         return self
 
     def __ceil__(self):
-        if diff := (self._total % 1):
-            return self + (1 - diff)
+        if self._total % 1:
+            return self // 1 + 1
         return self
 
     def __add__(self, other):

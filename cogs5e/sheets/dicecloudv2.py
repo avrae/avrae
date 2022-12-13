@@ -687,7 +687,8 @@ class DicecloudV2Parser(SheetLoaderABC):
         return attack
 
     def persist_actions_for_name(self, name):
-        """Since compendium actions can be found in spells, actions, and features, we need to keep track of what we've seen
+        """
+        Since compendium actions can be found in spells, actions, and features, we need to keep track of what we've seen
         """
         actions = []
         if (g_actions := get_actions_for_name(name)) and len(g_actions) <= 20:

@@ -468,8 +468,8 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         # calculate skills and saves from skill properties
         for skill in self._by_type["skill"]:
-            if not skill.get("inactive"):
-                vname = skill["variableName"]
+            if not skill.get("inactive") and skill["skillType"] in ("skill", "save", "check"):
+                vname = skill.get("variableName")
                 skill_obj = Skill(
                     # proficiency can be 0.49 or 0.5 for half round down or up, but we just want 0.5
                     skill["value"],

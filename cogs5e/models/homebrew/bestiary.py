@@ -305,8 +305,8 @@ def _monster_factory(data, bestiary_name):
     cr = {0.125: "1/8", 0.25: "1/4", 0.5: "1/2"}.get(
         data["stats"]["challengeRating"], str(data["stats"]["challengeRating"])
     )
-    num_hit_die = data["stats"]["numHitDie"]
-    hit_die_size = data["stats"]["hitDieSize"]
+    num_hit_die = data["stats"].get("numHitDie")
+    hit_die_size = data["stats"].get("hitDieSize")
     if num_hit_die is None or hit_die_size is None:
         raise ExternalImportError(f"Monster is missing hit die or hit die size ({data['name']}).")
     con_by_level = num_hit_die * ability_scores.get_mod("con")

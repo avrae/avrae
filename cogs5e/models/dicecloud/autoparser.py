@@ -215,7 +215,7 @@ class DCV2AutoParser:
                     self.parse_children(prop["children"], save=save)
                 case "note":
                     # we only use the summary here, since it's all DC would display
-                    desc = prop.get("summary")
+                    desc = prop.get("summary", {}).get("value")
                     if desc is not None:
                         self.text.append(desc)
                     self.parse_children(prop["children"], save=save)

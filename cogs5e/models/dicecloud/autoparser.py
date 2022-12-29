@@ -179,7 +179,11 @@ class DCV2AutoParser:
                     # all the checks for what exactly we're doing here
                     magical = "magical" in prop["tags"]
                     healing = prop["damageType"] == "healing"
-                    effects = [str(effect["amount"]["value"]).strip() for effect in prop["amount"].get("effects", [])]
+                    effects = [
+                        str(effect["amount"]["value"]).strip()
+                        for effect in prop["amount"].get("effects", [])
+                        if effect["amount"]["value"] is not None
+                    ]
                     damage_dice = str(prop["amount"]["value"]) + "".join(
                         effect if effect[0] in "+-" else f"+{effect}" for effect in effects
                     )

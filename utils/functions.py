@@ -498,9 +498,9 @@ def reconcile_adv(adv=False, dis=False, eadv=False) -> enums.AdvantageType:
 
 
 def maybe_http_url(url: str):
-    """Returns a url if one found, otherwise blank string."""
+    """Returns a url if one found, otherwise None."""
     # Mainly used for embed.set_thumbnail(url=url)
-    return url if "http" in url else ""
+    return url if "http" in url else None
 
 
 def exactly_one(iterable):

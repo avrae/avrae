@@ -835,7 +835,7 @@ class GameTrack(commands.Cog):
 
         embed = result.embed
         embed.colour = char.get_color()
-        if "thumb" not in args and char.options.embed_image:
+        if "thumb" not in args and char.options.embed_image and char.image:
             embed.set_thumbnail(url=char.image)
 
         await ctx.send(embed=embed)

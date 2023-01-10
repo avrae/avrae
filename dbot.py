@@ -14,8 +14,9 @@ import psutil
 import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
 from disnake import ApplicationCommandInteraction
-from disnake.errors import Forbidden, HTTPException, InvalidArgument, NotFound
+from disnake.errors import Forbidden, HTTPException, NotFound
 from disnake.ext import commands
+from disnake.ext.commands import CommandSyncFlags
 from disnake.ext.commands.errors import CommandInvokeError
 
 from aliasing.errors import CollectableRequiresLicenses, EvaluationError
@@ -59,14 +60,22 @@ async def get_prefix(the_bot, message):
 
 class Avrae(commands.AutoShardedBot):
     def __init__(self, prefix, description=None, **options):
+        sync_flags = CommandSyncFlags(
+            sync_commands=False,  # this is set by launch_shard below, to prevent multiple clusters racing).
+            sync_commands_debug=config.TESTING,
+        )
         super().__init__(
             prefix,
             help_command=help_command,
             description=description,
-            sync_commands=False,  # this is set by launch_shard below, to prevent multiple clusters racing
-            sync_commands_debug=config.TESTING,
-            **options,
+            command_sync_flags=sync_flags,
+            activity=options.get("activity"),
+            allowed_mentions=options.get("allowed_mentions"),
+            intents=options.get("intents"),
+            chunk_guilds_at_startup=options.get("chunk_guilds_at_startup"),
         )
+        self.pm_help = options.get("pm_help")
+        self.testing = options.get("testing")
         self.state = "init"
 
         # dbs
@@ -143,7 +152,7 @@ class Avrae(commands.AutoShardedBot):
                     scope.set_tag("guild.name", str(ctx.guild))
             sentry_sdk.capture_exception(exception)
 
-    async def launch_shards(self):
+    async def launch_shards(self, ignore_session_start_limit: bool = False):
         # set up my shard_ids
         async with clustering.coordination_lock(self.rdb):
             await clustering.coordinate_shards(self)
@@ -317,7 +326,7 @@ async def command_errors(ctx, error):
         elif isinstance(original, NotFound):
             return await ctx.send("Error: I tried to edit or delete a message that no longer exists.")
 
-        elif isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError)):
+        elif isinstance(original, (ClientResponseError, TypeError, ValueError, asyncio.TimeoutError, ClientOSError)):
             return await ctx.send("Error in Discord API. Please try again.")
 
         elif isinstance(original, HTTPException):

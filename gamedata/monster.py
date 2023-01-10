@@ -353,7 +353,7 @@ class Monster(StatBlock, Sourced):
 
     def get_image_url(self):
         """Returns a monster's image URL."""
-        return self.image_url or ""
+        return self.image_url or None
 
     def get_token_url(self, is_sub=False):
         """Returns a monster's token URL."""

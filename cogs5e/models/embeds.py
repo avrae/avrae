@@ -44,7 +44,7 @@ class EmbedWithCharacter(disnake.Embed):
         super().__init__(**kwargs)
         if name:
             self.set_author(name=character.name)
-        if character.options.embed_image and image:
+        if character.options.embed_image and image and character.image:
             self.set_thumbnail(url=character.image)
         self.colour = character.get_color()
 

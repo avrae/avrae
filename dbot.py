@@ -64,7 +64,7 @@ class Avrae(commands.AutoShardedBot):
             help_command=help_command,
             description=description,
             sync_commands=False,  # this is set by launch_shard below, to prevent multiple clusters racing
-            sync_commands_debug=config.TESTING,
+            sync_commands_debug=bool(config.TESTING),
             activity=options.get("activity"),
             allowed_mentions=options.get("allowed_mentions"),
             intents=options.get("intents"),

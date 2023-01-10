@@ -16,6 +16,7 @@ from aiohttp import ClientOSError, ClientResponseError
 from disnake import ApplicationCommandInteraction
 from disnake.errors import Forbidden, HTTPException, NotFound
 from disnake.ext import commands
+from disnake.ext.commands import CommandSyncFlags
 from disnake.ext.commands.errors import CommandInvokeError
 
 from aliasing.errors import CollectableRequiresLicenses, EvaluationError
@@ -59,12 +60,15 @@ async def get_prefix(the_bot, message):
 
 class Avrae(commands.AutoShardedBot):
     def __init__(self, prefix, description=None, **options):
+        sync_flags = CommandSyncFlags(
+            sync_commands=False,  # this is set by launch_shard below, to prevent multiple clusters racing).
+            sync_commands_debug=config.TESTING,
+        )
         super().__init__(
             prefix,
             help_command=help_command,
             description=description,
-            sync_commands=False,  # this is set by launch_shard below, to prevent multiple clusters racing
-            sync_commands_debug=bool(config.TESTING),
+            command_sync_flags=sync_flags,
             activity=options.get("activity"),
             allowed_mentions=options.get("allowed_mentions"),
             intents=options.get("intents"),

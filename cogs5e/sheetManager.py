@@ -675,7 +675,7 @@ class SheetManager(commands.Cog):
             Share your character with `avrae` on Dicecloud v1 to import private sheets, and give edit permissions for live updates.
 
         Dicecloud v2:
-            Share your character with `avrae` on Dicecloud v2 to import private sheets. Tag actions with `avrae:no_import` if you don't want them to be imported, and `avrae:parse_only` if you don't want them to be loaded from Beyond.
+            Share your character with `avrae` on Dicecloud v2 to import private sheets. Tag actions, spells, and features with `avrae:no_import` if you don't want them to be imported, and actions with `avrae:parse_only` if you don't want them to be loaded from Beyond.
 
         Gsheet:
             The sheet must be shared with directly with Avrae or be publicly viewable to anyone with the link.

@@ -469,7 +469,9 @@ class DicecloudV2Parser(SheetLoaderABC):
         # calculate skills and saves from skill properties
         for skill in self._by_type["skill"]:
             if not skill.get("inactive"):
-                vname = skill["variableName"]
+                vname = skill.get("variableName")
+                if not vname:
+                    continue
                 skill_obj = Skill(
                     # proficiency can be 0.49 or 0.5 for half round down or up, but we just want 0.5
                     skill["value"],
@@ -528,7 +530,7 @@ class DicecloudV2Parser(SheetLoaderABC):
     def get_actions(self):
         actions = []
         for f in self._by_type["feature"]:
-            if not f.get("inactive"):
+            if not f.get("inactive") and "avrae:no_import" not in f["tags"]:
                 actions += self.persist_actions_for_name(f.get("name"))
 
         return actions
@@ -566,6 +568,8 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions = []
 
         for spell in self._by_type["spell"]:
+            if "avrae:no_import" in spell["tags"]:
+                continue
             # unprepared spells are inactive, so we need to specifically check how it is deactivated
             if not (spell.get("deactivatedByAncestor") or spell.get("deactivatedByToggle")):
                 spell_actions = self.persist_actions_for_name(spell["name"])

@@ -97,13 +97,16 @@ class Subclass(Sourced):
     entity_type = "class"
     type_id = 789467139
 
-    def __init__(self, name, levels, optional_features, parent=None, description=None, **kwargs):
+    def __init__(
+        self, name, levels, optional_features, parent=None, description=None, limited_use_only=False, **kwargs
+    ):
         """
         :type name: str
         :type levels: list[list[ClassFeature]]
         :type optional_features: list[ClassFeature]
         :type parent: Class
         :type description: str
+        :type limited_use_only: bool
         """
         super().__init__(False, **kwargs)
         self.name = name
@@ -111,6 +114,7 @@ class Subclass(Sourced):
         self.levels = levels
         self.optional_features = optional_features
         self.parent = parent
+        self.limited_use_only = limited_use_only
 
     @classmethod
     def from_data(cls, d, parent_class):
@@ -124,6 +128,7 @@ class Subclass(Sourced):
             page=d["page"],
             url=d["url"],
             is_free=d["isFree"],
+            limited_use_only=d.get("limited_use_only", False),
             parent=parent_class,
             description=d.get("description"),
         )

@@ -993,7 +993,7 @@ class Lookup(commands.Cog):
                 await inter.send("Item not found.", ephemeral=True)
                 return
             name = name[0]
-        await self._check_access(inter, name, ["adventuring-gear", "armor", "magic-item", "weapons"])
+        await self._check_access(inter, name, ["adventuring-gear", "armor", "magic-item", "weapon"])
         return await self._item(inter, name)
 
     @slash_item.autocomplete("name")

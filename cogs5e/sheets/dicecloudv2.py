@@ -260,22 +260,23 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         # we iterate over all attributes here so we don't have to loop over it multiple times
         for attr in self._by_type["attribute"]:
-            if not attr.get("inactive"):
-                try:
-                    # parse basic stats and their checks
-                    self._parse_stats(attr, stat_dict, base_checks)
+            if attr.get("inactive") or attr.get("overridden"):
+                continue
+            try:
+                # parse basic stats and their checks
+                self._parse_stats(attr, stat_dict, base_checks)
 
-                    # handle spell slots
-                    self._parse_slots(attr, slots)
+                # handle spell slots
+                self._parse_slots(attr, slots)
 
-                    # assume all resources should be CCs
-                    self._parse_resources(attr, consumables)
+                # assume all resources should be CCs
+                self._parse_resources(attr, consumables)
 
-                except ValueError as e:
-                    raise ExternalImportError(
-                        e.args[0].capitalize()
-                        + f" for Attribute {attr.get('name') or attr.get('variableName') or attr['_id']}"
-                    )
+            except ValueError as e:
+                raise ExternalImportError(
+                    e.args[0].capitalize()
+                    + f" for Attribute {attr.get('name') or attr.get('variableName') or attr['_id']}"
+                )
 
         # ensure all the necessary stats were found
         if not all(stat in stat_dict for stat in STATS + BASE_STATS):

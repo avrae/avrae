@@ -194,6 +194,8 @@ class Compendium:
         seen = set()
 
         def handle_class(cls_or_sub):
+            # Certain features are for action/limited use import only
+            limited_use_only = isinstance(cls_or_sub, Subclass) and cls_or_sub.limited_use_only
             # load classfeats
             for i, level in enumerate(cls_or_sub.levels):
                 for feature in level:
@@ -202,26 +204,30 @@ class Compendium:
                     if copied.name in seen:
                         copied.name = f"{copied.name} (Level {i + 1})"
                     seen.add(copied.name)
-                    self.cfeats.append(copied)
+                    if not limited_use_only:
+                        self.cfeats.append(copied)
                     self._register_entity_lookup(feature)
 
                     for cfo in feature.options:
                         copied = copy.copy(cfo)
                         copied.name = f"{cls_or_sub.name}: {feature.name}: {cfo.name}"
-                        self.cfeats.append(copied)
+                        if not limited_use_only:
+                            self.cfeats.append(copied)
                         self._register_entity_lookup(cfo)
 
             # TCoE optional features and options
             for feature in cls_or_sub.optional_features:
                 copied = copy.copy(feature)
                 copied.name = f"{cls_or_sub.name}: {feature.name}"
-                self.optional_cfeats.append(copied)
+                if not limited_use_only:
+                    self.optional_cfeats.append(copied)
                 self._register_entity_lookup(feature)
 
                 for cfo in feature.options:
                     copied = copy.copy(cfo)
                     copied.name = f"{cls_or_sub.name}: {feature.name}: {cfo.name}"
-                    self.optional_cfeats.append(copied)
+                    if not limited_use_only:
+                        self.optional_cfeats.append(copied)
                     self._register_entity_lookup(cfo)
 
         for cls in self.classes:

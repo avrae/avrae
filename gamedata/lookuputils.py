@@ -147,7 +147,7 @@ def handle_source_footer(
         text_pieces.append("Legacy content.")
 
     # do the writing
-    text = " | ".join(text_pieces) or None
+    text = " | ".join(text_pieces) or " "
     if not allow_overwrite:
         if embed.footer.text:
             text = embed.footer.text

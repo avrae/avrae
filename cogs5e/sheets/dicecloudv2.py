@@ -307,7 +307,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                 try:
                     base_checks[attr_name] = Skill(int(attr["modifier"]), 0, None)
                 except KeyError:
-                    raise ExternalImportError("Skill {attr_name} is missing a modifier")
+                    raise ExternalImportError(f"Skill {attr_name} is missing a modifier")
 
             # track the total for all stats
             if attr_name in STATS + BASE_STATS:

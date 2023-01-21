@@ -1347,10 +1347,10 @@ class InitTracker(commands.Cog):
         is_character = isinstance(combatant, PlayerCombatant)
         if is_character and combatant.character_owner == str(ctx.author.id):
             args = await helpers.parse_snippets(
-                args, ctx, character=combatant.character, base_args=[combatant_name, spell_name]
+                args, ctx, character=combatant.character, base_args=[combatant.name, spell_name]
             )
         else:
-            args = await helpers.parse_snippets(args, ctx, statblock=combatant, base_args=[combatant_name, spell_name])
+            args = await helpers.parse_snippets(args, ctx, statblock=combatant, base_args=[combatant.name, spell_name])
         args = argparse(args)
 
         if not args.last("i", type_=bool):

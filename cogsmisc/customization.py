@@ -731,7 +731,9 @@ class Customization(commands.Cog):
 
     @commands.command()
     async def test(self, ctx, *, teststr):
-        """Parses `str` as if it were in an alias, for testing."""
+        """Parses `teststr` as if it were in an alias, for testing.
+        Note: Not recommended to be used in actual aliases, as it can lead to unexpected behaviour. You will probably want to use `!echo` instead.
+        """
         try:
             char = await ctx.get_character()
         except NoCharacter:
@@ -747,7 +749,9 @@ class Customization(commands.Cog):
 
     @commands.command()
     async def tembed(self, ctx, *, teststr):
-        """Parses `str` as if it were in an alias, for testing, then creates and prints an Embed.
+        """Parses `teststr` as if it were in an alias, for testing, then creates and prints an Embed.
+        Note: Not recommended to be used in actual aliases, as it can lead to unexpected behaviour. You will probably want to use `!embed` instead.
+
         Arguments: -title [title]
         -desc [description text]
         -thumb [image url]

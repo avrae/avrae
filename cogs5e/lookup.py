@@ -42,7 +42,9 @@ class Lookup(commands.Cog):
 
     @commands.slash_command(name="lookup")
     async def slash_lookup(self, inter: disnake.ApplicationCommandInteraction):
-        pass
+        if inter.author.id in self.bot.muted:
+            await inter.send("You do not have permission to use this command.", ephemeral=True)
+            raise commands.CommandNotFound
 
     # ==== rules/references ====
     async def _show_reference_options(self, ctx):

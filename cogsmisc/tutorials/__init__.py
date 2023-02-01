@@ -43,6 +43,10 @@ class Tutorials(commands.Cog):
     @commands.slash_command(name="help")
     async def slash_help(self, inter: disnake.ApplicationCommandInteraction):
         """View information about how to use Avrae."""
+        if inter.author.id in self.bot.muted:
+            await inter.send("You do not have permission to use this command.", ephemeral=True)
+            return
+
         if inter.guild is not None:
             guild_prefix = await self.bot.get_guild_prefix(inter.guild)
         else:

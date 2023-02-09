@@ -38,7 +38,6 @@ ACTIVATION_MAP = {
     "attack": None,
     "reaction": ActivationType.REACTION,
     "free": ActivationType.NO_ACTION,
-    "long": ActivationType.SPECIAL,
 }
 
 RESET_MAP = {
@@ -48,6 +47,22 @@ RESET_MAP = {
 }
 
 ADV_INT_MAP = {-1: False, 0: None, 1: True}
+
+# required stats for any character sheet, we want to ensure these are present
+BASE_STATS = (
+    "strength",
+    "dexterity",
+    "constitution",
+    "wisdom",
+    "intelligence",
+    "charisma",
+)
+
+STATS = (
+    "proficiencyBonus",
+    "armor",
+    "hitPoints",
+)
 
 
 class DicecloudV2Parser(SheetLoaderABC):
@@ -234,22 +249,6 @@ class DicecloudV2Parser(SheetLoaderABC):
         if self.parsed_attrs:
             return self.parsed_attrs
 
-        # required stats for any character sheet, we want to ensure these are present
-        base_stats = (
-            "strength",
-            "dexterity",
-            "constitution",
-            "wisdom",
-            "intelligence",
-            "charisma",
-        )
-
-        stats = (
-            "proficiencyBonus",
-            "armor",
-            "hitPoints",
-        )
-
         # defaults to 0 for any key that isn't pact
         slots = collections.defaultdict(lambda: 0)
         slots["pact"] = {}
@@ -261,75 +260,27 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         # we iterate over all attributes here so we don't have to loop over it multiple times
         for attr in self._by_type["attribute"]:
-            if not attr.get("inactive"):
-                try:
-                    try:
-                        # first check if it is a stat or spell slot
-                        self._attr_by_name[attr["variableName"]] = attr
-                        attr_name = attr["variableName"]
+            if attr.get("inactive") or attr.get("overridden"):
+                continue
+            try:
+                # parse basic stats and their checks
+                self._parse_stats(attr, stat_dict, base_checks)
 
-                        # add appropriate base checks if it is an ability score
-                        if attr_name in base_stats:
-                            try:
-                                base_checks[attr_name] = Skill(int(attr["modifier"]), 0, None)
-                            except KeyError:
-                                raise ExternalImportError("Skill {attr_name} is missing a modifier")
+                # handle spell slots
+                self._parse_slots(attr, slots)
 
-                        # track the total for all stats
-                        if attr_name in stats + base_stats:
-                            stat_dict[attr_name] = int(attr["total"])
+                # assume all resources should be CCs
+                self._parse_resources(attr, consumables)
 
-                        # handle spell slots
-                        if attr["attributeType"] == "spellSlot":
-                            try:
-                                if attr["variableName"] == "pactSlot":
-                                    slots["pact"] = {
-                                        "num": int(attr["total"]),
-                                        "level": int(attr["spellSlotLevel"]["value"]),
-                                    }
-                                slots[str(attr["spellSlotLevel"]["value"])] += int(attr["total"])
-                            except KeyError as e:
-                                if e.args[0] == "spellSlotLevel":
-                                    raise ExternalImportError(f"{attr_name} is missing a spell level")
-                                raise
-                    except KeyError as e:
-                        if e.args[0] == "variableName":
-                            pass
-                        else:
-                            raise ExternalImportError(f"Attribute {attr_name} missing key {e.args[0]}")
-                    if attr["attributeType"] == "resource":
-                        # add all resources
-                        name = attr.get("name") or attr.get("variableName")
-                        log.debug(f"Found resource named: {name}")
-                        if name is None:
-                            raise ExternalImportError(f"Resource {attr['_id']} is missing a name")
-                        self._seen_consumables.add(attr["_id"])
-                        try:
-                            uses = int(attr["total"])
-                        except KeyError:
-                            raise ExternalImportError(f"Resource {name} is missing a maximum value")
-
-                        # 7 was too small so 10 instead
-                        display_type = "bubble" if uses < 10 else None
-                        consumables.append(
-                            {
-                                "name": name,
-                                "value": int(attr.get("value", uses)),
-                                "minv": "0",
-                                "maxv": str(uses),
-                                "reset": RESET_MAP[attr.get("reset")],
-                                "display_type": display_type,
-                            }
-                        )
-                except ValueError as e:
-                    raise ExternalImportError(
-                        e.args[0].capitalize()
-                        + f" for Attribute {attr.get('name') or attr.get('variableName') or attr['_id']}"
-                    )
+            except ValueError as e:
+                raise ExternalImportError(
+                    e.args[0].capitalize()
+                    + f" for Attribute {attr.get('name') or attr.get('variableName') or attr['_id']}"
+                )
 
         # ensure all the necessary stats were found
-        if not all(stat in stat_dict for stat in stats + base_stats):
-            raise ExternalImportError(f"Missing required stats: {', '.join(set(stats + base_stats) - set(stat_dict))}")
+        if not all(stat in stat_dict for stat in STATS + BASE_STATS):
+            raise ExternalImportError(f"Missing required stats: {', '.join(set(STATS + BASE_STATS) - set(stat_dict))}")
 
         stats = BaseStats(
             stat_dict["proficiencyBonus"],
@@ -344,6 +295,70 @@ class DicecloudV2Parser(SheetLoaderABC):
         # save for later
         self.parsed_attrs = (stat_dict["hitPoints"], stat_dict["armor"], slots, stats, base_checks, consumables)
         return stat_dict["hitPoints"], stat_dict["armor"], slots, stats, base_checks, consumables
+
+    def _parse_stats(self, attr, stat_dict, base_checks):
+        try:
+            # assign by name to by name dict
+            self._attr_by_name[attr["variableName"]] = attr
+            attr_name = attr["variableName"]
+
+            # add appropriate base checks if it is an ability score
+            if attr_name in BASE_STATS:
+                try:
+                    base_checks[attr_name] = Skill(int(attr["modifier"]), 0, None)
+                except KeyError:
+                    raise ExternalImportError(f"Skill {attr_name} is missing a modifier")
+
+            # track the total for all stats
+            if attr_name in STATS + BASE_STATS:
+                stat_dict[attr_name] = int(attr["total"])
+
+        except KeyError as e:
+            if e.args[0] == "variableName":
+                pass
+            else:
+                raise ExternalImportError(f"Attribute {attr_name} missing key {e.args[0]}")
+
+    @staticmethod
+    def _parse_slots(attr, slots):
+        if attr["attributeType"] == "spellSlot":
+            try:
+                if attr.get("variableName") == "pactSlot":
+                    slots["pact"] = {
+                        "num": int(attr["total"]),
+                        "level": int(attr["spellSlotLevel"]["value"]),
+                    }
+                slots[str(attr["spellSlotLevel"]["value"])] += int(attr["total"])
+            except KeyError as e:
+                if e.args[0] == "spellSlotLevel":
+                    raise ExternalImportError(f"{get_ident(attr)} is missing a spell level")
+                raise
+
+    def _parse_resources(self, attr, consumables):
+        if attr["attributeType"] == "resource":
+            # add all resources
+            name = get_ident(attr, incl_id=False)
+            log.debug(f"Found resource named: {name}")
+            if name is None:
+                raise ExternalImportError(f"Resource {attr['_id']} is missing a name")
+            self._seen_consumables.add(attr["_id"])
+            try:
+                uses = int(attr["total"])
+            except KeyError:
+                raise ExternalImportError(f"Resource {name} is missing a maximum value")
+
+            # 7 was too small so 10 instead
+            display_type = "bubble" if uses < 10 else None
+            consumables.append(
+                {
+                    "name": name,
+                    "value": int(attr.get("value", uses)),
+                    "minv": "0",
+                    "maxv": str(uses),
+                    "reset": RESET_MAP.get(attr.get("reset")),
+                    "display_type": display_type,
+                }
+            )
 
     def get_levels(self) -> Levels:
         """Returns a dict with the character's level and class levels."""
@@ -404,8 +419,9 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions = []
         consumables = []
         for attack in self._by_type["action"]:
+            tags = attack["tags"]
             # we don't want to parse inactive actions
-            if not attack.get("inactive"):
+            if not attack.get("inactive") and "avrae:no_import" not in tags:
                 try:
                     aname = attack["name"]
                 except KeyError:
@@ -420,7 +436,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                             "value": attack.get("usesLeft", uses),
                             "minv": "0",
                             "maxv": str(uses),
-                            "reset": RESET_MAP[attack.get("reset")],
+                            "reset": RESET_MAP.get(attack.get("reset")),
                             "display_type": display_type,
                         }
                     )
@@ -428,7 +444,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                 consumables += self._consumables_from_resources(attack["resources"])
 
                 # don't bother parsing if a compendium action is found
-                if atk_actions := self.persist_actions_for_name(aname):
+                if "avrae:parse_only" not in tags and (atk_actions := self.persist_actions_for_name(aname)):
                     actions += atk_actions
                     continue
                 atk = self.parse_attack(attack)
@@ -453,8 +469,10 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         # calculate skills and saves from skill properties
         for skill in self._by_type["skill"]:
-            if not skill.get("inactive"):
-                vname = skill["variableName"]
+            if not skill.get("inactive") and skill["skillType"] in ("skill", "save", "check"):
+                vname = skill.get("variableName")
+                if not vname:
+                    continue
                 skill_obj = Skill(
                     # proficiency can be 0.49 or 0.5 for half round down or up, but we just want 0.5
                     skill["value"],
@@ -468,6 +486,17 @@ class DicecloudV2Parser(SheetLoaderABC):
                     case "skill" | "check":
                         if vname in SKILL_NAMES:
                             skills[vname] = skill_obj
+
+        if missing_skills := set(SKILL_NAMES) - set(skills):
+            raise ExternalImportError(
+                f"Your sheet is missing the following skill{'s' if len(missing_skills)>1 else ''}:"
+                f" {', '.join(missing_skills)}"
+            )
+        if missing_saves := set(SAVE_NAMES) - set(saves):
+            raise ExternalImportError(
+                f"Your sheet is missing the following save{'s' if len(missing_saves)>1 else ''}:"
+                f" {', '.join(missing_saves)}"
+            )
 
         return Skills(skills), Saves(saves)
 
@@ -502,7 +531,7 @@ class DicecloudV2Parser(SheetLoaderABC):
     def get_actions(self):
         actions = []
         for f in self._by_type["feature"]:
-            if not f.get("inactive"):
+            if not f.get("inactive") and "avrae:no_import" not in f["tags"]:
                 actions += self.persist_actions_for_name(f.get("name"))
 
         return actions
@@ -540,6 +569,8 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions = []
 
         for spell in self._by_type["spell"]:
+            if "avrae:no_import" in spell["tags"]:
+                continue
             # unprepared spells are inactive, so we need to specifically check how it is deactivated
             if not (spell.get("deactivatedByAncestor") or spell.get("deactivatedByToggle")):
                 spell_actions = self.persist_actions_for_name(spell["name"])
@@ -572,7 +603,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                             "value": spell.get("usesLeft", 0),
                             "minv": "0",
                             "maxv": str(uses),
-                            "reset": RESET_MAP[spell.get("reset")],
+                            "reset": RESET_MAP.get(spell.get("reset")),
                             "display_type": display_type,
                         }
                     )
@@ -636,7 +667,7 @@ class DicecloudV2Parser(SheetLoaderABC):
             pact.get("num"),
             pact.get("num"),
         )
-
+        # get readable identifier utility
         log.debug(f"Completed parsing spellbook: {spellbook.to_dict()}")
 
         return spellbook, consumables, attacks, actions
@@ -649,19 +680,21 @@ class DicecloudV2Parser(SheetLoaderABC):
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
 
-        log.debug(f"Processing attack {atk_prop.get('name')}")
+        log.debug(f"Processing attack {get_ident(atk_prop)}")
         try:
             auto = DCV2AutoParser(self).get_automation(atk_prop)
         except AutoParserException as e:
             node = e.node
             if isinstance(e.__cause__, KeyError):
                 raise ExternalImportError(
-                    f"{node['type']} {node.get('name') or node.get('variableName') or node['_id']} could not get key"
-                    f" {e.__cause__.args[0]}"
+                    f"{node['type']} {get_ident(node)} in {get_ident(atk_prop)} could not get key {e.__cause__.args[0]}"
+                )
+            if e.__cause__ is None:
+                raise ExternalImportError(
+                    f"{node['type']} {get_ident(node)} in {get_ident(atk_prop)} encountered an error: {e.args[0]}"
                 )
             raise ExternalImportError(
-                f"{node['type']} {node.get('name') or node.get('variableName') or node['_id']} could not import"
-                " properly"
+                f"{node['type']} {get_ident(node)} in {get_ident(node)} could not import properly due to {e.__cause__}"
             ) from e
         if auto is None:
             log.debug("Oops! Automation is None!")
@@ -669,13 +702,15 @@ class DicecloudV2Parser(SheetLoaderABC):
         name = atk_prop["name"]
         verb, proper = ("casts", True) if atk_prop["type"] == "spell" else (None, False)
         log.debug(f"Parsing {atk_prop['type']}")
-        activation = ACTIVATION_MAP[atk_prop["actionType"]]
+        activation = ACTIVATION_MAP.get(atk_prop["actionType"], ActivationType.SPECIAL)
         attack = Attack(name, auto, verb=verb, proper=proper, activation_type=activation)
 
         return attack
 
     def persist_actions_for_name(self, name):
-        """Since compendium actions can be found in spells, actions, and features, we need to keep track of what we've seen"""
+        """
+        Since compendium actions can be found in spells, actions, and features, we need to keep track of what we've seen
+        """
         actions = []
         if (g_actions := get_actions_for_name(name)) and len(g_actions) <= 20:
             for g_action in g_actions:
@@ -709,8 +744,13 @@ class DicecloudV2Parser(SheetLoaderABC):
                         "value": full_attr.get("value", uses),
                         "minv": "0",
                         "maxv": str(uses),
-                        "reset": RESET_MAP[full_attr.get("reset")],
+                        "reset": RESET_MAP.get(full_attr.get("reset")),
                         "display_type": display_type,
                     }
                 )
         return consumables
+
+
+# get readable identifier utility
+def get_ident(attr, *, incl_id=True):
+    return attr.get("name") or attr.get("variableName") or (attr["_id"] if incl_id else None)

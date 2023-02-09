@@ -245,7 +245,7 @@ class InitTracker(commands.Cog):
         `-group <group>` - Adds the combatant to a group.
         `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
         `-b <condition bonus>` - Adds a bonus to the combatant's initiative roll.
-        `-rollhp` - Rolls the monsters HP, instead of using the default value.
+        `rollhp` - Rolls the monsters HP, instead of using the default value.
         `-hp <hp>` - Sets starting HP.
         `-thp <thp>` - Sets starting THP.
         `-ac <ac>` - Sets the combatant's starting AC.
@@ -1063,7 +1063,7 @@ class InitTracker(commands.Cog):
         Rolls an attack against another combatant.
         __**Valid Arguments**__
         {VALID_AUTOMATION_ARGS}
-        -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+        custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
         """,
     )
     async def attack(self, ctx, atk_name=None, *, args=""):
@@ -1092,7 +1092,7 @@ class InitTracker(commands.Cog):
         Rolls an attack as another combatant.
         __**Valid Arguments**__
         {VALID_AUTOMATION_ARGS}
-        -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+        custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
         """,
     )
     async def aoo(self, ctx, combatant_name, atk_name=None, *, args=""):
@@ -1347,10 +1347,10 @@ class InitTracker(commands.Cog):
         is_character = isinstance(combatant, PlayerCombatant)
         if is_character and combatant.character_owner == str(ctx.author.id):
             args = await helpers.parse_snippets(
-                args, ctx, character=combatant.character, base_args=[combatant_name, spell_name]
+                args, ctx, character=combatant.character, base_args=[combatant.name, spell_name]
             )
         else:
-            args = await helpers.parse_snippets(args, ctx, statblock=combatant, base_args=[combatant_name, spell_name])
+            args = await helpers.parse_snippets(args, ctx, statblock=combatant, base_args=[combatant.name, spell_name])
         args = argparse(args)
 
         if not args.last("i", type_=bool):

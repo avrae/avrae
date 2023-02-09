@@ -50,7 +50,7 @@ jobs:
       - name: Deploy Amazon ECS task definition
         if: steps.do-release.outputs.result != '0'
         run: |
-          aws ecs update-service --cluster $CLUSTER_NAME-$DEPLOY_ENV --service $SERVICE_NAME --force-new-deployment --region $REGION
+          aws ecs update-service --cluster $CLUSTER_NAME-$DEPLOY_ENV --service $SERVICE_NAME --force-new-deployment --region $REGION --task-definition avrae-bot-ecs-task-definition
 
   # ===== help gen =====
   build-docs:

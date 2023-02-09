@@ -81,7 +81,7 @@ class Lookup(commands.Cog):
             name = "condition"
         else:
             name = f"Condition: {name}"
-        await self._rule(ctx, name)
+        await self.rule(ctx, name=name)
 
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
@@ -248,7 +248,7 @@ class Lookup(commands.Cog):
                 await inter.send("Race not found.", ephemeral=True)
                 return
             name = name[0]
-        await self._check_access(inter, name, ["race"])
+        await self._check_access(inter, name, ["race", "subrace"])
         return await self._race(inter, name)
 
     @slash_race.autocomplete("name")
@@ -704,10 +704,15 @@ class Lookup(commands.Cog):
         embed_queue[0].set_thumbnail(url=monster.get_image_url())
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
-        if pm or (visible and pm_dm and req_dm_monster):
-            await ctx.author.send(embeds=embed_queue)
-        else:
-            await destination.send(embeds=embed_queue)
+        for i, embed in enumerate(embed_queue):
+            if pm or (visible and pm_dm and req_dm_monster):
+                await ctx.author.send(embed=embed)
+            elif i == 0:
+                # Ensure the first embed is sent as a reply
+                await destination.send(embed=embed)
+            else:
+                # and the rest are to the channel
+                await destination.channel.send(embed=embed)
 
     @commands.command()
     async def monimage(self, ctx, *, name: str):
@@ -725,7 +730,7 @@ class Lookup(commands.Cog):
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
-        await self._monimage(monster, hide_name)
+        await self._monimage(ctx, monster, hide_name)
 
     @slash_lookup.sub_command(name="monimage", description="Shows a monster's image.")
     async def slash_monimage(
@@ -957,7 +962,14 @@ class Lookup(commands.Cog):
             embed_queue[0].set_thumbnail(url=spell.image)
 
         await Stats.increase_stat(ctx, "spells_looked_up_life")
-        await destination.send(embeds=embed_queue)
+
+        for i, embed in enumerate(embed_queue):
+            if i == 0:
+                # Ensure the first embed is sent as a reply
+                await destination.send(embed=embed)
+            else:
+                # and the rest are to the channel
+                await destination.channel.send(embed=embed)
 
     # ==== items ====
     @commands.command(name="item")
@@ -981,7 +993,7 @@ class Lookup(commands.Cog):
                 await inter.send("Item not found.", ephemeral=True)
                 return
             name = name[0]
-        await self._check_access(inter, name, ["adventuring-gear", "armor", "magic-item", "weapons"])
+        await self._check_access(inter, name, ["adventuring-gear", "armor", "magic-item", "weapon"])
         return await self._item(inter, name)
 
     @slash_item.autocomplete("name")

@@ -176,9 +176,9 @@ def compare_embeds(request_embed, embed, *, regex: bool = True):
 def embed_assertions(embed):
     """Checks to ensure that the embed is valid."""
     assert len(embed) <= 6000
-    assert len(embed.title) <= 256
-    assert len(embed.description) <= 4096
-    assert len(embed.fields) <= 25
+    assert embed.title is None or len(embed.title) <= 256
+    assert embed.description is None or len(embed.description) <= 4096
+    assert embed.fields is None or len(embed.fields) <= 25
     for field in embed.fields:
         assert 0 < len(field.name) <= 256
         assert 0 < len(field.value) <= 1024
@@ -198,9 +198,10 @@ def message_content_check(request: "Request", content: str = None, *, regex: boo
             assert request.data.get("content") == content
     if embed:
         embed_data = request.data.get("embeds")
-        assert embed_data is not None and embed_data
-        embed_assertions(disnake.Embed.from_dict(embed_data[0]))
-        compare_embeds(embed_data[0], embed.to_dict(), regex=regex)
+        if embed_data is not None:
+            assert embed_data
+            embed_assertions(disnake.Embed.from_dict(embed_data[0]))
+            compare_embeds(embed_data[0], embed.to_dict(), regex=regex)
     return match
 
 

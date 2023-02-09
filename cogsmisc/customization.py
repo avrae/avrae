@@ -731,7 +731,9 @@ class Customization(commands.Cog):
 
     @commands.command()
     async def test(self, ctx, *, teststr):
-        """Parses `str` as if it were in an alias, for testing."""
+        """Parses `teststr` as if it were in an alias, for testing.
+        Note: Not recommended to be used in actual aliases, as it can lead to unexpected behaviour. You will probably want to use `!echo` instead.
+        """
         try:
             char = await ctx.get_character()
         except NoCharacter:
@@ -747,7 +749,9 @@ class Customization(commands.Cog):
 
     @commands.command()
     async def tembed(self, ctx, *, teststr):
-        """Parses `str` as if it were in an alias, for testing, then creates and prints an Embed.
+        """Parses `teststr` as if it were in an alias, for testing, then creates and prints an Embed.
+        Note: Not recommended to be used in actual aliases, as it can lead to unexpected behaviour. You will probably want to use `!embed` instead.
+
         Arguments: -title [title]
         -desc [description text]
         -thumb [image url]
@@ -788,7 +792,9 @@ class Customization(commands.Cog):
             cvar = character.get_scope_locals().get(name)
             if cvar is None:
                 return await ctx.send("This cvar is not defined.")
-            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=cvar)
+            return await send_long_code_text(
+                ctx, outside_codeblock=f"**{name}**:".replace("_", "\_"), inside_codeblock=cvar
+            )
 
         helpers.set_cvar(character, name, value)
 
@@ -830,7 +836,9 @@ class Customization(commands.Cog):
         """Lists all cvars for the currently active character."""
         character: Character = await ctx.get_character()
         await ctx.send(
-            "{}'s character variables:\n{}".format(character.name, ", ".join(sorted(character.cvars.keys())))
+            "{}'s character variables:\n{}".format(character.name, ", ".join(sorted(character.cvars.keys()))).replace(
+                "_", "\_"
+            )
         )
 
     @commands.group(invoke_without_command=True, aliases=["uvar"])

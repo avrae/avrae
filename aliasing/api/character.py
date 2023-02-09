@@ -181,7 +181,7 @@ class AliasCharacter(AliasStatBlock):
         :param str minVal: The minimum value of the counter. Supports :ref:`cvar-table` parsing.
         :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
         :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
-        :param str dispType: Either ``None`` or ``'bubble'``.
+        :param str dispType: Either ``None``, ``'bubble'``, or ``'square'``.
         :param str reset_to: The value the counter should reset to. Supports :ref:`cvar-table` parsing.
         :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
         :param str title: The title of the counter.
@@ -217,7 +217,7 @@ class AliasCharacter(AliasStatBlock):
         :param str minVal: The minimum value of the counter. Supports :ref:`cvar-table` parsing.
         :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
         :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
-        :param str dispType: Either ``None`` or ``'bubble'``.
+        :param str dispType: Either ``None``, ``'bubble'``, or ``'square'``.
         :param str reset_to: The value the counter should reset to. Supports :ref:`cvar-table` parsing.
         :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
         :param str title: The title of the counter.
@@ -527,7 +527,7 @@ class AliasCustomCounter:
     @property
     def display_type(self):
         """
-        Returns the cc's display type. (None, 'bubble')
+        Returns the cc's display type. (None, 'bubble', 'square')
 
         :rtype: str
         """
@@ -744,7 +744,7 @@ class AliasAction:
 
         :rtype: int or None
         """
-        return self.activation_type.value if self.activation_type is not None else None
+        return self._action.activation_type.value if self._action.activation_type is not None else None
 
     @property
     def activation_type_name(self):

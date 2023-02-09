@@ -266,6 +266,7 @@ class BeyondClient(BeyondClientBase):
         return [
             entitlements.EntityEntitlements.from_dict(e)
             async for e in self.query(
+                Limit=1000,
                 TableName=DYNAMO_ENTITLEMENTS_TABLE,
                 KeyConditionExpression="PartitionKey = :entityTypeKey",
                 ExpressionAttributeValues={":entityTypeKey": {"S": f"ENTITY#{etype}"}},

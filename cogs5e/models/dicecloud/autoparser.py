@@ -150,7 +150,10 @@ class DCV2AutoParser:
                             self.resources.append((f"{sl_name}: {prop['name']}" if sl_name else prop["name"], 1))
                         if attrs := prop["resources"]["attributesConsumed"]:
                             for attr in attrs:
-                                self.resources.append((attr["statName"], attr["quantity"]["value"]))
+                                if "statName" in attr:
+                                    self.resources.append((attr["statName"], attr["quantity"]["value"]))
+                                else:
+                                    raise AutoParserException(prop, "Resource is not tied to a specfic attribute.")
 
                         self.parse_children(prop["children"], save=save)
 
@@ -176,7 +179,11 @@ class DCV2AutoParser:
                     # all the checks for what exactly we're doing here
                     magical = "magical" in prop["tags"]
                     healing = prop["damageType"] == "healing"
-                    effects = [str(effect["amount"]["value"]).strip() for effect in prop["amount"].get("effects", [])]
+                    effects = [
+                        str(effect["amount"]["value"]).strip()
+                        for effect in prop["amount"].get("effects", [])
+                        if effect["amount"]["value"] is not None
+                    ]
                     damage_dice = str(prop["amount"]["value"]) + "".join(
                         effect if effect[0] in "+-" else f"+{effect}" for effect in effects
                     )
@@ -212,7 +219,7 @@ class DCV2AutoParser:
                     self.parse_children(prop["children"], save=save)
                 case "note":
                     # we only use the summary here, since it's all DC would display
-                    desc = prop.get("summary")
+                    desc = prop.get("summary", {}).get("value")
                     if desc is not None:
                         self.text.append(desc)
                     self.parse_children(prop["children"], save=save)
@@ -229,6 +236,8 @@ class DCV2AutoParser:
                 case _:
                     self.parse_children(prop["children"], save=save)
         except Exception as e:
+            if isinstance(e, AutoParserException):
+                raise e
             raise AutoParserException(prop, "Auto Parser encounter an error parsing a property") from e
 
     def parse_children(self, children, *, save=False):

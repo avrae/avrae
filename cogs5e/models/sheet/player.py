@@ -3,6 +3,7 @@ import collections
 import d20
 
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, NoReset
+from utils import constants
 from utils.functions import bubble_format
 from .attack import AttackList
 from .spellcasting import SpellbookSpell
@@ -158,8 +159,8 @@ class CustomCounter:
             raise InvalidArgument("Invalid reset.")
         if any(c in name for c in ".$"):
             raise InvalidArgument("Invalid character in CC name.")
-        if display_type == "bubble" and (maxv is None or minv is None):
-            raise InvalidArgument("Bubble display requires a max and min value.")
+        if display_type in ("bubble", "square") and (maxv is None or minv is None):
+            raise InvalidArgument(f"{display_type.title()} display requires a max and min value.")
 
         # sanity checks
         if reset not in ("none", None) and (maxv is None and reset_to is None and reset_by is None):
@@ -172,8 +173,8 @@ class CustomCounter:
         min_value = None
         if minv is not None:
             min_value = character.evaluate_math(minv)
-            if display_type == "bubble" and (min_value < 0):
-                raise InvalidArgument("Bubble display requires a min value of >= 0.")
+            if display_type in ("bubble", "square") and (min_value < 0):
+                raise InvalidArgument(f"{display_type.title()} display requires a min value of >= 0.")
 
         max_value = None
         if maxv is not None:
@@ -325,6 +326,11 @@ class CustomCounter:
         if self.display_type == "bubble":
             assert self.max is not None
             val = f"{bubble_format(self.value, _max)}\n"
+        elif self.display_type == "square":
+            assert self.max is not None
+            val = (
+                f"{bubble_format(self.value, _max, used_char=constants.EMPTY_BUBBLE_ALT, unused_char=constants.FILLED_BUBBLE_ALT)}\n"
+            )
         else:
             val = f"**Current Value**: {self.value}\n"
             if self.min is not None and self.max is not None:
@@ -347,6 +353,11 @@ class CustomCounter:
         if self.display_type == "bubble":
             assert self.max is not None
             out = bubble_format(self.value, _max)
+        elif self.display_type == "square":
+            assert self.max is not None
+            out = bubble_format(
+                self.value, _max, used_char=constants.EMPTY_BUBBLE_ALT, unused_char=constants.FILLED_BUBBLE_ALT
+            )
         else:
             if self.max is not None:
                 out = f"{self.value}/{_max}"

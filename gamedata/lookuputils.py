@@ -119,7 +119,7 @@ def handle_source_footer(
     :param allow_overwrite: Whether or not to allow overwriting an existing footer text.
     """
     text_pieces = []
-    icon_url = embed.Empty
+    icon_url = None
     book = compendium.book_by_source(sourced.source)
     if text is not None:
         text_pieces.append(text)
@@ -147,7 +147,7 @@ def handle_source_footer(
         text_pieces.append("Legacy content.")
 
     # do the writing
-    text = " | ".join(text_pieces) or embed.Empty
+    text = " | ".join(text_pieces) or " "
     if not allow_overwrite:
         if embed.footer.text:
             text = embed.footer.text

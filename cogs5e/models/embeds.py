@@ -237,10 +237,13 @@ def set_maybe_long_desc(embed, desc):
     :param embed: The embed to add the description (and potentially fields) to.
     :param str desc: The description to add. Will overwrite existing description.
     """
-    desc = chunk_text(trim_str(desc, 5000))
-    embed.description = "".join(desc[:2]).strip()
+    desc = chunk_text(trim_str(desc, 5000), max_chunk_size=1000)
+    opened_block = "".join(desc[:2]).strip().count("```") % 2
+    embed.description = "".join(desc[:2]).strip() + ("\n```" * opened_block)
     for piece in desc[2:]:
-        embed.add_field(name="** **", value=piece.strip(), inline=False)
+        piece = ("```\n" * opened_block) + piece
+        opened_block = piece.count("```") % 2
+        embed.add_field(name="** **", value=piece.strip() + ("\n```" * opened_block), inline=False)
 
 
 def add_fields_from_long_text(embed, field_name, text):

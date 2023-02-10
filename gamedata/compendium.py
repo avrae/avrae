@@ -177,13 +177,12 @@ class Compendium:
         self.subclasses = []
         for cls in self.classes:
             for subcls in cls.subclasses:
-                if subcls.limited_use_only:  # Certain 'subclasses' are for action/limited use import only
-                    continue
                 copied = copy.copy(subcls)
                 copied.name = f"{cls.name}: {subcls.name}"
                 # register lookups
                 self._register_entity_lookup(subcls)
-                self.subclasses.append(copied)
+                if subcls.limited_use_only:  # Certain 'subclasses' are for action/limited use import only
+                    self.subclasses.append(copied)
 
     def _load_classfeats(self):
         """

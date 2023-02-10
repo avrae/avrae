@@ -45,12 +45,16 @@ async def available(ctx, entities: List["_SourcedT"], entity_type: str, user_id:
     if user_id is None:
         user_id = ctx.author.id
 
+    # Remove limited use only items from entity list
+    try:
+        entities = list(filter(lambda a: not a.limited_use_only, entities))
+    except AttributeError:
+        pass
+
     available_ids = await ctx.bot.ddb.get_accessible_entities(ctx, user_id, entity_type)
     if available_ids is None:
-        return [e for e in entities if e.limited_use_only is False and e.is_free]
-    return [
-        e for e in entities if e.limited_use_only is False and e.is_free or e.entitlement_entity_id in available_ids
-    ]
+        return [e for e in entities if e.is_free]
+    return [e for e in entities if e.is_free or e.entitlement_entity_id in available_ids]
 
 
 def can_access(entity: "Sourced", available_ids: set[int] = None) -> bool:

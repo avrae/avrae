@@ -259,21 +259,26 @@ def verify_signature(ctx: disnake.ext.commands.Context, data: str):
     }
 
 
-def parse_coins(args: str) -> dict:
+def parse_coins(args: str, include_total: bool = True) -> dict:
     """
     Parses a coin string into a representation of each currency.
     If the user input is a decimal number, assumes gold pieces.
     Otherwise, allows the user to specify currencies in the form '+1gp -2sp 3cp'
 
+    :param str args: The coin string to parse
+    :param bool include_total: Whether to include the `"total"` key
     :return: A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3, "total": 0.83}``
     :rtype: dict
     """
     coin_args = parse_coin_args(args)
-    return {
+    parsed = {
         "pp": coin_args.pp,
         "gp": coin_args.gp,
         "ep": coin_args.ep,
         "sp": coin_args.sp,
         "cp": coin_args.cp,
-        "total": coin_args.total,
     }
+
+    if include_total:
+        parsed.update({"total": coin_args.total})
+    return parsed

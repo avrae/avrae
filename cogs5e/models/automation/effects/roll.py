@@ -37,6 +37,8 @@ class Roll(Effect):
             out["higher"] = self.higher
         if self.cantripScale is not None:
             out["cantripScale"] = self.cantripScale
+        if self.displayName is not None:
+            out["displayName"] = self.displayName
         return out
 
     def run(self, autoctx):

@@ -24,6 +24,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from gamedata.compendium import compendium
 from utils import config, constants, enums
+from utils.enums import ActivationType
 from utils.functions import smart_trim
 
 log = logging.getLogger(__name__)
@@ -509,6 +510,13 @@ class BeyondSheetParser(SheetLoaderABC):
     def _transform_attack(attack) -> Attack:
         desc = html_to_md(attack["desc"])
 
+        activation = attack.get("activationType")
+        # Attack's are listed as Actions on Beyond, and this was the default prior
+        if activation == 1:
+            activation = None
+        if activation is not None:
+            activation = ActivationType(activation)
+
         if attack["saveDc"] is not None and attack["saveStat"] is not None:
             stat = constants.STAT_ABBREVIATIONS[attack["saveStat"] - 1]
             for_half = desc and "half" in desc
@@ -531,10 +539,11 @@ class BeyondSheetParser(SheetLoaderABC):
             # description text
             if desc:
                 effects.append(automation.Text(desc))
-
-            return Attack(attack["name"], automation.Automation(effects))
+            return Attack(attack["name"], automation.Automation(effects), activation_type=activation)
         else:
-            return Attack.new(attack["name"], attack["toHit"], attack["damage"] or "0", desc)
+            return Attack.new(
+                attack["name"], attack["toHit"], attack["damage"] or "0", desc, activation_type=activation
+            )
 
 
 def derive_adv(advs, dises):

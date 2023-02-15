@@ -18,6 +18,10 @@ class CoinsArgs:
     def total(self) -> float:
         return (self.pp * 10) + self.gp + (self.ep * 0.5) + (self.sp * 0.1) + (self.cp * 0.01)
 
+    @property
+    def total_cp(self) -> int:
+        return (self.pp * 1000) + (self.gp * 100) + (self.ep * 50) + (self.sp * 10) + self.cp
+
 
 class Coinpurse(HasIntegrationMixin):
     def __init__(self, pp=0, gp=0, ep=0, sp=0, cp=0):
@@ -48,8 +52,13 @@ class Coinpurse(HasIntegrationMixin):
         return f"{COIN_TYPES['gp']['icon']} {self.total:,.2f} gp{delta_out}"
 
     @property
-    def total(self):
+    def total(self) -> float:
         return (self.pp * 10) + self.gp + (self.ep * 0.5) + (self.sp * 0.1) + (self.cp * 0.01)
+
+    @property
+    def total_cp(self) -> int:
+        """Returns the total amount of coins in copper pieces; useful for avoiding floating-point rounding errors."""
+        return (self.pp * 1000) + (self.gp * 100) + (self.ep * 50) + (self.sp * 10) + self.cp
 
     @classmethod
     def from_dict(cls, d):
@@ -84,22 +93,18 @@ class Coinpurse(HasIntegrationMixin):
         if self.pp + coins.pp < 0:
             # Still not enough? Convert the total transaction to copper, run again
             if (self.total + coins.total) >= 0:
-                return self.auto_convert_down(CoinsArgs(cp=int(coins.total * 100)))
+                return self.auto_convert_down(CoinsArgs(cp=coins.total_cp))
             else:
                 raise InvalidArgument("You do not have enough coins to cover this transaction.")
         return coins
 
     def consolidate_coins(self) -> CoinsArgs:
-        total_cp = self.total * 100
-        new_pp = int(total_cp // 1000)
-        total_cp -= new_pp * 1000
-        new_gp = int(total_cp // 100)
-        total_cp -= new_gp * 100
-        new_ep = int(total_cp // 50)
-        total_cp -= new_ep * 50
-        new_sp = int(total_cp // 10)
-        total_cp -= new_sp * 10
-        new_cp = int(total_cp)
+        total_cp = self.total_cp
+        new_pp, total_cp = divmod(total_cp, 1000)
+        new_gp, total_cp = divmod(total_cp, 100)
+        new_ep, total_cp = divmod(total_cp, 50)
+        new_sp, total_cp = divmod(total_cp, 10)
+        new_cp = total_cp
 
         delta = CoinsArgs(
             pp=new_pp - self.pp, gp=new_gp - self.gp, ep=new_ep - self.ep, sp=new_sp - self.sp, cp=new_cp - self.cp

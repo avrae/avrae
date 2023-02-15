@@ -426,6 +426,8 @@ class DicecloudV2Parser(SheetLoaderABC):
                     aname = attack["name"]
                 except KeyError:
                     continue
+
+                log.debug(f"Parsing {aname}")
                 # convert uses into consumable format
                 if attack.get("uses"):
                     uses = attack["uses"]["value"]
@@ -733,6 +735,8 @@ class DicecloudV2Parser(SheetLoaderABC):
         attrs = resources["attributesConsumed"]
         consumables = []
         for attr in attrs:
+            if "variableName" not in attr:
+                continue
             full_attr = self._attr_by_name.get(attr["variableName"])
             if full_attr and full_attr["_id"] not in self._seen_consumables:
                 self._seen_consumables.add(full_attr["_id"])

@@ -399,7 +399,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 num = 2
                 while f"{processed_attack.name}{num}" in used_names:
                     num += 1
-                processed_attack.name = f"{processed_attack.name}{num}"
+                processed_attack.name = f"{processed_attack.name} {num}"
             attacks.append(((str(attack_data["id"]), str(attack_data["typeId"])), processed_attack))
             used_names.add(processed_attack.name)
 

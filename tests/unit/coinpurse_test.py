@@ -76,6 +76,7 @@ async def test_coin_autoconvert_up():
     assert Coinpurse(pp=10, gp=9, ep=1, sp=4, cp=1234).consolidate_coins() == CoinsArgs(
         pp=2, gp=-7, ep=-1, sp=-2, cp=-1230
     )
+    assert Coinpurse(pp=0, gp=410, ep=1, sp=4, cp=9).consolidate_coins() == CoinsArgs(pp=41, gp=-410)
 
 
 async def test_coin_compactstring():

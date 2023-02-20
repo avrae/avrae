@@ -61,6 +61,12 @@ def search(
     if len(list_to_search) == 0:
         return [], False
 
+    # Remove limited use only items from search results
+    try:
+        list_to_search = list(filter(lambda a: not a.limited_use_only, list_to_search))
+    except AttributeError:
+        pass
+
     # full match, return result
     exact_matches = [a for a in list_to_search if value.lower() == key(a).lower()]
     if not (exact_matches or strict):

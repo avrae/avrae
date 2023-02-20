@@ -34,7 +34,7 @@ CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiority
 CLASS_RESOURCE_NAMES = {
     "expertiseDice": "Expertise Dice",
     "ki": "Ki",
-    "rages": "Rages",
+    "rages": "Rage",
     "sorceryPoints": "Sorcery Points",
     "superiorityDice": "Superiority Dice",
 }

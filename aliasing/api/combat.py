@@ -592,6 +592,8 @@ class SimpleEffect:
         self.duration = self._effect.duration
         self.remaining = self._effect.remaining
         self.effect = self._effect.effects.to_dict()
+        self.attacks = [i.to_dict() for i in self._effect.attacks]
+        self.buttons = [i.to_dict() for i in self._effect.buttons]
         self.conc = self._effect.concentration
         self.desc = self._effect.desc
         self.ticks_on_end = self._effect.end_on_turn_end

@@ -749,6 +749,7 @@ Draconic's syntax is very similar to Python. Other Python features supported in 
 * `List Comprehensions <https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions>`_
 * `Functions <https://docs.python.org/3/tutorial/controlflow.html#defining-functions>`_
 * `Lambda Expressions <https://docs.python.org/3/tutorial/controlflow.html#lambda-expressions>`_
+* `Argument Unpacking <https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists>`_
 
 Initiative Models
 -----------------

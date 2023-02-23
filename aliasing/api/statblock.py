@@ -563,7 +563,7 @@ class AliasSkills:
 
     def __getattr__(self, item):
         if item not in self._skills.skills:
-            raise ValueError(f"{item} is not a skill.")
+            raise AttributeError(f"{item} is not a skill.")
         return AliasSkill(self._skills.__getattr__(item))
 
     def __getitem__(self, item):

@@ -800,7 +800,7 @@ class AliasCoinpurse:
 
     def __getattr__(self, item):
         if item not in COIN_TYPES:
-            raise ValueError(f"{item} is not valid coin.")
+            raise AttributeError(f"{item} is not valid coin.")
         return getattr(self._coinpurse, item)
 
     def __getitem__(self, item):

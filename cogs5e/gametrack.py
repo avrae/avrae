@@ -596,6 +596,8 @@ class GameTrack(commands.Cog):
             new_value = counter.value + result
         elif operator == "set":
             new_value = result
+        elif name in ("set", "mod"):
+            return await ctx.send(f"Invalid operator. Did you mean `{ctx.prefix}cc {operator} {name} {modifier}`?")
         else:
             return await ctx.send("Invalid operator. Use mod or set.")
 

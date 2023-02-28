@@ -757,9 +757,9 @@ class GameTrack(commands.Cog):
         if character.consumables:
             # paginate if > 25
             total = len(character.consumables)
-            maxpage = total // 25 + 1
-            page = max(1, min(page, maxpage))
             pages = [character.consumables[i : i + 25] for i in range(0, total, 25)]
+            maxpage = len(pages)
+            page = max(1, min(page, maxpage))
             for counter in pages[page - 1]:
                 embed.add_field(name=counter.name, value=counter.full_str())
             if total > 25:

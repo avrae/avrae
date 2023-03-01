@@ -256,7 +256,7 @@ class SimpleCombatant(AliasStatBlock):
 
         :rtype: bool
         """
-        return self._hidden
+        return bool(self._hidden)
 
     def save(self, ability: str, adv: bool = None):
         """

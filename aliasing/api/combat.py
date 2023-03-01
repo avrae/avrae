@@ -249,6 +249,15 @@ class SimpleCombatant(AliasStatBlock):
         """
         return self._monster_name
 
+    @property
+    def is_hidden(self):
+        """
+        Whether the HP, AC, Resists, etc are hidden.
+
+        :rtype: bool
+        """
+        return bool(self._hidden)
+
     def save(self, ability: str, adv: bool = None):
         """
         Rolls a combatant's saving throw.

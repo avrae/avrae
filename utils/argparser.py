@@ -149,13 +149,16 @@ class ParsedArguments:
         return cls([])
 
     # basic argument getting
+
+    # Have to escape the _ in the type_ parameter for docs
+    # noinspection PyIncorrectDocstring
     def get(self, arg, default=None, type_=str, ephem=False):
         """
         Gets a list of all values of an argument.
 
         :param str arg: The name of the arg to get.
         :param default: The default value to return if the arg is not found. Not cast to type.
-        :param type type_: The type that each value in the list should be returned as.
+        :param type type\_: The type that each value in the list should be returned as.
         :param bool ephem: Whether to add applicable ephemeral arguments to the returned list.
         :return: The relevant argument list.
         :rtype: list
@@ -170,13 +173,15 @@ class ParsedArguments:
         except (ValueError, TypeError):
             raise InvalidArgument(f"One or more arguments cannot be cast to {type_.__name__} (in `{arg}`)")
 
+    # Have to escape the _ in the type_ parameter for docs
+    # noinspection PyIncorrectDocstring
     def last(self, arg, default=None, type_=str, ephem=False):
         """
         Gets the last value of an arg.
 
         :param str arg: The name of the arg to get.
         :param default: The default value to return if the arg is not found. Not cast to type.
-        :param type type_: The type that the arg should be returned as.
+        :param type type\_: The type that the arg should be returned as.
         :param bool ephem: Whether to return an ephemeral argument if such exists.
         :raises: InvalidArgument if the arg cannot be cast to the type
         :return: The relevant argument.

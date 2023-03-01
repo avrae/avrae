@@ -425,7 +425,7 @@ class Combatant(BaseCombatant, StatBlock):
         """
         Called when the combatant is removed from combat, either through !i remove or the combat ending.
         """
-        pass
+        self.remove_all_effects()
 
     # stringification
     def get_summary(self, private=False, no_notes=False) -> str:

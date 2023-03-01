@@ -596,6 +596,8 @@ class GameTrack(commands.Cog):
             new_value = counter.value + result
         elif operator == "set":
             new_value = result
+        elif name in ("set", "mod"):
+            return await ctx.send(f"Invalid operator. Did you mean `{ctx.prefix}cc {operator} {name} {modifier}`?")
         else:
             return await ctx.send("Invalid operator. Use mod or set.")
 
@@ -757,9 +759,9 @@ class GameTrack(commands.Cog):
         if character.consumables:
             # paginate if > 25
             total = len(character.consumables)
-            maxpage = total // 25 + 1
-            page = max(1, min(page, maxpage))
             pages = [character.consumables[i : i + 25] for i in range(0, total, 25)]
+            maxpage = len(pages)
+            page = max(1, min(page, maxpage))
             for counter in pages[page - 1]:
                 embed.add_field(name=counter.name, value=counter.full_str())
             if total > 25:

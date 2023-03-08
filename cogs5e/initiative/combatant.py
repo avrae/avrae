@@ -174,6 +174,8 @@ class Combatant(BaseCombatant, StatBlock):
                 out = "<Critical>"
             elif ratio <= 0:
                 out = "<Dead>"
+        else:  # Max HP is less than 0?!
+            out = "<Very Dead>"
         return out
 
     @property

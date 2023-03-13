@@ -159,7 +159,7 @@ class CustomCounter:
             raise InvalidArgument("Invalid reset.")
         if any(c in name for c in ".$"):
             raise InvalidArgument("Invalid character in CC name.")
-        if display_type in ("bubble", "square") and (maxv is None or minv is None):
+        if display_type in constants.COUNTER_BUBBLES and (maxv is None or minv is None):
             raise InvalidArgument(f"{display_type.title()} display requires a max and min value.")
 
         # sanity checks
@@ -173,7 +173,7 @@ class CustomCounter:
         min_value = None
         if minv is not None:
             min_value = character.evaluate_math(minv)
-            if display_type in ("bubble", "square") and (min_value < 0):
+            if display_type in constants.COUNTER_BUBBLES and (min_value < 0):
                 raise InvalidArgument(f"{display_type.title()} display requires a min value of >= 0.")
 
         max_value = None
@@ -323,14 +323,9 @@ class CustomCounter:
         _max = self.get_max()
         _reset = self.RESET_MAP.get(self.reset_on)
 
-        if self.display_type == "bubble":
+        if self.display_type in constants.COUNTER_BUBBLES:
             assert self.max is not None
-            val = f"{bubble_format(self.value, _max)}\n"
-        elif self.display_type == "square":
-            assert self.max is not None
-            val = (
-                f"{bubble_format(self.value, _max, used_char=constants.EMPTY_BUBBLE_ALT, unused_char=constants.FILLED_BUBBLE_ALT)}\n"
-            )
+            val = f"{bubble_format(self.value, _max, chars=constants.COUNTER_BUBBLES[self.display_type])}\n"
         else:
             val = f"**Current Value**: {self.value}\n"
             if self.min is not None and self.max is not None:
@@ -350,14 +345,9 @@ class CustomCounter:
     def __str__(self):
         _max = self.get_max()
 
-        if self.display_type == "bubble":
+        if self.display_type in constants.COUNTER_BUBBLES:
             assert self.max is not None
-            out = bubble_format(self.value, _max)
-        elif self.display_type == "square":
-            assert self.max is not None
-            out = bubble_format(
-                self.value, _max, used_char=constants.EMPTY_BUBBLE_ALT, unused_char=constants.FILLED_BUBBLE_ALT
-            )
+            out = bubble_format(self.value, _max, chars=constants.COUNTER_BUBBLES[self.display_type])
         else:
             if self.max is not None:
                 out = f"{self.value}/{_max}"

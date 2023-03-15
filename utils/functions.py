@@ -306,15 +306,15 @@ def camel_to_title(string):
 
 
 def bubble_format(
-    value: int, max_: int, fill_from_right=False, used_char=constants.EMPTY_BUBBLE, unused_char=constants.FILLED_BUBBLE
+    value: int, max_: int, fill_from_right=False, chars: constants.CounterBubbles = constants.COUNTER_BUBBLES["bubble"]
 ):
     """Returns a bubble string to represent a counter's value."""
     if max_ > 100:
         return f"{value}/{max_}"
 
     used = max_ - value
-    filled = unused_char * value
-    empty = used_char * used
+    filled = chars.filled * value
+    empty = chars.empty * used
     if fill_from_right:
         return f"{empty}{filled}"
     return f"{filled}{empty}"

@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 # ==== useful constants ====
 RESIST_TYPES = ("resist", "immune", "vuln", "neutral")
 DAMAGE_TYPES = (
@@ -137,14 +139,19 @@ COIN_TYPES = {
     },
 }
 
+CounterBubbles = namedtuple("CounterBubbles", ("empty", "filled"))
+
 # ==== emojis, icons, other discord things ====
 DDB_LOGO_EMOJI = "<:beyond:783780183559372890>"
 DDB_LOGO_ICON = "https://cdn.discordapp.com/emojis/783780183559372890.png?v=1"
-EMPTY_BUBBLE = "\u3007"
-FILLED_BUBBLE = "\u25c9"
-# pact slots
-EMPTY_BUBBLE_ALT = "\u25a2"
-FILLED_BUBBLE_ALT = "\u25a3"
+
+COUNTER_BUBBLES = {
+    "bubble": CounterBubbles(empty="\u3007", filled="\u25c9"),  # 〇◉, spell slots
+    "square": CounterBubbles(empty="\u25a2", filled="\u25a3"),  # ▢▣, pact slots
+    "hex": CounterBubbles(empty="\u2B21", filled="\u2B22"),  # ⬡⬢
+    "star": CounterBubbles(empty="\u2606", filled="\u2605"),  # ☆★
+}
+
 # homebrew
 HOMEBREW_EMOJI = "<:homebrew:783780183525818418>"
 HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"

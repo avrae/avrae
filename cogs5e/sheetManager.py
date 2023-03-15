@@ -245,7 +245,11 @@ class SheetManager(commands.Cog):
     )
     async def save(self, ctx, skill, *args):
         if skill == "death":
-            ds_cmd = self.bot.get_command("game deathsave")
+            base_cmd = "game deathsave"
+            if args and (sub_cmd := args[0].lower()) in ("fail", "success", "reset"):
+                base_cmd += f" {sub_cmd}"
+                args = []
+            ds_cmd = self.bot.get_command(base_cmd)
             if ds_cmd is None:
                 return await ctx.send("Error: GameTrack cog not loaded.")
             return await ctx.invoke(ds_cmd, *args)

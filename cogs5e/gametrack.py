@@ -21,7 +21,7 @@ from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.gameutils import resolve_strict_coins
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
-from utils import constants
+from utils.constants import COUNTER_BUBBLES
 from utils.argparser import argparse
 from utils.functions import confirm, maybe_mod, search, search_and_select, try_delete
 
@@ -89,16 +89,16 @@ class GameTrack(commands.Cog):
                 f"{character.spellbook.slots_str(level)} ({(value - old_slots):+})"
             )
 
+        bubble = COUNTER_BUBBLES["bubble"]
+        pact = COUNTER_BUBBLES["square"]
+
         # footer - pact vs non pact
         if character.spellbook.max_pact_slots is not None:
             embed.set_footer(
-                text=(
-                    f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used\n"
-                    f"{constants.FILLED_BUBBLE_ALT} / {constants.EMPTY_BUBBLE_ALT} = Pact Slot"
-                )
+                text=f"{bubble.filled} = Available / {bubble.empty} = Used\n{pact.filled} / {pact.empty} = Pact Slot"
             )
         else:
-            embed.set_footer(text=f"{constants.FILLED_BUBBLE} = Available / {constants.EMPTY_BUBBLE} = Used")
+            embed.set_footer(text=f"{bubble.filled} = Available / {bubble.filled} = Used")
 
         await ctx.send(embed=embed)
 
@@ -629,7 +629,7 @@ class GameTrack(commands.Cog):
         `-max <max value>` - The maximum value of the counter.
         `-min <min value>` - The minimum value of the counter.
         `-value <value>` - The initial value for the counter.
-        `-type <bubble|square|default>` - Whether the counter displays bubbles/squares to show remaining uses or numbers. Default - numbers.
+        `-type <bubble|square|hex|star|default>` - Whether the counter displays bubbles/squares/hexes/stars to show remaining uses or numbers. Default - numbers.
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
         `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
         """  # noqa: E501

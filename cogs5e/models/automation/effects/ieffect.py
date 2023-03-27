@@ -1,4 +1,5 @@
 from typing import List, Optional
+import re
 
 import disnake
 
@@ -243,6 +244,7 @@ class IEffect(Effect):
             desc = None
 
         duration = autoctx.args.last("dur", duration, int)
+        parsed_name = autoctx.parse_annostr(self.name)
         if self.effects is not None:
             effects = self.effects.resolve(autoctx)
         else:
@@ -256,7 +258,7 @@ class IEffect(Effect):
             effect = init.InitiativeEffect.new(
                 combat=combatant.combat,
                 combatant=combatant,
-                name=self.name,
+                name=parsed_name,
                 duration=duration,
                 passive_effects=effects,
                 attacks=attacks,
@@ -278,10 +280,10 @@ class IEffect(Effect):
             # find the next correct name for the effect and create a new one, without conflicting pieces
             if self.stacking and (stack_parent := combatant.get_effect(effect.name, strict=True)):
                 count = 2
-                new_name = f"{self.name} x{count}"
+                new_name = f"{parsed_name} x{count}"
                 while combatant.get_effect(new_name, strict=True):
                     count += 1
-                    new_name = f"{self.name} x{count}"
+                    new_name = f"{parsed_name} x{count}"
                 effect = init.InitiativeEffect.new(
                     combat=combatant.combat,
                     combatant=combatant,
@@ -328,7 +330,7 @@ class IEffect(Effect):
             effect = init.InitiativeEffect.new(
                 combat=None,
                 combatant=None,
-                name=self.name,
+                name=parsed_name,
                 duration=duration,
                 passive_effects=effects,
                 attacks=attacks,
@@ -343,7 +345,8 @@ class IEffect(Effect):
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
-        return f"Effect: {self.name}"
+        clean_name = re.sub(r"{+.+?}+", "<<Variable>>", self.name)
+        return f"Effect: {clean_name}"
 
 
 # ==== metavars ====

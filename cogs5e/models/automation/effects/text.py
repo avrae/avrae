@@ -62,7 +62,6 @@ class Text(Effect):
             text = f"{text[:1020]}..."
 
         if not hide:
-            print(self.title)
             autoctx.effect_queue(text, self.title)
         else:
             autoctx.add_pm(str(autoctx.ctx.author.id), text)

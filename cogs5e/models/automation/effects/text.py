@@ -6,12 +6,15 @@ from ..results import TextResult
 
 
 class Text(Effect):
-    def __init__(self, text, **kwargs):
+    def __init__(self, text, title=None, **kwargs):
         """
         :type text: str or EntityReference
         """
         super().__init__("text", **kwargs)
         self.text = text
+        self.title = title
+        if not self.title:
+            self.title = "Effect"
 
     @classmethod
     def from_data(cls, data):
@@ -21,7 +24,8 @@ class Text(Effect):
     def to_dict(self):
         out = super().to_dict()
         text = self.text if isinstance(self.text, str) else self.text.to_dict()
-        out.update({"text": text})
+        title = self.title
+        out.update({"text": text, "title": title})
         return out
 
     async def preflight(self, autoctx):
@@ -58,11 +62,12 @@ class Text(Effect):
             text = f"{text[:1020]}..."
 
         if not hide:
-            autoctx.effect_queue(text)
+            print(self.title)
+            autoctx.effect_queue(text, self.title)
         else:
             autoctx.add_pm(str(autoctx.ctx.author.id), text)
 
-        return TextResult(text=text)
+        return TextResult(text=text, title=self.title)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

@@ -274,7 +274,7 @@ IEffect
 
     {
         type: "ieffect2";
-        name: string;
+        name: AnnotatedString;
         duration?: int | IntExpression;
         effects?: PassiveEffects;
         attacks?: AttackInteraction[];
@@ -299,7 +299,7 @@ It must be inside a Target effect.
 
     .. attribute:: name
 
-        The name of the effect to add.
+        The name of the effect to add. Annotations will show as *Variable* in the attack string.
 
     .. attribute:: duration
 
@@ -691,6 +691,7 @@ Text
     {
         type: "text";
         text: AnnotatedString | AbilityReference;
+        title: string
     }
 
 Outputs a short amount of text in the resulting embed.
@@ -703,6 +704,10 @@ Outputs a short amount of text in the resulting embed.
 
         - An AnnotatedString (the text to display).
         - An AbilityReference (see :ref:`AbilityReference`). Displays the ability's description in whole.
+
+    .. attribute:: title
+
+        *optional* - Allows you to set the name of the field. Defaults to "Effect"
 
 .. _set-variable:
 

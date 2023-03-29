@@ -138,7 +138,8 @@ class Automation:
         inner = Effect.build_child_str(self.effects, caster, evaluator)
         if not inner:
             inner = ", ".join(e.type for e in self.effects)
-        return disnake.utils.escape_markdown(f"{inner[0].upper()}{inner[1:]}.", as_needed=True)
+        escaped = disnake.utils.escape_markdown(f"{inner[0].upper()}{inner[1:]}.", as_needed=True)
+        return escaped.replace("<<Variable>>", "*Variable*")
 
     def __str__(self):
         return f"Automation ({len(self.effects)} effects)"

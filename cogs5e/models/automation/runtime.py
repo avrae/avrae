@@ -123,10 +123,10 @@ class AutomationContext:
         """Adds a line of text to the embed footer."""
         self._footer_queue.append(text)
 
-    def effect_queue(self, text):
+    def effect_queue(self, text, title="Effect"):
         """Adds a line of text to the Effect field (lines are unique)."""
         if text not in self._effect_queue:
-            self._effect_queue.append(text)
+            self._effect_queue.append((title, text))
 
     def postflight_queue_field(self, name, value, merge=True):
         """
@@ -174,8 +174,8 @@ class AutomationContext:
         # add fields
         for field in self._field_queue:
             self.embed.add_field(**field)
-        for effect in self._effect_queue:
-            self.embed.add_field(name="Effect", value=effect, inline=False)
+        for title, effect in self._effect_queue:
+            self.embed.add_field(name=title, value=effect, inline=False)
         for field in self._postflight_queue:
             self.embed.add_field(**field)
         self.embed.set_footer(text="\n".join(self._footer_queue))

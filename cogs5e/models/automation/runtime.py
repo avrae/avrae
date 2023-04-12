@@ -125,7 +125,7 @@ class AutomationContext:
 
     def effect_queue(self, text, title="Effect"):
         """Adds a line of text to the Effect field (lines are unique)."""
-        if text not in self._effect_queue:
+        if (title, text) not in self._effect_queue:
             self._effect_queue.append((title, text))
 
     def postflight_queue_field(self, name, value, merge=True):

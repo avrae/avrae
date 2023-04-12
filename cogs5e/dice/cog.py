@@ -51,7 +51,7 @@ class Dice(commands.Cog):
 
         `!r (1d8+4)*2` - Warhammer damage against bludgeoning vulnerability
 
-        `!r 1d10[cold]+2d6[piercing] Ice Knife` - The Ice Knife Spell does cold and piercing damage
+        `!r 1d10[piercing]+2d6[cold] Ice Knife` - The Ice Knife Spell does cold and piercing damage
 
         **Advanced Options**
         __Operators__

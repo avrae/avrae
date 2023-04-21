@@ -169,8 +169,9 @@ async def get_collectable_named(
         return personal_obj
     # conflicting name errors
     if personal_obj is not None and subscribed_obj_ids:
+        subbed_name = obj_name if len(subscribed_obj_ids) == 1 else obj_name_pl
         raise AliasNameConflict(
-            f"I found both a personal {obj_name} and {len(subscribed_obj_ids)} workshop {obj_name}(es) "
+            f"I found both a local {obj_name} and {len(subscribed_obj_ids)} workshop {subbed_name} "
             f"named {ctx.prefix}{name}. Use `{ctx.prefix}{obj_command_name} autofix` to automatically assign "
             f"all conflicting {obj_name_pl} unique names, or `{ctx.prefix}{obj_command_name} rename {name} <new name>` "
             "to manually rename it."

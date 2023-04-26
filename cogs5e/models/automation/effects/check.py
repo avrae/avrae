@@ -128,6 +128,7 @@ class Check(Effect):
         contest_skill_name = None
         contest_roll = None
         contest_did_tie = False
+        contest_out = ""
         if self.contest_ability is not None:
             contest_skill, contest_skill_key = get_highest_skill(autoctx.caster, self.contest_ability_list)
             contest_skill_name = camel_to_title(contest_skill_key)
@@ -140,7 +141,7 @@ class Check(Effect):
             autoctx.metavars["lastContestNaturalRoll"] = d20.utils.leftmost(contest_roll.expr).total
             autoctx.metavars["lastContestAbility"] = contest_skill_name
 
-            autoctx.queue(f"**{contest_skill_name} Contest ({autoctx.caster.name})**: {contest_roll.result}")
+            contest_out = f"**{contest_skill_name} Contest ({autoctx.caster.name})**: {contest_roll.result}"
 
         # ==== execution ====
         skill_key = None  # In case the target is simple
@@ -170,15 +171,19 @@ class Check(Effect):
             autoctx.metavars["lastCheckAbility"] = skill_name
 
             success_str = ""
+            display_name = ""
             if check_dc is not None:
                 is_success = check_roll.total >= check_dc
                 success_str = "; Success!" if is_success else "; Failure!"
             elif contest_roll is not None:
+                display_name = f" ({autoctx.target.target.name})"
                 if check_roll.total > contest_roll.total:
                     is_success = True
-                    success_str = "; Success!"
+                    success_str = "; Win!"
+                    contest_out += "; Lose!"
                 elif check_roll.total == contest_roll.total:
                     success_str = "; Tie!"
+                    contest_out += "; Tie!"
                     autoctx.metavars["lastContestDidTie"] = True
                     contest_did_tie = True
                     if self.contest_tie_behaviour == "fail" or self.contest_tie_behaviour is None:
@@ -187,9 +192,11 @@ class Check(Effect):
                         is_success = True
                 else:
                     is_success = False
-                    success_str = "; Failure!"
+                    success_str = "; Lose!"
+                    contest_out += "; Win!"
+                autoctx.queue(contest_out)
 
-            out = f"**{skill_name} Check**: {check_roll.result}{success_str}"
+            out = f"**{skill_name} Check{display_name}**: {check_roll.result}{success_str}"
 
             if not hide:
                 autoctx.queue(out)

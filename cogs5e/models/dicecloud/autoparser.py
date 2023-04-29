@@ -15,7 +15,8 @@ NO_DICE_COUNT = re.compile(r"(?=\s|^)d(?=[\d{])")
 THE_DICE_D = re.compile(r"(?=^|\b)([\d}]+)d([\d{]+)(?=$|\b)")
 IF_TRUE_FALSE = re.compile(r"([^?(]*)\?([^:]*):([^)]*)")
 MAGIC_ANNOSTR_REGEX = re.compile(
-    r"(\s*)(\(?\s*?(?:(?<!\w)\d+(?!\d*d\d+(?=\s|$|\b)).*?)?(?:(?:[a-ce-zA-Z_]|d(?!\d+(?=\s|$|\b)))\w*).*?\)?)(?=$|\s*[+\-*/]?[+\-*/(\d\s]*(?:\d*d\d+))"
+    r"(\s*)(\(?\s*?(?:(?<!\w)\d+(?!\d*d\d+(?=\s|$|\b)).*?)?"
+    r"(?:(?:[a-ce-zA-Z_]|d(?!\d+(?=\s|$|\b)))\w*).*?\)?)(?=$|\s*[+\-*/]?[+\-*/(\d\s]*(?:\d*d\d+))"
 )
 SPECIAL_FUNCS = (
     (re.compile(r"\btrunc\b"), "int"),
@@ -33,6 +34,7 @@ class DCV2AutoParser:
         self.stack_effects = []
         self.saves = []
         self.attacks = []
+        self.ieffects = []
         self.target = {}
         self.targets = []
         self.resources = []
@@ -40,7 +42,7 @@ class DCV2AutoParser:
         self.text = []
 
     def get_automation(self, prop):
-        self.parse(prop, initial=True)
+        self.parse(prop)
 
         # the insert the action description as the first text
         desc = prop.get("summary", {}).get("value") or prop.get("description", {}).get("value")
@@ -56,12 +58,12 @@ class DCV2AutoParser:
 
         return Automation.from_data(self.auto)
 
-    def parse(self, prop, *, initial=False):
+    def parse(self, prop):
         # most types have unique effects under an action
         try:
             match prop["type"]:
                 case "action" | "spell":
-                    self.parse_action(prop, initial)
+                    self.parse_action(prop)
                 case "savingThrow":
                     self.parse_save(prop)
                 case "damage":
@@ -84,6 +86,8 @@ class DCV2AutoParser:
                 case "roll":
                     self.parse_roll(prop)
                 # everything else does nothing and just runs its children
+                case "buff":
+                    self.parse_buff(prop)
                 case _:
                     self.parse_children(prop["children"])
         except Exception as e:
@@ -98,13 +102,14 @@ class DCV2AutoParser:
             "amount": str(amt)
         })
 
-    def set_target(self, target_self):
-        target = {
+    def set_target(self, target):
+        target = "self" if target == "self" else "all"
+        target_node = {
             "type": "target",
-            "target": "self" if target_self else "all",
+            "target": target,
             "effects": []
         }
-        if self.target and (self.target["target"] == "self" != target_self) and self.target in self.stack_effects:
+        if self.target and (self.target["target"] != target) and self.target in self.stack_effects:
             variable_name = "DCV2_TARGET" + self.meta["target_count"]
             self.meta["target_count"] += 1
             variable = {
@@ -123,19 +128,14 @@ class DCV2AutoParser:
                 "errorBehaviour": "false"
             }
             self.auto.append(branch)
-            branch["onTrue"].append(target)
-        elif self.target in self.stack_effects:
-            return
+            branch["onTrue"].append(target_node)
         else:
-            self.stack[-1].append(target)
+            self.stack[-1].append(target_node)
 
-        if target_self:
-            self.self_target = target
-        else:
-            self.target = target
+        self.target = target_node
 
-        self.stack.append(target["effects"])
-        self.stack_effects.append(target)
+        self.stack.append(target_node["effects"])
+        self.stack_effects.append(target_node)
 
     def pop_stack(self):
         self.stack.pop()
@@ -146,9 +146,9 @@ class DCV2AutoParser:
     def parse_children(self, children):
         for child_id in children:
             child_prop = self.parser._by_id[child_id]
-            self.parse(child_prop, initial=False)
+            self.parse(child_prop)
 
-    def parse_action(self, prop, initial):
+    def parse_action(self, prop):
         # get names for custom counters
         if prop.get("uses", None):
             sl_name = prop.get("spellListName")
@@ -160,7 +160,7 @@ class DCV2AutoParser:
                 else:
                     raise AutoParserException(prop, "Resource is not tied to a specfic attribute.")
 
-        self.set_target(prop["target"] == "self")
+        self.set_target(prop["target"])
 
         # get attack bonus
         if atk_roll := prop.get("attackRoll"):
@@ -182,7 +182,7 @@ class DCV2AutoParser:
         self.pop_stack()
 
     def parse_save(self, prop):
-        self.set_target(prop.get("target") == "self")
+        self.set_target(prop["target"])
 
         stat = prop["stat"][:3].lower()
         if stat not in STAT_ABBREVIATIONS:
@@ -200,11 +200,14 @@ class DCV2AutoParser:
         self.stack[-1].append(save)
         self.parse_children(prop["children"])
 
+        self.saves.pop()
+        self.pop_stack()
+
     def parse_damage(self, prop):
         # all the checks for what exactly we're doing here
         magical = "magical" in prop["tags"]
         healing = prop["damageType"] == "healing"
-        self.set_target(prop["target"] == "self")
+        self.set_target(prop["target"])
 
         effects = [
             str(effect["amount"]["value"]).strip()
@@ -228,10 +231,14 @@ class DCV2AutoParser:
         log.debug(f"Parsing damage: {damage}")
         self.parse_children(prop["children"])
 
+        self.pop_stack()
+
     def parse_branch(self, prop):
         parse_children = True
+        pop_stack = False
         match prop["branchType"]:
             case "if":
+                pop_stack = True
                 condition = prop["condition"]["value"]
 
                 branch = {
@@ -247,14 +254,17 @@ class DCV2AutoParser:
                 self.stack_effects.append(branch)
 
             case "hit" | "miss" as hit:
+                pop_stack = True
                 attack = self.attacks[-1][hit]
                 self.stack.append(attack)
                 self.stack_effects.append(self.attacks[-1])
             case "successfulSave":
+                pop_stack = True
                 save = self.saves[-1]["success"]
                 self.stack.append(save)
                 self.stack_effects.append(self.saves[-1])
             case "failedSave":
+                pop_stack = True
                 save = self.saves[-1]["fail"]
                 self.stack.append(save)
                 self.stack_effects.append(self.saves[-1])
@@ -291,12 +301,14 @@ class DCV2AutoParser:
                 self.text.append("Each Target Branch is not supported, and will not work correctly")
         if parse_children:
             self.parse_children(prop["children"])
+        if pop_stack:
+            self.pop_stack()
 
     def parse_roll(self, prop):
         if name := prop.get("variableName"):
             roll = {
                 "type": "roll",
-                "dice": self.convert_to_annostr(prop["roll"]["value"]),
+                "dice": self.convert_to_annostr(str(prop["roll"]["value"])),
                 "name": name,
             }
             if d_name := prop.get("name"):
@@ -304,6 +316,24 @@ class DCV2AutoParser:
 
             self.stack[-1].append(roll)
         self.parse_children(prop["children"])
+
+    def parse_buff(self, prop):
+        self.set_target(prop["target"])
+
+        ieffect = {
+            "type": "ieffect2",
+            "name": prop["name"],
+            "effects": {},
+            "attacks": [],
+            "stacking": True
+        }
+
+        self.ieffects.append(ieffect)
+        self.stack[-1].append(ieffect)
+
+        for child_id in prop["children"]:
+            child_prop = self.parser._by_id[child_id]
+            self.parse_buff_child(child_prop)
 
     @staticmethod
     def convert_to_annostr(string: str):

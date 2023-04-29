@@ -30,10 +30,11 @@ class DCV2AutoParser:
         self.parser = parser
         self.auto = []
         self.stack = [self.auto]
-        self.old_stacks = []
+        self.stack_effects = []
         self.saves = []
         self.attacks = []
         self.target = {}
+        self.targets = []
         self.resources = []
         self.meta = {"target_count": 0, "random_count": 0}
         self.text = []
@@ -72,7 +73,7 @@ class DCV2AutoParser:
                     if prop["condition"]["value"]:
                         self.parse_children(prop["children"])
                 case "branch":
-                    self.parse_brance(prop)
+                    self.parse_branch(prop)
                 case "note":
                     # we only use the summary here, since it's all DC would display
                     desc = prop.get("summary", {}).get("value")
@@ -103,11 +104,7 @@ class DCV2AutoParser:
             "target": "self" if target_self else "all",
             "effects": []
         }
-        if (
-            (not target_self and self.target in self.stack)
-            or
-            (target_self and self.self_target in self.stack)
-        ):
+        if self.target and (self.target["target"] == "self" != target_self) and self.target in self.stack_effects:
             variable_name = "DCV2_TARGET" + self.meta["target_count"]
             self.meta["target_count"] += 1
             variable = {
@@ -118,9 +115,6 @@ class DCV2AutoParser:
 
             self.stack[-1].append(variable)
 
-            self.old_stacks.append(self.stack)
-            self.stack = []
-
             branch = {
                 "type": "condition",
                 "condition": f"{variable_name}",
@@ -130,7 +124,7 @@ class DCV2AutoParser:
             }
             self.auto.append(branch)
             branch["onTrue"].append(target)
-        elif self.target in self.stack or self.self_target in self.stack:
+        elif self.target in self.stack_effects:
             return
         else:
             self.stack[-1].append(target)
@@ -141,9 +135,11 @@ class DCV2AutoParser:
             self.target = target
 
         self.stack.append(target["effects"])
+        self.stack_effects.append(target)
 
     def pop_stack(self):
         self.stack.pop()
+        self.stack_effects.pop()
         if not self.stack:
             self.stack = self.old_stacks.pop()
 
@@ -160,7 +156,7 @@ class DCV2AutoParser:
         if attrs := prop["resources"]["attributesConsumed"]:
             for attr in attrs:
                 if "statName" in attr:
-                    self.add_resources(attr["statName"], attr["quantity"]["value"])
+                    self.add_resource(attr["statName"], attr["quantity"]["value"])
                 else:
                     raise AutoParserException(prop, "Resource is not tied to a specfic attribute.")
 
@@ -248,16 +244,20 @@ class DCV2AutoParser:
 
                 self.stack[-1].append(branch)
                 self.stack.append(branch["onTrue"])
+                self.stack_effects.append(branch)
 
             case "hit" | "miss" as hit:
                 attack = self.attacks[-1][hit]
                 self.stack.append(attack)
+                self.stack_effects.append(self.attacks[-1])
             case "successfulSave":
                 save = self.saves[-1]["success"]
                 self.stack.append(save)
+                self.stack_effects.append(self.saves[-1])
             case "failedSave":
                 save = self.saves[-1]["fail"]
                 self.stack.append(save)
+                self.stack_effects.append(self.saves[-1])
             case "random" | "index" as listing:
                 parse_children = False
                 if listing == "random":
@@ -284,6 +284,7 @@ class DCV2AutoParser:
                     }
                     self.stack[-1].append(branch)
                     self.stack.append(branch["onTrue"])
+                    self.stack_effects.append(branch)
                     self.parse_children([child_id])
                     self.pop_stack()
             case "eachTarget":

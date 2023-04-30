@@ -1,4 +1,3 @@
-import collections
 import logging
 import re
 
@@ -6,9 +5,6 @@ from cogs5e.models.automation import Automation
 from cogs5e.models.dicecloud.errors import AutoParserException
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import chunk_text
-
-# because I like attributes
-Effects = collections.namedtuple("Effects", ["damage", "saves", "save_damage"])
 
 # various regex for annotated strings
 NO_DICE_COUNT = re.compile(r"(?=\s|^)d(?=[\d{])")

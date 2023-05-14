@@ -54,10 +54,12 @@ class DCV2AutoParser:
         # add all the text as text effects
         for text in self.text:
             for chunk in chunk_text(text):
+                # fmt: off
                 self.auto.append({
                     "type": "text",
-                    "text": chunk
+                    "text": chunk,
                 })
+                # fmt: on
 
         return Automation.from_data(self.auto)
 
@@ -97,32 +99,38 @@ class DCV2AutoParser:
 
     def add_resource(self, name, amt=1):
         # initial action resources are only processed once, so we want to do them all at once
+        # fmt: off
         self.auto.insert(0, {
             "type": "counter",
             "counter": name,
-            "amount": str(amt)
+            "amount": str(amt),
         })
+        # fmt: on
 
     # makes sure that the current target hasn't changed, handling it if it has
     def set_target(self, target):
         target = "self" if target == "self" or self.meta["always_self"] else "all"
+
+        # fmt: off
         target_node = {
             "type": "target",
             "target": target,
-            "effects": []
+            "effects": [],
         }
+        # fmt: on
+
         # handles the swapping of targets, since Avrae does not allow target switching
         if self.target and (self.target["target"] != target) and self.target in self.stack_effects:
             # internal variable to only run this target if we reach this part on the original
             variable_name = f"DCV2_TARGET{self.meta['target_count']}"
             self.meta["target_count"] += 1
+
+            # fmt: off
             variable = {
                 "type": "variable",
                 "name": variable_name,
-                "value": "True"
+                "value": "True",
             }
-
-            self.stack[-1].append(variable)
 
             # branch that actually handles the check
             branch = {
@@ -130,8 +138,11 @@ class DCV2AutoParser:
                 "condition": f"{variable_name}",
                 "onTrue": [],
                 "onFalse": [],
-                "errorBehaviour": "false"
+                "errorBehaviour": "false",
             }
+            # fmt: on
+
+            self.stack[-1].append(variable)
             self.auto.append(branch)
             branch["onTrue"].append(target_node)
         else:
@@ -172,12 +183,14 @@ class DCV2AutoParser:
 
         # creates the attack effect
         if atk_roll := prop.get("attackRoll"):
+            # fmt: off
             attack = {
                 "type": "attack",
                 "hit": [],
                 "miss": [],
-                "attackBonus": str(atk_roll["value"])
+                "attackBonus": str(atk_roll["value"]),
             }
+            # fmt: on
 
             # keep a reference to the attack node for branches
             self.attacks.append(attack)
@@ -197,13 +210,15 @@ class DCV2AutoParser:
         if stat not in STAT_ABBREVIATIONS:
             raise AutoParserException(prop, "Save did not have a valid stat type")
 
+        # fmt: off
         save = {
             "type": "save",
             "stat": stat,
             "fail": [],
             "success": [],
-            "dc": prop["dc"]["value"]
+            "dc": prop["dc"]["value"],
         }
+        # fmt: on
 
         # keep a reference to the save node for branches
         self.saves.append(save)
@@ -232,10 +247,12 @@ class DCV2AutoParser:
         # handle all the annotated string stuff, as well as a few funcs
         damage_dice = self.convert_to_annostr(damage_dice) + f" [{'magical ' if magical else ''}{prop['damageType']}]"
 
+        # fmt: off
         damage = {
             "type": "damage",
             "damage": damage_dice,
         }
+        # fmt: on
 
         self.stack[-1].append(damage)
         log.debug(f"Parsing damage: {damage}")
@@ -253,13 +270,15 @@ class DCV2AutoParser:
                 pop_stack = True
                 condition = prop["condition"]["value"]
 
+                # fmt: off
                 branch = {
                     "type": "condition",
                     "condition": condition,
                     "onTrue": [],
                     "onFalse": [],
-                    "errorBehaviour": "false"
+                    "errorBehaviour": "false",
                 }
+                # fmt: on
 
                 self.stack[-1].append(branch)
                 self.stack.append(branch["onTrue"])
@@ -284,11 +303,15 @@ class DCV2AutoParser:
                     child_count = len(prop["children"])
                     # if the list is random, make a variable that stores a random number
                     index = f"DCV2_RANDOM{self.meta['random_count']}"
+
+                    # fmt: off
                     variable = {
                         "type": "variable",
                         "name": index,
-                        "value": f"random(1, {child_count + 1})"
+                        "value": f"random(1, {child_count + 1})",
                     }
+                    # fmt: on
+
                     self.meta["random_count"] += 1
 
                     self.stack[-1].append(variable)
@@ -300,13 +323,17 @@ class DCV2AutoParser:
                 # create all the branches to handle each result
                 for i, child_id in enumerate(prop["children"]):
                     condition = f"({index}) == {i + 1}"
+
+                    # fmt: off
                     branch = {
                         "type": "condition",
                         "condition": condition,
                         "onTrue": [],
                         "onFalse": [],
-                        "errorBehaviour": "false"
+                        "errorBehaviour": "false",
                     }
+                    # fmt: on
+
                     self.stack[-1].append(branch)
                     self.stack.append(branch["onTrue"])
                     self.stack_effects.append(branch)
@@ -324,11 +351,14 @@ class DCV2AutoParser:
     # create the roll effect from the property, pretty straightforward
     def parse_roll(self, prop):
         if name := prop.get("variableName"):
+            # fmt: off
             roll = {
                 "type": "roll",
                 "dice": self.convert_to_annostr(str(prop["roll"]["value"])),
                 "name": name,
             }
+            # fmt: on
+
             if d_name := prop.get("name"):
                 roll["displayName"] = d_name
 
@@ -338,13 +368,15 @@ class DCV2AutoParser:
     def parse_buff(self, prop):
         self.set_target(prop["target"])
 
+        # fmt: off
         ieffect = {
             "type": "ieffect2",
             "name": prop["name"],
             "effects": {},
             "attacks": [],
-            "stacking": True
+            "stacking": True,
         }
+        # fmt: on
 
         # TODO: not implemented yet
         # self.ieffects.append(ieffect)

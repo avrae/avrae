@@ -4,7 +4,6 @@ import re
 import disnake
 from disnake.ext import commands
 
-from cogs5e.lookup import ENTITY_CACHE
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew, NoSelectionElements, NotAllowed
 from cogs5e.models.homebrew import Pack, Tome
@@ -22,12 +21,10 @@ class Homebrew(commands.Cog):
         self.bot = bot
 
     async def clear_cache(self, ctx, entity_type):
-        if ctx.guild is None:
-            key = f"{entity_type}.{ctx.author.id}"
-        else:
-            key = f"{entity_type}.{ctx.guild.id}.{ctx.author.id}"
-        ENTITY_CACHE.pop(key, None)
-        await self.bot.rdb.delete(key)
+        lookup = self.bot.get_cog("Lookup")
+        if lookup is None:
+            return await ctx.send("Error: Lookup cog not loaded.")
+        await lookup.clear_cache(ctx, entity_type)
 
     @commands.group(invoke_without_command=True)
     async def bestiary(self, ctx, *, name=None):

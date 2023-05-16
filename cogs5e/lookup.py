@@ -1149,6 +1149,15 @@ class Lookup(commands.Cog):
         await self.bot.rdb.jsetex(key, [m.to_dict() for m in converted_entities], ENTITY_TTL)
         return converted_entities
 
+    async def clear_cache(self, ctx, entity_type):
+        if ctx.guild is None:
+            key = f"{entity_type}.{ctx.author.id}"
+        else:
+            key = f"{entity_type}.{ctx.guild.id}.{ctx.author.id}"
+        if key in ENTITY_CACHE:
+            del ENTITY_CACHE[key]
+        await self.bot.rdb.delete(key)
+
     # ==== listeners ====
     @commands.Cog.listener()
     async def on_guild_join(self, guild):

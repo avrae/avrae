@@ -28,7 +28,7 @@ from utils.functions import chunk_text, get_positivity, search_and_select, smart
 from utils.settings import ServerSettings
 
 LARGE_THRESHOLD = 200
-ENTITY_TTL = 15 * 60
+ENTITY_TTL = 5 * 60
 ENTITY_CACHE = cachetools.TTLCache(64, ENTITY_TTL)
 
 log = logging.getLogger(__name__)

@@ -4,6 +4,7 @@ import re
 import disnake
 from disnake.ext import commands
 
+from cogs5e.lookup import ENTITY_CACHE
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew, NoSelectionElements, NotAllowed
 from cogs5e.models.homebrew import Pack, Tome
@@ -19,6 +20,14 @@ class Homebrew(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    async def clear_cache(self, ctx, entity_type):
+        if ctx.guild is None:
+            key = f"{entity_type}.{ctx.author.id}"
+        else:
+            key = f"{entity_type}.{ctx.guild.id}.{ctx.author.id}"
+        ENTITY_CACHE.pop(key, None)
+        await self.bot.rdb.delete(key)
 
     @commands.group(invoke_without_command=True)
     async def bestiary(self, ctx, *, name=None):
@@ -40,6 +49,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Bestiary not found.")
             await bestiary.set_active(ctx)
+            await self.clear_cache(ctx, "monster")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
         if bestiary.desc:
@@ -210,6 +220,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Pack not found.")
             await pack.set_active(ctx)
+            await self.clear_cache(ctx, "item")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = pack.name
         embed.description = pack.desc
@@ -333,6 +344,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Tome not found.")
             await tome.set_active(ctx)
+            await self.clear_cache(ctx, "spell")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = tome.name
         embed.description = tome.desc

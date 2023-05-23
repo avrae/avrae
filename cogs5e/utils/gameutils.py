@@ -78,7 +78,7 @@ def _parse_coin_args_float(coins: float) -> CoinsArgs:
     Parses a float into currencies. The input is assumed to be in gp, and any sub-cp values will be truncated.
     """
     # if any sub-copper passed (i.e. 1-thousandth), truncate it
-    total_copper = int(coins * 100)
+    total_copper = round(coins * 100)
 
     if coins < 0:
         # If it's a negative value, remove all the lowest coins first
@@ -119,7 +119,6 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
 
 
 async def resolve_strict_coins(coinpurse, coins: CoinsArgs, ctx, mode: CoinsAutoConvert = 0):
-
     if (coinpurse.total + coins.total) < 0:
         raise InvalidArgument("You cannot put a currency into negative numbers.")
     if not all(

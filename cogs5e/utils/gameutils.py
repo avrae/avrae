@@ -78,7 +78,7 @@ def _parse_coin_args_float(coins: float) -> CoinsArgs:
     Parses a float into currencies. The input is assumed to be in gp, and any sub-cp values will be truncated.
     """
     # if any sub-copper passed (i.e. 1-thousandth), truncate it
-    total_copper = round(coins * 100)
+    total_copper = int(round(coins * 100, 1))
 
     if coins < 0:
         # If it's a negative value, remove all the lowest coins first

@@ -95,6 +95,7 @@ class DCV2AutoParser:
         except AutoParserException:
             raise
         except Exception as e:
+            log.debug(str(e))
             raise AutoParserException(prop, "Auto Parser encounter an error parsing a property") from e
 
     def add_resource(self, name, amt=1):
@@ -145,19 +146,24 @@ class DCV2AutoParser:
             self.stack[-1].append(variable)
             self.auto.append(branch)
             branch["onTrue"].append(target_node)
-        else:
+        elif self.target.get("target") != target:
             self.stack[-1].append(target_node)
+        elif self.target:
+            target_node = self.target
 
         # swap the current target
         self.target = target_node
 
-        self.stack.append(target_node["effects"])
-        self.stack_effects.append(target_node)
+        self.push_effect_stack(target_node["effects"], target_node)
 
     # pops the stack, removing both the node and the effect
-    def pop_stack(self):
+    def pop_effect_stack(self):
         self.stack.pop()
         self.stack_effects.pop()
+
+    def push_effect_stack(self, focus, effect):
+        self.stack.append(focus)
+        self.stack_effects.append(effect)
 
     # retrieves and parses the children based on the IDs provided by the property
     def parse_children(self, children):
@@ -201,7 +207,7 @@ class DCV2AutoParser:
         if atk_roll:
             self.attacks.pop()
 
-        self.pop_stack()
+        self.pop_effect_stack()
 
     def parse_save(self, prop):
         self.set_target(prop["target"])
@@ -226,7 +232,7 @@ class DCV2AutoParser:
         self.parse_children(prop["children"])
 
         self.saves.pop()
-        self.pop_stack()
+        self.pop_effect_stack()
 
     def parse_damage(self, prop):
         # all the checks for what exactly we're doing here
@@ -258,7 +264,7 @@ class DCV2AutoParser:
         log.debug(f"Parsing damage: {damage}")
         self.parse_children(prop["children"])
 
-        self.pop_stack()
+        self.pop_effect_stack()
 
     def parse_branch(self, prop):
         # setup variables for whether children should be parsed, and if we should remove an entry from the stack
@@ -281,21 +287,24 @@ class DCV2AutoParser:
                 # fmt: on
 
                 self.stack[-1].append(branch)
-                self.stack.append(branch["onTrue"])
-                self.stack_effects.append(branch)
+                self.push_effect_stack(branch["onTrue"], branch)
             # attack hit/miss
             case "hit" | "miss" as hit:
                 pop_stack = True
-                attack = self.attacks[-1][hit]
-                self.stack.append(attack)
-                self.stack_effects.append(self.attacks[-1])
+                if self.attacks:
+                    attack = self.attacks[-1][hit]
+                    self.push_effect_stack(attack, self.attacks[-1])
+                else:
+                    raise AutoParserException(prop, f"Could not find an attack that is a parent of this on {hit} branch.")
             # save failed/succeeded
             case "successfulSave" | "failedSave" as state:
                 state = "success" if state == "successfulSave" else "fail"
                 pop_stack = True
-                save = self.saves[-1][state]
-                self.stack.append(save)
-                self.stack_effects.append(self.saves[-1])
+                if self.saves:
+                    save = self.saves[-1][state]
+                    self.push_effect_stack(save, self.saves[-1])
+                else:
+                    raise AutoParserException(prop, f"Could not find a save that is a parent of this {state} branch.")
             # lots of individual branches need to be generated to handle these
             case "random" | "index" as listing:
                 parse_children = False
@@ -335,10 +344,9 @@ class DCV2AutoParser:
                     # fmt: on
 
                     self.stack[-1].append(branch)
-                    self.stack.append(branch["onTrue"])
-                    self.stack_effects.append(branch)
+                    self.push_effect_stack(branch["onTrue"], branch)
                     self.parse_children([child_id])
-                    self.pop_stack()
+                    self.pop_effect_stack()
             # would require knowing number of targets ahead of time,
             # since this generally only applies when switching targets
             case "eachTarget":
@@ -346,7 +354,7 @@ class DCV2AutoParser:
         if parse_children:
             self.parse_children(prop["children"])
         if pop_stack:
-            self.pop_stack()
+            self.pop_effect_stack()
 
     # create the roll effect from the property, pretty straightforward
     def parse_roll(self, prop):

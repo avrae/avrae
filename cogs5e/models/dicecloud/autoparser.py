@@ -146,10 +146,10 @@ class DCV2AutoParser:
             self.stack[-1].append(variable)
             self.auto.append(branch)
             branch["onTrue"].append(target_node)
-        elif self.target.get("target") != target:
-            self.auto.append(target_node)
-        elif self.target:
+        elif self.target.get("target") == target:
             target_node = self.target
+        else:
+            self.auto.append(target_node)
 
         # swap the current target
         self.target = target_node

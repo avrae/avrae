@@ -147,7 +147,7 @@ class DCV2AutoParser:
             self.auto.append(branch)
             branch["onTrue"].append(target_node)
         elif self.target.get("target") != target:
-            self.stack[-1].append(target_node)
+            self.auto.append(target_node)
         elif self.target:
             target_node = self.target
 
@@ -295,7 +295,9 @@ class DCV2AutoParser:
                     attack = self.attacks[-1][hit]
                     self.push_effect_stack(attack, self.attacks[-1])
                 else:
-                    raise AutoParserException(prop, f"Could not find an attack that is a parent of this on {hit} branch.")
+                    raise AutoParserException(
+                        prop, f"Could not find an attack that is a parent of this on {hit} branch."
+                    )
             # save failed/succeeded
             case "successfulSave" | "failedSave" as state:
                 state = "success" if state == "successfulSave" else "fail"

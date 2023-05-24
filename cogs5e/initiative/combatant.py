@@ -133,7 +133,7 @@ class Combatant(BaseCombatant, StatBlock):
         base_hp = self._max_hp or 0
         base_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_value, reducer=max, default=0)
         bonus_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_bonus, reducer=sum, default=0)
-        return max(base_hp, base_effect_hp) + bonus_effect_hp
+        return (base_effect_hp or base_hp) + bonus_effect_hp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):
@@ -805,7 +805,7 @@ class PlayerCombatant(Combatant):
         base_hp = self._max_hp or self.character.max_hp
         base_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_value, reducer=max, default=0)
         bonus_effect_hp = self.active_effects(mapper=lambda effect: effect.effects.max_hp_bonus, reducer=sum, default=0)
-        return max(base_hp, base_effect_hp) + bonus_effect_hp
+        return (base_effect_hp or base_hp) + bonus_effect_hp
 
     @max_hp.setter
     def max_hp(self, new_max_hp):

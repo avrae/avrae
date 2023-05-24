@@ -28,7 +28,7 @@ from utils.functions import chunk_text, get_positivity, search_and_select, smart
 from utils.settings import ServerSettings
 
 LARGE_THRESHOLD = 200
-ENTITY_TTL = 15 * 60
+ENTITY_TTL = 5 * 60
 ENTITY_CACHE = cachetools.TTLCache(64, ENTITY_TTL)
 
 log = logging.getLogger(__name__)
@@ -1148,6 +1148,15 @@ class Lookup(commands.Cog):
         ENTITY_CACHE[key] = converted_entities
         await self.bot.rdb.jsetex(key, [m.to_dict() for m in converted_entities], ENTITY_TTL)
         return converted_entities
+
+    async def clear_cache(self, ctx, entity_type):
+        if ctx.guild is None:
+            key = f"{entity_type}.{ctx.author.id}"
+        else:
+            key = f"{entity_type}.{ctx.guild.id}.{ctx.author.id}"
+        if key in ENTITY_CACHE:
+            del ENTITY_CACHE[key]
+        await self.bot.rdb.delete(key)
 
     # ==== listeners ====
     @commands.Cog.listener()

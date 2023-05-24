@@ -20,6 +20,12 @@ class Homebrew(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def clear_cache(self, ctx, entity_type):
+        lookup = self.bot.get_cog("Lookup")
+        if lookup is None:
+            return await ctx.send("Error: Lookup cog not loaded.")
+        await lookup.clear_cache(ctx, entity_type)
+
     @commands.group(invoke_without_command=True)
     async def bestiary(self, ctx, *, name=None):
         """Commands to manage homebrew monsters.
@@ -40,6 +46,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Bestiary not found.")
             await bestiary.set_active(ctx)
+            await self.clear_cache(ctx, "monster")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
         if bestiary.desc:
@@ -210,6 +217,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Pack not found.")
             await pack.set_active(ctx)
+            await self.clear_cache(ctx, "item")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = pack.name
         embed.description = pack.desc
@@ -333,6 +341,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Tome not found.")
             await tome.set_active(ctx)
+            await self.clear_cache(ctx, "spell")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = tome.name
         embed.description = tome.desc

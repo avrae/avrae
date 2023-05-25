@@ -147,7 +147,8 @@ class DCV2AutoParser:
             self.auto.append(branch)
             branch["onTrue"].append(target_node)
         elif self.target.get("target") == target:
-            target_node = self.target
+            self.push_effect_stack(self.stack[-1], self.stack_effects[-1])
+            return
         else:
             self.auto.append(target_node)
 

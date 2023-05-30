@@ -223,9 +223,11 @@ class DCV2AutoParser:
             "stat": stat,
             "fail": [],
             "success": [],
-            "dc": prop["dc"]["value"],
         }
         # fmt: on
+
+        if (dc := prop.get("dc", {}).get("value")) is not None:
+            save["dc"] = dc
 
         # keep a reference to the save node for branches
         self.saves.append(save)

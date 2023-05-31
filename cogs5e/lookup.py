@@ -916,6 +916,16 @@ class Lookup(commands.Cog):
 
     async def _spell(self, ctx, spell: gamedata.spell):
         destination = await self._get_destination(ctx)
+
+        if ctx.guild is not None:
+            if hasattr(ctx, "get_server_settings"):
+                guild_settings = await ctx.get_server_settings()
+            else:
+                guild_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+            pm = guild_settings.lookup_pm_result
+        else:
+            pm = False
+
         embed = EmbedWithAuthor(ctx)
         embed.url = spell.url
         color = embed.colour
@@ -966,7 +976,9 @@ class Lookup(commands.Cog):
         await Stats.increase_stat(ctx, "spells_looked_up_life")
 
         for i, embed in enumerate(embed_queue):
-            if i == 0:
+            if pm:
+                await ctx.author.send(embed=embed)
+            elif i == 0:
                 # Ensure the first embed is sent as a reply
                 await destination.send(embed=embed)
             else:

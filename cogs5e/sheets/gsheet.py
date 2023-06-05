@@ -569,6 +569,7 @@ class GoogleSheet(SheetLoaderABC):
         skills = {}
         saves = {}
         is_joat = False
+        is_ra = False
         all_check_bonus = 0
 
         if self.version == (2, 0):
@@ -576,14 +577,21 @@ class GoogleSheet(SheetLoaderABC):
             all_check_bonus = int(character.value("AQ26") or 0)
         elif self.version == (2, 1):
             is_joat = bool(character.value("AQ59"))
+            is_ra = bool(character.value("AQ67")) # parsing for remarkable athlethe from champion 7
             all_check_bonus = int(character.value("AR58"))
         joat_bonus = int(is_joat and self.get_stats().prof_bonus // 2)
+        # upside-down floor division to do ceiling division for half-prof bonus (rounded up) of remarkable athlethe
+        ra_bonus = int(is_ra and -(self.get_stats().prof_bonus // -2)) # 
 
         # calculate str, dex, con, etc checks
         for cell, skill, advcell in BASE_ABILITY_CHECKS:
             try:
                 # add bonuses manually since the cell does not include them
-                value = int(character.value(cell)) + all_check_bonus + joat_bonus
+                # seperate basic abilities into (dex, str, con) and (wis, int, cha) so remarkable athlete half-prof can be added
+                if skill == "dexterity" or skill == "constitution" or skill == "strength":
+                    value = int(character.value(cell)) + all_check_bonus + max(joat_bonus,ra_bonus)
+                else:
+                    value = int(character.value(cell)) + all_check_bonus + joat_bonus
             except (TypeError, ValueError):
                 raise MissingAttribute(skill, cell, character.worksheet.title)
             prof = 0

@@ -326,7 +326,7 @@ async def command_errors(ctx, error):
         elif isinstance(original, NotFound):
             return await ctx.send("Error: I tried to edit or delete a message that no longer exists.")
 
-        elif isinstance(original, (ClientResponseError, TypeError, ValueError, asyncio.TimeoutError, ClientOSError)):
+        elif isinstance(original, (ClientResponseError, asyncio.TimeoutError, ClientOSError)):
             return await ctx.send("Error in Discord API. Please try again.")
 
         elif isinstance(original, HTTPException):

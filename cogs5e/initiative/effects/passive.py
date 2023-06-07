@@ -259,7 +259,7 @@ class InitPassiveEffect:
             check_bonus=args.join("cb", "+"),
             check_adv=resolve_check_advs(args.get("cadv")),
             check_dis=resolve_check_advs(args.get("cdis")),
-            dc_bonus=args.join("dc", "+"),
+            dc_bonus=sum(args.get("dc", type_=int)),
         )
 
     # ==== stringification ====

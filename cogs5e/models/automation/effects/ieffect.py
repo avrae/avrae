@@ -394,6 +394,7 @@ class _PassiveEffectsWrapper:
             check_bonus=self.resolve_annotatedstring(autoctx, "check_bonus"),
             check_adv=self.resolve_check_advs(autoctx, "check_adv"),
             check_dis=self.resolve_check_advs(autoctx, "check_dis"),
+            dc_bonus=self.resolve_intexpression(autoctx, "dc_bonus"),
         )
 
     def resolve_annotatedstring(self, autoctx, attr: str) -> str | None:

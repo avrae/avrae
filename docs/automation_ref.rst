@@ -385,6 +385,7 @@ PassiveEffects
         check_bonus: AnnotatedString;
         check_adv: AnnotatedString[];
         check_dis: AnnotatedString[];
+        dc_bonus: IntExpression;
     }
 
 Used to specify the passive effects granted by an initiative effect.
@@ -493,6 +494,10 @@ Used to specify the passive effects granted by an initiative effect.
         disadvantage on for ability checks for while this effect is active. If a base ability is given, the disadvantage
         will apply to all skills based on that ability (e.g. ``strength`` gives disadvantage on ``athletics`` checks).
         Use ``all`` as a stat name to specify all skills.
+
+    .. attribute:: dc_bonus
+
+        *optional* - A bonus added to the all of the combatant's save DCs while this effect is active.
 
 .. _attackinteraction:
 

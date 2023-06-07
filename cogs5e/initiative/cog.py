@@ -967,6 +967,7 @@ class InitTracker(commands.Cog):
         __Checks/Saves__
         `-sb <save bonus>` - Adds a bonus to all saving throws.
         `-sadv/sdis <ability>` - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
+        `-dc <dc>` - Adds a bonus to all saving throw DCs.
         `-cb <check bonus>` - Adds a bonus to all ability checks.
         `-cadv/cdis <ability>` - Gives advantage/disadvantage on ability checks for the provided ability, or "all" for all checks. If a base ability is passed, affects all skills based on that ability.
         __General__

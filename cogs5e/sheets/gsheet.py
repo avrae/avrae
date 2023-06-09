@@ -600,8 +600,8 @@ class GoogleSheet(SheetLoaderABC):
                     prof = 0.5
                 else:
                     prof = 0
-            elif is_joat:
-                prof = 0.5
+            if is_joat:
+               prof = 0.5
             skl_obj = Skill(value, prof)
             skills[skill] = skl_obj
         # read the value of the rest of the skills

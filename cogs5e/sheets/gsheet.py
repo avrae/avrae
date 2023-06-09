@@ -595,7 +595,12 @@ class GoogleSheet(SheetLoaderABC):
             except (TypeError, ValueError):
                 raise MissingAttribute(skill, cell, character.worksheet.title)
             prof = 0
-            if is_joat:
+            if is_ra:
+                if skill == "dexterity" or skill == "constitution" or skill == "strength":
+                    prof = 0.5
+                else:
+                    prof = 0
+            elif is_joat:
                 prof = 0.5
             skl_obj = Skill(value, prof)
             skills[skill] = skl_obj

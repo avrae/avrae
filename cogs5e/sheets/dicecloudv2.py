@@ -696,7 +696,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                     f"{node['type']} {get_ident(node)} in {get_ident(atk_prop)} encountered an error: {e.args[0]}"
                 )
             raise ExternalImportError(
-                f"{node['type']} {get_ident(node)} in {get_ident(node)} could not import properly due to {e.__cause__}"
+                f"{node['type']} {get_ident(node)} in {get_ident(atk_prop)} could not import properly due to {e.__cause__}"
             ) from e
         if auto is None:
             log.debug("Oops! Automation is None!")

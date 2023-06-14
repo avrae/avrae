@@ -295,6 +295,7 @@ IEffect
         stacking?: boolean;
         save_as?: string;
         parent?: string;
+        target_self?: boolean;
     }
 
 Adds an InitTracker Effect to a targeted creature, if the automation target is in combat.
@@ -362,6 +363,11 @@ It must be inside a Target effect.
 
         If ``stacking`` is true and a valid stack parent exists, the stack parent will take priority over the given
         parent.
+
+    .. attribute:: target_self
+
+        *optional, default false* - If true, the effect will be applied to the caster of the spell, rather than the
+        target.
 
 **Variables**
 

@@ -9,7 +9,15 @@ from ..utils import stringify_intexpr
 
 
 class UseCounter(Effect):
-    def __init__(self, counter, amount: str, allowOverflow: bool = False, errorBehaviour: str = "warn", **kwargs):
+    def __init__(
+        self,
+        counter,
+        amount: str,
+        allowOverflow: bool = False,
+        errorBehaviour: str = "warn",
+        fixedValue: bool = None,
+        **kwargs,
+    ):
         """
         :type counter: str or SpellSlotReference or AbilityReference
         """
@@ -18,6 +26,7 @@ class UseCounter(Effect):
         self.amount = amount
         self.allow_overflow = allowOverflow
         self.error_behaviour = errorBehaviour
+        self.fixedValue = fixedValue
 
     @classmethod
     def from_data(cls, data):
@@ -36,6 +45,8 @@ class UseCounter(Effect):
                 "errorBehaviour": self.error_behaviour,
             }
         )
+        if self.fixedValue is not None:
+            out["fixedValue"] = self.fixedValue
         return out
 
     def run(self, autoctx):
@@ -53,6 +64,8 @@ class UseCounter(Effect):
         # -l, nopact handled in use_spell_slot
 
         try:
+            if self.fixedValue:
+                amt = None
             amount = amt or autoctx.parse_intexpression(self.amount)
         except Exception:
             raise AutomationException(f"{self.amount!r} cannot be interpreted as an amount (in Use Counter)")

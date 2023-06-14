@@ -616,7 +616,9 @@ class InitTracker(commands.Cog):
             out = combat.get_summary()
         await destination.send(out)
 
-    @init.command()
+    @init.group(
+        invoke_without_command=True,
+    )
     async def note(self, ctx, name: str, *, note: str = ""):
         """Attaches a note to a combatant."""
         combat = await ctx.get_combat()
@@ -625,12 +627,23 @@ class InitTracker(commands.Cog):
         if combatant is None:
             return await ctx.send("Combatant not found.")
 
-        combatant.notes = note
         if note == "":
-            await ctx.send("Removed note.")
+            await ctx.send(f"```md\n{combatant}\n# {combatant.notes}\n```")
         else:
-            await ctx.send("Added note.")
+            combatant.notes = note
+            await ctx.send(f"Added note to {combatant.name}.")
         await combat.final(ctx)
+
+    @note.command(name="remove", aliases=["delete"])
+    async def note_remove(self, ctx, name: str):
+        """Removes a note from a combatant."""
+        combat = await ctx.get_combat()
+
+        combatant = await combat.select_combatant(ctx, name)
+        if combatant is None:
+            return await ctx.send("Combatant not found.")
+
+        await ctx.send(f"Removed note from {combatant.name}.")
 
     @init.command(aliases=["opts"])
     async def opt(self, ctx, name: str, *args):

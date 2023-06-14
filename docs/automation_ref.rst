@@ -57,6 +57,7 @@ Target
         target: "all" | "each" | int | "self" | "parent" | "children";
         effects: Effect[];
         sortBy?: "hp_asc" | "hp_desc";
+        self_target?: boolean;
     }
 
 A Target effect should only show up as a top-level effect.
@@ -85,6 +86,10 @@ It designates what creatures to affect.
 
         - ``hp_asc``: Sorts the targets in order of remaining hit points ascending (lowest HP first, None last).
         - ``hp_desc``: Sorts the targets in order of remaining hit points descending (highest HP first, None last).
+
+    .. attribute:: self_target
+
+        *optional* - If ``true``, the effect will be added to the caster of the automation as opposed to the target.
 
 **Variables**
 
@@ -205,6 +210,7 @@ Damage
         overheal?: boolean;
         higher?: {int: string};
         cantripScale?: boolean;
+        fixedValue?: boolean;
     }
 
 Deals damage to or heals a targeted creature. It must be inside a Target effect.
@@ -232,6 +238,10 @@ Deals damage to or heals a targeted creature. It must be inside a Target effect.
     .. attribute:: cantripScale
 
         *optional* - Whether this roll should scale like a cantrip.
+
+    .. attribute:: fixedValue
+
+        *optional* - If ``true``, won't add any bonuses to damage from ``-d`` arguments or damage bonus effects.
 
 **Variables**
 
@@ -285,6 +295,7 @@ IEffect
         stacking?: boolean;
         save_as?: string;
         parent?: string;
+        target_self?: boolean;
     }
 
 Adds an InitTracker Effect to a targeted creature, if the automation target is in combat.
@@ -352,6 +363,11 @@ It must be inside a Target effect.
 
         If ``stacking`` is true and a valid stack parent exists, the stack parent will take priority over the given
         parent.
+
+    .. attribute:: target_self
+
+        *optional, default false* - If true, the effect will be applied to the caster of the spell, rather than the
+        target.
 
 **Variables**
 
@@ -648,6 +664,7 @@ Roll
         cantripScale?: boolean;
         hidden?: boolean;
         displayName?: string;
+        fixedValue?: boolean;
     }
 
 Rolls some dice and saves the result in a variable. Displays the roll and its name in a Meta field, unless
@@ -679,6 +696,11 @@ Rolls some dice and saves the result in a variable. Displays the roll and its na
     .. attribute:: displayName
 
         The name to display in the Meta field. If left blank, it will use the saved name.
+
+    .. attribute:: fixedValue
+
+        *optional* - If ``true``, won't add any bonuses to damage from ``-d`` arguments or damage bonus effects.
+
 
 **Variables**
 
@@ -803,6 +825,7 @@ Use Counter
         amount: IntExpression;
         allowOverflow?: boolean;
         errorBehaviour?: "warn" | "raise" | "ignore";
+        fixedValue?: boolean;
     }
 
 Uses a number of charges of the given counter, and displays the remaining amount and delta.
@@ -839,6 +862,10 @@ Uses a number of charges of the given counter, and displays the remaining amount
         - The target does not have counters (e.g. they are a monster)
         - The counter does not exist
         - ``allowOverflow`` is false and the new value is out of bounds
+
+    .. attribute:: fixedValue
+
+        *optional* - If ``true``, won't take into account ``-amt`` arguments.
 
 **Variables**
 

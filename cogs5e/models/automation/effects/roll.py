@@ -20,6 +20,7 @@ class Roll(Effect):
         cantripScale: bool = None,
         hidden: bool = False,
         displayName: str = None,
+        fixedValue: bool = None,
         **kwargs,
     ):
         super().__init__("roll", **kwargs)
@@ -29,6 +30,7 @@ class Roll(Effect):
         self.cantripScale = cantripScale
         self.hidden = hidden
         self.displayName = displayName
+        self.fixedValue = fixedValue
 
     def to_dict(self):
         out = super().to_dict()
@@ -39,33 +41,39 @@ class Roll(Effect):
             out["cantripScale"] = self.cantripScale
         if self.displayName is not None:
             out["displayName"] = self.displayName
+        if self.fixedValue is not None:
+            out["fixedValue"] = self.fixedValue
         return out
 
     def run(self, autoctx):
         super().run(autoctx)
-        d = autoctx.args.join("d", "+", ephem=True)
-        maxdmg = autoctx.args.last("max", None, bool, ephem=True)
-        mi = autoctx.args.last("mi", None, int)
-
-        # add on combatant damage effects (#224)
-        effect_d = autoctx.caster_active_effects(mapper=lambda effect: effect.effects.damage_bonus, reducer="+".join)
-        if effect_d:
-            if d:
-                d = f"{d}+{effect_d}"
-            else:
-                d = effect_d
 
         dice_ast = copy.copy(d20.parse(autoctx.parse_annostr(self.dice)))
         dice_ast = utils.upcast_scaled_dice(self, autoctx, dice_ast)
 
-        if not self.hidden:
-            # -mi # (#527)
-            if mi:
-                dice_ast = d20.utils.tree_map(utils.mi_mapper(mi), dice_ast)
+        if not (self.fixedValue or self.hidden):
+            d = autoctx.args.join("d", "+", ephem=True)
+
+            # add on combatant damage effects (#224)
+            effect_d = autoctx.caster_active_effects(
+                mapper=lambda effect: effect.effects.damage_bonus, reducer="+".join
+            )
+            if effect_d:
+                if d:
+                    d = f"{d}+{effect_d}"
+                else:
+                    d = effect_d
 
             if d:
                 d_ast = d20.parse(d)
                 dice_ast.roll = d20.ast.BinOp(dice_ast.roll, "+", d_ast.roll)
+        if not self.hidden:
+            maxdmg = autoctx.args.last("max", None, bool, ephem=True)
+            mi = autoctx.args.last("mi", None, int)
+
+            # -mi # (#527)
+            if mi:
+                dice_ast = d20.utils.tree_map(utils.mi_mapper(mi), dice_ast)
 
             if maxdmg:
                 dice_ast = d20.utils.tree_map(utils.max_mapper, dice_ast)

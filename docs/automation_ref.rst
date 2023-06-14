@@ -683,7 +683,7 @@ Rolls some dice and saves the result in a variable. Displays the roll and its na
 
     .. attribute:: fixedValue
 
-        *optional* - If ``true``, won't add any bonuses to damage from `-d` arguments or damage bonus effects.
+        *optional* - If ``true``, won't add any bonuses to damage from ``-d`` arguments or damage bonus effects.
 
 
 **Variables**
@@ -849,7 +849,7 @@ Uses a number of charges of the given counter, and displays the remaining amount
 
     .. attribute:: fixedValue
 
-        *optional* - If ``true``, won't add any bonuses to damage from `amt` arguments.
+        *optional* - If ``true``, won't take into account ``-amt`` arguments.
 
 **Variables**
 

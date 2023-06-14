@@ -258,6 +258,8 @@ class IEffect(Effect):
         if self.target_self:
             combatant = autoctx.caster
             effect_target = f" on {combatant.name}"
+            if not isinstance(combatant, init.Combatant):
+                combatant = None
         else:
             combatant = autoctx.target.combatant
             effect_target = ""

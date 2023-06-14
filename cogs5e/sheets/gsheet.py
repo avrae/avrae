@@ -237,7 +237,7 @@ class TempCharacter:
         col = letter2num(_pos.group(1))
         row = int(_pos.group(2)) - 1
         if row > len(source) or col > len(source[row]):
-            raise IndexError("Cell out of bounds.")
+            raise IndexError(f"Cell `{pos}` is out of bounds.")
         value = source[row][col]
         log.debug(f"Cell {pos}: {value}")
         return value
@@ -606,6 +606,8 @@ class GoogleSheet(SheetLoaderABC):
             adv = None
             if self.version >= (2, 0) and advcell:
                 advtype = character.unformatted_value(advcell)
+                if isinstance(advtype, str):
+                    advtype = advtype.lower()
                 if advtype in {"a", "adv", "advantage"}:
                     adv = True
                 elif advtype in {"d", "dis", "disadvantage"}:
@@ -615,6 +617,8 @@ class GoogleSheet(SheetLoaderABC):
                 prof = 0.5
             if profcell:
                 proftype = character.unformatted_value(profcell)
+                if isinstance(proftype, str):
+                    proftype = proftype.lower()
                 if proftype == "e":
                     prof = 2
                 elif proftype and proftype != "0":

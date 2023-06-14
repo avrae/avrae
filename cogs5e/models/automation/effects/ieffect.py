@@ -174,6 +174,7 @@ class IEffect(Effect):
         stacking: bool = False,
         save_as: str = None,
         parent: str = None,
+        target_self: bool = False,
         **kwargs,
     ):
         if attacks is None:
@@ -192,6 +193,7 @@ class IEffect(Effect):
         self.stacking = stacking
         self.save_as = save_as
         self.parent = parent
+        self.target_self = target_self
 
     @classmethod
     def from_data(cls, data):
@@ -219,6 +221,7 @@ class IEffect(Effect):
                 "stacking": self.stacking,
                 "save_as": self.save_as,
                 "parent": self.parent,
+                "target_self": self.target_self,
             }
         )
         return out
@@ -252,9 +255,15 @@ class IEffect(Effect):
         attacks = [a.resolve(autoctx) for a in self.attacks]
         buttons = [b.resolve(autoctx) for b in self.buttons]
 
-        conc_conflict = []
-        if autoctx.target.combatant is not None:
+        if self.target_self:
+            combatant = autoctx.caster
+            effect_target = f" on {combatant.name}"
+        else:
             combatant = autoctx.target.combatant
+            effect_target = ""
+
+        conc_conflict = []
+        if combatant is not None:
             effect = init.InitiativeEffect.new(
                 combat=combatant.combat,
                 combatant=combatant,
@@ -319,9 +328,9 @@ class IEffect(Effect):
 
             # add
             effect_result = combatant.add_effect(effect)
-            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
+            autoctx.queue(f"**Effect{effect_target}**: {effect.get_str(description=False)}")
             if conc_conflict := effect_result["conc_conflict"]:
-                autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
+                autoctx.queue(f"**Concentration{effect_target}**: dropped {', '.join([e.name for e in conc_conflict])}")
 
             # save as
             if self.save_as is not None:
@@ -339,7 +348,7 @@ class IEffect(Effect):
                 concentration=self.concentration,
                 desc=desc,
             )
-            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
+            autoctx.queue(f"**Effect{effect_target}**: {effect.get_str(description=False)}")
 
         return IEffectResult(effect=effect, conc_conflict=conc_conflict)
 

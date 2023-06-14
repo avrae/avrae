@@ -66,17 +66,18 @@ class Save(Effect):
         elif autoctx.dc_override is not None:
             dc = autoctx.dc_override
 
+        if autoctx.args.last("dc") is not None:
+            dc = maybe_mod(autoctx.args.last("dc"), dc)
+
+        if dc is None:
+            raise NoSpellDC("No spell save DC found. Use the `-dc` argument to specify one!")
+
         # dc effects
         bonus_effect_dc = autoctx.caster_active_effects(
             mapper=lambda effect: effect.effects.dc_bonus, reducer=sum, default=0
         )
         dc += bonus_effect_dc
 
-        if autoctx.args.last("dc") is not None:
-            dc = maybe_mod(autoctx.args.last("dc"), dc)
-
-        if dc is None:
-            raise NoSpellDC("No spell save DC found. Use the `-dc` argument to specify one!")
         try:
             save_skill = next(
                 s

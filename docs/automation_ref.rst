@@ -210,6 +210,7 @@ Damage
         overheal?: boolean;
         higher?: {int: string};
         cantripScale?: boolean;
+        fixedValue?: boolean;
     }
 
 Deals damage to or heals a targeted creature. It must be inside a Target effect.
@@ -237,6 +238,10 @@ Deals damage to or heals a targeted creature. It must be inside a Target effect.
     .. attribute:: cantripScale
 
         *optional* - Whether this roll should scale like a cantrip.
+
+    .. attribute:: fixedValue
+
+        *optional* - If ``true``, won't add any bonuses to damage from ``-d`` arguments or damage bonus effects.
 
 **Variables**
 

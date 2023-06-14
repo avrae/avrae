@@ -13,13 +13,22 @@ from ..results import DamageResult
 
 
 class Damage(Effect):
-    def __init__(self, damage: str, overheal: bool = False, higher: dict = None, cantripScale: bool = None, **kwargs):
+    def __init__(
+        self,
+        damage: str,
+        overheal: bool = False,
+        higher: dict = None,
+        cantripScale: bool = None,
+        fixedValue: bool = None,
+        **kwargs,
+    ):
         super().__init__("damage", **kwargs)
         self.damage = damage
         self.overheal = overheal
         # common
         self.higher = higher
         self.cantripScale = cantripScale
+        self.fixedValue = fixedValue
 
     def to_dict(self):
         out = super().to_dict()
@@ -28,6 +37,8 @@ class Damage(Effect):
             out["higher"] = self.higher
         if self.cantripScale is not None:
             out["cantripScale"] = self.cantripScale
+        if self.fixedValue is not None:
+            out["fixedValue"] = self.fixedValue
         return out
 
     def run(self, autoctx):
@@ -40,7 +51,6 @@ class Damage(Effect):
         args = autoctx.args
         damage = self.damage
         resistances = Resistances()
-        d_args = args.get("d", [], ephem=True)
         c_args = args.get("c", [], ephem=True)
         crit_arg = args.last("crit", None, bool, ephem=True)
         nocrit = args.last("nocrit", default=False, type_=bool, ephem=True)
@@ -68,12 +78,12 @@ class Damage(Effect):
         if autoctx.target.is_simple and self.is_meta(autoctx):
             return
 
-        # add on combatant damage effects (#224)
-        d_args.extend(autoctx.caster_active_effects(mapper=lambda effect: effect.effects.damage_bonus, default=[]))
-
+        d_args = []
         # check if we actually need to care about the -d tag
-        if self.contains_roll_meta(autoctx):
-            d_args = []  # d was likely applied in the Roll effect already
+        if not (self.contains_roll_meta(autoctx) or self.fixedValue):
+            d_args = args.get("d", [], ephem=True)
+            # add on combatant damage effects (#224)
+            d_args.extend(autoctx.caster_active_effects(mapper=lambda effect: effect.effects.damage_bonus, default=[]))
 
         # set up damage AST
         damage = autoctx.parse_annostr(damage)

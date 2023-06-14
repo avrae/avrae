@@ -5,7 +5,7 @@ from cogs5e.models.sheet.resistance import Resistance
 from utils.argparser import ParsedArguments
 from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.enums import AdvantageType
-from utils.functions import camel_to_title, exactly_one, verbose_stat
+from utils.functions import camel_to_title, verbose_stat
 
 _OwnerT = TypeVar("_OwnerT")
 _DT = TypeVar("_DT")
@@ -200,6 +200,7 @@ class InitPassiveEffect:
         deserializer=lambda data: set(data),
         serializer=lambda data: list(data),
     )
+    dc_bonus: int = _PassiveEffect(stringifier=_abstract_str_attr("Save DC Bonus"))
 
     def __init__(self, **kwargs):
         for attr in kwargs:
@@ -258,6 +259,7 @@ class InitPassiveEffect:
             check_bonus=args.join("cb", "+"),
             check_adv=resolve_check_advs(args.get("cadv")),
             check_dis=resolve_check_advs(args.get("cdis")),
+            dc_bonus=sum(args.get("dc", type_=int)),
         )
 
     # ==== stringification ====

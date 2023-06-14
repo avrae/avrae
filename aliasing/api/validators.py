@@ -34,6 +34,7 @@ class PassiveEffects(BaseModel):
     check_bonus: Optional[str255]
     check_adv: Optional[Set[str]]
     check_dis: Optional[Set[str]]
+    dc_bonus: Optional[int]
 
     @validator("save_adv", "save_dis")
     def check_valid_save_keys(cls, value):

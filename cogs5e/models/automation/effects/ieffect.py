@@ -1,5 +1,5 @@
-from typing import List, Optional
 import re
+from typing import List, Optional
 
 import disnake
 
@@ -175,6 +175,7 @@ class IEffect(Effect):
         save_as: str = None,
         parent: str = None,
         target_self: bool = False,
+        tick_on_caster: bool = False,
         **kwargs,
     ):
         if attacks is None:
@@ -194,6 +195,7 @@ class IEffect(Effect):
         self.save_as = save_as
         self.parent = parent
         self.target_self = target_self
+        self.tick_on_caster = tick_on_caster
 
     @classmethod
     def from_data(cls, data):
@@ -222,6 +224,7 @@ class IEffect(Effect):
                 "save_as": self.save_as,
                 "parent": self.parent,
                 "target_self": self.target_self,
+                "tick_on_caster": self.tick_on_caster,
             }
         )
         return out
@@ -264,6 +267,16 @@ class IEffect(Effect):
             combatant = autoctx.target.combatant
             effect_target = ""
 
+        tick_on_combatant_id = None
+        if self.tick_on_caster:
+            if isinstance(autoctx.caster, init.Combatant):
+                tick_on_combatant_id = autoctx.caster.id
+            else:
+                autoctx.meta_queue(
+                    f"**Warning**: The effect `{parsed_name}`'s duration may be off by up to 1 round since the caster"
+                    " is not in combat."
+                )
+
         conc_conflict = []
         if combatant is not None:
             effect = init.InitiativeEffect.new(
@@ -277,6 +290,7 @@ class IEffect(Effect):
                 end_on_turn_end=self.end_on_turn_end,
                 concentration=self.concentration,
                 desc=desc,
+                tick_on_combatant_id=tick_on_combatant_id,
             )
             conc_parent = None
             stack_parent = None

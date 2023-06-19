@@ -418,6 +418,7 @@ class SimpleCombatant(AliasStatBlock):
         passive_effects: dict = None,
         attacks: list[dict] = None,
         buttons: list[dict] = None,
+        tick_on_combatant_id: str = None,
     ):
         """
         Adds an effect to the combatant. Returns the added effect.
@@ -442,6 +443,7 @@ class SimpleCombatant(AliasStatBlock):
         :param passive_effects: The passive effects this effect should grant. See :ref:`ieffectargs`.
         :param attacks: The attacks granted by this effect. See :ref:`ieffectargs`.
         :param buttons: The buttons granted by this effect. See :ref:`ieffectargs`.
+        :param tick_on_combatant_id: The ID of the combatant whose turn the effect duration ticks on (defaults to the combatant who the effect is on).
         :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """  # noqa: E501
         # validate types
@@ -459,6 +461,8 @@ class SimpleCombatant(AliasStatBlock):
             raise ValueError("The parent of a SimpleEffect must be a SimpleEffect.")
         if desc is not None:
             desc = str(desc)
+        if tick_on_combatant_id is not None:
+            tick_on_combatant_id = str(tick_on_combatant_id)
 
         # parse v4.1 models (passive, attacks, buttons)
         parsed_passive = parsed_attacks = parsed_buttons = None
@@ -500,6 +504,7 @@ class SimpleCombatant(AliasStatBlock):
             passive_effects=parsed_passive,
             attacks=parsed_attacks,
             buttons=parsed_buttons,
+            tick_on_combatant_id=tick_on_combatant_id,
         )
         if parent:
             effect_obj.set_parent(parent._effect)

@@ -145,9 +145,6 @@ class CombatantGroup(Combatant):
         for c in self.get_combatants():
             c.on_turn(num_turns)
 
-    def on_turn_end(self, num_turns=1):
-        for c in self.get_combatants():
-            c.on_turn_end(num_turns)
 
     def on_remove(self):
         for c in self.get_combatants():

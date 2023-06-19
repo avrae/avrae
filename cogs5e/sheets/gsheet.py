@@ -598,8 +598,6 @@ class GoogleSheet(SheetLoaderABC):
             if is_ra:
                 if skill == "dexterity" or skill == "constitution" or skill == "strength":
                     prof = 0.5
-                else:
-                    prof = 0
             if is_joat:
                 prof = 0.5
             skl_obj = Skill(value, prof)

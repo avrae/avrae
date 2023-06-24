@@ -94,6 +94,17 @@ class Check(Effect):
         if invalid_abilities := set(ability_list).difference(constants.SKILL_NAMES):
             raise AutomationException(f"Invalid skill names in check node: {', '.join(invalid_abilities)}")
 
+        # ==== user args for user's checks in contested check automation ====
+        contest_ability_list = autoctx.args.get("selfability") or self.contest_ability_list
+        self_auto_pass = autoctx.args.last("selfcpass", type_=bool, ephem=True)
+        self_auto_fail = autoctx.args.last("selfcfail", type_=bool, ephem=True)
+        self_check_bonus = autoctx.args.get("selfcb", ephem=True)
+        self_adv = reconcile_adv(
+            adv=autoctx.args.last("selfcadv", type_=bool, ephem=True) or self.adv == enums.AdvantageType.ADV,
+            dis=autoctx.args.last("selfcdis", type_=bool, ephem=True) or self.adv == enums.AdvantageType.DIS,
+        )
+        self_min = autoctx.args.last("selfmc", type_=int, ephem=True)
+        
         # ==== setup ====
         skill_name = natural_join([camel_to_title(a) for a in ability_list], "or")
         check_roll = None
@@ -130,10 +141,16 @@ class Check(Effect):
         contest_did_tie = False
         contest_out = ""
         if self.contest_ability is not None:
-            contest_skill, contest_skill_key = get_highest_skill(autoctx.caster, self.contest_ability_list)
+            contest_skill, contest_skill_key = get_highest_skill(autoctx.caster, contest_ability_list)
             contest_skill_name = camel_to_title(contest_skill_key)
             contest_dice = get_check_dice_for_statblock(
-                autoctx, statblock_holder=autoctx, skill=contest_skill, skill_key=contest_skill_key
+                autoctx,
+                statblock_holder=autoctx,
+                skill=contest_skill, 
+                skill_key=contest_skill_key,
+                bonus=self_check_bonus,
+                base_adv=self_adv,
+                min_check=self_min
             )
             contest_roll = d20.roll(contest_dice)
 

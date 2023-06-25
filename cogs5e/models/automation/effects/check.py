@@ -96,8 +96,6 @@ class Check(Effect):
 
         # ==== user args for user's checks in contested check automation ====
         contest_ability_list = autoctx.args.get("selfability") or self.contest_ability_list
-        self_auto_pass = autoctx.args.last("selfcpass", type_=bool, ephem=True)
-        self_auto_fail = autoctx.args.last("selfcfail", type_=bool, ephem=True)
         self_check_bonus = autoctx.args.get("selfcb", ephem=True)
         self_adv = reconcile_adv(
             adv=autoctx.args.last("selfcadv", type_=bool, ephem=True) or self.adv == enums.AdvantageType.ADV,

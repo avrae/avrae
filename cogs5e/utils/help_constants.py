@@ -108,6 +108,14 @@ nopact - Uses a normal spell slot instead of a Pact Magic slot, if applicable.
 *cadv/cdis* - Gives the target advantage/disadvantage on the ability check.
 *cpass/cfail* - Target automatically succeeds or fails the ability check if a DC is given.
 
+__Contest Against Caster Checks__
+> The following are arguments when the automation causes the target to roll a contested check against you (a Grapple contest, for example).
+> Use these arguments to modify your roll(s), and use the regular **Check** arguments above to modify the target's rolls.
+-selfability <ability> - Overrides the check roll's ability for you.
+*-selfcb <bonus>* - Adds a bonus to your check.
+*selfcadv/selfcdis* - Gives you advantage/disadvantage on your ability check.
+-selfmc <minimum roll value> - Sets the minimum value the dice can return for your check (before bonuses).
+
 **Other**
 -choice <choice> - Provides input to the attack. Not all attacks will utilize this argument.
 -h - Hides rolled values.

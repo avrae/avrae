@@ -1059,16 +1059,34 @@ class InitTracker(commands.Cog):
         out = ""
 
         for combatant in targets:
+            effects = combatant.get_effects()
+            if not effects:
+                out += f"{combatant.name} has no effects to remove.\n"
+                continue
             if effect is None:
-                combatant.remove_all_effects()
-                out += f"All effects removed from {combatant.name}.\n"
+                confirmation = await confirm(
+                    ctx,
+                    f"Are you sure you want to remove all effects ({len(effects)}) from {combatant.name}?",
+                    delete_msgs=True,
+                )
+                if confirmation:
+                    combatant.remove_all_effects()
+                    out += f"All effects removed from {combatant.name}.\n"
+                else:
+                    out += f"No effects removed from {combatant.name}.\n"
             else:
                 to_remove = await combatant.select_effect(effect)
-                children_removed = ""
-                if to_remove.children:
-                    children_removed = f"Also removed {len(to_remove.children)} child effects.\n"
-                to_remove.remove()
-                out += f"Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}"
+                confirmation = to_remove.name.lower() == effect.lower() or await confirm(
+                    ctx, f"Are you sure you want to remove {to_remove.name} from {combatant.name}?", delete_msgs=True
+                )
+                if confirmation:
+                    children_removed = ""
+                    if to_remove.children:
+                        children_removed = f"Also removed {len(to_remove.children)} child effects.\n"
+                    to_remove.remove()
+                    out += f"Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}"
+                else:
+                    out += f"{to_remove.name} not removed from {combatant.name}.\n"
         await ctx.send(out)
         await combat.final(ctx)
 

@@ -642,8 +642,10 @@ class InitTracker(commands.Cog):
         combatant = await combat.select_combatant(ctx, name)
         if combatant is None:
             return await ctx.send("Combatant not found.")
+        combatant.notes = ""
 
         await ctx.send(f"Removed note from {combatant.name}.")
+        await combat.final(ctx)
 
     @init.command(aliases=["opts"])
     async def opt(self, ctx, name: str, *args):

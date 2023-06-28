@@ -206,6 +206,12 @@ class TestYourStandardInitiative:
             assert len(effects) == 1
 
             avrae.message(f'!i re "{combatant}"')
+            await dhttp.receive_delete()
+            await dhttp.receive_message(
+                f"Are you sure you want to remove all effects (1) from {combatant}?", regex=False
+            )
+            avrae.message(f"yes")
+            await dhttp.receive_delete()
             await dhttp.drain()
 
     async def test_effect_granted_attacks(self, avrae, dhttp):

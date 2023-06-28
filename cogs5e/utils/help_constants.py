@@ -10,9 +10,9 @@ __Valid Arguments__
 *adv/dis* - Give advantage/disadvantage to the check roll(s).
 *-b <bonus>* - Adds a bonus to the roll.
 -dc <dc> - Sets a DC and counts successes/failures.
--mc <minimum roll> - Sets the minimum roll on the dice (e.g. Reliable Talent, Glibness)
+*-mc <minimum roll>* - Sets the minimum roll on the dice (e.g. Reliable Talent, Glibness).
 -rr <iterations> - How many checks to roll.
-str/dex/con/int/wis/cha - Rolls using a different skill base (e.g. Strength (Intimidation))
+str/dex/con/int/wis/cha - Rolls using a different skill base (e.g. Strength (Intimidation)).
 
 -phrase <phrase> - Adds flavor text.
 -title <title> - Changes the title of the check. Replaces [name] with caster's name and [cname] with the check's name.
@@ -30,7 +30,7 @@ __Valid Arguments__
 *adv/dis* - Give advantage/disadvantage to the save roll(s).
 *-b <bonus>* - Adds a bonus to the roll.
 -dc <dc> - Sets a DC and counts successes/failures.
--mc <minimum roll> - Sets the minimum roll on the dice (e.g. Starry Form: Dragon, Trance of Order)
+*-mc <minimum roll>* - Sets the minimum roll on the dice (e.g. Starry Form: Dragon, Trance of Order)
 -rr <iterations> - How many saves to roll (does not apply to Death Saves).
 
 -phrase <phrase> - Adds flavor text.
@@ -103,10 +103,19 @@ nopact - Uses a normal spell slot instead of a Pact Magic slot, if applicable.
 **Checks**
 -ability <ability> - Overrides the check roll's ability (e.g. `-ability arcana`, `-ability sleightOfHand`).
 *-cb <bonus>* - Adds a bonus to ability checks.
+*-mc <minimum roll>* - Sets the minimum roll on the dice (e.g. Reliable Talent, Glibness).
 -cdc <dc> - Overrides the DC of the ability check.
 -cdc <+X/-X> - Modifies the DC by a certain amount.
 *cadv/cdis* - Gives the target advantage/disadvantage on the ability check.
 *cpass/cfail* - Target automatically succeeds or fails the ability check if a DC is given.
+
+__Contest Against Caster Checks__
+> The following are arguments when the automation causes the target to roll a contested check against you (a Grapple contest, for example).
+> Use these arguments to modify your roll(s), and use the regular **Check** arguments above to modify the target's rolls.
+-selfability <ability> - Overrides the check roll's ability for you.
+*-selfcb <bonus>* - Adds a bonus to your ability checks.
+*selfcadv/selfcdis* - Gives you advantage/disadvantage on your ability checks.
+*-selfmc <minimum roll value>* - Sets the minimum roll on the dice (e.g. Reliable Talent, Glibness).
 
 **Other**
 -choice <choice> - Provides input to the attack. Not all attacks will utilize this argument.

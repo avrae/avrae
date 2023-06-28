@@ -296,6 +296,7 @@ IEffect
         save_as?: string;
         parent?: string;
         target_self?: boolean;
+        tick_on_caster?: boolean;
     }
 
 Adds an InitTracker Effect to a targeted creature, if the automation target is in combat.
@@ -316,6 +317,16 @@ It must be inside a Target effect.
 
         *optional, default infinite* - The duration of the effect, in rounds of combat. If this is negative, creates an
         effect with infinite duration.
+
+        .. note::
+
+            **Wait, how do durations actually work?**
+
+            Durations use a "tick" system, and ``duration`` is actually a measure of how many "ticks" an effect sticks
+            around for. By default, each effect "ticks" once at the beginning of its combatant's turn.
+
+            By using ``end`` and ``tick_on_caster``, you can control how the duration ticks in order to create effects
+            that last until the end of your next turn, end of the caster's next turn, etc.
 
     .. attribute:: effects
 
@@ -366,8 +377,16 @@ It must be inside a Target effect.
 
     .. attribute:: target_self
 
-        *optional, default false* - If true, the effect will be applied to the caster of the spell, rather than the
+        *optional, default false* - If true, the effect will be applied to the caster of the action, rather than the
         target.
+
+    .. attribute:: tick_on_caster
+
+        *optional, default false* - If true, the effect's duration will be dependent on the caster of the action, rather
+        than the target. For example, a ``tick_on_caster`` effect with a duration of 1 will last until the start of the
+        *caster's* next turn, rather than the *target's*.
+
+        If the caster is not in combat, this has no effect.
 
 **Variables**
 

@@ -411,17 +411,12 @@ class Combatant(BaseCombatant, StatBlock):
     # hooks
     def on_turn(self, num_turns: int = 1):
         """
-        A method called at the start of each of the combatant's turns.
+        A method called at the start of each combatant's turns.
         :param num_turns: The number of turns that just passed.
         :return: None
         """
         for e in self.get_effects().copy():
             e.on_turn(num_turns)
-
-    def on_turn_end(self, num_turns: int = 1):
-        """A method called at the end of each of the combatant's turns."""
-        for e in self.get_effects().copy():
-            e.on_turn_end(num_turns)
 
     def on_remove(self):
         """

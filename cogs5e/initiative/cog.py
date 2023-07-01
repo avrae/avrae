@@ -1077,7 +1077,9 @@ class InitTracker(commands.Cog):
             else:
                 to_remove = await combatant.select_effect(effect)
                 confirmation = to_remove.name.lower() == effect.lower() or await confirm(
-                    ctx, f"Are you sure you want to remove {to_remove.name} from {combatant.name}? (Reply with yes/no)", delete_msgs=True
+                    ctx,
+                    f"Are you sure you want to remove {to_remove.name} from {combatant.name}? (Reply with yes/no)",
+                    delete_msgs=True
                 )
                 if confirmation:
                     children_removed = ""

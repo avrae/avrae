@@ -134,7 +134,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         subrace = None
         background = None
         filled = 0
-        for prop in self._by_type["slotFiller"] + self._by_type["note"]:
+        for prop in self._by_type["folder"] + self._by_type["feature"] + self._by_type["note"]:
             if race is None and "race" in prop["tags"]:
                 race = prop["name"]
                 filled += 1

@@ -659,9 +659,9 @@ class Customization(commands.Cog):
         if not await confirm(
             ctx,
             (
-                f"This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
-                f"Are you *absolutely sure* you want to continue?\n"
-                f"Type `Yes, I am sure` to confirm."
+                "This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm."
             ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
@@ -714,9 +714,9 @@ class Customization(commands.Cog):
         if not await confirm(
             ctx,
             (
-                f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
-                f"Are you *absolutely sure* you want to continue?\n"
-                f"Type `Yes, I am sure` to confirm."
+                "This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm."
             ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
@@ -901,9 +901,9 @@ class Customization(commands.Cog):
         if not await confirm(
             ctx,
             (
-                f"This will delete **ALL** of your user variables (uvars). "
-                f"Are you *absolutely sure* you want to continue?\n"
-                f"Type `Yes, I am sure` to confirm."
+                "This will delete **ALL** of your user variables (uvars). "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm."
             ),
             response_check=lambda r: r == "Yes, I am sure",
         ):

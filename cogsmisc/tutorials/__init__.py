@@ -216,8 +216,8 @@ class Tutorials(commands.Cog):
         embed.colour = disnake.Colour.blurple()
         embed.description = textwrap.dedent(f"""
             :wave: Hi there! Thanks for adding me to {guild.name}!
-            
-            I'm ready to roll, but before we get started, let's take a look at some of the things I can do! 
+
+            I'm ready to roll, but before we get started, let's take a look at some of the things I can do!
             """).strip()
 
         if not prefix_is_default:

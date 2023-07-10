@@ -1337,7 +1337,7 @@ class InitTracker(commands.Cog):
         Casts a spell against another combatant.
         __**Valid Arguments**__
         {VALID_SPELLCASTING_ARGS}
-        
+
         {VALID_AUTOMATION_ARGS}
         """)
     async def cast(self, ctx, spell_name, *, args=""):

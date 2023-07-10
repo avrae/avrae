@@ -1066,7 +1066,10 @@ class InitTracker(commands.Cog):
             if effect is None:
                 confirmation = await confirm(
                     ctx,
-                    f"Are you sure you want to remove all effects ({len(effects)}) from {combatant.name}? (Reply with yes/no)",
+                    (
+                        f"Are you sure you want to remove all effects ({len(effects)}) from {combatant.name}? (Reply"
+                        " with yes/no)"
+                    ),
                     delete_msgs=True,
                 )
                 if confirmation:
@@ -1079,7 +1082,7 @@ class InitTracker(commands.Cog):
                 confirmation = to_remove.name.lower() == effect.lower() or await confirm(
                     ctx,
                     f"Are you sure you want to remove {to_remove.name} from {combatant.name}? (Reply with yes/no)",
-                    delete_msgs=True
+                    delete_msgs=True,
                 )
                 if confirmation:
                     children_removed = ""

@@ -48,8 +48,10 @@ class ButtonHandler:
         author_id = inter.author.id
         if not (author_id == combatant.controller_id or author_id == combat.dm_id):
             await inter.send(
-                "You do not have permission to control this combatant. Only the combatant owner and combat DM may use "
-                "this button.",
+                (
+                    "You do not have permission to control this combatant. Only the combatant owner and combat DM may"
+                    " use this button."
+                ),
                 ephemeral=True,
             )
             return

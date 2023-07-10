@@ -1333,15 +1333,13 @@ class InitTracker(commands.Cog):
         if (gamelog := self.bot.get_cog("GameLog")) and isinstance(combatant, PlayerCombatant):
             await gamelog.send_save(ctx, combatant.character, result.skill_name, result.rolls)
 
-    @init.command(
-        help=f"""
+    @init.command(help=f"""
         Casts a spell against another combatant.
         __**Valid Arguments**__
         {VALID_SPELLCASTING_ARGS}
         
         {VALID_AUTOMATION_ARGS}
-        """
-    )
+        """)
     async def cast(self, ctx, spell_name, *, args=""):
         return await self._cast(ctx, None, spell_name, args)
 

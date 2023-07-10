@@ -148,7 +148,7 @@ DDB_LOGO_ICON = "https://cdn.discordapp.com/emojis/783780183559372890.png?v=1"
 COUNTER_BUBBLES = {
     "bubble": CounterBubbles(empty="\u3007", filled="\u25c9"),  # 〇◉, spell slots
     "square": CounterBubbles(empty="\u25a2", filled="\u25a3"),  # ▢▣, pact slots
-    "hex": CounterBubbles(empty="\u2B21", filled="\u2B22"),  # ⬡⬢
+    "hex": CounterBubbles(empty="\u2b21", filled="\u2b22"),  # ⬡⬢
     "star": CounterBubbles(empty="\u2606", filled="\u2605"),  # ☆★
 }
 

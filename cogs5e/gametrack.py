@@ -528,8 +528,10 @@ class GameTrack(commands.Cog):
 
         if not await confirm(
             ctx,
-            f"This will remove {num_to_remove} override{'s' if num_to_remove>1 else ''} from your spellbook. "
-            "Are you *absolutely sure* you want to continue?",
+            (
+                f"This will remove {num_to_remove} override{'s' if num_to_remove>1 else ''} from your spellbook. "
+                "Are you *absolutely sure* you want to continue?"
+            ),
         ):
             return await ctx.send("Unconfirmed. Aborting.")
 

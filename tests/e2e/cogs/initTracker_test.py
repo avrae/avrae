@@ -20,9 +20,11 @@ class TestInitiativeSimple:
             "```md\nCurrent initiative: 0 (round 0)\n===============================\n```", regex=False
         )
         await dhttp.receive_message(
-            "Everyone roll for initiative!\nIf you have a character set up with SheetManager: "
-            "`!init join`\nIf it's a 5e monster: `!init madd <monster name>`\nOtherwise: "
-            "`!init add <modifier> <name>`",
+            (
+                "Everyone roll for initiative!\nIf you have a character set up with SheetManager: "
+                "`!init join`\nIf it's a 5e monster: `!init madd <monster name>`\nOtherwise: "
+                "`!init add <modifier> <name>`"
+            ),
             regex=False,
         )
 

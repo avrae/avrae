@@ -357,9 +357,11 @@ class CollectableManagementGroup(commands.Group):
         changes = "\n".join([f"`{old}` ({collection}) -> `{new}`" for old, new, collection in rename_tris])
         response = await confirm(
             ctx,
-            f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
-            "Do you want to continue? (Reply with yes/no)\n"
-            f"{changes}",
+            (
+                f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
+                "Do you want to continue? (Reply with yes/no)\n"
+                f"{changes}"
+            ),
         )
         if not response:
             return await ctx.send("Ok, aborting.")
@@ -426,9 +428,11 @@ class CollectableManagementGroup(commands.Group):
             collection = personal_obj.collection
             response = await confirm(
                 ctx,
-                f"This action will subscribe the server to the `{collection.name}` workshop collection, found at "
-                f"<{collection.url}>. This will add {collection.alias_count} aliases and "
-                f"{collection.snippet_count} snippets to the server. Do you want to continue? (Reply with yes/no)",
+                (
+                    f"This action will subscribe the server to the `{collection.name}` workshop collection, found at "
+                    f"<{collection.url}>. This will add {collection.alias_count} aliases and "
+                    f"{collection.snippet_count} snippets to the server. Do you want to continue? (Reply with yes/no)"
+                ),
             )
             if not response:
                 return await ctx.send("Ok, aborting.")
@@ -455,8 +459,10 @@ class CollectableManagementGroup(commands.Group):
         # check if it overwrites anything
         if existing_server_obj is not None and not await confirm(
             ctx,
-            f"There is already an existing server {self.obj_name} named `{name}`. Do you want to overwrite it? "
-            "(Reply with yes/no)",
+            (
+                f"There is already an existing server {self.obj_name} named `{name}`. Do you want to overwrite it? "
+                "(Reply with yes/no)"
+            ),
         ):
             return await ctx.send("Ok, aborting.")
 
@@ -583,15 +589,19 @@ class Customization(commands.Cog):
         if prefix.startswith("/"):
             if not await confirm(
                 ctx,
-                "Setting a prefix that begins with / may cause issues. "
-                "Are you sure you want to continue? (Reply with yes/no)",
+                (
+                    "Setting a prefix that begins with / may cause issues. "
+                    "Are you sure you want to continue? (Reply with yes/no)"
+                ),
             ):
                 return await ctx.send("Ok, cancelling.")
         else:
             if not await confirm(
                 ctx,
-                f"Are you sure you want to set my prefix to `{prefix}`? This will affect "
-                "everyone on this server! (Reply with yes/no)",
+                (
+                    f"Are you sure you want to set my prefix to `{prefix}`? This will affect "
+                    "everyone on this server! (Reply with yes/no)"
+                ),
             ):
                 return await ctx.send("Ok, cancelling.")
 
@@ -648,9 +658,11 @@ class Customization(commands.Cog):
         """Deletes ALL user aliases."""
         if not await confirm(
             ctx,
-            f"This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
-            f"Are you *absolutely sure* you want to continue?\n"
-            f"Type `Yes, I am sure` to confirm.",
+            (
+                f"This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
+                f"Are you *absolutely sure* you want to continue?\n"
+                f"Type `Yes, I am sure` to confirm."
+            ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
@@ -701,9 +713,11 @@ class Customization(commands.Cog):
         """Deletes ALL user snippets."""
         if not await confirm(
             ctx,
-            f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
-            f"Are you *absolutely sure* you want to continue?\n"
-            f"Type `Yes, I am sure` to confirm.",
+            (
+                f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
+                f"Are you *absolutely sure* you want to continue?\n"
+                f"Type `Yes, I am sure` to confirm."
+            ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
@@ -819,9 +833,11 @@ class Customization(commands.Cog):
         char: Character = await ctx.get_character()
         if not await confirm(
             ctx,
-            f"This will delete **ALL** of your character variables for {char.name}. "
-            "Are you *absolutely sure* you want to continue?\n"
-            "Type `Yes, I am sure` to confirm.",
+            (
+                f"This will delete **ALL** of your character variables for {char.name}. "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm."
+            ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
@@ -884,9 +900,11 @@ class Customization(commands.Cog):
         """Deletes ALL user variables."""
         if not await confirm(
             ctx,
-            f"This will delete **ALL** of your user variables (uvars). "
-            f"Are you *absolutely sure* you want to continue?\n"
-            f"Type `Yes, I am sure` to confirm.",
+            (
+                f"This will delete **ALL** of your user variables (uvars). "
+                f"Are you *absolutely sure* you want to continue?\n"
+                f"Type `Yes, I am sure` to confirm."
+            ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")

@@ -135,8 +135,10 @@ async def resolve_strict_coins(coinpurse, coins: CoinsArgs, ctx, mode: CoinsAuto
             and coins.explicit
             and not await confirm(
                 ctx,
-                "You don't have enough of the chosen coins to complete this transaction"
-                ". Auto convert from other coins? (Reply with yes/no)",
+                (
+                    "You don't have enough of the chosen coins to complete this transaction"
+                    ". Auto convert from other coins? (Reply with yes/no)"
+                ),
             )
         ):
             raise InvalidArgument("You cannot put a currency into negative numbers.")

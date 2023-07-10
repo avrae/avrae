@@ -209,8 +209,10 @@ class SheetManager(commands.Cog):
         if conflicts:
             if await confirm(
                 ctx,
-                f"This will overwrite {len(conflicts)} attacks with the same name "
-                f"({', '.join(c.name for c in conflicts)}). Continue? (Reply with yes/no)",
+                (
+                    f"This will overwrite {len(conflicts)} attacks with the same name "
+                    f"({', '.join(c.name for c in conflicts)}). Continue? (Reply with yes/no)"
+                ),
             ):
                 for conflict in conflicts:
                     character.overrides.attacks.remove(conflict)
@@ -650,9 +652,11 @@ class SheetManager(commands.Cog):
         if conflict:
             return await confirm(
                 ctx,
-                "Warning: This will overwrite a character with the same ID. Do you wish to continue "
-                "(Reply with yes/no)?\n"
-                f"If you only wanted to update your character, run `{ctx.prefix}update` instead.",
+                (
+                    "Warning: This will overwrite a character with the same ID. Do you wish to continue "
+                    "(Reply with yes/no)?\n"
+                    f"If you only wanted to update your character, run `{ctx.prefix}update` instead."
+                ),
             )
         return True
 

@@ -29,6 +29,7 @@ def upcast_scaled_dice(effect, autoctx, dice_ast):
         else:
             level_dice = 4
         level_dice = autoctx.args.last("cantripdice", default=level_dice, type_=int)
+
         def mapper(node):
             if isinstance(node, d20.ast.Dice):
                 node.num = level_dice

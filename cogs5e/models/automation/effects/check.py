@@ -102,7 +102,7 @@ class Check(Effect):
             dis=autoctx.args.last("selfcdis", type_=bool, ephem=True) or self.adv == enums.AdvantageType.DIS,
         )
         self_min = autoctx.args.last("selfmc", type_=int, ephem=True)
-        
+
         # ==== setup ====
         skill_name = natural_join([camel_to_title(a) for a in ability_list], "or")
         check_roll = None
@@ -144,11 +144,11 @@ class Check(Effect):
             contest_dice = get_check_dice_for_statblock(
                 autoctx,
                 statblock_holder=autoctx,
-                skill=contest_skill, 
+                skill=contest_skill,
                 skill_key=contest_skill_key,
                 bonus=self_check_bonus,
                 base_adv=self_adv,
-                min_check=self_min
+                min_check=self_min,
             )
             contest_roll = d20.roll(contest_dice)
 

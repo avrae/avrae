@@ -339,10 +339,12 @@ class AdminUtils(commands.Cog):
         num_shards = len(self.bot.shard_ids) if self.bot.shard_ids is not None else 1
         if not await confirm(
             ctx,
-            f"Are you absolutely sure you want to kill cluster {cluster_id}? (Reply with yes/no)\n"
-            f"**This will terminate approximately {num_shards} shards, which "
-            f"will take at least {num_shards * 5} seconds to restart, and "
-            f"impact about {len(self.bot.guilds)} servers.**",
+            (
+                f"Are you absolutely sure you want to kill cluster {cluster_id}? (Reply with yes/no)\n"
+                f"**This will terminate approximately {num_shards} shards, which "
+                f"will take at least {num_shards * 5} seconds to restart, and "
+                f"impact about {len(self.bot.guilds)} servers.**"
+            ),
         ):
             return await ctx.send("ok, not killing")
         resp = await self.pscall("kill_cluster", kwargs={"cluster_id": cluster_id}, expected_replies=1)

@@ -118,11 +118,11 @@ async def test_inline_rolling_reaction(avrae, dhttp, mock_ldclient):
     async with server_settings(avrae, inline_enabled=InlineRollingType.REACTION):
         with mock_ldclient.flags({"cog.dice.inline_rolling.enabled": True}):
             avrae.message("[[1d20]]")
-            await dhttp.receive_reaction("\N{game die}")
+            await dhttp.receive_reaction("\N{GAME DIE}")
             # first time interaction
             await dhttp.receive_message(dm=True)
 
-            avrae.add_reaction("\N{game die}")
+            avrae.add_reaction("\N{GAME DIE}")
             await dhttp.receive_message(rf"\({D20_PATTERN}\)")
 
 

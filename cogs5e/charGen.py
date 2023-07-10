@@ -145,7 +145,6 @@ class CharGenerator(commands.Cog):
     async def randchar(self, ctx, level=None):
         """Rolls up a random 5e character."""
         if level is None:
-
             rolls = [roll("4d6kh3") for _ in range(6)]
             stats = "\n".join(str(r) for r in rolls)
             total = sum([r.total for r in rolls])

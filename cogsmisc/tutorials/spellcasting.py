@@ -125,13 +125,17 @@ class Spellcasting(Tutorial):
                 embed.description = checklist(
                     [
                         (
-                            f"Manually lose a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
-                            "-<number of spell slots>`.",
+                            (
+                                f"Manually lose a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
+                                "-<number of spell slots>`."
+                            ),
                             state_map.data.get("has_removed"),
                         ),
                         (
-                            f"Manually gain a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
-                            "+<number of spell slots>`.",
+                            (
+                                f"Manually gain a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
+                                "+<number of spell slots>`."
+                            ),
                             state_map.data.get("has_added"),
                         ),
                     ]

@@ -210,7 +210,7 @@ class TestYourStandardInitiative:
             avrae.message(f'!i re "{combatant}"')
             await dhttp.receive_delete()
             await dhttp.receive_message(
-                f"Are you sure you want to remove all effects (1) from {combatant}?", regex=False
+                f"Are you sure you want to remove all effects (1) from {combatant}? (Reply with yes/no)", regex=False
             )
             avrae.message(f"yes")
             await dhttp.receive_delete()

@@ -13,7 +13,10 @@ def maybe_alias_statblock(target):
     """Returns the AliasStatBlock for the target if applicable."""
     if not isinstance(target, (StatBlock, str, type(None))):
         raise ValueError("target must be a statblock, str, or None")
-    return aliasing.api.statblock.AliasStatBlock(target) if isinstance(target, StatBlock) else target
+    if isinstance(target, StatBlock):
+        return aliasing.api.statblock.AliasStatBlock(target)
+
+    return aliasing.api.statblock.AliasStatBlock(StatBlock(name=target or "Target"))
 
 
 def upcast_scaled_dice(effect, autoctx, dice_ast):

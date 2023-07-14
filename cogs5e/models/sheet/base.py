@@ -141,9 +141,9 @@ class Skill:
         if reroll:
             reroll_str = f"ro{reroll}"
 
-        if adv is False:
+        if adv in (False, 0):
             base = f"2d20{reroll_str}kl1"
-        elif adv is True:
+        elif adv in (True, 1):
             base = f"2d20{reroll_str}kh1"
         else:
             base = f"1d20{reroll_str}"

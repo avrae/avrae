@@ -127,9 +127,9 @@ class Skill:
 
     # ---------- main funcs ----------
     def d20(self, base_adv=None, reroll: int = None, min_val: int = None, mod_override=None):
-        if base_adv is None:
+        if base_adv in (None, 0):
             adv = self.adv
-        elif self.adv is None:
+        elif self.adv in (None, 0):
             adv = base_adv
         elif base_adv is self.adv:
             adv = self.adv
@@ -141,7 +141,7 @@ class Skill:
         if reroll:
             reroll_str = f"ro{reroll}"
 
-        if adv in (False, 0):
+        if adv in (False, -1):
             base = f"2d20{reroll_str}kl1"
         elif adv in (True, 1):
             base = f"2d20{reroll_str}kh1"

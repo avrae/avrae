@@ -32,3 +32,5 @@ docs/_build/
 
 # Adding for Changelog Creation
 **/WorkingChangelog.md
+
+/shared/coverage.xml

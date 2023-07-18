@@ -42,7 +42,7 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: topsecret
 
   redis:
-    image: redis:5
+    image: redis:7
     ports:
       - 58379:6379
     volumes:

@@ -107,6 +107,8 @@ class GameLogClient(BaseClient):
             log.info("Connected to pubsub.")
             async for msg in channel.listen():
                 try:
+                    if msg["type"] == "subscribe":
+                        continue
                     await self._recv(msg["data"])
                 except Exception as e:
                     log.error(str(e))

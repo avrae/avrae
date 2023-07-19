@@ -86,6 +86,8 @@ class AdminUtils(commands.Cog):
             log.info("Connected to pubsub.")
             async for msg in channel.listen():
                 try:
+                    if msg["type"] == "subscribe":
+                        continue
                     await self._ps_recv(msg["data"])
                 except Exception as e:
                     log.error(str(e))

@@ -8,6 +8,8 @@ import json
 import logging
 import uuid
 
+import redis.asyncio
+
 
 class RedisIO:
     """
@@ -16,7 +18,7 @@ class RedisIO:
 
     def __init__(self, _db):
         """
-        :type _db: :class:`aioredis.Redis`
+        :type _db: :class:`redis.asyncio.Redis`
         """
         self._db = _db
 
@@ -24,15 +26,15 @@ class RedisIO:
         encoded_data = await self._db.get(key)
         return encoded_data.decode() if encoded_data is not None else default
 
-    async def set(self, key, value, *, ex=0, nx=False, xx=False):
+    async def set(self, key, value, *, ex=1, nx=False, xx=False):
         exist = None
         if nx and xx:
             raise ValueError("'nx' and 'xx' args are mutually exclusive")
         if nx:
-            exist = self._db.SET_IF_NOT_EXIST
+            return await self._db.set(key, value, ex=ex, nx=True)
         elif xx:
-            exist = self._db.SET_IF_EXIST
-        return await self._db.set(key, value, expire=ex, exist=exist)
+            return await self._db.set(key, value, ex=ex, xx=True)
+        return await self._db.set(key, value, ex=ex)
 
     async def incr(self, key):
         return await self._db.incr(key)
@@ -53,12 +55,12 @@ class RedisIO:
         return await self._db.ttl(key)
 
     async def iscan(self, match=None, count=None):
-        async for key_bin in self._db.iscan(match=match, count=count):
+        async for key_bin in self._db.scan_iter(match=match, count=count):
             yield key_bin.decode()
 
     # ==== hashmaps ====
     async def set_dict(self, key, dictionary):
-        return await self._db.hmset_dict(key, **dictionary)
+        return await self._db.hset(key, **dictionary)
 
     async def get_dict(self, key, dict_key):
         return await self.hget(key, dict_key)
@@ -66,13 +68,13 @@ class RedisIO:
     async def get_whole_dict(self, key, default=None):
         if default is None:
             default = {}
-        out = await self._db.hgetall(key, encoding="utf-8")
+        out = await self._db.hgetall(key)
         if out is None:
             return default
         return out
 
     async def hget(self, key, field, default=None):
-        out = await self._db.hget(key, field, encoding="utf-8")
+        out = await self._db.hget(key, field)
         return out if out is not None else default
 
     async def hset(self, key, field, value):
@@ -130,15 +132,16 @@ class RedisIO:
 
     # ==== pubsub ====
     async def subscribe(self, *channels):
-        return await self._db.subscribe(*channels)
+        pssub = self._db.client().pubsub(ignore_subscribe_message=True)
+        await pssub.subscribe(*channels)
+        return pssub
 
     async def publish(self, channel, data):
         return await self._db.publish(channel, data)
 
     # ==== misc ====
     async def close(self):
-        self._db.close()
-        await self._db.wait_closed()
+        await self._db.close()
 
 
 class _PubSubMessageBase(abc.ABC):

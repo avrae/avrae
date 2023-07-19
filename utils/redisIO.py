@@ -132,7 +132,7 @@ class RedisIO:
 
     # ==== pubsub ====
     async def subscribe(self, *channels):
-        pssub = self._db.client().pubsub(ignore_subscribe_message=True)
+        pssub = self._db.client().pubsub()
         await pssub.subscribe(*channels)
         return pssub
 

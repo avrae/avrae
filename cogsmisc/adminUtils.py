@@ -79,7 +79,7 @@ class AdminUtils(commands.Cog):
             try:  # connect to the pubsub channel
                 channel = await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL)
             except Exception as e:
-                log.warning("Could not connect to pubsub! Waiting to reconnect...")
+                log.warning(f"Could not connect to pubsub! Waiting to reconnect...[{e}]")
                 await asyncio.sleep(5)
                 continue
 

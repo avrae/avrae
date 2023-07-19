@@ -77,16 +77,16 @@ class AdminUtils(commands.Cog):
         }
         while True:  # if we ever disconnect from pubsub, wait 5s and try reinitializing
             try:  # connect to the pubsub channel
-                channel = (await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL))[0]
-            except:
+                channel = (await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL))
+            except Exception as e:
                 log.warning("Could not connect to pubsub! Waiting to reconnect...")
                 await asyncio.sleep(5)
                 continue
 
             log.info("Connected to pubsub.")
-            async for msg in channel.iter(encoding="utf-8"):
+            async for msg in channel.listen():
                 try:
-                    await self._ps_recv(msg)
+                    await self._ps_recv(msg["data"])
                 except Exception as e:
                     log.error(str(e))
             log.warning("Disconnected from Redis pubsub! Waiting to reconnect...")

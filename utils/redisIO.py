@@ -25,7 +25,6 @@ class RedisIO:
         return encoded_data.decode() if encoded_data is not None else default
 
     async def set(self, key, value, *, ex=1, nx=False, xx=False):
-        exist = None
         if nx and xx:
             raise ValueError("'nx' and 'xx' args are mutually exclusive")
         if nx:

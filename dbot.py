@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 
-import aioredis
+from redis import asyncio as redis
 import d20
 import disnake
 import motor.motor_asyncio
@@ -112,7 +112,7 @@ class Avrae(commands.AutoShardedBot):
         self.glclient.init()
 
     async def setup_rdb(self):
-        return RedisIO(await aioredis.create_redis_pool(config.REDIS_URL, db=config.REDIS_DB_NUM))
+        return RedisIO(await redis.from_url(url=config.REDIS_URL))
 
     async def get_guild_prefix(self, guild: disnake.Guild) -> str:
         guild_id = str(guild.id)

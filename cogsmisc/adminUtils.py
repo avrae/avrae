@@ -77,7 +77,7 @@ class AdminUtils(commands.Cog):
         }
         while True:  # if we ever disconnect from pubsub, wait 5s and try reinitializing
             try:  # connect to the pubsub channel
-                channel = (await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL))
+                channel = await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL)
             except Exception as e:
                 log.warning("Could not connect to pubsub! Waiting to reconnect...")
                 await asyncio.sleep(5)

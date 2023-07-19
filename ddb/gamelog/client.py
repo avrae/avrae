@@ -98,7 +98,7 @@ class GameLogClient(BaseClient):
     async def main_loop(self):
         while True:  # if we ever disconnect from pubsub, wait 5s and try reinitializing
             try:  # connect to the pubsub channel
-                channel = (await self.rdb.subscribe(GAME_LOG_PUBSUB_CHANNEL))
+                channel = await self.rdb.subscribe(GAME_LOG_PUBSUB_CHANNEL)
             except:
                 log.warning("Could not connect to pubsub! Waiting to reconnect...")
                 await asyncio.sleep(5)

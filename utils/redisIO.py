@@ -66,9 +66,12 @@ class RedisIO:
         if default is None:
             default = {}
         out = await self._db.hgetall(key)
-        if out is None:
+
+        data = {key.decode('utf-8'): value for key, value in out.items()}
+
+        if data is None:
             return default
-        return out
+        return data
 
     async def hget(self, key, field, default=None):
         out = await self._db.hget(key, field)

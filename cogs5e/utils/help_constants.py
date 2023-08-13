@@ -81,6 +81,7 @@ sadv/sdis - Gives the target advantage/disadvantage on the saving throw.
 *-mi <value>* - Minimum value of each die on the damage roll.
 *savage* - Rolls two sets of the base damage dice, choosing the higher of the two.
 *-cantripdice <amount>* - Overrides how many dice to use for cantrip scaling.
+*-critdice <amount>* - Adds or removes additional crit dice from the weapon dice on a crit.
 
 __Damage Types__
 *magical* - Makes the damage type of the attack magical.

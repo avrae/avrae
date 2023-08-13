@@ -778,7 +778,7 @@ class PlayerCombatant(Combatant):
         base_ac = self.base_ac
         base_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_value, reducer=max, default=0)
         bonus_effect_ac = self.active_effects(mapper=lambda effect: effect.effects.ac_bonus, reducer=sum, default=0)
-        return max(base_effect_ac, base_ac) + bonus_effect_ac
+        return (base_effect_ac or base_ac) + bonus_effect_ac
 
     @ac.setter
     def ac(self, new_ac):

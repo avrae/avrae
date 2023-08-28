@@ -23,7 +23,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import ExternalImportError, NoCharacter
 from cogs5e.models.sheet.attack import Attack, AttackList
-from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
+from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE, DDB_PDF_URL_RE
 from cogs5e.sheets.dicecloud import DICECLOUD_URL_RE, DicecloudParser
 from cogs5e.sheets.dicecloudv2 import DICECLOUDV2_URL_RE, DicecloudV2Parser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
@@ -697,6 +697,15 @@ class SheetManager(commands.Cog):
             loading = await ctx.send("Loading character data from Beyond...")
             prefix = "beyond"
             url = beyond_match.group(1)
+            parser = BeyondSheetParser(url)
+        elif beyond_pdf_match := DDB_PDF_URL_RE.match(url):
+            await ctx.send(
+                "Warning: This URL is for a PDF, and not for the actual character sheet. "
+                "Next time, please use the sharing link instead."
+            )
+            loading = await ctx.send("Loading character data from Beyond...")
+            prefix = "beyond"
+            url = beyond_pdf_match.group(1)
             parser = BeyondSheetParser(url)
         elif dicecloud_match := DICECLOUD_URL_RE.match(url):
             loading = await ctx.send("Loading character data from Dicecloud...")

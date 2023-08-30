@@ -31,11 +31,12 @@ log = logging.getLogger(__name__)
 
 ENDPOINT = config.DDB_CHAR_COMPUTATION_ENDPT
 if config.ENVIRONMENT in ("development", "staging"):
-    DDB_URL_RE = re.compile(
-        r"(?:https?://)?(?:stg\.dndbeyond\.com|www\.dndbeyond\.com|ddb\.ac)(?:/profile/.+)?/characters/(\d+)/?"
-    )
+    urls = r"stg\.dndbeyond\.com|www\.dndbeyond\.com|ddb\.ac"
 else:
-    DDB_URL_RE = re.compile(r"(?:https?://)?(?:www\.dndbeyond\.com|ddb\.ac)(?:/profile/.+)?/characters/(\d+)/?")
+    urls = r"www\.dndbeyond\.com|ddb\.ac"
+
+DDB_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})(?:/profile/.+)?/characters/(\d+)/?")
+DDB_PDF_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})/sheet-pdfs/.+_(\d+).pdf")
 SKILL_MAP = {
     "3": "acrobatics",
     "11": "animalHandling",

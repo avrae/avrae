@@ -33,6 +33,9 @@ class RedisIO:
             return await self._db.set(key, value, ex=ex, xx=True)
         return await self._db.set(key, value, ex=ex)
 
+    async def bset(self, key, value):
+        return await self._db.set(key, value)
+
     async def incr(self, key):
         return await self._db.incr(key)
 

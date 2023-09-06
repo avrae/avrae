@@ -159,7 +159,7 @@ class InlineRoller:
             await user.send(embed=embed)
         except disnake.HTTPException:
             return
-        await self.bot.rdb.bset(f"cog.dice.inline_rolling.users.{user.id}.onboarded.message", str(time.time()))
+        await self.bot.rdb.set(f"cog.dice.inline_rolling.users.{user.id}.onboarded.message", str(time.time()))
 
     async def inline_rolling_reaction_onboarding(self, user):
         if await self.bot.rdb.get(f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction"):
@@ -192,7 +192,7 @@ class InlineRoller:
             await user.send(embed=embed)
         except disnake.HTTPException:
             return
-        await self.bot.rdb.bset(f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction", str(time.time()))
+        await self.bot.rdb.set(f"cog.dice.inline_rolling.users.{user.id}.onboarded.reaction", str(time.time()))
 
 
 # ==== character-aware rolls ====

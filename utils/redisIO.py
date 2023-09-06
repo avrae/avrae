@@ -24,7 +24,7 @@ class RedisIO:
         encoded_data = await self._db.get(key)
         return encoded_data.decode() if encoded_data is not None else default
 
-    async def set(self, key, value, *, ex=1, nx=False, xx=False):
+    async def set(self, key, value, *, ex=None, nx=False, xx=False):
         if nx and xx:
             raise ValueError("'nx' and 'xx' args are mutually exclusive")
         if nx:
@@ -32,9 +32,6 @@ class RedisIO:
         elif xx:
             return await self._db.set(key, value, ex=ex, xx=True)
         return await self._db.set(key, value, ex=ex)
-
-    async def bset(self, key, value):
-        return await self._db.set(key, value)
 
     async def incr(self, key):
         return await self._db.incr(key)

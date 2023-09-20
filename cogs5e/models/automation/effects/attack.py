@@ -53,6 +53,7 @@ class Attack(Effect):
         criton = args.last("criton", 20, int)
         ac = args.last("ac", None, int)
         force_roll = args.last("attackroll", None, int, ephem=True)
+        hide_force_roll = args.last("hideforceroll", None, bool, ephem=True) and 1
         min_attack_roll = args.last("attackmin", 0, int)
 
         # ==== caster options ====
@@ -139,7 +140,7 @@ class Attack(Effect):
             if min_attack_roll:
                 reroll_str = f"{reroll_str}mi{min_attack_roll}"
 
-            if force_roll:
+            if force_roll and not hide_force_roll:
                 formatted_d20 = f"{force_roll}"
             elif adv == AdvantageType.ADV:
                 formatted_d20 = f"2d20{reroll_str}kh1"
@@ -153,7 +154,7 @@ class Attack(Effect):
             to_hit_message = "**To Hit**:"
             if ac:
                 to_hit_message = f"**To Hit (AC {ac})**:"
-            if force_roll:
+            if force_roll and not hide_force_roll:
                 to_hit_message = f"{to_hit_message} Forced Roll!"
 
             if b:

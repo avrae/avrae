@@ -135,7 +135,7 @@ class Compendium:
         ldclient.set_config(ldclient.Config(sdk_key=config.LAUNCHDARKLY_SDK_KEY))
 
         if ldclient.get().variation(
-                "data.monsters.gridfs", {"key": "anonymous-user-start-bot", "anonymous": True}, False
+            "data.monsters.gridfs", {"key": "anonymous-user-start-bot", "anonymous": True}, False
         ):
             fs = motor.motor_asyncio.AsyncIOMotorGridFSBucket(mdb)
             data = await fs.open_download_stream_by_name(filename="monsters")

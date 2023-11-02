@@ -134,7 +134,9 @@ class Compendium:
 
         ldclient.set_config(ldclient.Config(sdk_key=config.LAUNCHDARKLY_SDK_KEY))
 
-        if ldclient.get().variation("data.monsters.gridfs", {"key": "anonymous-user-start-bot", "anonymous": True}, False):
+        if ldclient.get().variation(
+                "data.monsters.gridfs", {"key": "anonymous-user-start-bot", "anonymous": True}, False
+        ):
             fs = motor.motor_asyncio.AsyncIOMotorGridFSBucket(mdb)
             data = await fs.open_download_stream_by_name(filename="monsters")
             gridout = await data.read()
@@ -272,7 +274,7 @@ class Compendium:
             self._actions_by_eid[(action.type_id, action.id)].append(action)
 
     def _deserialize_and_register_lookups(
-            self, cls: Type[T], data_source: List[dict], skip_out_filter: Callable[[T], bool] = None, **kwargs
+        self, cls: Type[T], data_source: List[dict], skip_out_filter: Callable[[T], bool] = None, **kwargs
     ) -> List[T]:
         out = []
         for entity_data in data_source:

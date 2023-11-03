@@ -67,7 +67,7 @@ class RedisIO:
             default = {}
         out = await self._db.hgetall(key)
 
-        data = {key.decode('utf-8'): value for key, value in out.items()}
+        data = {key.decode("utf-8"): value for key, value in out.items()}
 
         if data is None:
             return default

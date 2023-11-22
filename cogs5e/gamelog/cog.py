@@ -42,7 +42,9 @@ class GameLog(commands.Cog):
         """
         Links a D&D Beyond campaign to this channel, displaying rolls made on players' character sheets in real time.
 
-        You must be the DM of the campaign to link it to a channel.
+        You must be the DM of the campaign to link it to a channel. 
+        
+        This link should be the url visible on your web browser when you are viewing your campaign and *not* the join link.
 
         Not seeing a player's rolls? Link their D&D Beyond and Discord accounts [here](https://www.dndbeyond.com/account), and check with the `!ddb` command!
         """

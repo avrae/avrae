@@ -924,6 +924,18 @@ SimpleEffect
 
         :type: bool
 
+    .. attribute:: attacks
+
+        A list of the attacks granted by the effect.
+
+        :type: list
+
+    .. attribute:: buttons
+
+        A list of the buttons granted by the effect.
+
+        :type: list
+
 .. _ieffectargs:
 
 Initiative Effect Args

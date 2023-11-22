@@ -54,6 +54,12 @@ You can specify the type of hindrance you want to apply with the ``-choice`` arg
 * ``-choice blindness`` for the Blindness option
 * ``-choice deafness`` for the Deafness option
 
+Dragon's Breath
+-----------------
+You can specify the type of damage you want to apply with the ``-choice`` argument. If a choice is *not* provided at cast time, it will do [chromatic] damage by default, and you will need to use ``-choice [element]`` to specify the damage type each time the breath attack is used, and adjustments may be required to the targets health, depending on resistances.
+
+In this case, it does not check against a value, but instead just inputs whatever is given. This means you can technically give someone Pizza Breath with ``-choice pizza``.
+
 Eldritch Blast
 -----------------
 Eldritch Blast has a number of Eldritch Invocations that can affect it. You can add these to your ``invocations`` cvar to have them automatically applied when you cast Eldritch Blast.
@@ -115,6 +121,13 @@ You can specify the type of shield you want to apply with the ``-choice`` argume
 * ``-choice warmfire`` to create a Warm Shield
 * ``-choice chillcold`` to create a Chill Shield
 
+Flame Strike
+-----------------
+You can specify the type of additional damage you want to apply with the ``-choice`` argument when upcasting. If a choice is *not* provided at cast time, it will do [choice] damage by default, and adjustments may be required to the targets health, depending on resistances.
+
+In this case, it does not check against a value, but instead just inputs whatever is given. This means you can technically have it be a Pizza Strike and deal extra [pizza] damage with ``-choice pizza``.
+
+
 Guardian of Nature
 --------------------
 You can specify the type of form you want to apply with the ``-choice`` argument.
@@ -144,3 +157,9 @@ You can specify the type of damage you want to apply with the ``-choice`` argume
 * ``-choice goodneutralangelicfeyfae`` for the Radiant damage option
 * ``-choice evilfiendish`` for the Necrotic damage option
 
+
+Spirit Shroud
+-----------------
+You can specify the type of damage you want to apply to the granted attack with the ``-choice`` argument. If a choice is *not* provided at cast time, it will do [shroud] damage by default, and adjustments may be required to the targets health, depending on resistances.
+
+In this case, it does not check against a value, but instead just inputs whatever is given. This means you can technically have it be a Pizza Shroud deal [pizza] damage with ``-choice pizza``.

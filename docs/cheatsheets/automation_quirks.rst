@@ -122,6 +122,17 @@ You can specify the type of form you want to apply with the ``-choice`` argument
 * ``-choice "primal beast"`` for the Primal Beast option
 * ``-choice "great tree"`` for the Great Tree option
 
+Hex
+---------
+You can specify the affected ability score with ``-choice``. This also applies to the ``Shift Hex`` action the spell grants for shifting the hex after the target dies.
+
+* ``-choice strength``
+* ``-choice dexterity``
+* ``-choice constitution``
+* ``-choice intelligence``
+* ``-choice wisdom``
+* ``-choice charisma``
+
 Shield
 -----------------
 You can have the automation automatically heal you for the damage you absorb by adding ``-amt [amount]`` to the end of the command. (``-amt 5`` for instance). It will heal you for the amount you specify.

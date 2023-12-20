@@ -222,9 +222,6 @@ class CollectableManagementGroup(commands.Group):
             if bindings := subscription_doc[self.binding_key]:
                 collections.append((the_collection.name, ", ".join(sorted(ab["name"] for ab in bindings))))
 
-        # Mock 40 collections
-        collections.extend([("Collection", "Alias") for _ in range(25)])
-
         # build the resulting embed
         if collections:
             amt_per_page = 20

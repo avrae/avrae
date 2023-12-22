@@ -280,7 +280,7 @@ ATTACK_RE = re.compile(
     r"(?P<damageTypeBase>[aA-zZ ]+) damage[., ]??(?: in melee[.,]?? or [+-]?(?:\d+ "
     r"\((?P<damageRangedDice>.+?)\)|(?P<damageRangedInt>\d+)) (?P<damageTypeRanged>[aA-zZ ]+) "
     r"damage at range[,.]?)?(?:,? or [+-]?(?:\d+ \((?P<damageDiceVers>.+?)\)|(?P<damageIntVers>\d+))"
-    r" (?P<damageTypeVers>[aA-zZ ]+) damage if used with two hands to make a melee attack)?"
+    r" (?P<damageTypeVers>[aA-zZ ]+) damage if used with two hands(?: to make a melee attack)?)?"
     r"(?:,? (?:plus|and) [+-]?(?:\d+ \((?P<damageBonusDice>.+?)\)|(?P<damageBonusInt>\d+)) "
     r"(?P<damageTypeBonus>[aA-zZ ]+) damage)?",
     re.IGNORECASE,

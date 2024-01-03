@@ -102,7 +102,7 @@ class Homebrew(commands.Cog):
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
         # https://critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
         # https://critterdb.com:443/#/bestiary/view/5acfe382de482a4d0ed57b46
-        # https://bestiarybuilder.com/bestiary-viewer/658df202a17b4b6e2645fa0b 
+        # https://bestiarybuilder.com/bestiary-viewer/658df202a17b4b6e2645fa0b
         if (
             match := re.match(
                 r"https?://(?:www\.)?bestiarybuilder.com/bestiary-viewer/([0-9a-f]+)", url

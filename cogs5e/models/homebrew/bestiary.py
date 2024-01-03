@@ -29,7 +29,8 @@ BESTIARY_SCHEMA_VERSION = b"2"
 class Bestiary(CommonHomebrewMixin):
     # site_type = CRITTER_DB or BESTIARY_BUILDER
     def __init__(
-        self, _id, sha256: str, upstream: str, published: bool, site_type: str, name: str, monsters: list = None, desc: str = None, **_
+        self, _id, sha256: str, upstream: str, published: bool, site_type: str, 
+        name: str, monsters: list = None, desc: str = None, **_
     ):
         # metadata - should never change
         super().__init__(_id)
@@ -317,6 +318,7 @@ async def parse_response(resp, sha256_hash):
 def spaced_to_camel(spaced):
     return re.sub(r"\s+(\w)", lambda m: m.group(1).upper(), spaced.lower())
 
+
 def _monster_factory_bestiary_builder(data, bestiary_name):
     if data["hitdice"] is None:
         raise ExternalImportError(f"Monster is missing hit die ({data['name']}).")
@@ -365,7 +367,6 @@ def _monster_factory_bestiary_builder(data, bestiary_name):
         else:
             name_duplications[atk.name] = 1
 
-
     spellcasting = parse_bestiary_builder_spellcasting(data["spellcasting"])
     return Monster(
         name=data["name"],
@@ -403,6 +404,7 @@ def _monster_factory_bestiary_builder(data, bestiary_name):
         source=bestiary_name,
     )
 
+
 def parse_bestiary_builder_traits(data, key):
     traits = []
     attacks = []
@@ -427,13 +429,13 @@ def parse_bestiary_builder_traits(data, key):
 
             attacks.extend(Attack.from_dict(a.dict()) for a in normalized_obj)
 
-
         traits.append(Trait(name, desc))
     return traits, attacks
 
+
 def parse_bestiary_builder_spellcasting(data):
     known_spells = []
-    will_spells  = []
+    will_spells = []
     daily_spells = {}
 
     def extract_spells(key, dc, sab, mod, isWill=False, times=0):
@@ -509,7 +511,6 @@ def parse_bestiary_builder_spellcasting(data):
 
     log.debug(f"Bestiary builder spellbook: {spellbook.to_dict()}")
     return spellbook
-    
 
 
 # criitterdb -> bestiary helpers

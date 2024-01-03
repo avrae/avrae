@@ -440,7 +440,7 @@ def parse_bestiary_builder_spellcasting(data):
 
     def extract_spells(key, dc, sab, mod, isWill=False, times=0):
         spells = data["known_spells"][key]
-        if times: 
+        if times:
             spells = data["known_spells"][key][times]
 
         for name in spells:
@@ -459,9 +459,9 @@ def parse_bestiary_builder_spellcasting(data):
                 SpellbookSpell(real_name, strict=strict, dc=dc, sab=sab, mod=mod)
             )
 
-            if isWill: 
+            if isWill:
                 will_spells.append(real_name)
-            if times: 
+            if times:
                 daily_spells[real_name] = times
 
     # caster type casting
@@ -531,6 +531,7 @@ ATTACK_RE = re.compile(
     re.IGNORECASE,
 )
 JUST_DAMAGE_RE = re.compile(r"[+-]?\d+ \((.+?)\) (\w+) damage", re.IGNORECASE)
+
 
 def _monster_factory_critterdb(data, bestiary_name):
     ability_scores = BaseStats(

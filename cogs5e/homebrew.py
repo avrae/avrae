@@ -116,7 +116,7 @@ class Homebrew(commands.Cog):
             bestiary = await Bestiary.from_bestiary_builder(ctx, bestiary_id)
         elif (
             match := re.match(
-                r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", 
+                r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)",
                 url
             )
         ):

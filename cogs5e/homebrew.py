@@ -85,11 +85,10 @@ class Homebrew(commands.Cog):
 
     @bestiary.command(name="import")
     async def bestiary_import(self, ctx, url):
-        """
-        Imports a bestiary from [Bestiary Builder](https://bestiary.stevnbak.dk) or [CritterDB](https://critterdb.com/).
+        """Imports a bestiary from [Bestiary Builder](https://bestiary.stevnbak.dk) or [CritterDB](https://critterdb.com/).
         **Bestiary Builder:**
         To share a bestiary with Avrae, make sure it is Public or Unlisted.
-        
+
         **CritterDB:**
         To share a bestiary with Avrae, enable Link Sharing in the sharing menu of your bestiary!
 
@@ -108,7 +107,7 @@ class Homebrew(commands.Cog):
             match := re.match(
                 r"https?://(?:www\.)?bestiarybuilder.com/bestiary-viewer/([0-9a-f]+)", url
             )
-        ): 
+        ):
             loading = await ctx.send("Importing bestiary from Bestiary Builder (this may take a while for large bestiaries)...")
             bestiary_id = match.group(1)
             bestiary = await Bestiary.from_bestiary_builder(ctx, bestiary_id)
@@ -125,7 +124,7 @@ class Homebrew(commands.Cog):
             return await ctx.send(
                 "This is not a valid Bestiary Builder or CritterDB link. Ensure the link is to the bestiary and not an individual creature."
             )
-        
+
         await bestiary.subscribe(ctx)
         await bestiary.set_active(ctx)
 
@@ -154,7 +153,7 @@ class Homebrew(commands.Cog):
 
         if old_bestiary.site_type == "BESTIARY_BUILDER":
             bestiary = await Bestiary.from_bestiary_builder(ctx, old_bestiary.upstream)
-        else: 
+        else:
             bestiary = await Bestiary.from_critterdb(ctx, old_bestiary.upstream, old_bestiary.published)
 
         # only do subscription operations if there was actually a change

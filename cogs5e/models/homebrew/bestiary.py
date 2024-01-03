@@ -1,5 +1,4 @@
 import hashlib
-import enum
 import logging
 import re
 from math import floor
@@ -14,18 +13,18 @@ from markdownify import markdownify
 import gamedata as gd
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
 from cogs5e.models.sheet.attack import Attack, AttackList
-from cogs5e.models.sheet.base import BaseStats, Saves, Skill, Skills
+from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
 from gamedata.monster import Monster, MonsterSpellbook, Trait
 from utils.functions import search_and_select
 from utils.subscription_mixins import CommonHomebrewMixin
-from utils.constants import SKILL_NAMES
 log = logging.getLogger(__name__)
 
 # presented to the hash first - update this when bestiary or monster schema changes
 # to invalidate the existing cache of data
-BESTIARY_SCHEMA_VERSION = b"1"
+BESTIARY_SCHEMA_VERSION = b"2"
+
 
 class Bestiary(CommonHomebrewMixin):
     # site_type = CRITTER_DB or BESTIARY_BUILDER
@@ -49,7 +48,7 @@ class Bestiary(CommonHomebrewMixin):
             d["monsters"] = [Monster.from_bestiary(m, d["name"]) for m in d["monsters"]]
         if "published" not in d:  # versions prior to v1.5.11 don't have this tag, default to True
             d["published"] = True
-        if "site_type" not in d: # versions prior to (TODO: SET VERSION) don't have this tag, default to CRITTER_DB
+        if "site_type" not in d:  # versions prior to (TODO: SET VERSION) don't have this tag, default to CRITTER_DB
             d["site_type"] = "CRITTER_DB"
         return cls(**d)
 
@@ -88,13 +87,14 @@ class Bestiary(CommonHomebrewMixin):
                 desc = metadata["description"]
                 sha256_hash.update(name.encode() + desc.encode())
 
-
         # try and find a bestiary by looking up upstream|hash
         # if it exists, return it
         # otherwise commit a new one to the db and return that
         sha256 = sha256_hash.hexdigest()
         log.debug(f"Bestiary hash: {sha256}")
-        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one({"upstream": url, "sha256": sha256, "site_type": "BESTIARY_BUILDER"})
+        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one(
+            {"upstream": url, "sha256": sha256, "site_type": "BESTIARY_BUILDER"}
+        )
         if existing_bestiary:
             log.info("This bestiary already exists")
             existing_bestiary = Bestiary.from_dict(existing_bestiary)
@@ -135,7 +135,9 @@ class Bestiary(CommonHomebrewMixin):
         # otherwise commit a new one to the db and return that
         sha256 = sha256_hash.hexdigest()
         log.debug(f"Bestiary hash: {sha256}")
-        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one({"upstream": url, "sha256": sha256, "site_type": "CRITTER_DB"})
+        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one(
+            {"upstream": url, "sha256": sha256, "site_type": "CRITTER_DB"}
+        )
         if existing_bestiary:
             log.info("This bestiary already exists")
             existing_bestiary = Bestiary.from_dict(existing_bestiary)
@@ -145,7 +147,6 @@ class Bestiary(CommonHomebrewMixin):
         b = cls(None, sha256, url, published, "CRITTER_DB", name, parsed_creatures, desc)
         await b.write_to_db(ctx)
         return b
-
 
     async def load_monsters(self, ctx):
         if not self._monsters:
@@ -323,7 +324,7 @@ def _monster_factory_bestiary_builder(data, bestiary_name):
     proficiency = data["ability_scores"]["prof_bonus"]
     if proficiency is None:
         raise ExternalImportError(f"Monster's proficiency bonus is nonexistent ({data['name']}).")
-    
+
     ability_scores = BaseStats(
         data["ability_scores"]["prof_bonus"] or 0,
         data["ability_scores"]["strength"] or 10,
@@ -425,7 +426,7 @@ def parse_bestiary_builder_traits(data, key):
                 )
 
             attacks.extend(Attack.from_dict(a.dict()) for a in normalized_obj)
-        
+
 
         traits.append(Trait(name, desc))
     return traits, attacks

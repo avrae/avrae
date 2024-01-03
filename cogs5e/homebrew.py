@@ -85,7 +85,7 @@ class Homebrew(commands.Cog):
 
     @bestiary.command(name="import")
     async def bestiary_import(self, ctx, url):
-        """Imports a bestiary from [Bestiary Builder](https://bestiary.stevnbak.dk) or [CritterDB](https://critterdb.com/).
+        """Imports a bestiary from [Bestiary Builder](https://bestiarybuilder.com) or [CritterDB](https://critterdb.com/).
         **Bestiary Builder:**
         To share a bestiary with Avrae, make sure it is Public or Unlisted.
 

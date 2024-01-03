@@ -49,7 +49,7 @@ class Bestiary(CommonHomebrewMixin):
             d["monsters"] = [Monster.from_bestiary(m, d["name"]) for m in d["monsters"]]
         if "published" not in d:  # versions prior to v1.5.11 don't have this tag, default to True
             d["published"] = True
-        if "site_type" not in d:  # versions prior to (TODO: SET VERSION) don't have this tag, default to CRITTER_DB
+        if "site_type" not in d:  # versions prior to v4.3 don't have this tag, default to CRITTER_DB
             d["site_type"] = "CRITTER_DB"
         return cls(**d)
 

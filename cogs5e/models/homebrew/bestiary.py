@@ -29,7 +29,7 @@ BESTIARY_SCHEMA_VERSION = b"2"
 class Bestiary(CommonHomebrewMixin):
     # site_type = CRITTER_DB or BESTIARY_BUILDER
     def __init__(
-        self, _id, sha256: str, upstream: str, published: bool, site_type: str, 
+        self, _id, sha256: str, upstream: str, published: bool, site_type: str,
         name: str, monsters: list = None, desc: str = None, **_
     ):
         # metadata - should never change
@@ -440,7 +440,8 @@ def parse_bestiary_builder_spellcasting(data):
 
     def extract_spells(key, dc, sab, mod, isWill=False, times=0):
         spells = data["known_spells"][key]
-        if times: spells = data["known_spells"][key][times]
+        if times: 
+            spells = data["known_spells"][key][times]
 
         for name in spells:
             # remove any (parenthetical stuff) except (UA)
@@ -457,18 +458,20 @@ def parse_bestiary_builder_spellcasting(data):
             known_spells.append(
                 SpellbookSpell(real_name, strict=strict, dc=dc, sab=sab, mod=mod)
             )
-            if isWill: will_spells.append(real_name)
-            if times: daily_spells[real_name] = times
+
+            if isWill: 
+                will_spells.append(real_name)
+            if times: 
+                daily_spells[real_name] = times
 
     # caster type casting
-    caster_dc  = data["caster_dc"]
+    caster_dc = data["caster_dc"]
     caster_sab = data["caster_sab"]
     caster_mod = data["caster_mod"]
     extract_spells("caster_spells", caster_dc, caster_sab, caster_mod)
 
-
     # innate type casting
-    innate_dc  = data["innate_dc"]
+    innate_dc = data["innate_dc"]
     innate_sab = data["innate_sab"]
     innate_mod = data["innate_mod"]
     # at will
@@ -477,8 +480,7 @@ def parse_bestiary_builder_spellcasting(data):
     for times in data["known_spells"]["daily_spells"].keys():
         extract_spells("daily_spells", innate_dc, innate_sab, innate_mod, False, times)
 
-
-    usual_dc  = caster_dc
+    usual_dc = caster_dc
     usual_sab = caster_sab
     usual_mod = caster_mod
 

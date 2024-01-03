@@ -108,22 +108,29 @@ class Homebrew(commands.Cog):
                 r"https?://(?:www\.)?bestiarybuilder.com/bestiary-viewer/([0-9a-f]+)", url
             )
         ):
-            loading = await ctx.send("Importing bestiary from Bestiary Builder (this may take a while for large bestiaries)...")
+            loading = await ctx.send((
+                "Importing bestiary from Bestiary Builder"
+                " (this may take a while for large bestiaries)..."
+            ))
             bestiary_id = match.group(1)
             bestiary = await Bestiary.from_bestiary_builder(ctx, bestiary_id)
         elif (
             match := re.match(
-                r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", url
+                r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", 
+                url
             )
         ):
-            loading = await ctx.send("Importing bestiary from CritterDB (this may take a while for large bestiaries)...")
+            loading = await ctx.send(
+                "Importing bestiary from CritterDB (this may take a while for large bestiaries)..."
+            )
             bestiary_id = match.group(2)
             is_published = bool(match.group(1))
             bestiary = await Bestiary.from_critterdb(ctx, bestiary_id, published=is_published)
         else:
-            return await ctx.send(
-                "This is not a valid Bestiary Builder or CritterDB link. Ensure the link is to the bestiary and not an individual creature."
-            )
+            return await ctx.send((
+                "This is not a valid Bestiary Builder or CritterDB link. " +
+                "Ensure the link is to the bestiary and not an individual creature."
+            ))
 
         await bestiary.subscribe(ctx)
         await bestiary.set_active(ctx)

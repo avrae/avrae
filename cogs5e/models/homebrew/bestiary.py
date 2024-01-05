@@ -70,7 +70,7 @@ class Bestiary(CommonHomebrewMixin):
     @classmethod
     async def from_bestiary_builder(cls, ctx, url):
         log.info(f"Getting Bestiary Builder ID {url}")
-        api_base = "https://bestiarybuiler.com/api/export/bestiary"
+        api_base = "https://bestiarybuilder.com/api/export/bestiary"
         sha256_hash = hashlib.sha256()
         sha256_hash.update(BESTIARY_SCHEMA_VERSION)
 

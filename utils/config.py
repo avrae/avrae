@@ -1,6 +1,12 @@
 import os
 import sys
 
+# This method will load the variables from .env into the environment for running in local
+#from dotenv import load_dotenv
+
+#load_dotenv()
+
+
 # ==== bot config constants / env vars ====
 TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
 TESTING = bool(os.environ.get("TESTING")) or "test" in sys.argv

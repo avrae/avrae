@@ -6,6 +6,7 @@ d20==1.1.2
 # top-level deps
 aiobotocore==2.9.0
 redis==4.6.0
+
 cachetools==5.3.2
 disnake~=2.9.0
 gspread==5.12.4

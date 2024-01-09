@@ -7,7 +7,7 @@ d20==1.1.2
 aiobotocore==2.9.0
 redis==4.6.0
 cachetools==5.3.2
-disnake~=2.9.1
+disnake~=2.9.0
 gspread==5.12.4
 httplib2==0.22.0
 launchdarkly-server-sdk==7.2.0

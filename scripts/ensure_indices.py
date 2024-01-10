@@ -1,5 +1,4 @@
 import os
-import certifi
 
 from pymongo import ASCENDING, DESCENDING, IndexModel, MongoClient
 
@@ -97,10 +96,8 @@ def run(mdb):
 
 
 if __name__ == "__main__":
-    if os.getenv("ENVIRONMENT", "development") == "development":
-        mclient = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"))
-    else:
-        mclient = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"), tlsCAFile=certifi.where())
+    mclient = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"))
+
 
     mdb = mclient[os.getenv("MONGO_DB", "avrae")]
 

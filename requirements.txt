@@ -29,7 +29,9 @@ boto3==1.33.0  # used by clustering in certain scenarios
 botocore==1.33.12
 dnspython==2.1.0  # used by mongodb
 google-auth==2.13.0
-pymongo==4.6.0  # pin this below 4.0 - TLS config changes in 4.0 are breaking
+pymongo==4.6.1  # pin this below 4.0 - TLS config changes in 4.0 are breaking
 
 # Handling for Datadog
 ddtrace>=0.59.1
+certifi~=2023.11.17
+

@@ -5,6 +5,7 @@ import random
 import sys
 import time
 import traceback
+import certifi
 
 from redis import asyncio as redis
 import d20
@@ -30,6 +31,10 @@ from utils import clustering, config, context
 from utils.feature_flags import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
+
+#Adding dotenv to test in local
+#from dotenv import load_dotenv
+#load_dotenv()
 
 # -----COGS-----
 COGS = (
@@ -79,7 +84,9 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
 
         # dbs
-        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+        #self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+        #TODO: Remove these comments after proper testing
+        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL,tlsCAFile=certifi.where())
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
 

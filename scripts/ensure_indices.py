@@ -97,9 +97,10 @@ def run(mdb):
 
 
 if __name__ == "__main__":
-    #mclient = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"))
-    #TODO: Remove these comments after proper testing
-    mclient = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"),tlsCAFile=certifi.where())
+    if os.getenv("ENVIRONMENT", "development") == "development":
+        mclient = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"))
+    else:
+        mclient = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"), tlsCAFile=certifi.where())
 
     mdb = mclient[os.getenv("MONGO_DB", "avrae")]
 

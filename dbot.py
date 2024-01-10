@@ -32,9 +32,9 @@ from utils.feature_flags import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
-#Adding dotenv to test in local
-#from dotenv import load_dotenv
-#load_dotenv()
+# Adding dotenv to test in local
+# from dotenv import load_dotenv
+# load_dotenv()
 
 # -----COGS-----
 COGS = (

@@ -6,6 +6,7 @@ d20==1.1.2
 # top-level deps
 aiobotocore==2.9.0
 redis==4.6.0
+
 cachetools==5.3.2
 disnake~=2.9.0
 gspread==5.12.4
@@ -33,3 +34,4 @@ pymongo==4.6.1  # pin this below 4.0 - TLS config changes in 4.0 are breaking
 # Handling for Datadog
 ddtrace>=0.59.1
 certifi~=2023.11.17
+

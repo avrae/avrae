@@ -143,7 +143,7 @@ class Tutorials(commands.Cog):
         # confirm
         result = await confirm(ctx, "Are you sure you want to skip the current tutorial objective? (Reply with yes/no)")
         if not result:
-            return await ctx.send("Ok, aborting.")
+            return await ctx.send("Ok, cancelling.")
         # run tutorial state transition
         # commit new state map
         await state.transition(ctx, user_state)
@@ -158,7 +158,7 @@ class Tutorials(commands.Cog):
         # confirm
         result = await confirm(ctx, "Are you sure you want to end the current tutorial? (Reply with yes/no)")
         if not result:
-            return await ctx.send("Ok, aborting.")
+            return await ctx.send("Ok, cancelling.")
         # delete tutorial state map
         await user_state.end_tutorial(ctx)
         await ctx.send("Ok, ended the tutorial.")

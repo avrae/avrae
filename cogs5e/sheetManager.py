@@ -217,7 +217,7 @@ class SheetManager(commands.Cog):
                 for conflict in conflicts:
                     character.overrides.attacks.remove(conflict)
             else:
-                return await ctx.send("Okay, aborting.")
+                return await ctx.send("Okay, cancelling.")
 
         character.overrides.attacks.extend(attacks)
         await character.commit(ctx)
@@ -233,7 +233,7 @@ class SheetManager(commands.Cog):
         character: Character = await ctx.get_character()
         attack = await search_and_select(ctx, character.overrides.attacks, name, lambda a: a.name)
         if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}? (Reply with yes/no)")):
-            return await ctx.send("Okay, aborting delete.")
+            return await ctx.send("Okay, cancelling delete.")
         character.overrides.attacks.remove(attack)
         await character.commit(ctx)
         await ctx.send(f"Okay, deleted attack {attack.name}.")

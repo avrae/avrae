@@ -533,7 +533,7 @@ class GameTrack(commands.Cog):
                 "Are you *absolutely sure* you want to continue?"
             ),
         ):
-            return await ctx.send("Unconfirmed. Aborting.")
+            return await ctx.send("Unconfirmed. Cancelling.")
 
         character.remove_all_known_spells()
 
@@ -642,7 +642,7 @@ class GameTrack(commands.Cog):
             if await confirm(ctx, "Warning: This will overwrite an existing consumable. Continue? (Reply with yes/no)"):
                 character.consumables.remove(conflict)
             else:
-                return await ctx.send("Overwrite unconfirmed. Aborting.")
+                return await ctx.send("Overwrite unconfirmed. Cancelling.")
 
         args = argparse(args)
         _reset = args.last("reset")

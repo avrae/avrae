@@ -36,6 +36,7 @@ from utils.redisIO import RedisIO
 #from dotenv import load_dotenv
 #load_dotenv()
 
+
 # -----COGS-----
 COGS = (
     "cogs5e.dice",
@@ -85,6 +86,7 @@ class Avrae(commands.AutoShardedBot):
 
         # dbs
         self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
 

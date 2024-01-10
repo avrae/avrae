@@ -98,6 +98,7 @@ def run(mdb):
 if __name__ == "__main__":
     mclient = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"))
 
+
     mdb = mclient[os.getenv("MONGO_DB", "avrae")]
 
     input(f"Indexing on {mdb.name}. Press enter to continue.")

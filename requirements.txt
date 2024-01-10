@@ -12,7 +12,7 @@ gspread==5.12.4
 httplib2==0.22.0
 launchdarkly-server-sdk==7.2.0
 markdownify==0.11.6
-motor==3.3.2
+motor==2.3.1
 Pillow==10.1.0
 psutil==5.9.7
 pydantic~=1.10.13
@@ -28,8 +28,7 @@ boto3==1.33.0  # used by clustering in certain scenarios
 botocore==1.33.12
 dnspython==2.1.0  # used by mongodb
 google-auth==2.13.0
-pymongo==4.6.1  # pin this below 4.0 - TLS config changes in 4.0 are breaking
+pymongo==3.11.3  # pin this below 4.0 - TLS config changes in 4.0 are breaking
 
 # Handling for Datadog
 ddtrace>=0.59.1
-certifi~=2023.11.17

@@ -84,10 +84,10 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
 
         # dbs
-        if config.ENVIRONMENT == "development":
-            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
-        else:
+        if config.ENVIRONMENT == "nightly":
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL, tlsCAFile=certifi.where())
+        else:
+            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
 

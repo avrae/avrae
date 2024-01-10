@@ -19,6 +19,7 @@ from cogs5e.models.sheet.spellcasting import SpellbookSpell
 from gamedata.monster import Monster, MonsterSpellbook, Trait
 from utils.functions import search_and_select
 from utils.subscription_mixins import CommonHomebrewMixin
+
 log = logging.getLogger(__name__)
 
 # presented to the hash first - update this when bestiary or monster schema changes
@@ -29,8 +30,16 @@ BESTIARY_SCHEMA_VERSION = b"2"
 class Bestiary(CommonHomebrewMixin):
     # site_type = CRITTER_DB or BESTIARY_BUILDER
     def __init__(
-        self, _id, sha256: str, upstream: str, published: bool, site_type: str,
-        name: str, monsters: list = None, desc: str = None, **_
+        self,
+        _id,
+        sha256: str,
+        upstream: str,
+        published: bool,
+        site_type: str,
+        name: str,
+        monsters: list = None,
+        desc: str = None,
+        **_,
     ):
         # metadata - should never change
         super().__init__(_id)
@@ -455,9 +464,7 @@ def parse_bestiary_builder_spellcasting(data):
                 real_name = s
                 strict = False
 
-            known_spells.append(
-                SpellbookSpell(real_name, strict=strict, dc=dc, sab=sab, mod=mod)
-            )
+            known_spells.append(SpellbookSpell(real_name, strict=strict, dc=dc, sab=sab, mod=mod))
 
             if isWill:
                 will_spells.append(real_name)

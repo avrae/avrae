@@ -2,8 +2,8 @@ import os
 import sys
 
 # This method will load the variables from .env into the environment for running in local
-#from dotenv import load_dotenv
-#load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
 
 
 # ==== bot config constants / env vars ====

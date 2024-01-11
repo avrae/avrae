@@ -32,9 +32,9 @@ from utils.feature_flags import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
-#This method will load the variables from .env into the environment for running in local
-#from dotenv import load_dotenv
-#load_dotenv()
+# This method will load the variables from .env into the environment for running in local
+# from dotenv import load_dotenv
+# load_dotenv()
 
 
 # -----COGS-----

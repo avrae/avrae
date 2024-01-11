@@ -238,7 +238,7 @@ class AliasAuthor:
     @property
     def display_name(self):
         """
-        The user's display name - nickname if applicable, otherwise same as their name.
+        The user's display name if applicable, otherwise same as their name.
 
         :rtype: str
         """
@@ -247,12 +247,12 @@ class AliasAuthor:
     @property
     def guild_nickname(self):
         """
-        The user's display name - nickname if applicable, otherwise same as their name.
+        The user's guild (server) nickname if applicable, otherwise same as their name.
 
         :rtype: str
         """
         return self._guild_nickname
-        
+
     def __str__(self):
         return f"{self.name}#{self.discriminator}"
 

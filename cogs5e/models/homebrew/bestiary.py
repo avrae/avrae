@@ -92,7 +92,7 @@ class Bestiary(CommonHomebrewMixin):
                     raise ExternalImportError("Error importing bestiary: bad data. Are you sure the link is right?")
 
                 if raw.get("error", None):
-                    raise ExternalImportError("Error importing bestiary: this bestiary is private or does not exist.")
+                    raise ExternalImportError(f"Error importing bestiary: {raw['error']}")
 
                 creatures = raw["creatures"]
                 metadata = raw["metadata"]

@@ -398,7 +398,7 @@ def ordinal(number: int) -> str:
     if number // 10 == 1:
         return f"{number}th"
     else:
-        # index rolls over when index increases by 10, with the number shifted 1 to the left to match the start a 1
+        # index rolls over when number increases by 10, with the number shifted 1 to the left to match the 1st with a 1
         index = min(3, (abs(number) - 1) % 10)
         return f"{number}{ORDINAL_SUFFIXES[index]}"
 

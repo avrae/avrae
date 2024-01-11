@@ -91,6 +91,9 @@ class Bestiary(CommonHomebrewMixin):
                 except (ValueError, aiohttp.ContentTypeError):
                     raise ExternalImportError("Error importing bestiary: bad data. Are you sure the link is right?")
 
+                if raw.get("error", None):
+                    raise ExternalImportError("Error importing bestiary: this bestiary is private or does not exist.")
+
                 creatures = raw["creatures"]
                 metadata = raw["metadata"]
                 name = metadata["name"]

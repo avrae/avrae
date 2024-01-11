@@ -27,6 +27,7 @@ from utils.functions import (
     search_and_select,
     try_delete,
     camel_to_title,
+    ordinal,
 )
 from . import (
     Combat,
@@ -997,8 +998,9 @@ class InitTracker(commands.Cog):
 
         for i, t in enumerate([target_name] + args.get("t")):
             target = await combat.select_combatant(
+                ctx,
                 t,
-                f"Pick your {i+1}{['th','st','nd','rd','th'][(n // 10 % 10 != 1) * min(n % 10, 4)]} target.",
+                f"Pick your {ordinal(i+1)} target.",
                 select_group=True,
             )
             if isinstance(target, CombatantGroup):

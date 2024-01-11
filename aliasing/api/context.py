@@ -202,10 +202,11 @@ class AliasAuthor:
         """
         :type author: disnake.User
         """
-        self._name = author.name
+        self._name = author.name  # unique discord name
         self._id = author.id
         self._discriminator = author.discriminator
-        self._display_name = author.display_name
+        self._display_name = author.display_name  # Profile name
+        self._guild_nickname = author.nick  # Guild (Server) nickname
 
     @property
     def name(self):
@@ -243,6 +244,15 @@ class AliasAuthor:
         """
         return self._display_name
 
+    @property
+    def guild_nickname(self):
+        """
+        The user's display name - nickname if applicable, otherwise same as their name.
+
+        :rtype: str
+        """
+        return self._guild_nickname
+        
     def __str__(self):
         return f"{self.name}#{self.discriminator}"
 

@@ -252,7 +252,7 @@ class AliasAuthor:
         :rtype: str
         """
         return self._guild_nickname
-        
+
     def __str__(self):
         return f"{self.name}#{self.discriminator}"
 

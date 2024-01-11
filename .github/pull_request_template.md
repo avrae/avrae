@@ -1,6 +1,9 @@
 ### Summary
 Here goes a short summary about what the PR is about.
 
+### Changelog Entry
+Here goes a short one line about the PR to display in the Changelog ( optional )
+
 ### Checklist
 <!-- Put an "x" inside the braces to tick checkboxes, e.g. [x]. -->
 #### PR Type

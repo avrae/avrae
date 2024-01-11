@@ -6,6 +6,7 @@ import sys
 import time
 import traceback
 
+
 from redis import asyncio as redis
 import d20
 import disnake
@@ -30,6 +31,11 @@ from utils import clustering, config, context
 from utils.feature_flags import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
+
+#This method will load the variables from .env into the environment for running in local
+#from dotenv import load_dotenv
+#load_dotenv()
+
 
 # -----COGS-----
 COGS = (
@@ -80,6 +86,7 @@ class Avrae(commands.AutoShardedBot):
 
         # dbs
         self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
 

@@ -370,7 +370,12 @@ def _monster_factory_bestiary_builder(data, bestiary_name):
     attacks.extend(atks)
     mythic_actions, atks = parse_bestiary_builder_traits(data, "mythic")
     attacks.extend(atks)
-
+    # Avrae does not display these but we can at least parse their automation
+    _, atks = parse_bestiary_builder_traits(data, "lair")
+    attacks.extend(atks)
+    _, atks = parse_bestiary_builder_traits(data, "regional")
+    attacks.extend(atks)
+    
     name_duplications = {}
     for atk in attacks:
         if atk.name in name_duplications:

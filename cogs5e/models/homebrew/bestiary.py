@@ -375,7 +375,7 @@ def _monster_factory_bestiary_builder(data, bestiary_name):
     attacks.extend(atks)
     _, atks = parse_bestiary_builder_traits(data, "regional")
     attacks.extend(atks)
-    
+
     name_duplications = {}
     for atk in attacks:
         if atk.name in name_duplications:

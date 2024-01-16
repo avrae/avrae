@@ -5,6 +5,7 @@ import random
 import sys
 import time
 import traceback
+import gc
 
 
 from redis import asyncio as redis
@@ -274,7 +275,12 @@ async def on_ready():
 
 @bot.event
 async def on_resumed():
-    log.info("resumed.")
+    log.info("Bot has resumed connection to Discord.")
+    gc.collect()  # Perform garbage collection to clean up circular references
+    log.info("Garbage collection has been executed after resuming.")
+
+    collected = gc.collect()
+    log.info(f"Garbage collector: collected {collected} objects.")
 
 
 @bot.listen("on_command_error")

@@ -5,6 +5,7 @@ import random
 import sys
 import time
 import traceback
+import gc
 
 
 from redis import asyncio as redis
@@ -117,6 +118,9 @@ class Avrae(commands.AutoShardedBot):
         # ddb game log
         self.glclient = GameLogClient(self)
         self.glclient.init()
+
+        # lock for garbage collection
+        self.gc_lock = asyncio.Lock()
 
     async def setup_rdb(self):
         return RedisIO(await redis.from_url(url=config.REDIS_URL))
@@ -273,8 +277,14 @@ async def on_ready():
 
 
 @bot.event
-async def on_resumed():
-    log.info("resumed.")
+async def on_resumed(self):
+    if self.gc_lock.locked():
+        return
+
+    async with self.gc_lock:
+        await asyncio.sleep(2.0)  # Wait for 2 seconds
+        collected = gc.collect()  # Perform garbage collection
+        log.info(f"Garbage collector: collected {collected} objects.")
 
 
 @bot.listen("on_command_error")

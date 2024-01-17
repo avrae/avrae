@@ -217,8 +217,9 @@ class Monster(StatBlock, Sourced):
 
     @classmethod
     def from_bestiary(cls, data, source):
-        for key in ("traits", "actions", "reactions", "legactions"):
-            data[key] = [Trait(**t) for t in data.pop(key)]
+        for key in ("traits", "actions", "reactions", "legactions", "bonus_actions", "mythic_actions"):
+            if data[key]:
+                data[key] = [Trait(**t) for t in data.pop(key)]
         data["spellcasting"] = MonsterSpellbook.from_dict(data.pop("spellbook"))
         data["saves"] = Saves.from_dict(data["saves"])
         data["skills"] = Skills.from_dict(data["skills"])

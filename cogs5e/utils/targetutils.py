@@ -5,6 +5,7 @@ from cogs5e.initiative import CombatNotFound, CombatantGroup
 from cogs5e.models.character import Character
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from utils.argparser import ParsedArguments, argparse
+from utils.functions import ordinal
 
 if TYPE_CHECKING:
     from utils.context import AvraeContext
@@ -77,7 +78,12 @@ async def definitely_combat(ctx: "AvraeContext", combat: "Combat", args: ParsedA
             contextargs = argparse(contextargs)
 
         try:
-            target = await combat.select_combatant(ctx, t, f"Select target #{i + 1}.", select_group=allow_groups)
+            target = await combat.select_combatant(
+                ctx,
+                t,
+                f"Pick your {ordinal(i+1)} target.",
+                select_group=allow_groups,
+            )
         except SelectionException:
             raise InvalidArgument(f"Target {t} not found.")
 

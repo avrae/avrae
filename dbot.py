@@ -119,7 +119,7 @@ class Avrae(commands.AutoShardedBot):
         self.glclient = GameLogClient(self)
         self.glclient.init()
 
-        #lock for garbage collection
+        # lock for garbage collection
         self.gc_lock = asyncio.Lock()
 
     async def setup_rdb(self):

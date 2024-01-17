@@ -91,6 +91,9 @@ class Bestiary(CommonHomebrewMixin):
                 except (ValueError, aiohttp.ContentTypeError):
                     raise ExternalImportError("Error importing bestiary: bad data. Are you sure the link is right?")
 
+                if raw.get("error", None):
+                    raise ExternalImportError(f"Error importing bestiary: {raw['error']}")
+
                 creatures = raw["creatures"]
                 metadata = raw["metadata"]
                 name = metadata["name"]
@@ -366,6 +369,11 @@ def _monster_factory_bestiary_builder(data, bestiary_name):
     legactions, atks = parse_bestiary_builder_traits(data, "legactions")
     attacks.extend(atks)
     mythic_actions, atks = parse_bestiary_builder_traits(data, "mythic")
+    attacks.extend(atks)
+    # Avrae does not display these but we can at least parse their automation
+    _, atks = parse_bestiary_builder_traits(data, "lair")
+    attacks.extend(atks)
+    _, atks = parse_bestiary_builder_traits(data, "regional")
     attacks.extend(atks)
 
     name_duplications = {}

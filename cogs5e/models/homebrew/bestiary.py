@@ -477,7 +477,7 @@ def parse_bestiary_builder_spellcasting(data):
             if isWill:
                 will_spells.append(real_name)
             if times:
-                daily_spells[real_name] = times
+                daily_spells[real_name] = int(times)
 
     # caster type casting
     caster_dc = data["caster_dc"]

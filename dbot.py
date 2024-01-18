@@ -120,7 +120,7 @@ class Avrae(commands.AutoShardedBot):
         self.glclient.init()
 
         # lock for garbage collection
-        bot.gc_lock = asyncio.Lock()
+        self.gc_lock = asyncio.Lock()
 
     async def setup_rdb(self):
         return RedisIO(await redis.from_url(url=config.REDIS_URL))

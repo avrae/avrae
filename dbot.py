@@ -120,7 +120,7 @@ class Avrae(commands.AutoShardedBot):
         self.glclient.init()
 
         # lock for garbage collection
-        self.gc_lock = asyncio.Lock()
+        bot.gc_lock = asyncio.Lock()
 
     async def setup_rdb(self):
         return RedisIO(await redis.from_url(url=config.REDIS_URL))
@@ -277,11 +277,11 @@ async def on_ready():
 
 
 @bot.event
-async def on_resumed(self):
-    if self.gc_lock.locked():
+async def on_resumed():
+    if bot.gc_lock.locked():
         return
 
-    async with self.gc_lock:
+    async with bot.gc_lock:
         await asyncio.sleep(2.0)  # Wait for 2 seconds
         collected = gc.collect()  # Perform garbage collection
         log.info(f"Garbage collector: collected {collected} objects.")

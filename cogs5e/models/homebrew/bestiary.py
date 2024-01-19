@@ -415,7 +415,7 @@ def _monster_factory_bestiary_builder(data, bestiary_name):
         la_per_round=data["la_per_round"],
         attacks=attacks,
         proper=data["proper"],
-        image_url="",
+        image_url=data["image_url"],
         spellcasting=spellcasting,
         homebrew=True,
         source=bestiary_name,

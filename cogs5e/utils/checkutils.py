@@ -74,9 +74,9 @@ def run_check(skill_key, caster, args, embed):
             mapper=lambda effect: effect.effects.check_dis, reducer=lambda checks: set().union(*checks), default=set()
         )
         if skill_key in cadv_effects or base_ability_key in cadv_effects:
-            combat_context["adv"] = True
+            combat_context["adv"] = ["True"]
         if skill_key in cdis_effects or base_ability_key in cdis_effects:
-            combat_context["dis"] = True
+            combat_context["dis"] = ["True"]
 
         args.add_context("combat", combat_context)
         args.set_context("combat")
@@ -132,9 +132,9 @@ def run_save(save_key, caster, args, embed):
             mapper=lambda effect: effect.effects.save_dis, reducer=lambda saves: set().union(*saves), default=set()
         )
         if stat in sadv_effects:
-            combat_context["adv"] = True  # Because adv() only checks last() just forcibly add them
+            combat_context["adv"] = ["True"]  # Because adv() only checks last() just forcibly add them
         if stat in sdis_effects:
-            combat_context["dis"] = True
+            combat_context["dis"] = ["True"]
 
         args.add_context("combat", combat_context)
         args.set_context("combat")

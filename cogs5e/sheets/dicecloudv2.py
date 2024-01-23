@@ -133,7 +133,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         race = None
         subrace = None
         background = None
-        for prop in self._by_type.get("folder") + self._by_type.get("feature") + self._by_type.get("note"):
+        for prop in self._by_type["folder"] + self._by_type["feature"] + self._by_type["note"]:
             if race is None and "race" in prop["tags"]:
                 race = prop.get("name")
             elif subrace is None and "subrace" in prop["tags"]:
@@ -200,7 +200,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         # keep track of which properties' parents weren't registered by the time we reach them
         orphans = collections.defaultdict(lambda: [])  # :'(
-        for prop in self.character_data.get("creatureProperties"):
+        for prop in self.character_data.get("creatureProperties", []):
             # if a property is marked for removal, skip it
             if prop.get("removed"):
                 continue
@@ -255,7 +255,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         consumables = []
 
         # we iterate over all attributes here so we don't have to loop over it multiple times
-        for attr in self._by_type.get("attribute"):
+        for attr in self._by_type["attribute"]:
             if attr.get("inactive") or attr.get("overridden"):
                 continue
             try:
@@ -365,7 +365,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         # setup a default dict for collecting class levels
         levels = collections.defaultdict(lambda: 0)
-        for level in self._by_type.get("class"):
+        for level in self._by_type["class"]:
             try:
                 var_name = level["variableName"]
                 # BloodHunter rather than bloodHunter

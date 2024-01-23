@@ -3,7 +3,6 @@ name: Deploy Nightly
 on:
   push:
     branches:
-      - master
       - nightly
   workflow_dispatch:
 

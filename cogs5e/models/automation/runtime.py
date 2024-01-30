@@ -167,7 +167,7 @@ class AutomationContext:
 
         if phrase:
             # blockquote phrase
-            phrase = "\n".join(["> *" + x + "*" for x in phrase.split("\n")])
+            phrase = f">>> {phrase}"
             self.embed.description = phrase
 
         # add meta field (any lingering items in field queue that were not closed added to meta)

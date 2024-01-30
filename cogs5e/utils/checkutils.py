@@ -196,7 +196,7 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
     # phrase
     if phrase:
         # blockquote phrase to match actions
-        desc_out.append(f">>> {phrase}")
+        desc_out.append(f">>> *{phrase}*")
 
     # DC footer
     if iterations > 1 and dc:

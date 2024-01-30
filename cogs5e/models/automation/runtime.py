@@ -167,7 +167,7 @@ class AutomationContext:
 
         if phrase:
             # blockquote phrase to specify it is a phrase
-            self.embed.description = f">>> {phrase}"
+            self.embed.description = f">>> *{phrase}*"
 
         # add meta field (any lingering items in field queue that were not closed added to meta)
         self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)

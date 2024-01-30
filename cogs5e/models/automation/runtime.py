@@ -164,8 +164,11 @@ class AutomationContext:
 
         # description
         phrase = self.args.join("phrase", "\n")
+
         if phrase:
-            self.embed.description = f"*{phrase}*"
+            # blockquote phrase
+            phrase = "\n".join(["> *" + x + "*" for x in phrase.split("\n")])
+            self.embed.description = phrase
 
         # add meta field (any lingering items in field queue that were not closed added to meta)
         self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)

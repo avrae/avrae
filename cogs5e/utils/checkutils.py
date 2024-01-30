@@ -195,7 +195,9 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
 
     # phrase
     if phrase:
-        desc_out.append(f"*{phrase}*")
+        # blockquote phrase
+        phrase = "\n".join(["> *" + x + "*" for x in phrase.split("\n")])
+        desc_out.append(phrase)
 
     # DC footer
     if iterations > 1 and dc:

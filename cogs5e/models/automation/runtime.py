@@ -317,6 +317,7 @@ class AutomationTarget:
 
     # ==== helpers ====
     def damage(self, autoctx: AutomationContext, amount: int, allow_overheal: bool = True):
+        # add damage footer when we attack a Combatant
         if not self.is_simple:
             result = self.target.modify_hp(-amount, overflow=allow_overheal)
             autoctx.footer_queue(f"{self.target.name}: {result}")
@@ -327,6 +328,9 @@ class AutomationTarget:
 
                 if self.target.is_concentrating() and amount > 0:
                     autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
+        # for a non-init target, we still want to display that a damage node was run in the footer.
+        else:
+            autoctx.footer_queue(f"{self.target or '<No Target>'}: Dealt {amount} damage!")
 
     # ==== target base class helpers ====
     @cached_property

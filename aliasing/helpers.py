@@ -411,7 +411,7 @@ async def parse_snippets(args, ctx, statblock=None, character=None, base_args=No
             else:
                 # in case the user is using old-style on the fly templating
                 arg = await evaluator.transformed_str_async(arg, execution_scope=ExecutionScope.PERSONAL_SNIPPET)
-                new_args.append(argquote(arg))
+                new_args.append(arg)
     finally:
         await evaluator.run_commits()
         await send_warnings(ctx, evaluator.warnings)

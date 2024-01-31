@@ -114,7 +114,7 @@ class SheetManager(commands.Cog):
 
     # ---- attack management commands ----
     @action.command(name="add", aliases=["create"])
-    async def attack_add(self, ctx, name, *args):
+    async def attack_add(self, ctx, name, *, args=""):
         """
         Adds an attack to the active character.
         __Valid Arguments__
@@ -246,7 +246,7 @@ class SheetManager(commands.Cog):
         {VALID_SAVE_ARGS}
         """,
     )
-    async def save(self, ctx, skill, *args):
+    async def save(self, ctx, skill, *, args=""):
         if skill == "death":
             base_cmd = "game deathsave"
             if args and (sub_cmd := args[0].lower()) in ("fail", "success", "reset"):
@@ -255,7 +255,7 @@ class SheetManager(commands.Cog):
             ds_cmd = self.bot.get_command(base_cmd)
             if ds_cmd is None:
                 return await ctx.send("Error: GameTrack cog not loaded.")
-            return await ctx.invoke(ds_cmd, *args)
+            return await ctx.invoke(ds_cmd, args=args)
 
         char: Character = await ctx.get_character()
 
@@ -283,7 +283,7 @@ class SheetManager(commands.Cog):
         {VALID_CHECK_ARGS}
         """,
     )
-    async def check(self, ctx, check, *args):
+    async def check(self, ctx, check, *, args=""):
         char: Character = await ctx.get_character()
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, camel_to_title)
         args = await self.new_arg_stuff(args, ctx, char, base_args=[check])
@@ -373,7 +373,7 @@ class SheetManager(commands.Cog):
         await ctx.send("Portrait override removed!")
 
     @commands.command(hidden=True)  # hidden, as just called by token command
-    async def playertoken(self, ctx, *args):
+    async def playertoken(self, ctx, *, args=""):
         """
         Generates and sends a token for use on VTTs.
         __Valid Arguments__
@@ -518,7 +518,7 @@ class SheetManager(commands.Cog):
 
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
-    async def update(self, ctx, *args):
+    async def update(self, ctx, *, args=""):
         """
         Updates the current character sheet, preserving all settings.
         __Valid Arguments__
@@ -663,7 +663,7 @@ class SheetManager(commands.Cog):
 
     @commands.command(name="import")
     @commands.max_concurrency(1, BucketType.user)
-    async def import_sheet(self, ctx, url: str, *args):
+    async def import_sheet(self, ctx, url: str, *, args=""):
         """
         Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
@@ -738,11 +738,11 @@ class SheetManager(commands.Cog):
 
     @commands.command(hidden=True, aliases=["gsheet", "dicecloud"])
     @commands.max_concurrency(1, BucketType.user)
-    async def beyond(self, ctx, url: str, *args):
+    async def beyond(self, ctx, url: str, *, args=""):
         """
         This is an old command and has been replaced. Use `!import` instead!
         """
-        await self.import_sheet(ctx, url, *args)
+        await self.import_sheet(ctx, url, args=args)
 
     @staticmethod
     async def _load_sheet(ctx, parser, args, loading):

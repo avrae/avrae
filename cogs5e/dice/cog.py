@@ -206,7 +206,7 @@ class Dice(commands.Cog):
         {VALID_CHECK_ARGS}
         """,
     )
-    async def monster_check(self, ctx, monster_name, check, *args):
+    async def monster_check(self, ctx, monster_name, check, *, args=""):
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
         args = await helpers.parse_snippets(args, ctx, statblock=monster, base_args=[monster_name, check])
@@ -229,7 +229,7 @@ class Dice(commands.Cog):
         {VALID_SAVE_ARGS}
         """,
     )
-    async def monster_save(self, ctx, monster_name, save_stat, *args):
+    async def monster_save(self, ctx, monster_name, save_stat, *, args=""):
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
         args = await helpers.parse_snippets(args, ctx, statblock=monster, base_args=[monster_name, save_stat])
@@ -254,7 +254,7 @@ class Dice(commands.Cog):
         {VALID_AUTOMATION_ARGS}
         """,
     )
-    async def monster_cast(self, ctx, monster_name, spell_name, *args):
+    async def monster_cast(self, ctx, monster_name, spell_name, *, args=""):
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
         args = await helpers.parse_snippets(args, ctx, statblock=monster, base_args=[monster_name, spell_name])

@@ -768,7 +768,7 @@ class Lookup(commands.Cog):
         await destination.send(embed=embed)
 
     @commands.command()
-    async def token(self, ctx, name=None, *args):
+    async def token(self, ctx, name=None, *, args=""):
         """
         Shows a monster or your character's token.
         __Valid Arguments__
@@ -780,8 +780,8 @@ class Lookup(commands.Cog):
             if token_cmd is None:
                 return await ctx.send("Error: SheetManager cog not loaded.")
             if name:
-                args = (name, *args)
-            return await ctx.invoke(token_cmd, *args)
+                args = name + " " + args
+            return await ctx.invoke(token_cmd, args=args)
 
         # select monster
         token_args = argparse(args)
@@ -1059,7 +1059,7 @@ class Lookup(commands.Cog):
     @commands.command(hidden=True)
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def lookup_settings(self, ctx, *args):
+    async def lookup_settings(self, ctx, *, args=""):
         """This command has been replaced by `!servsettings`. If you're used to it, it still works like before!"""
         guild_settings = await ctx.get_server_settings()
         if not args:

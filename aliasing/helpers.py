@@ -370,7 +370,7 @@ async def parse_snippets(args, ctx, statblock=None, character=None, base_args=No
 
     original_args = str((base_args or []) + args)
 
-    new_list = []
+    new_args = []
 
     # set up the evaluator
     evaluator = await evaluators.ScriptingEvaluator.new(ctx)

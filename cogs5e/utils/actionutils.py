@@ -110,7 +110,7 @@ async def run_action(
     else:
         embed.title = f"{name} uses {action.name}!"
 
-    if action.automation is not None:
+    if action.automation:
         result = await run_automation(ctx, embed, args, caster, action.automation, targets, combat)
     else:
         # else, show action description and note that it can't be automated

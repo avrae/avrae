@@ -46,7 +46,6 @@ async def generate_token(img_url, is_subscriber=False, token_args=None):
             box = (0, 0, width, width)
         else:
             box = (width / 2 - height / 2, 0, width / 2 + height / 2, height)
-        img = img.crop(box)
         img = img.resize(TOKEN_SIZE, Image.Resampling.LANCZOS, box)
 
         # paste mask

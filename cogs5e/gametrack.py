@@ -284,7 +284,7 @@ class GameTrack(commands.Cog):
         await gameutils.send_hp_result(ctx, caster, delta)
 
     @game.group(name="deathsave", aliases=["ds"], invoke_without_command=True)
-    async def game_deathsave(self, ctx, *args):
+    async def game_deathsave(self, ctx, *, args=""):
         """Commands to manage character death saves.
         __Valid Arguments__
         See `!help save`."""
@@ -476,7 +476,7 @@ class GameTrack(commands.Cog):
         await ep.send_to(ctx)
 
     @spellbook.command(name="add")
-    async def spellbook_add(self, ctx, spell_name, *args):
+    async def spellbook_add(self, ctx, spell_name, *, args=""):
         """
         Adds a spell to the spellbook override.
 
@@ -622,7 +622,7 @@ class GameTrack(commands.Cog):
         await ctx.send(embed=result_embed)
 
     @customcounter.command(name="create")
-    async def customcounter_create(self, ctx, name, *args):
+    async def customcounter_create(self, ctx, name, *, args=""):
         """
         Creates a new custom counter.
         __Valid Arguments__
@@ -677,7 +677,7 @@ class GameTrack(commands.Cog):
             await ctx.send(f"Custom counter created.\n**{name}**\n{new_counter.full_str()}")
 
     @customcounter.command(name="edit")
-    async def customcounter_edit(self, ctx, name, *args):
+    async def customcounter_edit(self, ctx, name, *, args=""):
         """
         Edits an existing custom counter replacing passed arguments.
 

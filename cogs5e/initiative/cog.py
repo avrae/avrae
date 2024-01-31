@@ -109,7 +109,7 @@ class InitTracker(commands.Cog):
         await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
 
     @init.command()
-    async def begin(self, ctx, *args):
+    async def begin(self, ctx, *, args=""):
         """
         Begins combat in the channel the command is invoked in.
         __Valid Arguments__
@@ -166,7 +166,7 @@ class InitTracker(commands.Cog):
         await ctx.send(out)
 
     @init.command()
-    async def add(self, ctx, modifier: int, name: str, *args):
+    async def add(self, ctx, modifier: int, name: str, *, args=""):
         """
         Adds a generic combatant to the initiative order.
 
@@ -235,7 +235,7 @@ class InitTracker(commands.Cog):
         await combat.final(ctx)
 
     @init.command()
-    async def madd(self, ctx, monster_name: str, *args):
+    async def madd(self, ctx, monster_name: str, *, args=""):
         """Adds a monster to combat.
         __Valid Arguments__
         `-name <name>` - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
@@ -526,7 +526,7 @@ class InitTracker(commands.Cog):
         await combat.final(ctx)
 
     @init.command(name="reroll", aliases=["shuffle"])
-    async def reroll(self, ctx, *args):
+    async def reroll(self, ctx, *, args=""):
         """
         Rerolls initiative for all combatants, and starts a new round of combat.
         __Valid Arguments__
@@ -562,7 +562,7 @@ class InitTracker(commands.Cog):
         await combat.final(ctx)
 
     @init.command(name="meta", aliases=["metaset"])
-    async def metasetting(self, ctx, *settings):
+    async def metasetting(self, ctx, *, settings=""):
         """
         Changes the settings of the active combat.
         __Valid Settings__
@@ -649,7 +649,7 @@ class InitTracker(commands.Cog):
         await combat.final(ctx)
 
     @init.command(aliases=["opts"])
-    async def opt(self, ctx, name: str, *args):
+    async def opt(self, ctx, name: str, *, args=""):
         """
         Edits the options of a combatant.
         __Valid Arguments__
@@ -957,7 +957,7 @@ class InitTracker(commands.Cog):
         await gameutils.send_hp_result(ctx, combatant, delta)
 
     @init.command()
-    async def effect(self, ctx, target_name: str, effect_name: str, *args):
+    async def effect(self, ctx, target_name: str, effect_name: str, *, args=""):
         """
         Attaches a status effect to a combatant.
         [args] is a set of args that affects a combatant in combat.

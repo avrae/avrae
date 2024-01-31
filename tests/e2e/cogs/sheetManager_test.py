@@ -105,7 +105,7 @@ class TestComplexAttacks:
         await _receive_attack()
 
         avrae.message("!a TESTATTACKFOOBAR -phrase foobar -title barfoo")
-        await _receive_attack(disnake.Embed(description=r"\*foobar\*", title="barfoo"))
+        await _receive_attack(disnake.Embed(description=r">>> \*foobar\*", title="barfoo"))
 
         avrae.message("!a TESTATTACKFOOBAR adv")
         await _receive_attack()

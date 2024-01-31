@@ -368,9 +368,7 @@ async def parse_snippets(args, ctx, statblock=None, character=None, base_args=No
     if not isinstance(args, list):
         args = list(args)
 
-    original_args = args[:]
-    if base_args is not None:
-        original_args = base_args + original_args
+    original_args = str((base_args or []) + args)
 
     new_list = []
 
@@ -395,7 +393,7 @@ async def parse_snippets(args, ctx, statblock=None, character=None, base_args=No
                 await workshop_entitlements_check(ctx, the_snippet)
 
             if the_snippet:
-                the_snippet.code = the_snippet.code.replace("&ARGS&", str(original_args))
+                the_snippet.code = the_snippet.code.replace("&ARGS&", original_args)
                 # enter the evaluator
                 execution_scope = ExecutionScope.SERVER_SNIPPET if server_invoker else ExecutionScope.PERSONAL_SNIPPET
                 new_args += argsplit(

@@ -3,6 +3,7 @@ Created on May 6, 2017
 
 @author: mommo
 """
+
 from cogs5e.models.errors import ExternalImportError
 
 

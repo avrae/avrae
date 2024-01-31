@@ -7,6 +7,7 @@ Redis - if the key is present in for a given guild channel, that channel is cons
 This key is set when a combat starts and expired 2 minutes after a combat ends in a channel that has opted in to NLP
 recording.
 """
+
 import datetime
 import logging
 import re

@@ -3,6 +3,7 @@ Created on Dec 26, 2016
 
 @author: andrew
 """
+
 import random
 import time
 from datetime import datetime, timedelta
@@ -112,15 +113,13 @@ class Core(commands.Cog):
         embed.url = "https://invite.avrae.io"
         embed.colour = 0x7289DA
         embed.add_field(name="Uptime", value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
-        motd = random.choice(
-            [
-                "May the RNG be with you",
-                "May your rolls be high",
-                "Will give higher rolls for cookies",
-                ">:3",
-                "Does anyone even read these?",
-            ]
-        )
+        motd = random.choice([
+            "May the RNG be with you",
+            "May your rolls be high",
+            "Will give higher rolls for cookies",
+            ">:3",
+            "Does anyone even read these?",
+        ])
         embed.set_footer(text=f'{motd} | Build {await self.bot.rdb.get("build_num")} | Cluster {self.bot.cluster_id}')
 
         commands_run = (

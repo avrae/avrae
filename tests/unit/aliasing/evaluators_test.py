@@ -25,7 +25,8 @@ async def test_yaml_loading(draconic_evaluator):
 
 
 async def test_yaml_types(draconic_evaluator):
-    yaml_string = textwrap.dedent("""
+    yaml_string = textwrap.dedent(
+        """
         key1:
           nested_key1: 06-08-2012
           nested_key2: value2
@@ -36,7 +37,8 @@ async def test_yaml_types(draconic_evaluator):
           - 1
           - 2
           - 3
-    """)
+    """
+    )
     draconic_evaluator.builtins["yaml_string"] = yaml_string
 
     result = draconic_evaluator.eval("load_yaml(yaml_string)")
@@ -83,7 +85,8 @@ async def test_yaml_dumping(draconic_evaluator):
     draconic_evaluator.eval(
         'data = {"name": "Dice", "age": "old", "languages": 3, "drinks": ["beer", "wine", "apple juice"]}'
     )
-    expected_data = textwrap.dedent("""
+    expected_data = textwrap.dedent(
+        """
     name: Dice
     age: old
     languages: 3
@@ -91,7 +94,8 @@ async def test_yaml_dumping(draconic_evaluator):
     - beer
     - wine
     - apple juice
-    """).strip()
+    """
+    ).strip()
 
     result = draconic_evaluator.eval("dump_yaml(data)")
     assert result.strip() == expected_data
@@ -112,20 +116,23 @@ async def test_parsing_json(draconic_evaluator):
 
 async def test_anchors(draconic_evaluator):
     # scalar anchors
-    expr = textwrap.dedent("""
+    expr = textwrap.dedent(
+        """
     - &flag Apple
     - Beachball
     - Cartoon
     - Duckface
     - *flag
-    """)
+    """
+    )
     draconic_evaluator.builtins["yaml_string"] = expr
     result = draconic_evaluator.eval("load_yaml(yaml_string)")
     assert result == ["Apple", "Beachball", "Cartoon", "Duckface", "Apple"]
     assert type(result) is draconic_evaluator._list
 
     # mapping anchors
-    expr = textwrap.dedent("""
+    expr = textwrap.dedent(
+        """
     template: &foo
       game: Portal 2
       type: Turret
@@ -135,7 +142,8 @@ async def test_anchors(draconic_evaluator):
         - 2
         - 3
     response: *foo
-    """)
+    """
+    )
     draconic_evaluator.builtins["yaml_string"] = expr
     result = draconic_evaluator.eval("load_yaml(yaml_string)")
     print(result)
@@ -149,14 +157,16 @@ async def test_anchors(draconic_evaluator):
 
 async def test_naughty_yaml(draconic_evaluator):
     # taken from pyyaml docs
-    ex1 = textwrap.dedent("""
+    ex1 = textwrap.dedent(
+        """
     none: [~, null]
     bool: [true, false, on, off]
     int: 42
     float: 3.14159
     list: [LITE, RES_ACID, SUS_DEXT]
     dict: {hp: 13, sp: 5}
-    """)
+    """
+    )
     draconic_evaluator.builtins["ex1"] = ex1
     assert draconic_evaluator.eval("load_yaml(ex1)") == {
         "none": [None, None],
@@ -167,12 +177,14 @@ async def test_naughty_yaml(draconic_evaluator):
         "bool": [True, False, True, False],
     }
 
-    ex2 = textwrap.dedent("""
+    ex2 = textwrap.dedent(
+        """
     !!python/object:__main__.Hero
     name: Welthyr Syxgon
     hp: 1200
     sp: 0
-    """)
+    """
+    )
     draconic_evaluator.builtins["ex2"] = ex2
     with pytest.raises(draconic.AnnotatedException) as e:
         draconic_evaluator.eval("load_yaml(ex2)")

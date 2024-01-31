@@ -98,7 +98,9 @@ class TestLegacyIEffect:
         assert json.dumps(result)
 
     async def test_stacking_e2e(self, character, avrae, dhttp):
-        avrae.message(textwrap.dedent("""
+        avrae.message(
+            textwrap.dedent(
+                """
         !a import {
           "name": "Stacking IEffect Test",
           "_v": 2,
@@ -120,7 +122,9 @@ class TestLegacyIEffect:
             }
           ]
         }
-        """).strip())
+        """
+            ).strip()
+        )
         await dhttp.drain()
 
         avrae.message('!a "Stacking IEffect Test"')
@@ -144,17 +148,15 @@ class TestIEffect:
         "type": "ieffect2",
         "name": "Burning",
         "effects": {"save_dis": ["all"], "damage_bonus": "1 [fire]"},
-        "attacks": [
-            {
-                "attack": {
-                    "name": "Burning Hand (not the spell)",
-                    "_v": 2,
-                    "automation": [
-                        {"type": "target", "target": "each", "effects": [{"type": "damage", "damage": "1d8[fire]"}]}
-                    ],
-                }
+        "attacks": [{
+            "attack": {
+                "name": "Burning Hand (not the spell)",
+                "_v": 2,
+                "automation": [
+                    {"type": "target", "target": "each", "effects": [{"type": "damage", "damage": "1d8[fire]"}]}
+                ],
             }
-        ],
+        }],
         "buttons": [
             {
                 "label": "Take Fire Damage",
@@ -172,7 +174,8 @@ class TestIEffect:
         ],
     }
 
-    attack_data = textwrap.dedent("""
+    attack_data = textwrap.dedent(
+        """
         name: New Button Test
         _v: 2
         automation:
@@ -244,7 +247,8 @@ class TestIEffect:
                         effects:
                           - type: text
                             text: "{target.name} has the parent effect"
-        """).strip()
+        """
+    ).strip()
 
     async def test_ieffect_setup(self, avrae, dhttp):
         await start_init(avrae, dhttp)
@@ -362,7 +366,9 @@ class TestText:
 # ==== UseCounter ====
 @requires_data()
 async def import_usecounter_actions(avrae, dhttp):
-    avrae.message(textwrap.dedent("""
+    avrae.message(
+        textwrap.dedent(
+            """
     !a import {
         "name": "UseCounter Test",
         "automation": [{
@@ -372,8 +378,12 @@ async def import_usecounter_actions(avrae, dhttp):
         }],
         "_v": 2
     }
-    """).strip())
-    avrae.message(textwrap.dedent("""
+    """
+        ).strip()
+    )
+    avrae.message(
+        textwrap.dedent(
+            """
     !a import {
         "name": "UseCounter Test2",
         "automation": [{
@@ -383,8 +393,12 @@ async def import_usecounter_actions(avrae, dhttp):
         }],
         "_v": 2
     }
-    """).strip())
-    avrae.message(textwrap.dedent("""
+    """
+        ).strip()
+    )
+    avrae.message(
+        textwrap.dedent(
+            """
     !a import {
         "name": "UseCounter Test3",
         "automation": [{
@@ -394,8 +408,12 @@ async def import_usecounter_actions(avrae, dhttp):
         }],
         "_v": 2
     }
-    """).strip())
-    avrae.message(textwrap.dedent("""
+    """
+        ).strip()
+    )
+    avrae.message(
+        textwrap.dedent(
+            """
     !a import {
         "name": "UseCounter Test4",
         "automation": [{
@@ -405,7 +423,9 @@ async def import_usecounter_actions(avrae, dhttp):
         }],
         "_v": 2
     }
-    """).strip())
+    """
+        ).strip()
+    )
     await dhttp.drain()
 
 
@@ -544,7 +564,9 @@ async def test_usecounter_build_str(counter, amount):
 
 # ==== Check ====
 async def import_check_actions(avrae, dhttp):
-    avrae.message(textwrap.dedent("""
+    avrae.message(
+        textwrap.dedent(
+            """
             !a import {
               "_v": 2,
               "name": "Check Test",
@@ -586,8 +608,12 @@ async def import_check_actions(avrae, dhttp):
                 }
               ]
             }
-            """).strip())
-    avrae.message(textwrap.dedent("""
+            """
+        ).strip()
+    )
+    avrae.message(
+        textwrap.dedent(
+            """
             !a import {
               "_v": 2,
               "name": "Contest Check Test",
@@ -624,7 +650,9 @@ async def import_check_actions(avrae, dhttp):
                 }
               ]
             }
-            """).strip())
+            """
+        ).strip()
+    )
     await dhttp.drain()
 
 

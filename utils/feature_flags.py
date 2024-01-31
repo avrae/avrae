@@ -1,6 +1,7 @@
 """
 Asyncio wrapper for launchdarkly client to ensure flag evaluation is not a blocking call.
 """
+
 from typing import Optional, TYPE_CHECKING
 
 import ldclient

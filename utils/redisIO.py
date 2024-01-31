@@ -3,6 +3,7 @@ Created on Dec 28, 2016
 
 @author: andrew
 """
+
 import abc
 import json
 import logging

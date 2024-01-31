@@ -1,6 +1,7 @@
 """
 Image processing utilities.
 """
+
 import asyncio
 import hashlib
 import os

@@ -2,6 +2,7 @@
 Main entrypoint for the tutorials extension. The tutorials themselves can be found in this module, and
 are registered here. The tutorial commands are also registered here, as part of the Help cog.
 """
+
 import textwrap
 
 import disnake
@@ -214,11 +215,13 @@ class Tutorials(commands.Cog):
         embed = disnake.Embed()
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.display_avatar.url)
         embed.colour = disnake.Colour.blurple()
-        embed.description = textwrap.dedent(f"""
+        embed.description = textwrap.dedent(
+            f"""
             :wave: Hi there! Thanks for adding me to {guild.name}!
 
             I'm ready to roll, but before we get started, let's take a look at some of the things I can do!
-            """).strip()
+            """
+        ).strip()
 
         if not prefix_is_default:
             embed.add_field(

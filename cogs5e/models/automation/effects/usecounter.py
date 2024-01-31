@@ -37,14 +37,12 @@ class UseCounter(Effect):
     def to_dict(self):
         out = super().to_dict()
         counter = self.counter if isinstance(self.counter, str) else self.counter.to_dict()
-        out.update(
-            {
-                "counter": counter,
-                "amount": self.amount,
-                "allowOverflow": self.allow_overflow,
-                "errorBehaviour": self.error_behaviour,
-            }
-        )
+        out.update({
+            "counter": counter,
+            "amount": self.amount,
+            "allowOverflow": self.allow_overflow,
+            "errorBehaviour": self.error_behaviour,
+        })
         if self.fixedValue is not None:
             out["fixedValue"] = self.fixedValue
         return out

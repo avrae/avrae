@@ -204,22 +204,20 @@ class AttackList:
     @property
     def other_attacks(self):
         """Returns an AttackList of attacks that do not fall into the other action categories."""
-        return AttackList(
-            [
-                a
-                for a in self.attacks
-                if a.activation_type
-                not in (
-                    enums.ActivationType.ACTION,
-                    enums.ActivationType.BONUS_ACTION,
-                    enums.ActivationType.REACTION,
-                    enums.ActivationType.LEGENDARY,
-                    enums.ActivationType.MYTHIC,
-                    enums.ActivationType.LAIR,
-                    None,
-                )
-            ]
-        )
+        return AttackList([
+            a
+            for a in self.attacks
+            if a.activation_type
+            not in (
+                enums.ActivationType.ACTION,
+                enums.ActivationType.BONUS_ACTION,
+                enums.ActivationType.REACTION,
+                enums.ActivationType.LEGENDARY,
+                enums.ActivationType.MYTHIC,
+                enums.ActivationType.LAIR,
+                None,
+            )
+        ])
 
     # list compat
     def append(self, attack):

@@ -121,12 +121,10 @@ async def roll_stats(ctx):
     for i, rolls in enumerate(stat_rolls, 1):
         embed.add_field(
             name=f"""Stats {f"#{i}" if len(stat_rolls)>1 else ""}""",
-            value="\n".join(
-                [
-                    (f"**{stat_names[x]}:** " if straight else f"**Stat {x+1}:** ") + str(rolls["rolls"][x])
-                    for x in range(stats)
-                ]
-            )
+            value="\n".join([
+                (f"**{stat_names[x]}:** " if straight else f"**Stat {x+1}:** ") + str(rolls["rolls"][x])
+                for x in range(stats)
+            ])
             + f"\n-----\nTotal = `{rolls['total']}`",
             inline=True,
         )

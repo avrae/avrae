@@ -6,6 +6,7 @@ Yup. It's just an empty class. Small as can be.
 
 Is this an indicator that the init system is too deeply entangled with other systems? Probably.
 """
+
 import enum
 
 

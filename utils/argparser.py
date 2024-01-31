@@ -1,6 +1,7 @@
 import collections
 import itertools
 import re
+import string
 from typing import Iterator
 
 from disnake.ext.commands import BadArgument, ExpectedClosingQuoteError
@@ -380,7 +381,7 @@ class ParsedArguments:
 
 # ==== other helpers ====
 def argquote(arg: str):
-    if " " in arg:
+    if any(char in arg for char in string.whitespace):
         arg = arg.replace('"', '\\"')  # re.sub(r'(?<!\\)"', r'\"', arg)
         arg = f'"{arg}"'
     return arg

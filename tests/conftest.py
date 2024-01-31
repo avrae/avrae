@@ -3,6 +3,7 @@ This file sets up the "globals" we need for our tests
 namely, it creates the Avrae instance and overrides its http and gateway handlers
 and defines a bunch of helper methods
 """
+
 import asyncio
 import json
 import logging

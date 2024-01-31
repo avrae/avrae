@@ -27,6 +27,7 @@
   ]
 }
 """
+
 import argparse
 import itertools
 import json

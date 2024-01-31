@@ -3,6 +3,7 @@ Created on Nov 29, 2016
 
 @author: andrew
 """
+
 import itertools
 import logging
 

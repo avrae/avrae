@@ -1,6 +1,7 @@
 """
 Useful validators for methods with complex types (like SimpleCombatant.add_effect()).
 """
+
 from typing import List, Optional, Set
 
 import automation_common

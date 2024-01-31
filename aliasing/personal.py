@@ -1,6 +1,7 @@
 """
 Personal aliases and snippets. Unrelated to the workshop.
 """
+
 import abc
 import datetime
 
@@ -163,14 +164,12 @@ class Servalias(_AliasBase):
         await mdb.servaliases.delete_one({"server": self.owner, "name": self.name})
 
     async def log_invocation(self, ctx, _):
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {
-                "type": "servalias",
-                "object_id": self.id,
-                "timestamp": datetime.datetime.utcnow(),
-                "user_id": ctx.author.id,
-            }
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": "servalias",
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -238,14 +237,12 @@ class Servsnippet(_SnippetBase):
         await mdb.servsnippets.delete_one({"server": self.owner, "name": self.name})
 
     async def log_invocation(self, ctx, _):
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {
-                "type": "servsnippet",
-                "object_id": self.id,
-                "timestamp": datetime.datetime.utcnow(),
-                "user_id": ctx.author.id,
-            }
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": "servsnippet",
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
     @staticmethod
     async def get_ctx_map(ctx):

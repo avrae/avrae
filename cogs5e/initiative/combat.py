@@ -393,8 +393,7 @@ class Combat:
     @overload
     async def select_combatant(
         self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[True] = False
-    ) -> Optional[Combatant | CombatantGroup]:
-        ...
+    ) -> Optional[Combatant | CombatantGroup]: ...
 
     async def select_combatant(
         self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[False] = False

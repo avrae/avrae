@@ -1,6 +1,7 @@
 """
 Unit tests to test initiative name builders (in combatant_builders).
 """
+
 import d20
 import pytest
 

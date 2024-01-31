@@ -1,6 +1,7 @@
 """
 File containing models related to campaigns on DDB.
 """
+
 import datetime
 
 

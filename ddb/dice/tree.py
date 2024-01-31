@@ -18,6 +18,7 @@ https://github.com/DnDBeyond/ddb-integrated-dice/blob/master/packages/ddb-dice/s
         - RollType
         - RollKind
 """
+
 import uuid
 
 import d20

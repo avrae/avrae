@@ -1,6 +1,7 @@
 """
 Misc data models for tutorials.
 """
+
 import abc
 import asyncio
 import textwrap

@@ -3,6 +3,7 @@ Created on Jan 13, 2017
 
 @author: andrew
 """
+
 import itertools
 import logging
 from typing import Dict, List, TYPE_CHECKING, TypeVar, Callable

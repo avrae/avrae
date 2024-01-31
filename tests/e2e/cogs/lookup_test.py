@@ -1,6 +1,7 @@
 """
 Simple lookup tests: look up every entry in test static data
 """
+
 import itertools
 
 import disnake

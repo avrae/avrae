@@ -36,7 +36,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: avrae/${{ env.SERVICE_NAME }}
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: ${{ github.event.release.tag_name }}
         run: |
           docker build -t $SERVICE_NAME --build-arg COMMIT=$GITHUB_SHA .
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -134,4 +134,5 @@ jobs:
           SENTRY_PROJECT: avrae-bot
         with:
           environment: production
+          version: ${{ github.event.release.tag_name }}
           set_commits: skip

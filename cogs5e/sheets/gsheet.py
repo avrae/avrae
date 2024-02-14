@@ -322,7 +322,7 @@ class GoogleSheet(SheetLoaderABC):
 
     @staticmethod
     def _is_expired():
-        return datetime.datetime.now() > GoogleSheet._token_expiry
+        return datetime.datetime.now() >= GoogleSheet._token_expiry
 
     # load character data
     def _gchar(self):

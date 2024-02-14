@@ -315,6 +315,9 @@ class GoogleSheet(SheetLoaderABC):
         with GoogleSheet._client_lock():
             try:
                 await asyncio.get_event_loop().run_in_executor(None, GoogleSheet.g_client.http_client.login)
+                GoogleSheet._token_expiry = datetime.datetime.now() + datetime.timedelta(
+                    seconds=google.oauth2.service_account._DEFAULT_TOKEN_LIFETIME_SECS
+                )
             except:
                 GoogleSheet._client_initializing = False
                 raise

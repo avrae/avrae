@@ -313,15 +313,8 @@ class GoogleSheet(SheetLoaderABC):
     @staticmethod
     async def _refresh_google_token():
         with GoogleSheet._client_lock():
-
-            def _():
-                GoogleSheet.g_client.auth.refresh(request=Request())
-                GoogleSheet.g_client.session.headers.update(
-                    {"Authorization": "Bearer %s" % GoogleSheet.g_client.auth.token}
-                )
-
             try:
-                await asyncio.get_event_loop().run_in_executor(None, _)
+                await asyncio.get_event_loop().run_in_executor(None, GoogleSheet.g_client.http_client.login)
             except:
                 GoogleSheet._client_initializing = False
                 raise

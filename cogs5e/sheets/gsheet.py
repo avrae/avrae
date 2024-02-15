@@ -354,10 +354,10 @@ class GoogleSheet(SheetLoaderABC):
         owner_id = str(ctx.author.id)
         try:
             await self.get_character()
-        except (KeyError, SpreadsheetNotFound, APIError):
+        except (KeyError, SpreadsheetNotFound, APIError, PermissionError):
             raise ExternalImportError(
                 "Invalid character sheet. Make sure you've shared it with me at "
-                f"`{GoogleSheet.g_client.auth.signer_email}`, or made the sheet viewable to 'Anyone with the link'!"
+                f"`{GoogleSheet.g_client.http_client.auth.service_account_email}`, or made the sheet viewable to 'Anyone with the link'!"
             )
         except Exception:
             raise

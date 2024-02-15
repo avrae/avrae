@@ -15,7 +15,6 @@ from urllib.parse import urlparse
 import google.oauth2.service_account
 import gspread
 from d20 import RollSyntaxError
-from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
 from gspread import SpreadsheetNotFound
 from gspread.exceptions import APIError, WorksheetNotFound

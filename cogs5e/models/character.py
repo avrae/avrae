@@ -19,7 +19,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock
 from cogs5e.models.sheet.coinpurse import Coinpurse
 from cogs5e.sheets.abc import SHEET_VERSION
-from utils.functions import search_and_select
+from utils.functions import confirm, search_and_select
 from utils.settings import CharacterSettings
 
 log = logging.getLogger(__name__)
@@ -156,10 +156,13 @@ class Character(StatBlock):
         return cls(**d)
 
     @classmethod
-    async def from_ctx(cls, ctx, ignore_guild: bool = False):
+    async def from_ctx(cls, ctx, ignore_guild: bool = False, ignore_channel: bool = False):
         owner_id = str(ctx.author.id)
         active_character = None
-        if ctx.guild is not None and not ignore_guild:
+        if ctx.channel is not None and not ignore_channel:
+            channel_id = str(ctx.channel.id)
+            active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": channel_id})
+        if ctx.guild is not None and not ignore_guild and active_character is None:
             guild_id = str(ctx.guild.id)
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
         if active_character is None:
@@ -192,6 +195,25 @@ class Character(StatBlock):
         # write to cache
         inst = cls.from_dict(character)
         cls._cache[owner_id, character_id] = inst
+        return inst
+
+    @classmethod
+    async def from_bot_and_guild_id(cls, ctx, owner_id: str, guild_id: str):
+        owner_id = str(owner_id)
+        guild_id = str(guild_id)
+
+        try:
+            # read from cache if available
+            return cls._cache[owner_id, guild_id]
+        except KeyError:
+            pass
+
+        character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
+        if character is None:
+            raise NoCharacter()
+        # write to cache
+        inst = cls.from_dict(character)
+        cls._cache[owner_id, guild_id] = inst
         return inst
 
     @classmethod
@@ -336,17 +358,23 @@ class Character(StatBlock):
         """Sets the character as globally active and unsets any server-active character in the current context."""
         owner_id = str(ctx.author.id)
         did_unset_server_active = False
+        char: Character = await Character.from_ctx(ctx, ignore_guild=True)
         if ctx.guild is not None:
             guild_id = str(ctx.guild.id)
-            # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-            result = await ctx.bot.mdb.characters.update_many(
-                {"owner": owner_id, "active_guilds": guild_id}, {"$pull": {"active_guilds": guild_id}}
+            # prompt yes/no if they want to remove server status and only set global
+            resp = await confirm(
+                ctx, "Do you want to unset your server character {}? (Reply with yes/no)".format(char.name)
             )
-            did_unset_server_active = result.modified_count > 0
-            try:
-                self._active_guilds.remove(guild_id)
-            except ValueError:
-                pass
+            if resp:
+                # for all characters owned by this owner who are active on this guild, make them inactive on this guild
+                result = await ctx.bot.mdb.characters.update_many(
+                    {"owner": owner_id, "active_guilds": guild_id}, {"$pull": {"active_guilds": guild_id}}
+                )
+                did_unset_server_active = result.modified_count > 0
+                try:
+                    self._active_guilds.remove(guild_id)
+                except ValueError:
+                    pass
         # for all characters owned by this owner who are globally active, make them inactive
         await ctx.bot.mdb.characters.update_many({"owner": owner_id, "active": True}, {"$set": {"active": False}})
         # make this character active
@@ -364,18 +392,7 @@ class Character(StatBlock):
         if ctx.guild is None:
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)
-        owner_id = str(ctx.author.id)
-        # unset anyone else that might be active on this server
-        unset_result = await ctx.bot.mdb.characters.update_many(
-            {"owner": owner_id, "active_guilds": guild_id}, {"$pull": {"active_guilds": guild_id}}
-        )
-        # set us as active on this server
-        await ctx.bot.mdb.characters.update_one(
-            {"owner": owner_id, "upstream": self._upstream}, {"$addToSet": {"active_guilds": guild_id}}
-        )
-        if guild_id not in self._active_guilds:
-            self._active_guilds.append(guild_id)
-        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
+        return await self.set_active_helper(ctx, guild_id)
 
     async def unset_server_active(self, ctx):
         """
@@ -385,12 +402,50 @@ class Character(StatBlock):
         if ctx.guild is None:
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)
-        # if and only if this character is active in this server, unset me as active on this server
+        return await self.unset_active_helper(ctx, guild_id)
+
+    async def set_channel_active(self, ctx):
+        """
+        Removes all channel-active characters and sets the character as active on the current channel.
+        Raises NoPrivateMessage() if not in a channel.
+        """
+        if ctx.channel is None:
+            raise NoPrivateMessage()
+        channel_id = str(ctx.channel.id)
+        return await self.set_active_helper(ctx, channel_id)
+
+    async def unset_channel_active(self, ctx):
+        """
+        If this character is active on the contextual channel, unset it as the channel active character.
+        Raises NoPrivateMessage() if not in a channel.
+        """
+        if ctx.channel is None:
+            raise NoPrivateMessage()
+        channel_id = str(ctx.channel.id)
+        return await self.unset_active_helper(ctx, channel_id)
+
+    async def set_active_helper(self, ctx, id):
+        owner_id = str(ctx.author.id)
+        # unset anyone else that might be active with this server/channel id
+        unset_result = await ctx.bot.mdb.characters.update_many(
+            {"owner": owner_id, "active_guilds": id}, {"$pull": {"active_guilds": id}}
+        )
+        # set us as active with this server/channel id
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": owner_id, "upstream": self._upstream}, {"$addToSet": {"active_guilds": id}}
+        )
+        if id not in self._active_guilds:
+            self._active_guilds.append(id)
+        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
+
+    async def unset_active_helper(self, ctx, id):
+        id = str(id)
+        # if and only if this character is active in this server/channel, unset me as active on this server/channel
         unset_result = await ctx.bot.mdb.characters.update_one(
-            {"owner": str(ctx.author.id), "upstream": self._upstream}, {"$pull": {"active_guilds": guild_id}}
+            {"owner": str(ctx.author.id), "upstream": self._upstream}, {"$pull": {"active_guilds": id}}
         )
         try:
-            self._active_guilds.remove(guild_id)
+            self._active_guilds.remove(id)
         except ValueError:
             pass
         return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
@@ -669,6 +724,12 @@ class Character(StatBlock):
         """Returns if a character is active on the contextual server."""
         if ctx.guild is not None:
             return str(ctx.guild.id) in self._active_guilds
+        return False
+
+    def is_active_channel(self, ctx):
+        """Returns if a character is active on the contextual channel."""
+        if ctx.channel is not None:
+            return str(ctx.channel.id) in self._active_guilds
         return False
 
     def get_sheet_url(self):

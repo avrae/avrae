@@ -436,18 +436,62 @@ class SheetManager(commands.Cog):
 
     @character.command(name="server")
     @commands.guild_only()
-    async def character_server(self, ctx):
+    async def character_server(self, ctx, args=""):
         """
         Sets the current global active character as a server character.
         If the character is already the server character, unsets the server character.
 
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
         """  # noqa: E501
+        global_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=True)
+        server_character: Character = await Character.from_ctx(ctx, ignore_channel=True)
+        args = argparse(args)
+
+        if args.get("reset_all"):
+            # get all channels in server
+            resp = await confirm(
+                ctx, "Do you want to unset your all channel characters for this server? (Reply with yes/no)"
+            )
+            if resp:
+                for channel in ctx.guild.channels:
+                    channel_id = channel.id
+                    try:
+                        channel_character: Character = await Character.from_bot_and_guild_id(
+                            ctx, ctx.author.id, channel_id
+                        )
+                        unset_result = await channel_character.unset_active_helper(ctx, channel_id)
+                        if unset_result.did_unset_server_active:
+                            await ctx.send(f"Unset character {channel_character.name} for channel {channel.name}")
+                    except NoCharacter:
+                        continue
+
+        if global_character.upstream == server_character.upstream:
+            await ctx.send(f"Active server character already set to {global_character.name}")
+        else:
+            result = await global_character.set_server_active(ctx)
+            if result.did_unset_server_active:
+                await ctx.send(
+                    f"Active server character changed from {server_character.name} to {global_character.name}."
+                )
+            else:
+                await ctx.send(f"Active server character was already set to {global_character.name}.")
+
+        await try_delete(ctx.message)
+
+    @character.command(name="channel")
+    @commands.guild_only()
+    async def character_channel(self, ctx):
+        """
+        Sets the current global active character as a channel character.
+        If the character is already the channel character, unsets the channel character.
+
+        All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
+        """  # noqa: E501
         char: Character = await Character.from_ctx(ctx, ignore_guild=True)
 
-        if char.is_active_server(ctx):
-            await char.unset_server_active(ctx)
-            msg = f"Active server character unset from {char.name}."
+        if char.is_active_channel(ctx):
+            await char.unset_channel_active(ctx)
+            msg = f"Active channel character unset from {char.name}."
             try:
                 global_character = await ctx.get_character()
             except NoCharacter:
@@ -455,11 +499,11 @@ class SheetManager(commands.Cog):
             else:
                 await ctx.send(f"{msg} {global_character.name} is now active.")
         else:
-            result = await char.set_server_active(ctx)
+            result = await char.set_channel_active(ctx)
             if result.did_unset_server_active:
-                await ctx.send(f"Active server character changed to {char.name}.")
+                await ctx.send(f"Active channel character changed to {char.name}.")
             else:
-                await ctx.send(f"Active server character set to {char.name}.")
+                await ctx.send(f"Active channel character set to {char.name}.")
 
         await try_delete(ctx.message)
 

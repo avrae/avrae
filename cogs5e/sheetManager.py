@@ -441,6 +441,9 @@ class SheetManager(commands.Cog):
         Sets the current global active character as a server character.
         If the character is already the server character, unsets the server character.
 
+        args:
+            reset_all - This will unset any channel-specific characters that have been set and force the current global character to be used everywhere on this server
+
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
         """  # noqa: E501
         global_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=True)

@@ -324,7 +324,7 @@ async def cast_spell(
         remaining_casts = caster.spellbook.remaining_casts_of(spell, cast_level)
         if not (isinstance(caster.spellbook, monster.MonsterSpellbook) and spell.name not in caster.spellbook.at_will):
             remaining_casts += " (-1)"
-        embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(spell, cast_level))
+        embed.add_field(name="Spell Slots", value=remaining_casts)
 
     if conc_conflict:
         conflicts = ", ".join(e.name for e in conc_conflict)

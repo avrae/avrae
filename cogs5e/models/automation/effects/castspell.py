@@ -60,6 +60,10 @@ class CastSpell(Effect):
         if not spell.level <= cast_level <= 9:
             autoctx.meta_queue(f"**Error**: Unable to cast {spell.name} at level {cast_level} (invalid level).")
             return CastSpellResult(success=False, spell_id=self.id)
+
+        # AFR-988
+        autoctx.metavars["lastSpellLevel"] = cast_level
+
         if autoctx.is_spell:
             autoctx.meta_queue(f"**Error**: Unable to cast another spell inside a spell.")
             return CastSpellResult(success=False, spell_id=self.id)

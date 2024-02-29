@@ -510,6 +510,9 @@ class SheetManager(commands.Cog):
                 except NoCharacter:
                     continue
 
+        server_character: Character = await Character.from_ctx(ctx, ignore_channel=True)
+        server_character.unset_server_active(ctx)
+        await ctx.send(f"Unset character {server_character.name} for server")
         await try_delete(ctx.message)
 
     @character.command(name="list")

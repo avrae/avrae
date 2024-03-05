@@ -76,6 +76,8 @@ class Character(StatBlock):
             actions = Actions()
         if active_guilds is None:
             active_guilds = []
+        if active_channels is None:
+            active_channels = []
         if coinpurse is None:
             coinpurse = Coinpurse()
         if options_v2 is None:
@@ -158,7 +160,7 @@ class Character(StatBlock):
         return cls(**d)
 
     @classmethod
-    async def from_ctx(cls, ctx, ignore_guild: bool = False, ignore_channel: bool = False):
+    async def from_ctx(cls, ctx, ignore_guild: bool = False, ignore_channel: bool = False, raise_error: bool = True):
         owner_id = str(ctx.author.id)
         active_character = None
         if ctx.channel is not None and not ignore_channel:
@@ -169,7 +171,7 @@ class Character(StatBlock):
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
         if active_character is None:
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
-        if active_character is None:
+        if active_character is None and raise_error:
             raise NoCharacter()
 
         try:
@@ -368,12 +370,16 @@ class Character(StatBlock):
         """Sets the character as globally active and unsets any server-active character in the current context."""
         owner_id = str(ctx.author.id)
         did_unset_server_active = False
-        char: Character = await Character.from_ctx(ctx, ignore_guild=True)
-        if ctx.guild is not None:
+        server_character = None
+        try:
+            server_character: Character = await Character.from_ctx(ctx, ignore_guild=False, ignore_channel=True)
+        except NoCharacter:
+            pass
+        if ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):
             guild_id = str(ctx.guild.id)
             # prompt yes/no if they want to remove server status and only set global
             resp = await confirm(
-                ctx, "Do you want to unset your server character {}? (Reply with yes/no)".format(char.name)
+                ctx, f"Do you want to unset your active server character {server_character.name}? (Reply with yes/no)"
             )
             if resp:
                 # for all characters owned by this owner who are active on this guild, make them inactive on this guild

@@ -444,9 +444,9 @@ class SheetManager(commands.Cog):
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
         """  # noqa: E501
         global_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=True)
-        server_character: Character = await Character.from_ctx(ctx, ignore_channel=True)
+        server_character: Character = await Character.from_ctx(ctx, ignore_guild=False, ignore_channel=True)
 
-        if global_character.upstream == server_character.upstream:
+        if global_character.upstream == server_character.upstream and server_character.is_active_server(ctx):
             await ctx.send(f"Active server character already set to {global_character.name}")
         else:
             result = await global_character.set_server_active(ctx)
@@ -468,11 +468,11 @@ class SheetManager(commands.Cog):
 
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
         """  # noqa: E501
-        char: Character = await Character.from_ctx(ctx, ignore_guild=True)
+        channel_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=False)
 
-        if char.is_active_channel(ctx):
-            await char.unset_channel_active(ctx)
-            msg = f"Active channel character unset from {char.name}."
+        if channel_character.is_active_channel(ctx):
+            await channel_character.unset_channel_active(ctx)
+            msg = f"Active channel character unset from {channel_character.name}."
             try:
                 global_character = await ctx.get_character()
             except NoCharacter:
@@ -480,11 +480,11 @@ class SheetManager(commands.Cog):
             else:
                 await ctx.send(f"{msg} {global_character.name} is now active.")
         else:
-            result = await char.set_channel_active(ctx)
-            if result.did_unset_server_active:
-                await ctx.send(f"Active channel character changed to {char.name}.")
+            result = await channel_character.set_channel_active(ctx)
+            if result.did_unset_channel_active:
+                await ctx.send(f"Active channel character changed to {channel_character.name}.")
             else:
-                await ctx.send(f"Active channel character set to {char.name}.")
+                await ctx.send(f"Active channel character set to {channel_character.name}.")
 
         await try_delete(ctx.message)
 
@@ -507,7 +507,7 @@ class SheetManager(commands.Cog):
                         ctx, ctx.author.id, channel_id
                     )
                     unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id)
-                    if unset_result.did_unset_server_active:
+                    if unset_result.did_unset_channel_active:
                         await ctx.send(f"Unset character {channel_character.name} for channel {channel.name}")
                 except NoCharacter:
                     continue
@@ -528,7 +528,7 @@ class SheetManager(commands.Cog):
         user_characters = {c["upstream"]: c["name"] for c in user_characters}
 
         try:
-            char = await Character.from_ctx(ctx, ignore_guild=False)
+            char = await Character.from_ctx(ctx, ignore_guild=False, ignore_channel=False)
             char_out = f"**Active Character**: {char.name}\n\n"
             user_characters.pop(char.upstream)
         except NoCharacter:
@@ -619,6 +619,7 @@ class SheetManager(commands.Cog):
 
         # keeps an old check if the old character was active on the current server
         was_server_active = old_character.is_active_server(ctx)
+        was_channel_active = old_character.is_active_channel(ctx)
 
         await character.commit(ctx)
 
@@ -628,6 +629,8 @@ class SheetManager(commands.Cog):
             await character.set_active(ctx)
         if was_server_active:
             await character.set_server_active(ctx)
+        if was_channel_active:
+            await character.set_channel_active(ctx)
 
         await loading.edit(content=f"Updated and saved data for {character.name}!")
         if args.last("v"):
@@ -832,6 +835,15 @@ class SheetManager(commands.Cog):
     @staticmethod
     async def _active_character_embed(ctx):
         """Creates an embed to be displayed when the active character is checked"""
+        global_character: Character = await Character.from_ctx(
+            ctx, ignore_guild=True, ignore_channel=True, raise_error=False
+        )
+        server_character: Character = await Character.from_ctx(
+            ctx, ignore_guild=False, ignore_channel=True, raise_error=False
+        )
+        channel_character: Character = await Character.from_ctx(
+            ctx, ignore_guild=True, ignore_channel=False, raise_error=False
+        )
         active_character: Character = await ctx.get_character()
         embed = embeds.EmbedWithCharacter(active_character)
 
@@ -842,41 +854,22 @@ class SheetManager(commands.Cog):
         if (link := active_character.get_sheet_url()) is not None:
             desc = f"{desc}\n[Go to Character Sheet]({link})"
         embed.description = desc
-        embed.set_footer(text=f"To change active characters, use {ctx.prefix}character <name>.")
+        characterInfoMessages = []
+        if active_character.upstream != global_character.upstream:
+            characterInfoMessages.append(f"Global Character: {global_character.name}")
+        if active_character.upstream != server_character.upstream:
+            characterInfoMessages.append(f"Server Character: {server_character.name}")
+        if active_character.upstream != channel_character.upstream:
+            characterInfoMessages.append(f"Channel Character: {channel_character.name}")
 
-        # for a global character, we can return here
-        if not active_character.is_active_server(ctx):
-            return embed
-
-        # get the global active character or None
-        try:
-            global_character: Character = await ctx.get_character(ignore_guild=True)
-        except NoCharacter:
-            embed.set_footer(
-                text=(
-                    f"{active_character.name} is only active on {ctx.guild.name}. You have no global "
-                    f"active character. To set one, use {ctx.prefix}character <name>."
-                )
-            )
-            return embed
-
-        # global active character is server active
-        if global_character.upstream == active_character.upstream:
-            embed.set_footer(
-                text=(
-                    f"{active_character.name} is active on {ctx.guild.name} and globally. "
-                    f"To change active characters, use {ctx.prefix}character <name>."
-                )
-            )
-            return embed
-
-        # global and server active differ
-        embed.set_footer(
-            text=(
-                f"{active_character.name} is active on {ctx.guild.name}, overriding your global active "
-                f"character. To change active characters, use {ctx.prefix}character <name>."
-            )
+        characterInfoMessages.append(f"To change active characters, use {ctx.prefix}character <name>")
+        characterInfoMessages.append(f"To set a server-specific character, use {ctx.prefix}character server")
+        characterInfoMessages.append(f"To set a channel-specific character, use {ctx.prefix}character channel")
+        characterInfoMessages.append(
+            f"To reset all channel and server-specific characters, use {ctx.prefix}character reset_all"
         )
+        # global and server active differ
+        embed.set_footer(text=("\n".join(characterInfoMessages)))
         return embed
 
 

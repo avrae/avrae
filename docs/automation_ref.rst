@@ -1000,7 +1000,7 @@ This is usually used in features that cast spells using alternate resources (i.e
 
 **Variables**
 
-- ``spell_level`` (:class:`int`) The level used to cast the spell.
+No variables are exposed.
 
 Ability Check
 -------------

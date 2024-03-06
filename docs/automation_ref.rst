@@ -40,6 +40,7 @@ All Automation runs provide the following variables:
   targeted by this automation (i.e. the ``-t`` argument).
 - ``spell_attack_bonus`` (:class:`int` or None) - The attack bonus for the spell, or the caster's default attack bonus.
 - ``spell_dc`` (:class:`int` or None) - The DC for the spell, or the caster's default DC.
+- ``spell_level`` (:class:`int` or None) - The level used to cast the spell, or None
 - ``choice`` (:class:`str`) - The input provided by the ``-choice`` argument, always lowercase. If the arg was not used, it will be an empty string.
 
 Additionally, runs triggered by an initiative effect (such as automation provided in a :ref:`ButtonInteraction`) provide
@@ -999,7 +1000,7 @@ This is usually used in features that cast spells using alternate resources (i.e
 
 **Variables**
 
-No variables are exposed.
+- ``spell_level`` (:class:`int`) The level used to cast the spell.
 
 Ability Check
 -------------

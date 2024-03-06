@@ -61,9 +61,6 @@ class CastSpell(Effect):
             autoctx.meta_queue(f"**Error**: Unable to cast {spell.name} at level {cast_level} (invalid level).")
             return CastSpellResult(success=False, spell_id=self.id)
 
-        # AFR-988
-        autoctx.metavars["lastSpellLevel"] = cast_level
-
         if autoctx.is_spell:
             autoctx.meta_queue(f"**Error**: Unable to cast another spell inside a spell.")
             return CastSpellResult(success=False, spell_id=self.id)
@@ -75,6 +72,9 @@ class CastSpell(Effect):
             old_dc_override = autoctx.dc_override
             old_spell_override = autoctx.evaluator.builtins.get("spell")
             old_level_override = autoctx.spell_level_override
+            autoctx.metavars["spell_level"] = (
+                old_spell_level := autoctx.spell_level_override if autoctx.spell_level_override else cast_level
+            )
 
             # parenting
             explicit_parent = None
@@ -98,7 +98,9 @@ class CastSpell(Effect):
                 spell_override = autoctx.evaluator.builtins["spell"] = autoctx.parse_intexpression(self.casting_mod)
             if self.level is not None:
                 autoctx.spell_level_override = self.level
+                autoctx.metavars["spell_level"] = autoctx.spell_level_override
             autoctx.spell = spell
+
             results = self.run_children(spell.automation.effects, autoctx)
 
             # and restore them
@@ -107,6 +109,7 @@ class CastSpell(Effect):
             autoctx.evaluator.builtins["spell"] = old_spell_override
             autoctx.spell_level_override = old_level_override
             autoctx.spell = None
+            autoctx.metavars["spell_level"] = old_spell_level
 
             # display higher level info
             if cast_level != spell.level and spell.higherlevels:

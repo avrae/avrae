@@ -10,7 +10,7 @@ from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLicense
 from cogs5e.models.sheet.action import Action, Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
-from gamedata import lookuputils
+from gamedata import lookuputils, monster
 from utils import constants
 from utils.enums import CritDamageType
 from utils.functions import a_or_an, confirm, maybe_http_url, natural_join, search_and_select, smart_trim, verbose_stat
@@ -302,6 +302,7 @@ async def cast_spell(
             ab_override=ab_override,
             dc_override=dc_override,
             spell_override=spell_override,
+            spell_level_override=cast_level,
         )
     else:
         # no automation, display spell description
@@ -321,7 +322,10 @@ async def cast_spell(
         embed.add_field(name="At Higher Levels", value=smart_trim(spell.higherlevels), inline=False)
 
     if cast_level > 0 and not ignore:
-        embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(spell, cast_level))
+        remaining_casts = caster.spellbook.remaining_casts_of(spell, cast_level)
+        if not (isinstance(caster.spellbook, monster.MonsterSpellbook) and spell.name in caster.spellbook.at_will):
+            remaining_casts += " (-1)"
+        embed.add_field(name="Spell Slots", value=remaining_casts)
 
     if conc_conflict:
         conflicts = ", ".join(e.name for e in conc_conflict)

@@ -73,6 +73,7 @@ class AutomationContext:
 
         self.metavars["spell_attack_bonus"] = self.ab_override or self.caster.spellbook.sab
         self.metavars["spell_dc"] = self.dc_override or self.caster.spellbook.dc
+        self.metavars["spell_level"] = self.spell_level_override
 
         # InitiativeEffect utils
         self.ieffect = ieffect

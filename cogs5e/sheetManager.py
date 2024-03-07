@@ -455,7 +455,7 @@ class SheetManager(commands.Cog):
                     f"Active server character changed from {server_character.name} to {global_character.name}."
                 )
             else:
-                await ctx.send(f"Active server character was already set to {global_character.name}.")
+                await ctx.send(f"Active server character set to {global_character.name}.")
 
         await try_delete(ctx.message)
 
@@ -495,6 +495,7 @@ class SheetManager(commands.Cog):
         This will unset any channel or server-specific characters that have been set and force the current global character to be used everywhere on this server
         """  # noqa: E501
 
+        listOfUnsetCharacters = []
         # get all channels in server
         resp = await confirm(
             ctx, "Do you want to unset your all channel characters for this server? (Reply with yes/no)"
@@ -508,13 +509,18 @@ class SheetManager(commands.Cog):
                     )
                     unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id)
                     if unset_result.did_unset_channel_active:
-                        await ctx.send(f"Unset character {channel_character.name} for channel {channel.name}")
+                        listOfUnsetCharacters.append(f"{channel_character.name} for channel {channel.name}")
                 except NoCharacter:
                     continue
 
         server_character: Character = await Character.from_ctx(ctx, ignore_channel=True)
-        server_character.unset_server_active(ctx)
-        await ctx.send(f"Unset character {server_character.name} for server")
+        unset_server_result = await server_character.unset_server_active(ctx)
+        if unset_server_result.did_unset_server_active:
+            listOfUnsetCharacters.append(f"{server_character.name} for server")
+        if listOfUnsetCharacters.count() > 0:
+            await ctx.send(f"Unset the following: {", ".join(listOfUnsetCharacters)}")
+        else:
+            await ctx.send(f"No characters were set on any channels or servers")
         await try_delete(ctx.message)
 
     @character.command(name="list")

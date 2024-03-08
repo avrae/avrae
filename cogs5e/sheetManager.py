@@ -488,9 +488,9 @@ class SheetManager(commands.Cog):
 
         await try_delete(ctx.message)
 
-    @character.command(name="reset_all")
+    @character.command(name="resetall")
     @commands.guild_only()
-    async def reset_all(self, ctx):
+    async def resetall(self, ctx):
         """
         This will unset any channel or server-specific characters that have been set and force the current global character to be used everywhere on this server
         """  # noqa: E501
@@ -875,7 +875,7 @@ class SheetManager(commands.Cog):
         characterInfoMessages.append(f"To set a server-specific character, use {ctx.prefix}character server")
         characterInfoMessages.append(f"To set a channel-specific character, use {ctx.prefix}character channel")
         characterInfoMessages.append(
-            f"To reset all channel and server-specific characters, use {ctx.prefix}character reset_all"
+            f"To reset all channel and server-specific characters, use {ctx.prefix}character resetall"
         )
         # global and server active differ
         embed.set_footer(text=("\n".join(characterInfoMessages)))

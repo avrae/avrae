@@ -509,16 +509,17 @@ class SheetManager(commands.Cog):
                     )
                     unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id)
                     if unset_result.did_unset_channel_active:
-                        listOfUnsetCharacters.append(f"{channel_character.name} for channel {channel.name}")
+                        listOfUnsetCharacters.append(f"{channel_character.name} for channel '{channel.name}'")
                 except NoCharacter:
                     continue
 
         server_character: Character = await Character.from_ctx(ctx, ignore_channel=True)
         unset_server_result = await server_character.unset_server_active(ctx)
         if unset_server_result.did_unset_server_active:
-            listOfUnsetCharacters.append(f"{server_character.name} for server")
-        if listOfUnsetCharacters.count() > 0:
-            await ctx.send(f"Unset the following: {", ".join(listOfUnsetCharacters)}")
+            listOfUnsetCharacters.append(f"{server_character.name} for server '{ctx.guild.name}'")
+        if len(listOfUnsetCharacters) > 0:
+            fullListMessage = ", ".join(listOfUnsetCharacters)
+            await ctx.send(f"Unset the following character mappings: {fullListMessage}")
         else:
             await ctx.send(f"No characters were set on any channels or servers")
         await try_delete(ctx.message)
@@ -868,6 +869,8 @@ class SheetManager(commands.Cog):
         if active_character.upstream != channel_character.upstream:
             characterInfoMessages.append(f"Channel Character: {channel_character.name}")
 
+        characterInfoMessages.append(f"")
+        characterInfoMessages.append(f"Help:")
         characterInfoMessages.append(f"To change active characters, use {ctx.prefix}character <name>")
         characterInfoMessages.append(f"To set a server-specific character, use {ctx.prefix}character server")
         characterInfoMessages.append(f"To set a channel-specific character, use {ctx.prefix}character channel")

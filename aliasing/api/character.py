@@ -172,6 +172,8 @@ class AliasCharacter(AliasStatBlock):
             self._character.consumables.append(new_consumable)
             self._consumables = None  # reset cache
             return AliasCustomCounter(new_consumable)
+        else:
+            return self.cc(name)
 
     def create_cc(self, name: str, *args, **kwargs):
         """

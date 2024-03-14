@@ -436,7 +436,7 @@ class SheetManager(commands.Cog):
 
     @character.command(name="server")
     @commands.guild_only()
-    async def character_server(self, ctx, args=""):
+    async def character_server(self, ctx):
         """
         Sets the current global active character as a server character.
         If the character is already the server character, unsets the server character.
@@ -490,12 +490,12 @@ class SheetManager(commands.Cog):
 
     @character.command(name="resetall")
     @commands.guild_only()
-    async def resetall(self, ctx):
+    async def reset_all(self, ctx):
         """
         This will unset any channel or server-specific characters that have been set and force the current global character to be used everywhere on this server
         """  # noqa: E501
 
-        listOfUnsetCharacters = []
+        list_of_unset_characters = []
         # get all channels in server
         resp = await confirm(
             ctx, "Do you want to unset your all channel characters for this server? (Reply with yes/no)"
@@ -509,17 +509,17 @@ class SheetManager(commands.Cog):
                     )
                     unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id)
                     if unset_result.did_unset_channel_active:
-                        listOfUnsetCharacters.append(f"{channel_character.name} for channel '{channel.name}'")
+                        list_of_unset_characters.append(f"{channel_character.name} for channel '{channel.name}'")
                 except NoCharacter:
                     continue
 
         server_character: Character = await Character.from_ctx(ctx, ignore_channel=True)
         unset_server_result = await server_character.unset_server_active(ctx)
         if unset_server_result.did_unset_server_active:
-            listOfUnsetCharacters.append(f"{server_character.name} for server '{ctx.guild.name}'")
-        if len(listOfUnsetCharacters) > 0:
-            fullListMessage = ", ".join(listOfUnsetCharacters)
-            await ctx.send(f"Unset the following character mappings: {fullListMessage}")
+            list_of_unset_characters.append(f"{server_character.name} for server '{ctx.guild.name}'")
+        if len(list_of_unset_characters) > 0:
+            full_list_message = ", ".join(list_of_unset_characters)
+            await ctx.send(f"Unset the following character mappings: {full_list_message}")
         else:
             await ctx.send(f"No characters were set on any channels or servers")
         await try_delete(ctx.message)
@@ -842,15 +842,23 @@ class SheetManager(commands.Cog):
     @staticmethod
     async def _active_character_embed(ctx):
         """Creates an embed to be displayed when the active character is checked"""
-        global_character: Character = await Character.from_ctx(
-            ctx, ignore_guild=True, ignore_channel=True, raise_error=False
-        )
-        server_character: Character = await Character.from_ctx(
-            ctx, ignore_guild=False, ignore_channel=True, raise_error=False
-        )
-        channel_character: Character = await Character.from_ctx(
-            ctx, ignore_guild=True, ignore_channel=False, raise_error=False
-        )
+        global_character = None
+        server_character = None
+        channel_character = None
+
+        try:
+            global_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=True)
+        except NoCharacter:
+            pass
+        try:
+            server_character: Character = await Character.from_ctx(ctx, ignore_guild=False, ignore_channel=True)
+        except NoCharacter:
+            pass
+        try:
+            channel_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=False)
+        except NoCharacter:
+            pass
+
         active_character: Character = await ctx.get_character()
         embed = embeds.EmbedWithCharacter(active_character)
 

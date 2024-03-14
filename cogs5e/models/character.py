@@ -160,7 +160,7 @@ class Character(StatBlock):
         return cls(**d)
 
     @classmethod
-    async def from_ctx(cls, ctx, ignore_guild: bool = False, ignore_channel: bool = False, raise_error: bool = True):
+    async def from_ctx(cls, ctx, ignore_guild: bool = False, ignore_channel: bool = False):
         owner_id = str(ctx.author.id)
         active_character = None
         if ctx.channel is not None and not ignore_channel:
@@ -171,7 +171,7 @@ class Character(StatBlock):
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
         if active_character is None:
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
-        if active_character is None and raise_error:
+        if active_character is None:
             raise NoCharacter()
 
         try:
@@ -409,11 +409,11 @@ class Character(StatBlock):
             raise NoPrivateMessage()
         guild_id = str(ctx.guild.id)
         owner_id = str(ctx.author.id)
-        # unset anyone else that might be active with this server/channel id
+        # unset anyone else that might be active with this server id
         unset_result = await ctx.bot.mdb.characters.update_many(
             {"owner": owner_id, "active_guilds": guild_id}, {"$pull": {"active_guilds": guild_id}}
         )
-        # set us as active with this server/channel id
+        # set us as active with this server id
         await ctx.bot.mdb.characters.update_one(
             {"owner": owner_id, "upstream": self._upstream}, {"$addToSet": {"active_guilds": guild_id}}
         )

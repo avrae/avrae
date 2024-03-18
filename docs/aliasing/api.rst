@@ -454,11 +454,11 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_gvar(address)
 
-.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name, default=None)
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name[, default=None])
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_uvars()
 
-.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_uvar(name, default=None)
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_uvar(name[, default=None])
 
 .. function:: randint(stop)
               randint(start, stop[, step])

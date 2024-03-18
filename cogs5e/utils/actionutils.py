@@ -302,6 +302,7 @@ async def cast_spell(
             ab_override=ab_override,
             dc_override=dc_override,
             spell_override=spell_override,
+            spell_level_override=cast_level,
         )
     else:
         # no automation, display spell description

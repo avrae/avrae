@@ -499,9 +499,9 @@ Draconic Functions
     :param population: The itterable to choose random items from.
     :type population: iterable.
     :param weights: The odds for each item in the ``population`` iterable.
-    :type weights: list of ints
+    :type weights: list of integers, floats, and fractions but not decimals
     :param cum_weights: The cumulative odds for each item in the ``population`` itterable.
-    :type cum_weights: list of ints
+    :type cum_weights: list of integers, floats, and fractions but not decimals
     :param k: The length of the output.
     :type k: int
     :return: A list of random items from the iterable.

@@ -45,7 +45,6 @@ INDICES = {
         IndexModel([("owner", ASCENDING), ("upstream", ASCENDING)], unique=True),
         IndexModel([("owner", ASCENDING), ("active", ASCENDING)], background=True),
         IndexModel([("owner", ASCENDING), ("active_guilds", ASCENDING)], background=True),
-        IndexModel([("owner", ASCENDING), ("active_channels", ASCENDING)], background=True),
     ],
     "combats": [IndexModel("channel", unique=True), IndexModel("lastchanged", expireAfterSeconds=2592000)],
     "lookupsettings": [  # deprecated in feature/settings-menus branch, replaced by guild_settings

@@ -447,7 +447,9 @@ class SheetManager(commands.Cog):
         server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
 
         if global_character.upstream == server_character.upstream and server_character.is_active_server(ctx):
-            await ctx.send(f"Active server character already set to {global_character.name}")
+            unset_server_result = await server_character.unset_server_active(ctx)
+            if unset_server_result.did_unset_server_active:
+                await ctx.send(f"Unset server character {global_character.name}")
         else:
             result = await global_character.set_server_active(ctx)
             if result.did_unset_server_active:

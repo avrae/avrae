@@ -443,8 +443,8 @@ class SheetManager(commands.Cog):
 
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
         """  # noqa: E501
-        global_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=True)
-        server_character: Character = await Character.from_ctx(ctx, ignore_guild=False, ignore_channel=True)
+        global_character: Character = await Character.from_ctx(ctx, use_global=True, use_guild=False, use_channel=False)
+        server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
 
         if global_character.upstream == server_character.upstream and server_character.is_active_server(ctx):
             await ctx.send(f"Active server character already set to {global_character.name}")
@@ -468,7 +468,7 @@ class SheetManager(commands.Cog):
 
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
         """  # noqa: E501
-        channel_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=False)
+        channel_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=False, use_channel=True)
 
         if channel_character.is_active_channel(ctx):
             await channel_character.unset_channel_active(ctx)
@@ -513,10 +513,11 @@ class SheetManager(commands.Cog):
                 except NoCharacter:
                     continue
 
-        server_character: Character = await Character.from_ctx(ctx, ignore_channel=True)
-        unset_server_result = await server_character.unset_server_active(ctx)
-        if unset_server_result.did_unset_server_active:
-            list_of_unset_characters.append(f"{server_character.name} for server '{ctx.guild.name}'")
+        server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
+        if server_character:
+            unset_server_result = await server_character.unset_server_active(ctx)
+            if unset_server_result.did_unset_server_active:
+                list_of_unset_characters.append(f"{server_character.name} for server '{ctx.guild.name}'")
         if len(list_of_unset_characters) > 0:
             full_list_message = ", ".join(list_of_unset_characters)
             await ctx.send(f"Unset the following character mappings: {full_list_message}")
@@ -535,7 +536,7 @@ class SheetManager(commands.Cog):
         user_characters = {c["upstream"]: c["name"] for c in user_characters}
 
         try:
-            char = await Character.from_ctx(ctx, ignore_guild=False, ignore_channel=False)
+            char = await Character.from_ctx(ctx, use_global=True, use_guild=True, use_channel=True)
             char_out = f"**Active Character**: {char.name}\n\n"
             user_characters.pop(char.upstream)
         except NoCharacter:
@@ -847,15 +848,15 @@ class SheetManager(commands.Cog):
         channel_character = None
 
         try:
-            global_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=True)
+            global_character: Character = await Character.from_ctx(ctx, use_global=True, use_guild=False, use_channel=False)
         except NoCharacter:
             pass
         try:
-            server_character: Character = await Character.from_ctx(ctx, ignore_guild=False, ignore_channel=True)
+            server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
         except NoCharacter:
             pass
         try:
-            channel_character: Character = await Character.from_ctx(ctx, ignore_guild=True, ignore_channel=False)
+            channel_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=False, use_channel=True)
         except NoCharacter:
             pass
 

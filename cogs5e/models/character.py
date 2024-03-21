@@ -160,16 +160,16 @@ class Character(StatBlock):
         return cls(**d)
 
     @classmethod
-    async def from_ctx(cls, ctx, ignore_guild: bool = False, ignore_channel: bool = False):
+    async def from_ctx(cls, ctx, use_global: bool = False, use_guild: bool = False, use_channel: bool = False):
         owner_id = str(ctx.author.id)
         active_character = None
-        if ctx.channel is not None and not ignore_channel:
+        if ctx.channel is not None and use_channel:
             channel_id = str(ctx.channel.id)
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_channels": channel_id})
-        if ctx.guild is not None and not ignore_guild and active_character is None:
+        if ctx.guild is not None and use_guild and active_character is None:
             guild_id = str(ctx.guild.id)
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active_guilds": guild_id})
-        if active_character is None:
+        if use_global and active_character is None:
             active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
         if active_character is None:
             raise NoCharacter()
@@ -370,7 +370,7 @@ class Character(StatBlock):
         did_unset_server_active = False
         server_character = None
         try:
-            server_character: Character = await Character.from_ctx(ctx, ignore_guild=False, ignore_channel=True)
+            server_character: Character = await Character.from_ctx(ctx, use_guild=True, use_channel=False)
         except NoCharacter:
             pass
         if ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):

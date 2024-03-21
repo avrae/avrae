@@ -470,7 +470,9 @@ class SheetManager(commands.Cog):
 
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
         """  # noqa: E501
-        channel_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=False, use_channel=True)
+        channel_character: Character = await Character.from_ctx(
+            ctx, use_global=False, use_guild=False, use_channel=True
+        )
 
         if channel_character.is_active_channel(ctx):
             await channel_character.unset_channel_active(ctx)
@@ -850,15 +852,21 @@ class SheetManager(commands.Cog):
         channel_character = None
 
         try:
-            global_character: Character = await Character.from_ctx(ctx, use_global=True, use_guild=False, use_channel=False)
+            global_character: Character = await Character.from_ctx(
+                ctx, use_global=True, use_guild=False, use_channel=False
+            )
         except NoCharacter:
             pass
         try:
-            server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
+            server_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=True, use_channel=False
+            )
         except NoCharacter:
             pass
         try:
-            channel_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=False, use_channel=True)
+            channel_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=False, use_channel=True
+            )
         except NoCharacter:
             pass
 

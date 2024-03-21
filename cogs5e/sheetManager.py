@@ -878,14 +878,6 @@ class SheetManager(commands.Cog):
         if active_character.upstream != channel_character.upstream:
             characterInfoMessages.append(f"Channel Character: {channel_character.name}")
 
-        characterInfoMessages.append(f"")
-        characterInfoMessages.append(f"Help:")
-        characterInfoMessages.append(f"To change active characters, use {ctx.prefix}character <name>")
-        characterInfoMessages.append(f"To set a server-specific character, use {ctx.prefix}character server")
-        characterInfoMessages.append(f"To set a channel-specific character, use {ctx.prefix}character channel")
-        characterInfoMessages.append(
-            f"To reset all channel and server-specific characters, use {ctx.prefix}character resetall"
-        )
         # global and server active differ
         embed.set_footer(text=("\n".join(characterInfoMessages)))
         return embed

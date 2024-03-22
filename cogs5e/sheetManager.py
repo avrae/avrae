@@ -428,11 +428,11 @@ class SheetManager(commands.Cog):
         await try_delete(ctx.message)
         if result.did_unset_active_location:
             await ctx.send(
-                f"Active character changed to {char.name}. Your server active character has been unset.",
+                f"Active character changed to {char.name}. Your previous active character has been unset.",
                 delete_after=30,
             )
         else:
-            await ctx.send(f"Active character changed to {char.name}.", delete_after=15)
+            await ctx.send(f"Active character set to {char.name}.", delete_after=15)
 
     @character.command(name="server")
     @commands.guild_only()
@@ -443,10 +443,29 @@ class SheetManager(commands.Cog):
 
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
         """  # noqa: E501
-        global_character: Character = await Character.from_ctx(ctx, use_global=True, use_guild=False, use_channel=False)
-        server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
+        global_character = None
+        server_character = None
+        try:
+            global_character: Character = await Character.from_ctx(
+                ctx, use_global=True, use_guild=False, use_channel=False
+            )
+        except:
+            await ctx.send(
+                f"No global character is active. You must have a global character set to set a server character."
+            )
+            return
+        try:
+            server_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=True, use_channel=False
+            )
+        except:
+            pass
 
-        if global_character.upstream == server_character.upstream and server_character.is_active_server(ctx):
+        if (
+            server_character is not None
+            and global_character.upstream == server_character.upstream
+            and server_character.is_active_server(ctx)
+        ):
             unset_server_result = await server_character.unset_server_active(ctx)
             if unset_server_result.did_unset_active_location:
                 await ctx.send(f"Unset server character {global_character.name}")

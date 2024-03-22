@@ -387,20 +387,20 @@ class Character(StatBlock):
             # prompt yes/no if they want to remove server status and only set global
             resp = await confirm(
                 ctx,
-                f"Do you want to unset your replace your active channel character '{channel_character.name}' with '{self.name}'? (Reply with yes/no)",
+                f"Do you want to replace your active channel character '{channel_character.name}' with '{self.name}'? (Reply with yes/no)",
             )
             if resp:
                 # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-                return self.set_channel_active(ctx)
+                return await self.set_channel_active(ctx)
         elif ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):
             # prompt yes/no if they want to remove server status and only set global
             resp = await confirm(
                 ctx,
-                f"Do you want to unset your active server character '{server_character.name}' with '{self.name}'? (Reply with yes/no)",
+                f"Do you want to replace your active server character '{server_character.name}' with '{self.name}'? (Reply with yes/no)",
             )
             if resp:
                 # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-                return self.set_server_active(ctx)
+                return await self.set_server_active(ctx)
         else:
             # for all characters owned by this owner who are globally active, make them inactive
             await ctx.bot.mdb.characters.update_many({"owner": owner_id, "active": True}, {"$set": {"active": False}})
@@ -773,7 +773,7 @@ class Character(StatBlock):
     def is_active_channel(self, ctx):
         """Returns if a character is active on the contextual channel."""
         if ctx.channel is not None:
-            return str(ctx.channel.id) in self._active_guilds
+            return str(ctx.channel.id) in self._active_channels
         return False
 
     def get_sheet_url(self):

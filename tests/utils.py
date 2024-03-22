@@ -104,7 +104,7 @@ def requires_data(fail_if_no_data=False):
 async def active_character(avrae):
     """Gets the character active in this test."""
     fakectx = ContextBotProxy(avrae)
-    return await Character.from_ctx(fakectx)
+    return await Character.from_ctx(fakectx, use_global=True, use_channel=True, use_guild=True)
 
 
 async def active_combat(avrae):

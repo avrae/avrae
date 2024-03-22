@@ -365,38 +365,51 @@ class Character(StatBlock):
             self._live_integration.commit_soon(ctx)  # creates a task to commit eventually
 
     async def set_active(self, ctx):
-        """Sets the character as globally active and unsets any server-active character in the current context."""
+        """Sets the character as globally active and unsets any server-active character or channel-active character in the current context, whichever is most specific."""
         owner_id = str(ctx.author.id)
-        did_unset_server_active = False
-        server_character = None
+        did_unset_active_location = False
+        channel_character = None
         try:
-            server_character: Character = await Character.from_ctx(ctx, use_guild=True, use_channel=False)
+            channel_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=False, use_channel=True
+            )
         except NoCharacter:
             pass
-        if ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):
-            guild_id = str(ctx.guild.id)
+        server_character = None
+        try:
+            server_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=True, use_channel=False
+            )
+        except NoCharacter:
+            pass
+
+        if ctx.channel is not None and channel_character is not None and channel_character.is_active_channel(ctx):
             # prompt yes/no if they want to remove server status and only set global
             resp = await confirm(
-                ctx, f"Do you want to unset your active server character {server_character.name}? (Reply with yes/no)"
+                ctx,
+                f"Do you want to unset your replace your active channel character '{channel_character.name}' with '{self.name}'? (Reply with yes/no)",
             )
             if resp:
                 # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-                result = await ctx.bot.mdb.characters.update_many(
-                    {"owner": owner_id, "active_guilds": guild_id}, {"$pull": {"active_guilds": guild_id}}
-                )
-                did_unset_server_active = result.modified_count > 0
-                try:
-                    self._active_guilds.remove(guild_id)
-                except ValueError:
-                    pass
-        # for all characters owned by this owner who are globally active, make them inactive
-        await ctx.bot.mdb.characters.update_many({"owner": owner_id, "active": True}, {"$set": {"active": False}})
-        # make this character active
-        await ctx.bot.mdb.characters.update_one(
-            {"owner": owner_id, "upstream": self._upstream}, {"$set": {"active": True}}
-        )
-        self._active = True
-        return SetActiveResult(did_unset_server_active=did_unset_server_active)
+                return self.set_channel_active(ctx)
+        elif ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):
+            # prompt yes/no if they want to remove server status and only set global
+            resp = await confirm(
+                ctx,
+                f"Do you want to unset your active server character '{server_character.name}' with '{self.name}'? (Reply with yes/no)",
+            )
+            if resp:
+                # for all characters owned by this owner who are active on this guild, make them inactive on this guild
+                return self.set_server_active(ctx)
+        else:
+            # for all characters owned by this owner who are globally active, make them inactive
+            await ctx.bot.mdb.characters.update_many({"owner": owner_id, "active": True}, {"$set": {"active": False}})
+            # make this character active
+            await ctx.bot.mdb.characters.update_one(
+                {"owner": owner_id, "upstream": self._upstream}, {"$set": {"active": True}}
+            )
+            self._active = True
+        return SetActiveResult(did_unset_active_location=did_unset_active_location)
 
     async def set_server_active(self, ctx):
         """
@@ -417,7 +430,7 @@ class Character(StatBlock):
         )
         if guild_id not in self._active_guilds:
             self._active_guilds.append(guild_id)
-        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
+        return SetActiveResult(did_unset_active_location=unset_result.modified_count > 0)
 
     async def unset_server_active(self, ctx):
         """
@@ -435,7 +448,7 @@ class Character(StatBlock):
             self._active_guilds.remove(guild_id)
         except ValueError:
             pass
-        return SetActiveResult(did_unset_server_active=unset_result.modified_count > 0)
+        return SetActiveResult(did_unset_active_location=unset_result.modified_count > 0)
 
     async def set_channel_active(self, ctx):
         """
@@ -456,7 +469,7 @@ class Character(StatBlock):
         )
         if channel_id not in self._active_channels:
             self._active_channels.append(channel_id)
-        return SetActiveChannelResult(did_unset_channel_active=unset_result.modified_count > 0)
+        return SetActiveResult(did_unset_active_location=unset_result.modified_count > 0)
 
     async def unset_channel_active(self, ctx):
         """
@@ -478,7 +491,7 @@ class Character(StatBlock):
             self._active_channels.remove(channel_id)
         except ValueError:
             pass
-        return SetActiveChannelResult(did_unset_channel_active=unset_result.modified_count > 0)
+        return SetActiveResult(did_unset_active_location=unset_result.modified_count > 0)
 
     # ---------- HP ----------
     @property
@@ -788,8 +801,7 @@ class CharacterSpellbook(HasIntegrationMixin, Spellbook):
             self._live_integration.sync_slots()
 
 
-SetActiveResult = namedtuple("SetActiveResult", "did_unset_server_active")
-SetActiveChannelResult = namedtuple("SetActiveChannelResult", "did_unset_channel_active")
+SetActiveResult = namedtuple("SetActiveResult", "did_unset_active_location")
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
 DESERIALIZE_MAP = {

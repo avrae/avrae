@@ -426,7 +426,7 @@ class SheetManager(commands.Cog):
         char = Character.from_dict(selected_char)
         result = await char.set_active(ctx)
         await try_delete(ctx.message)
-        if result.did_unset_server_active:
+        if result.did_unset_active_location:
             await ctx.send(
                 f"Active character changed to {char.name}. Your server active character has been unset.",
                 delete_after=30,
@@ -448,11 +448,11 @@ class SheetManager(commands.Cog):
 
         if global_character.upstream == server_character.upstream and server_character.is_active_server(ctx):
             unset_server_result = await server_character.unset_server_active(ctx)
-            if unset_server_result.did_unset_server_active:
+            if unset_server_result.did_unset_active_location:
                 await ctx.send(f"Unset server character {global_character.name}")
         else:
             result = await global_character.set_server_active(ctx)
-            if result.did_unset_server_active:
+            if result.did_unset_active_location:
                 await ctx.send(
                     f"Active server character changed from {server_character.name} to {global_character.name}."
                 )
@@ -485,7 +485,7 @@ class SheetManager(commands.Cog):
                 await ctx.send(f"{msg} {global_character.name} is now active.")
         else:
             result = await channel_character.set_channel_active(ctx)
-            if result.did_unset_channel_active:
+            if result.did_unset_active_location:
                 await ctx.send(f"Active channel character changed to {channel_character.name}.")
             else:
                 await ctx.send(f"Active channel character set to {channel_character.name}.")
@@ -512,7 +512,7 @@ class SheetManager(commands.Cog):
                         ctx, ctx.author.id, channel_id
                     )
                     unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id)
-                    if unset_result.did_unset_channel_active:
+                    if unset_result.did_unset_active_location:
                         list_of_unset_characters.append(f"{channel_character.name} for channel '{channel.name}'")
                 except NoCharacter:
                     continue
@@ -520,7 +520,7 @@ class SheetManager(commands.Cog):
         server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
         if server_character:
             unset_server_result = await server_character.unset_server_active(ctx)
-            if unset_server_result.did_unset_server_active:
+            if unset_server_result.did_unset_active_location:
                 list_of_unset_characters.append(f"{server_character.name} for server '{ctx.guild.name}'")
         if len(list_of_unset_characters) > 0:
             full_list_message = ", ".join(list_of_unset_characters)
@@ -881,11 +881,11 @@ class SheetManager(commands.Cog):
             desc = f"{desc}\n[Go to Character Sheet]({link})"
         embed.description = desc
         characterInfoMessages = []
-        if active_character.upstream != global_character.upstream:
+        if global_character is not None and active_character.upstream != global_character.upstream:
             characterInfoMessages.append(f"Global Character: {global_character.name}")
-        if active_character.upstream != server_character.upstream:
+        if server_character is not None and active_character.upstream != server_character.upstream:
             characterInfoMessages.append(f"Server Character: {server_character.name}")
-        if active_character.upstream != channel_character.upstream:
+        if channel_character is not None and active_character.upstream != channel_character.upstream:
             characterInfoMessages.append(f"Channel Character: {channel_character.name}")
 
         # global and server active differ

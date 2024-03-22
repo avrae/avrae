@@ -32,7 +32,7 @@ class AvraeContext(Context):
         self.nlp_caster = None  # set in targetutils to provide caster or character info to NLP
         self.nlp_targets = None
 
-    async def get_character(self, use_guild: bool = False):
+    async def get_character(self, use_global: bool = True, use_guild: bool = True, use_channel: bool = True):
         """
         Gets the character active in this context.
 
@@ -42,8 +42,8 @@ class AvraeContext(Context):
         """
         if use_guild and self._character is not _sentinel:
             return self._character
-        character = await Character.from_ctx(self, use_guild=use_guild)
-        if use_guild:
+        character = await Character.from_ctx(self, use_global=use_global, use_guild=use_guild, use_channel=use_channel)
+        if use_guild or use_channel:
             self._character = character
         self.nlp_character = character
         return character

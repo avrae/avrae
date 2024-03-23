@@ -472,7 +472,7 @@ class SheetManager(commands.Cog):
             if unset_server_result.did_unset_active_location:
                 await ctx.send(f"Unset previous server character {server_character.name}.")
                 return
-      
+
         set_result = await global_character.set_server_active(ctx)
         msg = ""
         if set_result.did_unset_active_location:
@@ -546,7 +546,9 @@ class SheetManager(commands.Cog):
 
         server_character = None
         try:
-            server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
+            server_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=True, use_channel=False
+            )
         except NoCharacter:
             pass
         if server_character:

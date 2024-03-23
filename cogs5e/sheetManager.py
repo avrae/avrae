@@ -449,7 +449,7 @@ class SheetManager(commands.Cog):
             global_character: Character = await Character.from_ctx(
                 ctx, use_global=True, use_guild=False, use_channel=False
             )
-        except:
+        except NoCharacter:
             await ctx.send(
                 f"No global character is active. You must have a global character set to set a server character."
             )
@@ -461,23 +461,23 @@ class SheetManager(commands.Cog):
         except:
             pass
 
+        msg = ""
         if (
             server_character is not None
             and global_character.upstream == server_character.upstream
             and server_character.is_active_server(ctx)
         ):
+            # Toggle server character to not be set
             unset_server_result = await server_character.unset_server_active(ctx)
             if unset_server_result.did_unset_active_location:
-                await ctx.send(f"Unset server character {global_character.name}")
-        else:
-            result = await global_character.set_server_active(ctx)
-            if result.did_unset_active_location:
-                await ctx.send(
-                    f"Active server character changed from {server_character.name} to {global_character.name}."
-                )
-            else:
-                await ctx.send(f"Active server character set to {global_character.name}.")
-
+                await ctx.send(f"Unset previous server character {server_character.name}.")
+                return
+      
+        set_result = await global_character.set_server_active(ctx)
+        msg = ""
+        if set_result.did_unset_active_location:
+            msg = f"Unset previous server character '{server_character.name}'"
+        await ctx.send(f"{msg}Active server character set to {global_character.name}.")
         await try_delete(ctx.message)
 
     @character.command(name="channel")
@@ -489,26 +489,40 @@ class SheetManager(commands.Cog):
 
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
         """  # noqa: E501
-        channel_character: Character = await Character.from_ctx(
-            ctx, use_global=False, use_guild=False, use_channel=True
-        )
 
-        if channel_character.is_active_channel(ctx):
-            await channel_character.unset_channel_active(ctx)
-            msg = f"Active channel character unset from {channel_character.name}."
-            try:
-                global_character = await ctx.get_character()
-            except NoCharacter:
-                await ctx.send(f"{msg} You have no global active character.")
-            else:
-                await ctx.send(f"{msg} {global_character.name} is now active.")
-        else:
-            result = await channel_character.set_channel_active(ctx)
-            if result.did_unset_active_location:
-                await ctx.send(f"Active channel character changed to {channel_character.name}.")
-            else:
-                await ctx.send(f"Active channel character set to {channel_character.name}.")
+        try:
+            channel_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=False, use_channel=True
+            )
+        except NoCharacter:
+            pass
 
+        try:
+            global_character: Character = await Character.from_ctx(
+                ctx, use_global=True, use_guild=False, use_channel=False
+            )
+        except NoCharacter:
+            await ctx.send(
+                f"No global character is active. You must have a global character set to set a channel character."
+            )
+            return
+
+        msg = ""
+        if (
+            channel_character is not None
+            and global_character.upstream == channel_character.upstream
+            and channel_character.is_active_channel(ctx)
+        ):
+            unset_channel_result = await channel_character.unset_channel_active(ctx)
+            if unset_channel_result.did_unset_active_location:
+                await ctx.send(f"Unset previous channel character '{channel_character.name}'.")
+                return
+
+        set_result = await global_character.set_channel_active(ctx)
+        msg = ""
+        if set_result.did_unset_active_location:
+            msg = f"Unset previous channel character '{channel_character.name}'"
+        await ctx.send(f"{msg}Active channel character set to {global_character.name}.")
         await try_delete(ctx.message)
 
     @character.command(name="resetall")
@@ -530,7 +544,11 @@ class SheetManager(commands.Cog):
             except NoCharacter:
                 continue
 
-        server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
+        server_character = None
+        try:
+            server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
+        except NoCharacter:
+            pass
         if server_character:
             unset_server_result = await server_character.unset_server_active(ctx)
             if unset_server_result.did_unset_active_location:

@@ -520,21 +520,15 @@ class SheetManager(commands.Cog):
 
         list_of_unset_characters = []
         # get all channels in server
-        resp = await confirm(
-            ctx, "Do you want to unset your all channel characters for this server? (Reply with yes/no)"
-        )
-        if resp:
-            for channel in ctx.guild.channels:
-                channel_id = channel.id
-                try:
-                    channel_character: Character = await Character.from_bot_and_channel_id(
-                        ctx, ctx.author.id, channel_id
-                    )
-                    unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id)
-                    if unset_result.did_unset_active_location:
-                        list_of_unset_characters.append(f"{channel_character.name} for channel '{channel.name}'")
-                except NoCharacter:
-                    continue
+        for channel in ctx.guild.channels:
+            channel_id = channel.id
+            try:
+                channel_character: Character = await Character.from_bot_and_channel_id(ctx, ctx.author.id, channel_id)
+                unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id)
+                if unset_result.did_unset_active_location:
+                    list_of_unset_characters.append(f"{channel_character.name} for channel '{channel.name}'")
+            except NoCharacter:
+                continue
 
         server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
         if server_character:

@@ -384,23 +384,11 @@ class Character(StatBlock):
             pass
 
         if ctx.channel is not None and channel_character is not None and channel_character.is_active_channel(ctx):
-            # prompt yes/no if they want to remove server status and only set global
-            resp = await confirm(
-                ctx,
-                f"Do you want to replace your active channel character '{channel_character.name}' with '{self.name}'? (Reply with yes/no)",
-            )
-            if resp:
-                # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-                return await self.set_channel_active(ctx)
+            # for all characters owned by this owner who are active on this guild, make them inactive on this guild
+            return await self.set_channel_active(ctx)
         elif ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):
-            # prompt yes/no if they want to remove server status and only set global
-            resp = await confirm(
-                ctx,
-                f"Do you want to replace your active server character '{server_character.name}' with '{self.name}'? (Reply with yes/no)",
-            )
-            if resp:
-                # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-                return await self.set_server_active(ctx)
+            # for all characters owned by this owner who are active on this guild, make them inactive on this guild
+            return await self.set_server_active(ctx)
         else:
             # for all characters owned by this owner who are globally active, make them inactive
             await ctx.bot.mdb.characters.update_many({"owner": owner_id, "active": True}, {"$set": {"active": False}})

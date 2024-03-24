@@ -385,11 +385,14 @@ class Character(StatBlock):
 
         if ctx.channel is not None and channel_character is not None and channel_character.is_active_channel(ctx):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
+            await ctx.send(f"Current context being switched is channel.")
             return await self.set_channel_active(ctx)
         elif ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
+            await ctx.send(f"Current context being switched is server.")
             return await self.set_server_active(ctx)
         else:
+            await ctx.send(f"Current context being switched is global.")
             # for all characters owned by this owner who are globally active, make them inactive
             await ctx.bot.mdb.characters.update_many({"owner": owner_id, "active": True}, {"$set": {"active": False}})
             # make this character active

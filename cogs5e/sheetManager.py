@@ -490,6 +490,8 @@ class SheetManager(commands.Cog):
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
         """  # noqa: E501
 
+        channel_character = None
+        global_character = None
         try:
             channel_character: Character = await Character.from_ctx(
                 ctx, use_global=False, use_guild=False, use_channel=True
@@ -510,6 +512,7 @@ class SheetManager(commands.Cog):
         msg = ""
         if (
             channel_character is not None
+            and global_character is not None
             and global_character.upstream == channel_character.upstream
             and channel_character.is_active_channel(ctx)
         ):

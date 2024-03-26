@@ -508,9 +508,7 @@ class SheetManager(commands.Cog):
         msg = ""
         if set_result.did_unset_active_location:
             msg = f" Your previous active character '{set_result.previous_character_name}' has been unset."
-        msg = (
-            f"Active character changed to '{new_character_to_set.name}' for {set_result.character_location_context.value} context.{msg}",
-        )
+        msg = f"Active character changed to '{new_character_to_set.name}' for {set_result.character_location_context.value} context.{msg}"
         embed = await self._active_character_embed(ctx, msg)
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -578,9 +576,7 @@ class SheetManager(commands.Cog):
         msg = ""
         if set_result.did_unset_active_location:
             msg = f" Your previous active character '{set_result.previous_character_name}' has been unset."
-        msg = (
-            f"Active character changed to '{new_character_to_set.name}' for {set_result.character_location_context.value} context.{msg}",
-        )
+        msg = f"Active character changed to '{new_character_to_set.name}' for {set_result.character_location_context.value} context.{msg}"
         embed = await self._active_character_embed(ctx, msg)
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -985,7 +981,7 @@ class SheetManager(commands.Cog):
             characterInfoMessages.append(f"Channel Character: {channel_character.name}")
 
         # global and server active differ
-        embed.set_footer(text=("\n".join(characterInfoMessages)))
+        embed.set_footer(text="\n".join(characterInfoMessages))
         return embed
 
 

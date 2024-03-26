@@ -433,12 +433,12 @@ class SheetManager(commands.Cog):
         if result.did_unset_active_location:
             embed = await self._active_character_embed(
                 ctx,
-                f"Active character changed to '{char.name}' for {result.character_location_context.value} context. Your previous active character '{result.previous_character_name}' has been unset.",
+                f"{result.character_location_context.value} changed to '{char.name}'. Your previous active character '{result.previous_character_name}' has been unset.",
             )
             await ctx.send(embed=embed)
         else:
             embed = await self._active_character_embed(
-                ctx, f"Active character set to '{char.name}' for {result.character_location_context.value} context."
+                ctx, f"{result.character_location_context.value} changed to '{char.name}'"
             )
             await ctx.send(embed=embed)
 
@@ -508,7 +508,7 @@ class SheetManager(commands.Cog):
         msg = ""
         if set_result.did_unset_active_location:
             msg = f" Your previous active character '{set_result.previous_character_name}' has been unset."
-        msg = f"Active character changed to '{new_character_to_set.name}' for {set_result.character_location_context.value} context.{msg}"
+        msg = f"{set_result.character_location_context.value} changed to '{new_character_to_set.name}'.{msg}"
         embed = await self._active_character_embed(ctx, msg)
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -576,7 +576,7 @@ class SheetManager(commands.Cog):
         msg = ""
         if set_result.did_unset_active_location:
             msg = f" Your previous active character '{set_result.previous_character_name}' has been unset."
-        msg = f"Active character changed to '{new_character_to_set.name}' for {set_result.character_location_context.value} context.{msg}"
+        msg = f"{set_result.character_location_context.value} changed to '{new_character_to_set.name}.{msg}"
         embed = await self._active_character_embed(ctx, msg)
         await ctx.send(embed=embed)
         await try_delete(ctx.message)

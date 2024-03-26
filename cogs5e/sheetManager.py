@@ -433,12 +433,12 @@ class SheetManager(commands.Cog):
         if result.did_unset_active_location:
             embed = await self._active_character_embed(
                 ctx,
-                f"{result.character_location_context.value} character changed to '{char.name}'. Your previous active character '{result.previous_character_name}' has been unset.",
+                f"{result.character_location_context.value} character changed to: {char.name}\nYour previous active character '{result.previous_character_name}' has been unset.",
             )
             await ctx.send(embed=embed)
         else:
             embed = await self._active_character_embed(
-                ctx, f"{result.character_location_context.value} character changed to '{char.name}'"
+                ctx, f"{result.character_location_context.value} character changed to: {char.name}"
             )
             await ctx.send(embed=embed)
 
@@ -507,8 +507,8 @@ class SheetManager(commands.Cog):
         set_result = await new_character_to_set.set_server_active(ctx, server_character)
         msg = ""
         if set_result.did_unset_active_location:
-            msg = f" Your previous active character '{set_result.previous_character_name}' has been unset."
-        msg = f"{set_result.character_location_context.value} character changed to '{new_character_to_set.name}'.{msg}"
+            msg = f"\nYour previous active character '{set_result.previous_character_name}' has been unset."
+        msg = f"{set_result.character_location_context.value} character changed to: {new_character_to_set.name}{msg}"
         embed = await self._active_character_embed(ctx, msg)
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -575,8 +575,8 @@ class SheetManager(commands.Cog):
         set_result = await new_character_to_set.set_channel_active(ctx, channel_character)
         msg = ""
         if set_result.did_unset_active_location:
-            msg = f" Your previous active character '{set_result.previous_character_name}' has been unset."
-        msg = f"{set_result.character_location_context.value} character changed to '{new_character_to_set.name}.{msg}"
+            msg = f"\nYour previous active character '{set_result.previous_character_name}' has been unset."
+        msg = f"{set_result.character_location_context.value} character changed to: {new_character_to_set.name}{msg}"
         embed = await self._active_character_embed(ctx, msg)
         await ctx.send(embed=embed)
         await try_delete(ctx.message)

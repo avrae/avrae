@@ -454,7 +454,7 @@ class SheetManager(commands.Cog):
         )
 
         char = Character.from_dict(selected_char)
-        Character.add_to_cache(str(ctx.author.id), selected_char["upstream"], char)
+        Character.ensure_character_in_cache(str(ctx.author.id), char)
         return char
 
     @character.command(name="server")

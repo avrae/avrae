@@ -210,8 +210,8 @@ class Character(StatBlock):
         return inst
 
     @classmethod
-    async def add_to_cache(cls, owner_id, upstream, character):
-        cls._cache[owner_id, upstream] = character
+    async def ensure_character_in_cache(cls, owner_id, character):
+        cls._cache[owner_id, character["upstream"]] = character
         return
 
     @classmethod

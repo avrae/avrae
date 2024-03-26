@@ -966,11 +966,11 @@ class SheetManager(commands.Cog):
         )
         if (link := active_character.get_sheet_url()) is not None:
             desc = f"{desc}\n[Go to Character Sheet]({link})"
+        if message != "":
+            embed.add_field(name="Changes", value=message, inline=True)
         embed.description = desc
         characterInfoMessages = []
 
-        if message != "":
-            characterInfoMessages.append(f"{message}\n")
         if global_character is not None:
             characterInfoMessages.append(f"Global Character: {global_character.name}")
         if server_character is not None:

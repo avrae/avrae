@@ -453,9 +453,7 @@ class SheetManager(commands.Cog):
             ctx, user_characters, name, lambda e: e["name"], selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)"
         )
 
-        char = Character.from_dict(selected_char)
-        Character.ensure_character_in_cache(str(ctx.author.id), char)
-        return char
+        return Character.serialize_character_from_dict(str(ctx.author.id), char)
 
     @character.command(name="server")
     @commands.guild_only()

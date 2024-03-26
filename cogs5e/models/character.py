@@ -210,9 +210,10 @@ class Character(StatBlock):
         return inst
 
     @classmethod
-    async def ensure_character_in_cache(cls, owner_id, character):
-        cls._cache[owner_id, character["upstream"]] = character
-        return
+    async def serialize_character_from_dict(cls, owner_id, character_dictionary):
+        char = Character.from_dict(character_dictionary)
+        cls._cache[owner_id, character_dictionary["upstream"]] = character_dictionary
+        return char
 
     @classmethod
     async def from_bot_and_channel_id(cls, ctx, owner_id: str, channel_id: str):

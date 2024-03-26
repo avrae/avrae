@@ -512,7 +512,7 @@ class Character(StatBlock):
         if ctx.channel is None:
             raise NoPrivateMessage()
         channel_id = str(ctx.channel.id)
-        return await self.unset_active_channel_helper(ctx, channel_id)
+        return await self.unset_active_channel_helper(ctx, channel_id, previous_character)
 
     async def unset_active_channel_helper(self, ctx, channel_id, previous_character):
         channel_id = str(channel_id)

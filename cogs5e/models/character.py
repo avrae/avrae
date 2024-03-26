@@ -210,6 +210,11 @@ class Character(StatBlock):
         return inst
 
     @classmethod
+    async def add_to_cache(cls, owner_id, upstream, character):
+        cls._cache[owner_id, upstream] = character
+        return
+
+    @classmethod
     async def from_bot_and_channel_id(cls, ctx, owner_id: str, channel_id: str):
         owner_id = str(owner_id)
         channel_id = str(channel_id)

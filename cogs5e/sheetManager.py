@@ -453,7 +453,9 @@ class SheetManager(commands.Cog):
             ctx, user_characters, name, lambda e: e["name"], selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)"
         )
 
-        return Character.from_dict(selected_char)
+        char = Character.from_dict(selected_char)
+        Character.add_to_cache(str(ctx.author.id), selected_char["upstream"], char)
+        return char
 
     @character.command(name="server")
     @commands.guild_only()

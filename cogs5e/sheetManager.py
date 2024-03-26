@@ -607,8 +607,11 @@ class SheetManager(commands.Cog):
             if unset_server_result.did_unset_active_location:
                 list_of_unset_characters.append(f"{server_character.name} for server '{ctx.guild.name}'")
         if len(list_of_unset_characters) > 0:
-            full_list_message = ", ".join(list_of_unset_characters)
-            await ctx.send(f"Unset the following character mappings: {full_list_message}")
+            full_list_message = "\n".join(list_of_unset_characters)
+            embed = await self._active_character_embed(
+                ctx, f"Unset the following character mappings:\n\n{full_list_message}"
+            )
+            await ctx.send(embed=embed)
         else:
             await ctx.send("No characters were set on any channels or servers")
         await try_delete(ctx.message)

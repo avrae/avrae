@@ -409,18 +409,19 @@ class SheetManager(commands.Cog):
 
     @commands.group(aliases=["char"], invoke_without_command=True)
     async def character(self, ctx, *, name: str = None):
-        """If no character name is passed in, it will display the current character and other contextual information. Otherwise it
-        switches the active character. This will switch the most specific context that is set with either the current global character
-        or the named character passed in.
+        """If no character name is passed in, it will display the current character and other contextual information.
+        Otherwise it switches the active character. This will switch the most specific context that is set with either
+        the current global character or the named character passed in.
 
-        For example, if you have a channel character set for the channel you are typing this command in, it will switch to have the character
-        that is passed in as the new channel character. If you don't have a channel character set but do have a server character set, it will
-        switch to have the server character be set to whatever is the character name passed in. If you have neither a channel or server character
-        set it will default to global context and switch your global character to the character name passed in.
+        For example, if you have a channel character set for the channel you are typing this command in, it will switch
+        to have the character that is passed in as the new channel character. If you don't have a channel character set
+        but do have a server character set, it will switch to have the server character be set to whatever is the
+        character name passed in. If you have neither a channel or server character set it will default to global
+        context and switch your global character to the character name passed in.
 
         __Optional Arguments__
-        `<name>` - The name of the character you want to switch to. If not passed in it will show active character information.
-            e.g. `{ctx.prefix}character "Character Name"`
+        `<name>` - The name of the character you want to switch to. If not passed in it will show active character
+            information. e.g. `{ctx.prefix}character "Character Name"`
         """
         if name is None:
             embed = await self._active_character_embed(ctx)
@@ -433,7 +434,8 @@ class SheetManager(commands.Cog):
         if result.did_unset_active_location:
             embed = await self._active_character_embed(
                 ctx,
-                f"{result.character_location_context.value} character changed to: {char.name}\nYour previous active character '{result.previous_character_name}' has been unset.",
+                f"{result.character_location_context.value} character changed to: {char.name}\nYour previous active"
+                f"character '{result.previous_character_name}' has been unset.",
             )
             await ctx.send(embed=embed)
         else:
@@ -476,7 +478,7 @@ class SheetManager(commands.Cog):
                 )
             except NoCharacter:
                 await ctx.send(
-                    f"No global character is active. You must have a global character set to set a server character."
+                    "No global character is active. You must have a global character set to set a server character."
                 )
                 return
         else:
@@ -537,18 +539,11 @@ class SheetManager(commands.Cog):
                 )
             except NoCharacter:
                 await ctx.send(
-                    f"No global character is active. You must have a global character set to set a server character."
+                    "No global character is active. You must have a global character set to set a server character."
                 )
                 return
         else:
             new_character_to_set = await self.get_character_by_name(ctx, name)
-
-        try:
-            server_character: Character = await Character.from_ctx(
-                ctx, use_global=False, use_guild=True, use_channel=False
-            )
-        except:
-            pass
 
         try:
             channel_character: Character = await Character.from_ctx(
@@ -615,7 +610,7 @@ class SheetManager(commands.Cog):
             full_list_message = ", ".join(list_of_unset_characters)
             await ctx.send(f"Unset the following character mappings: {full_list_message}")
         else:
-            await ctx.send(f"No characters were set on any channels or servers")
+            await ctx.send("No characters were set on any channels or servers")
         await try_delete(ctx.message)
 
     @character.command(name="list")

@@ -589,7 +589,7 @@ class SheetManager(commands.Cog):
             channel_id = channel.id
             try:
                 channel_character: Character = await Character.from_bot_and_channel_id(ctx, ctx.author.id, channel_id)
-                unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id)
+                unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id, None)
                 if unset_result.did_unset_active_location:
                     list_of_unset_characters.append(f"{channel_character.name} for channel '{channel.name}'")
             except NoCharacter:

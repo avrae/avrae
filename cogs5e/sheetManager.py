@@ -938,7 +938,7 @@ class SheetManager(commands.Cog):
         return url
 
     @staticmethod
-    async def _active_character_embed(ctx, message = ""):
+    async def _active_character_embed(ctx, message=""):
         """Creates an embed to be displayed when the active character is checked"""
         global_character = None
         server_character = None

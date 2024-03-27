@@ -415,7 +415,7 @@ class SheetManager(commands.Cog):
 
         __Optional Arguments__
         `<name>` - The name of the character you want to switch to. If not passed in it will show active character
-            information. e.g. `{ctx.prefix}character "Character Name"`
+            information. e.g. `!character "Character Name"`
         """
         if name is None:
             embed = await self._active_character_embed(ctx)
@@ -459,7 +459,7 @@ class SheetManager(commands.Cog):
 
         __Optional Arguments__
         `<name>` - The name of the character you want to set as your server character. If not passed in it will default to switching to your current Global character.
-            e.g. `{ctx.prefix}character server "Character Name"`
+            e.g. `!character server "Character Name"`
         """  # noqa: E501
         new_character_to_set = None
         server_character = None
@@ -518,7 +518,7 @@ class SheetManager(commands.Cog):
 
         __Optional Arguments__
         `<name>` - The name of the character you want to set as your channel character. If not passed in it will default to switching to your current Global character.
-            e.g. `{ctx.prefix}character channel "Character Name"`
+            e.g. `!character channel "Character Name"`
         """  # noqa: E501
 
         channel_character = None

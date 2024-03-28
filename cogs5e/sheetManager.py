@@ -429,7 +429,7 @@ class SheetManager(commands.Cog):
         if result.did_unset_active_location:
             embed = await self._active_character_embed(
                 ctx,
-                f"{result.character_location_context.value} character changed to: {char.name}\nYour previous active"
+                f"{result.character_location_context.value} character changed to: {char.name}\nYour previous active "
                 f"character '{result.previous_character_name}' has been unset.",
             )
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)

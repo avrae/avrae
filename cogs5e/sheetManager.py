@@ -42,6 +42,7 @@ from utils.settings.character import CHARACTER_SETTINGS
 log = logging.getLogger(__name__)
 DELETE_AFTER_SECONDS = 30
 
+
 class SheetManager(commands.Cog):
     """
     Commands to load a character sheet into Avrae, and supporting commands to modify the character, as well as basic macros.
@@ -409,15 +410,9 @@ class SheetManager(commands.Cog):
 
     @commands.group(aliases=["char"], invoke_without_command=True)
     async def character(self, ctx, *, name: str = None):
-        """If no character name is passed in, it will display the current character and other contextual information.
-        Otherwise it switches the active character. This will switch the most specific context that is set with either
-        the current global character or the named character passed in.
+        """If no character name is passed in, it will display the current character and information about the current channel, server and global characters if appropriate. Otherwise it switches the active character for a channel, server or global, whatever is most specific.
 
-        For example, if you have a channel character set for the channel you are typing this command in, it will switch
-        to have the character that is passed in as the new channel character. If you don't have a channel character set
-        but do have a server character set, it will switch to have the server character be set to whatever is the
-        character name passed in. If you have neither a channel or server character set it will default to global
-        context and switch your global character to the character name passed in.
+        For example, if you have a channel character set for the channel you are typing this command in, it will switch to have the character that is passed in as the new channel character. If you don't have a channel character set but do have a server character set, it will switch to have the server character be set to whatever is the character name passed in. If you have neither a channel or server character set it will default to switching your global character to the character name passed in.
 
         __Optional Arguments__
         `<name>` - The name of the character you want to switch to. If not passed in it will show active character
@@ -459,8 +454,7 @@ class SheetManager(commands.Cog):
     @commands.guild_only()
     async def character_server(self, ctx, *, args: str = ""):
         """
-        Sets the current global active character as a server character.
-        If the character is already the server character, unsets the server character.
+        Sets the current global active character as a server character.  If the character is already the server character, unsets the server character.
 
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
 
@@ -533,8 +527,7 @@ class SheetManager(commands.Cog):
     @commands.guild_only()
     async def character_channel(self, ctx, *, args: str = ""):
         """
-        Sets the current global active character as a channel character.
-        If the character is already the channel character, unsets the channel character.
+        Sets the current global active character as a channel character. If the character is already the channel character, unsets the channel character.
 
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
 
@@ -646,7 +639,7 @@ class SheetManager(commands.Cog):
     @commands.guild_only()
     async def reset_all(self, ctx):
         """
-        This will unset any channel or server-specific characters that have been set and force the current global character to be used everywhere on this server
+        This will unset any channel and server-specific characters that have been set and force the current global character to be used everywhere on this server.
         """  # noqa: E501
 
         list_of_unset_characters = []

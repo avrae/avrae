@@ -40,7 +40,7 @@ from utils.functions import confirm, get_positivity, list_get, search_and_select
 from utils.settings.character import CHARACTER_SETTINGS
 
 log = logging.getLogger(__name__)
-
+DELETE_AFTER_SECONDS = 30
 
 class SheetManager(commands.Cog):
     """
@@ -421,7 +421,7 @@ class SheetManager(commands.Cog):
 
         __Optional Arguments__
         `<name>` - The name of the character you want to switch to. If not passed in it will show active character
-            information. e.g. `{ctx.prefix}character "Character Name"`
+            information. e.g. `!character "Character Name"`
         """
         if name is None:
             embed = await self._active_character_embed(ctx)
@@ -437,12 +437,12 @@ class SheetManager(commands.Cog):
                 f"{result.character_location_context.value} character changed to: {char.name}\nYour previous active"
                 f"character '{result.previous_character_name}' has been unset.",
             )
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         else:
             embed = await self._active_character_embed(
                 ctx, f"{result.character_location_context.value} character changed to: {char.name}"
             )
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
 
     async def get_character_by_name(self, ctx, name):
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
@@ -457,8 +457,8 @@ class SheetManager(commands.Cog):
 
     @character.command(name="server")
     @commands.guild_only()
-    async def character_server(self, ctx, *, name: str = None):
-        f"""
+    async def character_server(self, ctx, *, args: str = ""):
+        """
         Sets the current global active character as a server character.
         If the character is already the server character, unsets the server character.
 
@@ -466,11 +466,25 @@ class SheetManager(commands.Cog):
 
         __Optional Arguments__
         `<name>` - The name of the character you want to set as your server character. If not passed in it will default to switching to your current Global character.
-            e.g. `{ctx.prefix}character server "Character Name"`
+            e.g. `!character server "Character Name"`
+        `reset|unset` - This will unset the current server character and leave you with no currently set server character.
         """  # noqa: E501
         new_character_to_set = None
         server_character = None
 
+        parsed = argparse(args)
+        reset = parsed.last("reset")
+        unset = parsed.last("unset")
+        if reset or unset:
+            server_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=True, use_channel=False
+            )
+            await server_character.unset_server_active(ctx, server_character)
+            msg = f"Unset previous server character '{server_character.name}'"
+            embed = await self._active_character_embed(ctx, msg)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
+            return
+        name = args
         if name is None:
             try:
                 new_character_to_set: Character = await Character.from_ctx(
@@ -503,7 +517,7 @@ class SheetManager(commands.Cog):
                 embed = await self._active_character_embed(
                     ctx, f"Unset previous server character '{server_character.name}'."
                 )
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
                 return
 
         set_result = await new_character_to_set.set_server_active(ctx, server_character)
@@ -512,12 +526,12 @@ class SheetManager(commands.Cog):
             msg = f"\nYour previous active character '{set_result.previous_character_name}' has been unset."
         msg = f"{set_result.character_location_context.value} character changed to: {new_character_to_set.name}{msg}"
         embed = await self._active_character_embed(ctx, msg)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         await try_delete(ctx.message)
 
     @character.command(name="channel")
     @commands.guild_only()
-    async def character_channel(self, ctx, *, name: str = None):
+    async def character_channel(self, ctx, *, args: str = ""):
         """
         Sets the current global active character as a channel character.
         If the character is already the channel character, unsets the channel character.
@@ -526,12 +540,26 @@ class SheetManager(commands.Cog):
 
         __Optional Arguments__
         `<name>` - The name of the character you want to set as your channel character. If not passed in it will default to switching to your current Global character.
-            e.g. `{ctx.prefix}character channel "Character Name"`
+            e.g. `!character channel "Character Name"`
+        `reset|unset` - This will unset the current server character and leave you with no currently set server character.
         """  # noqa: E501
 
         channel_character = None
         new_character_to_set = None
 
+        parsed = argparse(args)
+        reset = parsed.last("reset")
+        unset = parsed.last("unset")
+        if reset or unset:
+            channel_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=False, use_channel=True
+            )
+            await channel_character.unset_channel_active(ctx, channel_character)
+            msg = f"Unset previous channel character '{channel_character.name}'"
+            embed = await self._active_character_embed(ctx, msg)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
+            return
+        name = args
         if name is None:
             try:
                 new_character_to_set: Character = await Character.from_ctx(
@@ -564,7 +592,7 @@ class SheetManager(commands.Cog):
                 embed = await self._active_character_embed(
                     ctx, f"Unset previous channel character '{channel_character.name}'."
                 )
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
                 return
 
         set_result = await new_character_to_set.set_channel_active(ctx, channel_character)
@@ -573,7 +601,7 @@ class SheetManager(commands.Cog):
             msg = f"\nYour previous active character '{set_result.previous_character_name}' has been unset."
         msg = f"{set_result.character_location_context.value} character changed to: {new_character_to_set.name}{msg}"
         embed = await self._active_character_embed(ctx, msg)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         await try_delete(ctx.message)
 
     @character.command(name="resetall")
@@ -611,7 +639,7 @@ class SheetManager(commands.Cog):
             embed = await self._active_character_embed(
                 ctx, f"Unset the following character mappings:\n\n{full_list_message}"
             )
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         else:
             await ctx.send("No characters were set on any channels or servers")
         await try_delete(ctx.message)

@@ -42,6 +42,7 @@ from utils.settings.character import CHARACTER_SETTINGS
 log = logging.getLogger(__name__)
 DELETE_AFTER_SECONDS = 20
 
+
 class SheetManager(commands.Cog):
     """
     Commands to load a character sheet into Avrae, and supporting commands to modify the character, as well as basic macros.

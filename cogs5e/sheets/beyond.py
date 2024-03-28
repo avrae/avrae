@@ -27,7 +27,7 @@ from gamedata.compendium import compendium
 from utils import config, constants, enums
 from utils.enums import ActivationType
 from utils.functions import smart_trim
-
+import json
 log = logging.getLogger(__name__)
 
 ENDPOINT = config.DDB_CHAR_COMPUTATION_ENDPT
@@ -36,7 +36,7 @@ if config.ENVIRONMENT in ("development", "staging"):
 else:
     urls = r"www\.dndbeyond\.com|ddb\.ac"
 
-DDB_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})(?:/profile/.+)?/characters/(\d+)/?")
+DDB_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})(?:/profile/.+)?/characters/(\d+)(?:/)?")
 DDB_PDF_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})/sheet-pdfs/.+_(\d+).pdf")
 SKILL_MAP = {
     "3": "acrobatics",
@@ -181,6 +181,9 @@ class BeyondSheetParser(SheetLoaderABC):
                     )
                 else:
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
+
+
+        print(json.dumps(character))
         character["_id"] = char_id
         self.character_data = character
         self._is_live = (ddb_user is not None) and (ddb_user.user_id == str(character["ownerId"]))

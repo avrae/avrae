@@ -40,7 +40,7 @@ from utils.functions import confirm, get_positivity, list_get, search_and_select
 from utils.settings.character import CHARACTER_SETTINGS
 
 log = logging.getLogger(__name__)
-
+DELETE_AFTER_SECONDS = 20
 
 class SheetManager(commands.Cog):
     """
@@ -437,12 +437,12 @@ class SheetManager(commands.Cog):
                 f"{result.character_location_context.value} character changed to: {char.name}\nYour previous active"
                 f"character '{result.previous_character_name}' has been unset.",
             )
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         else:
             embed = await self._active_character_embed(
                 ctx, f"{result.character_location_context.value} character changed to: {char.name}"
             )
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
 
     async def get_character_by_name(self, ctx, name):
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
@@ -503,7 +503,7 @@ class SheetManager(commands.Cog):
                 embed = await self._active_character_embed(
                     ctx, f"Unset previous server character '{server_character.name}'."
                 )
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
                 return
 
         set_result = await new_character_to_set.set_server_active(ctx, server_character)
@@ -512,7 +512,7 @@ class SheetManager(commands.Cog):
             msg = f"\nYour previous active character '{set_result.previous_character_name}' has been unset."
         msg = f"{set_result.character_location_context.value} character changed to: {new_character_to_set.name}{msg}"
         embed = await self._active_character_embed(ctx, msg)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         await try_delete(ctx.message)
 
     @character.command(name="channel")
@@ -564,7 +564,7 @@ class SheetManager(commands.Cog):
                 embed = await self._active_character_embed(
                     ctx, f"Unset previous channel character '{channel_character.name}'."
                 )
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
                 return
 
         set_result = await new_character_to_set.set_channel_active(ctx, channel_character)
@@ -573,7 +573,7 @@ class SheetManager(commands.Cog):
             msg = f"\nYour previous active character '{set_result.previous_character_name}' has been unset."
         msg = f"{set_result.character_location_context.value} character changed to: {new_character_to_set.name}{msg}"
         embed = await self._active_character_embed(ctx, msg)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         await try_delete(ctx.message)
 
     @character.command(name="resetall")
@@ -611,7 +611,7 @@ class SheetManager(commands.Cog):
             embed = await self._active_character_embed(
                 ctx, f"Unset the following character mappings:\n\n{full_list_message}"
             )
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         else:
             await ctx.send("No characters were set on any channels or servers")
         await try_delete(ctx.message)

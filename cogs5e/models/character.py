@@ -210,6 +210,12 @@ class Character(StatBlock):
         return inst
 
     @classmethod
+    async def serialize_character_from_dict(cls, owner_id, character_dictionary):
+        char = Character.from_dict(character_dictionary)
+        cls._cache[owner_id, character_dictionary["upstream"]] = character_dictionary
+        return char
+
+    @classmethod
     async def from_bot_and_channel_id(cls, ctx, owner_id: str, channel_id: str):
         owner_id = str(owner_id)
         channel_id = str(channel_id)
@@ -373,7 +379,8 @@ class Character(StatBlock):
             self._live_integration.commit_soon(ctx)  # creates a task to commit eventually
 
     async def set_active(self, ctx):
-        """Sets the character as globally active and unsets any server-active character or channel-active character in the current context, whichever is most specific."""
+        """Sets the character as globally active and unsets any server-active character or channel-active character in
+        the current context, whichever is most specific."""
         owner_id = str(ctx.author.id)
         did_unset_active_location = False
         channel_character = None
@@ -398,7 +405,6 @@ class Character(StatBlock):
         except NoCharacter:
             pass
 
-        character_context = CharacterLocationContext.NOCHARACTER
         if ctx.channel is not None and channel_character is not None and channel_character.is_active_channel(ctx):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
             return await self.set_channel_active(ctx, channel_character)

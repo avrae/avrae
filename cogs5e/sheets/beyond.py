@@ -162,7 +162,7 @@ class BeyondSheetParser(SheetLoaderABC):
             headers = {"Authorization": f"Bearer {ddb_user.token}"}
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{ENDPOINT}?charId={char_id}", headers=headers) as resp:
+            async with session.get(f"{ENDPOINT}/{char_id}", headers=headers) as resp:
                 log.debug(f"DDB returned {resp.status}")
                 if resp.status == 200:
                     character = await resp.json()

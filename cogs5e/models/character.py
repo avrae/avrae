@@ -210,6 +210,12 @@ class Character(StatBlock):
         return inst
 
     @classmethod
+    async def deserialize_character_from_dict(cls, owner_id, character_dictionary):
+        char = Character.from_dict(character_dictionary)
+        cls._cache[owner_id, character_dictionary["upstream"]] = char
+        return char
+
+    @classmethod
     async def from_bot_and_channel_id(cls, ctx, owner_id: str, channel_id: str):
         owner_id = str(owner_id)
         channel_id = str(channel_id)
@@ -396,7 +402,6 @@ class Character(StatBlock):
         except NoCharacter:
             pass
 
-        character_context = CharacterLocationContext.NOCHARACTER
         if ctx.channel is not None and channel_character is not None and channel_character.is_active_channel(ctx):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
             return await self.set_channel_active(ctx, channel_character)

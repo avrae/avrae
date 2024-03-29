@@ -380,8 +380,6 @@ class Character(StatBlock):
 
     async def set_active(self, ctx):
         """Sets the character as globally active and unsets any server-active character or channel-active character in the current context, whichever is most specific."""
-        owner_id = str(ctx.author.id)
-        did_unset_active_location = False
         channel_character = None
         try:
             channel_character: Character = await Character.from_ctx(

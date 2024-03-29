@@ -174,7 +174,9 @@ class BeyondSheetParser(SheetLoaderABC):
                     else:
                         raise ExternalImportError("You do not have permission to view this character.")
                 elif resp.status == 404:
-                    raise ExternalImportError("This character does not exist, or you do not have access to it. Are you using the right link?")
+                    raise ExternalImportError(
+                        "This character does not exist, or you do not have access to it. Are you using the right link?"
+                    )
                 elif resp.status == 429:
                     raise ExternalImportError(
                         "Too many people are trying to import characters! Please try again in a few minutes."

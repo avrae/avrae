@@ -210,9 +210,9 @@ class Character(StatBlock):
         return inst
 
     @classmethod
-    async def serialize_character_from_dict(cls, owner_id, character_dictionary):
+    async def deserialize_character_from_dict(cls, owner_id, character_dictionary):
         char = Character.from_dict(character_dictionary)
-        cls._cache[owner_id, character_dictionary["upstream"]] = character_dictionary
+        cls._cache[owner_id, character_dictionary["upstream"]] = char
         return char
 
     @classmethod

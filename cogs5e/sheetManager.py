@@ -40,7 +40,7 @@ from utils.functions import confirm, get_positivity, list_get, search_and_select
 from utils.settings.character import CHARACTER_SETTINGS
 
 log = logging.getLogger(__name__)
-DELETE_AFTER_SECONDS = 30
+DELETE_AFTER_SECONDS = 20
 
 
 class SheetManager(commands.Cog):

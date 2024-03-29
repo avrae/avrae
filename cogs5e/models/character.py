@@ -379,8 +379,7 @@ class Character(StatBlock):
             self._live_integration.commit_soon(ctx)  # creates a task to commit eventually
 
     async def set_active(self, ctx):
-        """Sets the character as globally active and unsets any server-active character or channel-active character in
-        the current context, whichever is most specific."""
+        """Sets the character as globally active and unsets any server-active character or channel-active character in the current context, whichever is most specific."""
         owner_id = str(ctx.author.id)
         did_unset_active_location = False
         channel_character = None
@@ -412,21 +411,27 @@ class Character(StatBlock):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
             return await self.set_server_active(ctx, server_character)
         else:
-            # for all characters owned by this owner who are globally active, make them inactive
-            await ctx.bot.mdb.characters.update_many({"owner": owner_id, "active": True}, {"$set": {"active": False}})
-            # make this character active
-            await ctx.bot.mdb.characters.update_one(
-                {"owner": owner_id, "upstream": self._upstream}, {"$set": {"active": True}}
-            )
-            self._active = True
-            previous_character_name = None
-            if global_character:
-                previous_character_name = global_character.name
-            return SetActiveResult(
-                did_unset_active_location=did_unset_active_location,
-                character_location_context=CharacterLocationContext.GLOBAL,
-                previous_character_name=previous_character_name,
-            )
+            return await self.set_global_active(ctx, global_character)
+
+    async def set_global_active(self, ctx, previous_character):
+        """Sets the current class as the global active character"""
+        owner_id = str(ctx.author.id)
+        did_unset_active_location = False
+        # for all characters owned by this owner who are globally active, make them inactive
+        await ctx.bot.mdb.characters.update_many({"owner": owner_id, "active": True}, {"$set": {"active": False}})
+        # make this character active
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": owner_id, "upstream": self._upstream}, {"$set": {"active": True}}
+        )
+        self._active = True
+        previous_character_name = None
+        if previous_character:
+            previous_character_name = previous_character.name
+        return SetActiveResult(
+            did_unset_active_location=did_unset_active_location,
+            character_location_context=CharacterLocationContext.GLOBAL,
+            previous_character_name=previous_character_name,
+        )
 
     async def set_server_active(self, ctx, previous_character):
         """

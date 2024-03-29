@@ -36,7 +36,7 @@ if config.ENVIRONMENT in ("development", "staging"):
 else:
     urls = r"www\.dndbeyond\.com|ddb\.ac"
 
-DDB_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})(?:/profile/.+)?/characters/(\d+)/?")
+DDB_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})(?:/profile/.+)?/characters/(\d+)(?:/)?")
 DDB_PDF_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})/sheet-pdfs/.+_(\d+).pdf")
 SKILL_MAP = {
     "3": "acrobatics",
@@ -162,7 +162,7 @@ class BeyondSheetParser(SheetLoaderABC):
             headers = {"Authorization": f"Bearer {ddb_user.token}"}
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{ENDPOINT}?charId={char_id}", headers=headers) as resp:
+            async with session.get(f"{ENDPOINT}{char_id}", headers=headers) as resp:
                 log.debug(f"DDB returned {resp.status}")
                 if resp.status == 200:
                     character = await resp.json()
@@ -174,13 +174,16 @@ class BeyondSheetParser(SheetLoaderABC):
                     else:
                         raise ExternalImportError("You do not have permission to view this character.")
                 elif resp.status == 404:
-                    raise ExternalImportError("This character does not exist. Are you using the right link?")
+                    raise ExternalImportError(
+                        "This character does not exist, or you do not have access to it. Are you using the right link?"
+                    )
                 elif resp.status == 429:
                     raise ExternalImportError(
                         "Too many people are trying to import characters! Please try again in a few minutes."
                     )
                 else:
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
+
         character["_id"] = char_id
         self.character_data = character
         self._is_live = (ddb_user is not None) and (ddb_user.user_id == str(character["ownerId"]))

@@ -410,19 +410,13 @@ class SheetManager(commands.Cog):
 
     @commands.group(aliases=["char"], invoke_without_command=True)
     async def character(self, ctx, *, name: str = None):
-        """If no character name is passed in, it will display the current character and other contextual information.
-        Otherwise it switches the active character. This will switch the most specific context that is set with either
-        the current global character or the named character passed in.
+        """If no character name is passed in, it will display the current character and information about the current channel, server and global characters if appropriate. Otherwise it switches the active character for a channel, server or global, whatever is most specific.
 
-        For example, if you have a channel character set for the channel you are typing this command in, it will switch
-        to have the character that is passed in as the new channel character. If you don't have a channel character set
-        but do have a server character set, it will switch to have the server character be set to whatever is the
-        character name passed in. If you have neither a channel or server character set it will default to global
-        context and switch your global character to the character name passed in.
+        For example, if you have a channel character set for the channel you are typing this command in, it will switch to have the character that is passed in as the new channel character. If you don't have a channel character set but do have a server character set, it will switch to have the server character be set to whatever is the character name passed in. If you have neither a channel or server character set it will default to switching your global character to the character name passed in.
 
         __Optional Arguments__
         `<name>` - The name of the character you want to switch to. If not passed in it will show active character
-            information. e.g. `{ctx.prefix}character "Character Name"`
+            information. e.g. `!character "Character Name"`
         """
         if name is None:
             embed = await self._active_character_embed(ctx)
@@ -435,7 +429,7 @@ class SheetManager(commands.Cog):
         if result.did_unset_active_location:
             embed = await self._active_character_embed(
                 ctx,
-                f"{result.character_location_context.value} character changed to: {char.name}\nYour previous active"
+                f"{result.character_location_context.value} character changed to: {char.name}\nYour previous active "
                 f"character '{result.previous_character_name}' has been unset.",
             )
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
@@ -458,20 +452,33 @@ class SheetManager(commands.Cog):
 
     @character.command(name="server")
     @commands.guild_only()
-    async def character_server(self, ctx, *, name: str = None):
-        f"""
-        Sets the current global active character as a server character.
-        If the character is already the server character, unsets the server character.
+    async def character_server(self, ctx, *, args: str = ""):
+        """
+        Sets the current global active character as a server character.  If the character is already the server character, unsets the server character.
 
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
 
         __Optional Arguments__
         `<name>` - The name of the character you want to set as your server character. If not passed in it will default to switching to your current Global character.
-            e.g. `{ctx.prefix}character server "Character Name"`
+            e.g. `!character server "Character Name"`
+        `reset|unset` - This will unset the current server character and leave you with no currently set server character.
         """  # noqa: E501
         new_character_to_set = None
         server_character = None
 
+        parsed = argparse(args)
+        reset = parsed.last("reset")
+        unset = parsed.last("unset")
+        if reset or unset:
+            server_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=True, use_channel=False
+            )
+            await server_character.unset_server_active(ctx, server_character)
+            msg = f"Unset previous server character '{server_character.name}'"
+            embed = await self._active_character_embed(ctx, msg)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
+            return
+        name = args
         if name is None:
             try:
                 new_character_to_set: Character = await Character.from_ctx(
@@ -479,7 +486,7 @@ class SheetManager(commands.Cog):
                 )
             except NoCharacter:
                 await ctx.send(
-                    "No global character is active. You must have a global character set to set a server character."
+                    "No global character is active. You must have a global character set to set a server character if no name is passed in."
                 )
                 return
         else:
@@ -518,21 +525,34 @@ class SheetManager(commands.Cog):
 
     @character.command(name="channel")
     @commands.guild_only()
-    async def character_channel(self, ctx, *, name: str = None):
+    async def character_channel(self, ctx, *, args: str = ""):
         """
-        Sets the current global active character as a channel character.
-        If the character is already the channel character, unsets the channel character.
+        Sets the current global active character as a channel character. If the character is already the channel character, unsets the channel character.
 
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
 
         __Optional Arguments__
         `<name>` - The name of the character you want to set as your channel character. If not passed in it will default to switching to your current Global character.
-            e.g. `{ctx.prefix}character channel "Character Name"`
+            e.g. `!character channel "Character Name"`
+        `reset|unset` - This will unset the current channel character and leave you with no currently set channel character.
         """  # noqa: E501
 
         channel_character = None
         new_character_to_set = None
 
+        parsed = argparse(args)
+        reset = parsed.last("reset")
+        unset = parsed.last("unset")
+        if reset or unset:
+            channel_character: Character = await Character.from_ctx(
+                ctx, use_global=False, use_guild=False, use_channel=True
+            )
+            await channel_character.unset_channel_active(ctx, channel_character)
+            msg = f"Unset previous channel character '{channel_character.name}'"
+            embed = await self._active_character_embed(ctx, msg)
+            await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
+            return
+        name = args
         if name is None:
             try:
                 new_character_to_set: Character = await Character.from_ctx(
@@ -540,7 +560,7 @@ class SheetManager(commands.Cog):
                 )
             except NoCharacter:
                 await ctx.send(
-                    "No global character is active. You must have a global character set to set a server character."
+                    "No global character is active. You must have a global character set to set a channel character if no name is passed in."
                 )
                 return
         else:
@@ -577,11 +597,49 @@ class SheetManager(commands.Cog):
         await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         await try_delete(ctx.message)
 
+    @character.command(name="global")
+    @commands.guild_only()
+    async def character_global(self, ctx, *, args: str = ""):
+        """
+        Sets the current global active character.
+        If the same global character is already set, it will mark it as inactive.
+
+        __Arguments__
+        `<name>` - The name of the character you want to set as your global character.
+            e.g. `!character global "Character Name"`
+        """  # noqa: E501
+
+        global_character = None
+        new_character_to_set = None
+        name = args
+        if name is None:
+            await ctx.send("No character name was passed in. You must pass in a name to be able to set your character.")
+            return
+
+        try:
+            global_character: Character = await Character.from_ctx(
+                ctx, use_global=True, use_guild=False, use_channel=False
+            )
+        except NoCharacter:
+            pass
+
+        new_character_to_set = await self.get_character_by_name(ctx, name)
+        set_result = await new_character_to_set.set_global_active(ctx, global_character)
+
+        msg = ""
+        if global_character and set_result.did_unset_active_location:
+            msg = f"\nUnset previous global character '{global_character.name}'."
+        embed = await self._active_character_embed(
+            ctx, f"Global character changed to: '{new_character_to_set.name}'{msg}"
+        )
+        await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
+        return
+
     @character.command(name="resetall")
     @commands.guild_only()
     async def reset_all(self, ctx):
         """
-        This will unset any channel or server-specific characters that have been set and force the current global character to be used everywhere on this server
+        This will unset any channel and server-specific characters that have been set and force the current global character to be used everywhere on this server.
         """  # noqa: E501
 
         list_of_unset_characters = []

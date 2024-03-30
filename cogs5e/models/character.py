@@ -379,7 +379,7 @@ class Character(StatBlock):
             self._live_integration.commit_soon(ctx)  # creates a task to commit eventually
 
     async def set_active(self, ctx):
-        """Sets the character as globally active and unsets any server-active character or channel-active character in the current context, whichever is most specific."""
+        """Sets the character as globally active and unsets any server-active character or channel-active characters."""
         channel_character = None
         try:
             channel_character: Character = await Character.from_ctx(
@@ -402,14 +402,20 @@ class Character(StatBlock):
         except NoCharacter:
             pass
 
+        messages = []
         if ctx.channel is not None and channel_character is not None and channel_character.is_active_channel(ctx):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-            return await self.set_channel_active(ctx, channel_character)
-        elif ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):
+            unset_channel_result = await channel_character.unset_channel_active(ctx, channel_character)
+            messages.append(unset_channel_result.message)
+        if ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-            return await self.set_server_active(ctx, server_character)
-        else:
-            return await self.set_global_active(ctx, global_character)
+            unset_server_result = await server_character.unset_server_active(ctx)
+            messages.append(unset_server_result.message)
+
+        joined_message = "\n".join(messages)
+        global_set_result = await self.set_global_active(ctx, global_character)
+        message = f"{global_set_result.message}\n{joined_message}"
+        return SetActiveResult(did_unset_active_location=global_set_result.did_unset_active_location, message=message)
 
     async def set_global_active(self, ctx, previous_character):
         """Sets the current class as the global active character"""
@@ -422,13 +428,12 @@ class Character(StatBlock):
             {"owner": owner_id, "upstream": self._upstream}, {"$set": {"active": True}}
         )
         self._active = True
-        previous_character_name = None
+        message = f"Global character set to '{self.name}'"
         if previous_character:
-            previous_character_name = previous_character.name
+            message = f"{message}\nUnset previous Global character '{previous_character.name}'"
         return SetActiveResult(
             did_unset_active_location=did_unset_active_location,
-            character_location_context=CharacterLocationContext.GLOBAL,
-            previous_character_name=previous_character_name,
+            message=message,
         )
 
     async def set_server_active(self, ctx, previous_character):
@@ -450,16 +455,15 @@ class Character(StatBlock):
         )
         if guild_id not in self._active_guilds:
             self._active_guilds.append(guild_id)
-        previous_character_name = None
+        message = f"Server character set to '{self.name}'"
         if previous_character:
-            previous_character_name = previous_character.name
+            message = f"{message}\nUnset previous Server character '{previous_character.name}'"
         return SetActiveResult(
             did_unset_active_location=unset_result.modified_count > 0,
-            character_location_context=CharacterLocationContext.SERVER,
-            previous_character_name=previous_character_name,
+            message=message,
         )
 
-    async def unset_server_active(self, ctx, previous_character):
+    async def unset_server_active(self, ctx):
         """
         If this character is active on the contextual guild, unset it as the guild active character.
         Raises NoPrivateMessage() if not in a server.
@@ -475,13 +479,15 @@ class Character(StatBlock):
             self._active_guilds.remove(guild_id)
         except ValueError:
             pass
-        previous_character_name = None
-        if previous_character:
-            previous_character_name = previous_character.name
+        did_unset_active_location = unset_result.modified_count > 0
+        message = ""
+        if did_unset_active_location:
+            message = f"Unset previous Server character '{self.name}'"
+        else:
+            message = "No server character was set"
         return SetActiveResult(
-            did_unset_active_location=unset_result.modified_count > 0,
-            character_location_context=CharacterLocationContext.SERVER,
-            previous_character_name=previous_character_name,
+            did_unset_active_location=did_unset_active_location,
+            message=message,
         )
 
     async def set_channel_active(self, ctx, previous_character):
@@ -504,13 +510,12 @@ class Character(StatBlock):
         if channel_id not in self._active_channels:
             self._active_channels.append(channel_id)
 
-        previous_character_name = None
+        message = f"Channel character set to '{self.name}'"
         if previous_character:
-            previous_character_name = previous_character.name
+            message = f"{message}\nUnset previous Channel character '{previous_character.name}'"
         return SetActiveResult(
             did_unset_active_location=unset_result.modified_count > 0,
-            character_location_context=CharacterLocationContext.CHANNEL,
-            previous_character_name=previous_character_name,
+            message=message,
         )
 
     async def unset_channel_active(self, ctx, previous_character):
@@ -533,13 +538,16 @@ class Character(StatBlock):
             self._active_channels.remove(channel_id)
         except ValueError:
             pass
-        previous_character_name = None
-        if previous_character:
-            previous_character_name = previous_character.name
+
+        did_unset_active_location = unset_result.modified_count > 0
+        message = ""
+        if did_unset_active_location:
+            message = f"Unset previous Channel character '{self.name}'"
+        else:
+            message = "No channel character was set"
         return SetActiveResult(
             did_unset_active_location=unset_result.modified_count > 0,
-            character_location_context=CharacterLocationContext.CHANNEL,
-            previous_character_name=previous_character_name,
+            message=message,
         )
 
     # ---------- HP ----------
@@ -850,9 +858,7 @@ class CharacterSpellbook(HasIntegrationMixin, Spellbook):
             self._live_integration.sync_slots()
 
 
-SetActiveResult = namedtuple(
-    "SetActiveResult", ["did_unset_active_location", "character_location_context", "previous_character_name"]
-)
+SetActiveResult = namedtuple("SetActiveResult", ["did_unset_active_location", "message"])
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
 DESERIALIZE_MAP = {

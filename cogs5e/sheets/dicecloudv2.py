@@ -373,7 +373,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                 raise ExternalImportError(f"Class {level.get('name', 'Unnamed')} is missing key {e.args[0]}")
 
         try:
-            total_level = self.character_data['creatureVariables'][0]['level']['value']
+            total_level = self.character_data["creatureVariables"][0]["level"]["value"]
         except (IndexError, KeyError):
             total_level = None
 

@@ -134,8 +134,10 @@ class Compendium:
 
         ldclient.set_config(ldclient.Config(sdk_key=config.LAUNCHDARKLY_SDK_KEY))
 
+        # TODO: Try importing Context as a standalone method
+        context = ldclient.Context.create("anonymous-user-start-bot", True)
         if ldclient.get().variation(
-            "data.monsters.gridfs", {"key": "anonymous-user-start-bot", "anonymous": True}, False
+            "data.monsters.gridfs", context, False
         ):
             fs = motor.motor_asyncio.AsyncIOMotorGridFSBucket(mdb)
             data = await fs.open_download_stream_by_name(filename="monsters")

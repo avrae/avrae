@@ -11,6 +11,8 @@ from utils import constants
 from utils.functions import smart_trim
 from .types import CombatantType
 
+import ldclient
+
 if TYPE_CHECKING:
     from utils.context import AvraeContext
     from . import Combatant, CombatantGroup, Combat
@@ -46,7 +48,8 @@ async def nlp_feature_flag_enabled(bot):
     return await bot.ldclient.variation(
         "cog.initiative.upenn_nlp.enabled",
         # since NLP recording is keyed on the server ID, we just use a throwaway key
-        {"key": "anonymous", "anonymous": True},
+        #{"key": "anonymous", "anonymous": True}, # Deprecated: SDK 7.0 and below
+        ldclient.Context.create("anonymous", True), # Required for SDK 8.0 and above
         default=False,
     )
 

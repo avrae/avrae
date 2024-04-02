@@ -441,7 +441,7 @@ class SheetManager(commands.Cog):
 
         return Character.deserialize_character_from_dict(str(ctx.author.id), selected_char)
 
-    @character.command(name="server")
+    @character.group(name="server", invoke_without_command=True)
     @commands.guild_only()
     async def character_server(self, ctx, *, name: str = None):
         """
@@ -456,7 +456,8 @@ class SheetManager(commands.Cog):
         new_character_to_set = None
         server_character = None
 
-        if name is None:
+        log.info(f"name='{name}'")
+        if name is None or name is "":
             try:
                 new_character_to_set: Character = await Character.from_ctx(
                     ctx, use_global=True, use_guild=False, use_channel=False
@@ -500,13 +501,13 @@ class SheetManager(commands.Cog):
         This will reset the current server character and leave you with no currently set server character.
         """  # noqa: E501
         server_character: Character = await Character.from_ctx(ctx, use_global=False, use_guild=True, use_channel=False)
-        await server_character.unset_server_active(ctx, server_character)
+        await server_character.unset_server_active(ctx)
         msg = f"Reset previous server character '{server_character.name}'"
         embed = await self._active_character_embed(ctx, msg)
         await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         return
 
-    @character.command(name="channel")
+    @character.group(name="channel", invoke_without_command=True)
     @commands.guild_only()
     async def character_channel(self, ctx, *, name: str = None):
         """
@@ -522,7 +523,8 @@ class SheetManager(commands.Cog):
 
         channel_character = None
         new_character_to_set = None
-        if name is None:
+        log.info(f"name='{name}'")
+        if name is None or name is "":
             try:
                 new_character_to_set: Character = await Character.from_ctx(
                     ctx, use_global=True, use_guild=False, use_channel=False
@@ -549,7 +551,7 @@ class SheetManager(commands.Cog):
             and new_character_to_set.upstream == channel_character.upstream
             and channel_character.is_active_channel(ctx)
         ):
-            unset_channel_result = await channel_character.unset_channel_active(ctx, channel_character)
+            unset_channel_result = await channel_character.unset_channel_active(ctx)
             embed = await self._active_character_embed(ctx, unset_channel_result.message)
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
             return
@@ -568,7 +570,7 @@ class SheetManager(commands.Cog):
         channel_character: Character = await Character.from_ctx(
             ctx, use_global=False, use_guild=False, use_channel=True
         )
-        await channel_character.unset_channel_active(ctx, channel_character)
+        await channel_character.unset_channel_active(ctx)
         msg = f"Reset previous channel character '{channel_character.name}'"
         embed = await self._active_character_embed(ctx, msg)
         await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)

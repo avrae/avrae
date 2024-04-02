@@ -494,7 +494,7 @@ class SheetManager(commands.Cog):
         await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         await try_delete(ctx.message)
 
-    @character_server.command(name="reset")
+    @character_server.command(name="reset", aliases=["unset"])
     @commands.guild_only()
     async def character_server_reset(self, ctx):
         """
@@ -561,7 +561,7 @@ class SheetManager(commands.Cog):
         await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
         await try_delete(ctx.message)
 
-    @character_channel.command(name="reset")
+    @character_channel.command(name="reset", aliases=["unset"])
     @commands.guild_only()
     async def character_channel_reset(self, ctx):
         """

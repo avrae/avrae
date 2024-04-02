@@ -449,7 +449,7 @@ class SheetManager(commands.Cog):
 
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
 
-        __Optional Arguments__
+        __Required Arguments__
         `name` - The name of the character you want to set as your server character. If not passed in it will default to switching to your current Global character.
             e.g. `!character server "Character Name"`
         """  # noqa: E501
@@ -457,15 +457,11 @@ class SheetManager(commands.Cog):
         server_character = None
 
         if name is None:
-            try:
-                new_character_to_set: Character = await Character.from_ctx(
-                    ctx, use_global=True, use_guild=False, use_channel=False
-                )
-            except NoCharacter:
-                await ctx.send(
-                    "No global character is active. You must have a global character set to set a server character if no name is passed in."
-                )
-                return
+            await ctx.send(
+                "Please pass in the name of a character to switch to for the server command. e.g. `!char server Merlin`",
+                delete_after=DELETE_AFTER_SECONDS,
+            )
+            return
         else:
             new_character_to_set = await self.get_character_by_name(ctx, name)
 
@@ -514,24 +510,19 @@ class SheetManager(commands.Cog):
 
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
 
-        __Optional Arguments__
+        __Required Arguments__
         `name` - The name of the character you want to set as your channel character. If not passed in it will default to switching to your current Global character.
             e.g. `!character channel "Character Name"`
-        `reset|unset` - This will unset the current channel character and leave you with no currently set channel character.
         """  # noqa: E501
 
         channel_character = None
         new_character_to_set = None
         if name is None:
-            try:
-                new_character_to_set: Character = await Character.from_ctx(
-                    ctx, use_global=True, use_guild=False, use_channel=False
-                )
-            except NoCharacter:
-                await ctx.send(
-                    "No global character is active. You must have a global character set to set a channel character if no name is passed in."
-                )
-                return
+            await ctx.send(
+                "Please pass in the name of a character to switch to for the channel command. e.g. `!char channel Merlin`",
+                delete_after=DELETE_AFTER_SECONDS,
+            )
+            return
         else:
             new_character_to_set = await self.get_character_by_name(ctx, name)
 

@@ -456,7 +456,6 @@ class SheetManager(commands.Cog):
         new_character_to_set = None
         server_character = None
 
-        log.info(f"name='{name}'")
         if name is None:
             try:
                 new_character_to_set: Character = await Character.from_ctx(
@@ -523,7 +522,6 @@ class SheetManager(commands.Cog):
 
         channel_character = None
         new_character_to_set = None
-        log.info(f"name='{name}'")
         if name is None:
             try:
                 new_character_to_set: Character = await Character.from_ctx(

@@ -405,7 +405,7 @@ class Character(StatBlock):
         messages = []
         if ctx.channel is not None and channel_character is not None and channel_character.is_active_channel(ctx):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
-            unset_channel_result = await channel_character.unset_channel_active(ctx, channel_character)
+            unset_channel_result = await channel_character.unset_channel_active(ctx)
             messages.append(unset_channel_result.message)
         if ctx.guild is not None and server_character is not None and server_character.is_active_server(ctx):
             # for all characters owned by this owner who are active on this guild, make them inactive on this guild
@@ -518,7 +518,7 @@ class Character(StatBlock):
             message=message,
         )
 
-    async def unset_channel_active(self, ctx, previous_character):
+    async def unset_channel_active(self, ctx):
         """
         If this character is active on the contextual channel, unset it as the channel active character.
         Raises NoPrivateMessage() if not in a channel.
@@ -526,9 +526,9 @@ class Character(StatBlock):
         if ctx.channel is None:
             raise NoPrivateMessage()
         channel_id = str(ctx.channel.id)
-        return await self.unset_active_channel_helper(ctx, channel_id, previous_character)
+        return await self.unset_active_channel_helper(ctx, channel_id)
 
-    async def unset_active_channel_helper(self, ctx, channel_id, previous_character):
+    async def unset_active_channel_helper(self, ctx, channel_id):
         channel_id = str(channel_id)
         # if and only if this character is active in this channel, unset me as active on this server/channel
         unset_result = await ctx.bot.mdb.characters.update_one(

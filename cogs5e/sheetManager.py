@@ -445,7 +445,7 @@ class SheetManager(commands.Cog):
     @commands.guild_only()
     async def character_server(self, ctx, *, name: str = None):
         """
-        Sets the current global active character as a server character.  If the character is already the server character, unsets the server character.
+        Sets the passed in character name as the server character.
 
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
 
@@ -478,9 +478,8 @@ class SheetManager(commands.Cog):
             and new_character_to_set.upstream == server_character.upstream
             and server_character.is_active_server(ctx)
         ):
-            # Toggle server character to not be set
-            unset_server_result = await server_character.unset_server_active(ctx)
-            embed = await self._active_character_embed(ctx, unset_server_result.message)
+            message = f"'{server_character.name}' is already the server character. Use the `!char server reset` command if you want to no longer use a server character here."
+            embed = await self._active_character_embed(ctx, message)
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
             return
 
@@ -506,7 +505,7 @@ class SheetManager(commands.Cog):
     @commands.guild_only()
     async def character_channel(self, ctx, *, name: str = None):
         """
-        Sets the current global active character as a channel character. If the character is already the channel character, unsets the channel character.
+        Sets the passed in character name as the channel character.
 
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
 
@@ -540,8 +539,8 @@ class SheetManager(commands.Cog):
             and new_character_to_set.upstream == channel_character.upstream
             and channel_character.is_active_channel(ctx)
         ):
-            unset_channel_result = await channel_character.unset_channel_active(ctx)
-            embed = await self._active_character_embed(ctx, unset_channel_result.message)
+            message = f"'{channel_character.name}' is already the channel character. Use the `!char channel reset` command if you want to no longer use a channel character here."
+            embed = await self._active_character_embed(ctx, message)
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
             return
 

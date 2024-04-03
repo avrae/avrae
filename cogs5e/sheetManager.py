@@ -450,7 +450,7 @@ class SheetManager(commands.Cog):
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
 
         __Required Arguments__
-        `name` - The name of the character you want to set as your server character. If not passed in it will default to switching to your current Global character.
+        `name` - The name of the character you want to set as your server character.
             e.g. `!character server "Character Name"`
         """  # noqa: E501
         new_character_to_set = None
@@ -511,7 +511,7 @@ class SheetManager(commands.Cog):
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
 
         __Required Arguments__
-        `name` - The name of the character you want to set as your channel character. If not passed in it will default to switching to your current Global character.
+        `name` - The name of the character you want to set as your channel character.
             e.g. `!character channel "Character Name"`
         """  # noqa: E501
 
@@ -578,7 +578,7 @@ class SheetManager(commands.Cog):
             channel_id = channel.id
             try:
                 channel_character: Character = await Character.from_bot_and_channel_id(ctx, ctx.author.id, channel_id)
-                unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id, None)
+                unset_result = await channel_character.unset_active_channel_helper(ctx, channel_id)
                 if unset_result.did_unset_active_location:
                     list_of_unset_characters.append(f"{channel_character.name} for channel '{channel.name}'")
             except NoCharacter:

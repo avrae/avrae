@@ -450,7 +450,7 @@ class SheetManager(commands.Cog):
         All commands in the server that use your active character will instead use the server character, even if the active character is changed elsewhere.
 
         __Required Arguments__
-        `name` - The name of the character you want to set as your server character. If not passed in it will default to switching to your current Global character.
+        `name` - The name of the character you want to set as your server character.
             e.g. `!character server "Character Name"`
         """  # noqa: E501
         new_character_to_set = None
@@ -511,7 +511,7 @@ class SheetManager(commands.Cog):
         All commands in the channel that use your active character will instead use the new channel character, even if the active character is changed elsewhere.
 
         __Required Arguments__
-        `name` - The name of the character you want to set as your channel character. If not passed in it will default to switching to your current Global character.
+        `name` - The name of the character you want to set as your channel character.
             e.g. `!character channel "Character Name"`
         """  # noqa: E501
 

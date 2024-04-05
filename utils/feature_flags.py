@@ -18,7 +18,7 @@ class AsyncLaunchDarklyClient(ldclient.LDClient):
 
     def __init__(self, loop, sdk_key, *args, **kwargs):
         # config = ldclient.Config(sdk_key=sdk_key, *args, **kwargs) # Deprecated: SDK 7.0 and below
-        config = ldclient.set_config(Config(sdk_key=sdk_key, *args, **kwargs)) # Required for SDK 8.0 and above
+        config = ldclient.set_config(Config(sdk_key=sdk_key)) # Required for SDK 8.0 and above. *args, **kwargs are not supported
         # config = ldclient.get() # Required for SDK 8.0 and above
         super().__init__(config=config)
         self.loop = loop

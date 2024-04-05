@@ -72,7 +72,7 @@ class AvraeHelp(HelpCommand):
 
             # Replace default prefix with the contexts prefix
             # new variable to avoid changing the original
-            command_text = re.sub(r"!(\w+)", rf"{self.context.clean_prefix}\1", command.help)
+            command_text = re.sub(r"!([aA-zZ0-9]+)", rf"{self.context.clean_prefix}\1", command.help)
             try:
                 self.embed_paginator.extend_field(command_text)
             except ValueError:

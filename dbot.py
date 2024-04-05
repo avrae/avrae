@@ -222,8 +222,7 @@ class Avrae(commands.AutoShardedBot):
         await self.rdb.close()
         await self.glclient.close()
         self.mclient.close()
-        # self.ldclient.close() # Deprecated: SDK 7.0 and below
-        self.ldclient.get().close() # Required for SDK 8.0 and above
+        self.ldclient.close()
 
 
 desc = (

@@ -114,6 +114,7 @@ class Avrae(commands.AutoShardedBot):
 
         # launchdarkly
         self.ldclient = AsyncLaunchDarklyClient(self.loop, sdk_key=config.LAUNCHDARKLY_SDK_KEY)
+        self.ldclient.get()
 
         # ddb game log
         self.glclient = GameLogClient(self)

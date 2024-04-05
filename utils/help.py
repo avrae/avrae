@@ -1,4 +1,5 @@
 import itertools
+import re
 
 import disnake
 from disnake.ext.commands import Group, HelpCommand
@@ -68,10 +69,14 @@ class AvraeHelp(HelpCommand):
         if command.help:
             # Strip left spaces (but not tabs) from help docs, as Discord inconsistently does this based on device
             command.help = "\n".join([line.lstrip(" ") for line in command.help.splitlines()])
+
+            # Replace default prefix with the contexts prefix
+            # new variable to avoid changing the original
+            command_text = re.sub(r"!([aA-zZ0-9]+)", rf"{self.context.clean_prefix}\1", command.help)
             try:
-                self.embed_paginator.extend_field(command.help)
+                self.embed_paginator.extend_field(command_text)
             except ValueError:
-                for line in command.help.splitlines():
+                for line in command_text.splitlines():
                     self.embed_paginator.extend_field(line)
 
     def add_help_footer(self):

@@ -470,7 +470,7 @@ class SheetManager(commands.Cog):
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
             return
         name = args
-        if name is None or name == "": # F632 use ==/!= to compare constant literals (str, bytes, int, float, tuple)
+        if name is None or name == "":
             try:
                 new_character_to_set: Character = await Character.from_ctx(
                     ctx, use_global=True, use_guild=False, use_channel=False
@@ -537,7 +537,7 @@ class SheetManager(commands.Cog):
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
             return
         name = args
-        if name is None or name == "": # F632 use ==/!= to compare constant literals (str, bytes, int, float, tuple)
+        if name is None or name == "":
             try:
                 new_character_to_set: Character = await Character.from_ctx(
                     ctx, use_global=True, use_guild=False, use_channel=False

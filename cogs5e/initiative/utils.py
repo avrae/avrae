@@ -48,8 +48,7 @@ async def nlp_feature_flag_enabled(bot):
     return await bot.ldclient.variation(
         "cog.initiative.upenn_nlp.enabled",
         # since NLP recording is keyed on the server ID, we just use a throwaway key
-        #{"key": "anonymous", "anonymous": True}, # Deprecated: SDK 7.0 and below
-        ldclient.Context.create("anonymous", True), # Required for SDK 8.0 and above
+        ldclient.Context.create("anonymous", True),
         default=False,
     )
 

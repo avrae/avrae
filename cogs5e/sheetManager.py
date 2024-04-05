@@ -211,10 +211,8 @@ class SheetManager(commands.Cog):
         if conflicts:
             if await confirm(
                 ctx,
-                (
-                    f"This will overwrite {len(conflicts)} attacks with the same name "
-                    f"({', '.join(c.name for c in conflicts)}). Continue? (Reply with yes/no)"
-                ),
+                f"This will overwrite {len(conflicts)} attacks with the same name "
+                f"({', '.join(c.name for c in conflicts)}). Continue? (Reply with yes/no)",
             ):
                 for conflict in conflicts:
                     character.overrides.attacks.remove(conflict)
@@ -250,13 +248,15 @@ class SheetManager(commands.Cog):
     async def save(self, ctx, skill, *, args=""):
         if skill == "death":
             base_cmd = "game deathsave"
-            if args and (sub_cmd := args[0].lower()) in ("fail", "success", "reset"):
+            if args and (sub_cmd := args.split()[0].lower()) in ("fail", "success", "reset"):
                 base_cmd += f" {sub_cmd}"
-                args = []
+                args = ""
             ds_cmd = self.bot.get_command(base_cmd)
             if ds_cmd is None:
                 return await ctx.send("Error: GameTrack cog not loaded.")
-            return await ctx.invoke(ds_cmd, args=args)
+            if args:
+                return await ctx.invoke(ds_cmd, args=args)
+            return await ctx.invoke(ds_cmd)
 
         char: Character = await ctx.get_character()
 
@@ -458,7 +458,8 @@ class SheetManager(commands.Cog):
 
         if name is None:
             await ctx.send(
-                "Please pass in the name of a character to switch to for the server command. e.g. `!char server Merlin`",
+                "Please pass in the name of a character to switch to for the server command. e.g. `!char server"
+                " Merlin`",
                 delete_after=DELETE_AFTER_SECONDS,
             )
             return
@@ -518,7 +519,8 @@ class SheetManager(commands.Cog):
         new_character_to_set = None
         if name is None:
             await ctx.send(
-                "Please pass in the name of a character to switch to for the channel command. e.g. `!char channel Merlin`",
+                "Please pass in the name of a character to switch to for the channel command. e.g. `!char channel"
+                " Merlin`",
                 delete_after=DELETE_AFTER_SECONDS,
             )
             return
@@ -797,11 +799,9 @@ class SheetManager(commands.Cog):
         if conflict:
             return await confirm(
                 ctx,
-                (
-                    "Warning: This will overwrite a character with the same ID. Do you wish to continue "
-                    "(Reply with yes/no)?\n"
-                    f"If you only wanted to update your character, run `{ctx.prefix}update` instead."
-                ),
+                "Warning: This will overwrite a character with the same ID. Do you wish to continue "
+                "(Reply with yes/no)?\n"
+                f"If you only wanted to update your character, run `{ctx.prefix}update` instead.",
             )
         return True
 

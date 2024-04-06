@@ -266,10 +266,7 @@ class SheetManager(commands.Cog):
         if gamelog := self.bot.get_cog("GameLog"):
             await gamelog.send_save(ctx, char, result.skill_name, result.rolls)
 
-    @save.command(
-        name="death",
-        help="Equivalent to `!game deathsave`"
-    )
+    @save.command(name="death", help="Equivalent to `!game deathsave`")
     async def save_death(self, ctx, *, args=""):
         base_cmd = "game deathsave"
         if args and (sub_cmd := args.split()[0].lower()) in ("fail", "success", "reset"):

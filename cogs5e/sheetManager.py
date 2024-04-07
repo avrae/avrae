@@ -238,26 +238,15 @@ class SheetManager(commands.Cog):
         await character.commit(ctx)
         await ctx.send(f"Okay, deleted attack {attack.name}.")
 
-    @commands.command(
+    @commands.group(
         aliases=["s"],
+        invoke_without_command=True,
         help=f"""
         Rolls a save for your current active character.
         {VALID_SAVE_ARGS}
         """,
     )
     async def save(self, ctx, skill, *, args=""):
-        if skill == "death":
-            base_cmd = "game deathsave"
-            if args and (sub_cmd := args.split()[0].lower()) in ("fail", "success", "reset"):
-                base_cmd += f" {sub_cmd}"
-                args = ""
-            ds_cmd = self.bot.get_command(base_cmd)
-            if ds_cmd is None:
-                return await ctx.send("Error: GameTrack cog not loaded.")
-            if args:
-                return await ctx.invoke(ds_cmd, args=args)
-            return await ctx.invoke(ds_cmd)
-
         char: Character = await ctx.get_character()
 
         args = await self.new_arg_stuff(args, ctx, char, base_args=[skill])
@@ -276,6 +265,20 @@ class SheetManager(commands.Cog):
         await try_delete(ctx.message)
         if gamelog := self.bot.get_cog("GameLog"):
             await gamelog.send_save(ctx, char, result.skill_name, result.rolls)
+
+    @save.command(name="death", help="Equivalent to `!game deathsave`")
+    async def save_death(self, ctx, *, args=""):
+        base_cmd = "game deathsave"
+        if args and (sub_cmd := args.split()[0].lower()) in ("fail", "success", "reset"):
+            base_cmd += f" {sub_cmd}"
+        ds_cmd = self.bot.get_command(base_cmd)
+        if ds_cmd is None:
+            return await ctx.send("Error: GameTrack cog not loaded.")
+
+        if base_cmd == "game deathsave":
+            return await ctx.invoke(ds_cmd, args=args)
+        else:
+            return await ctx.invoke(ds_cmd)
 
     @commands.command(
         aliases=["c"],

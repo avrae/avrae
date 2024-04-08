@@ -135,7 +135,7 @@ class Compendium:
         ldclient.set_config(ldclient.Config(sdk_key=config.LAUNCHDARKLY_SDK_KEY))
 
         # TODO: Try importing Context as a standalone method
-        context = ldclient.Context.create("anonymous-user-start-bot", True)
+        context = ldclient.Context.create("anonymous-user-start-bot")
         if ldclient.get().variation(
             "data.monsters.gridfs", context, False
         ):

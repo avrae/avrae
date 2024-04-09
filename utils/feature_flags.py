@@ -32,9 +32,9 @@ class AsyncLaunchDarklyClient(ldclient.LDClient):
         """Return a variation for a key given a DDB user or None."""
         if user is None:
             # TODO: Check if second argument is valid for "anonymous" as a -kind- of user
-            context = ldclient.Context.create(str(discord_id))
+            user = ldclient.Context.create(str(discord_id))
         else:
-            user = user.to_ld_dict()
+            user = ldclient.Context.create(str(user.to_ld_dict()))
         return await self.variation(key, user, default)
 
 

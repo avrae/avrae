@@ -619,7 +619,18 @@ class SheetManager(commands.Cog):
 
     @character.command(name="list")
     async def character_list(self, ctx):
-        """Lists your characters."""
+        """
+        Lists the characters owned by the user.
+
+        This command retrieves all the characters owned by the user from the database, and sends an embed containing
+        the names of these characters. If the user has an active character, it is highlighted in the embed.
+
+        Args:
+            ctx (Context): The context in which the command was called.
+
+        Returns:
+            None
+        """
         user_characters = await self.bot.mdb.characters.find(
             {"owner": str(ctx.author.id)}, ["name", "upstream"]
         ).to_list(None)
@@ -653,7 +664,19 @@ class SheetManager(commands.Cog):
 
     @character.command(name="delete")
     async def character_delete(self, ctx, *, name):
-        """Deletes a character."""
+        """
+        Deletes a character.
+
+        This command deletes a character from the user's character list. The user is asked to confirm the deletion before
+        the character is deleted. If the user has no characters, a message is sent to the user and the command ends.
+
+        Args:
+            ctx (Context): The context in which the command was called.
+            name (str): The name of the character to delete.
+
+        Returns:
+            None
+        """
         user_characters = await self.bot.mdb.characters.find(
             {"owner": str(ctx.author.id)}, ["name", "upstream"]
         ).to_list(None)

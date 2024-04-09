@@ -136,9 +136,7 @@ class Compendium:
 
         # TODO: Try importing Context as a standalone method
         context = ldclient.Context.create("anonymous-user-start-bot")
-        if ldclient.get().variation(
-            "data.monsters.gridfs", context, False
-        ):
+        if ldclient.get().variation("data.monsters.gridfs", context, False):
             fs = motor.motor_asyncio.AsyncIOMotorGridFSBucket(mdb)
             data = await fs.open_download_stream_by_name(filename="monsters")
             gridout = await data.read()

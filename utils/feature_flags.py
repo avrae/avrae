@@ -16,7 +16,9 @@ class AsyncLaunchDarklyClient(ldclient.LDClient):
     """Works exactly like a normal LDClient, except certain blocking methods run in a separate thread."""
 
     def __init__(self, loop, sdk_key, *args, **kwargs):
-        super().__init__(config=Config(sdk_key=sdk_key)) # Required for SDK 8.0 and above. *args, **kwargs are not supported
+        super().__init__(
+            config=Config(sdk_key=sdk_key)
+        )  # Required for SDK 8.0 and above. *args, **kwargs are not supported
         self.loop = loop
 
     async def variation(self, key, user, default):  # run variation evaluation in a separate thread

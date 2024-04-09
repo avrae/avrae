@@ -482,7 +482,11 @@ class SheetManager(commands.Cog):
             and new_character_to_set.upstream == server_character.upstream
             and server_character.is_active_server(ctx)
         ):
-            message = f"'{server_character.name}' is already the server character. Use the `!char server reset` command if you want to no longer use a server character here."
+            message = (
+                f"'{server_character.name}' is already the server character. "
+                f"Use the `!char server reset` command if you want to no longer "
+                f"use a server character here."
+            )
             embed = await self._active_character_embed(ctx, message)
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
             return
@@ -544,7 +548,11 @@ class SheetManager(commands.Cog):
             and new_character_to_set.upstream == channel_character.upstream
             and channel_character.is_active_channel(ctx)
         ):
-            message = f"'{channel_character.name}' is already the channel character. Use the `!char channel reset` command if you want to no longer use a channel character here."
+            message = (
+                f"'{channel_character.name}' is already the channel character. "
+                f"Use the `!char channel reset` command if you want to no "
+                f"longer use a channel character here."
+            )
             embed = await self._active_character_embed(ctx, message)
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
             return

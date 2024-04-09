@@ -68,8 +68,17 @@ class BeyondUser:
         }
 
     def to_ld_dict(self):
-        """Returns a dict representing the DDB user in LaunchDarkly."""
+        """
+        Returns a dictionary representing the DDB user in LaunchDarkly.
+
+        This method is used to convert the user's information into a format that can be used by LaunchDarkly.
+        The returned dictionary includes the user's ID, username, roles, subscription status, and subscription tier.
+
+        Returns:
+            dict: A dictionary containing the user's information in a format compatible with LaunchDarkly.
+        """
         return {
+            "kind": "user",
             "key": self.user_id,
             "name": self.username,
             "custom": {

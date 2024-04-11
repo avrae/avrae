@@ -414,7 +414,6 @@ class SheetManager(commands.Cog):
     @commands.group(aliases=["char"], invoke_without_command=True)
     async def character(self, ctx, *, name: str = None):
         """View or change your current active character.
-        
         Displays the current active character and any assigned channel, server or global character.
 
         __Optional Arguments__

@@ -90,6 +90,9 @@ def search(
             for r in sorted_weighted:
                 if r[0] not in results:
                     results.append(r[0])
+
+            # build results sorted by confidence
+            results = sorted(results, key=lambda e: sorted_weighted.index((e, _)))
         else:
             results = partial_matches
     else:

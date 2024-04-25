@@ -392,16 +392,19 @@ class SimpleCombatant(AliasStatBlock):
             note = str(note)
         self._combatant.notes = note
 
-    def get_effect(self, name: str):
+    def get_effect(self, name: str, strict: bool = False):
         """
         Gets a SimpleEffect, fuzzy searching (partial match) for a match.
 
         :param str name: The name of the effect to get.
+        :param bool strict: Whether combatant name must be a full case insensitive match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         :return: The effect.
         :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """
         name = str(name)
-        effect = self._combatant.get_effect(name, False)
+        effect = self._combatant.get_effect(name, strict)
         if effect:
             return SimpleEffect(effect)
         return None

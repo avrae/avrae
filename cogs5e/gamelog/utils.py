@@ -1,4 +1,5 @@
 import functools
+import logging
 
 from ddb.gamelog import GameLogEventContext
 from ddb.gamelog.errors import IgnoreEvent
@@ -24,7 +25,7 @@ def feature_flag(flag_name, default=False):
             # custom attributes/username/etc
             # note: this means that feature flag targeting can only be controlled by global or individual user id
             # but still, better than nothing
-            user = gctx.bot.ddb.get_ddb_user(gctx.event.user_id)
+            user = await gctx.bot.ddb.get_ddb_user(gctx, gctx.event.user_id)
 
             if not user:
                 raise IgnoreEvent(f"User {gctx.event.user_id} has not connected their account")

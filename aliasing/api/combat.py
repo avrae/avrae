@@ -520,6 +520,9 @@ class SimpleCombatant(AliasStatBlock):
         Removes an effect from the combatant, fuzzy searching on name. If not found, does nothing.
 
         :param str name: The name of the effect to remove.
+        :param bool strict: Whether effect name must be an exact match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         """
         name = str(name)
         effect = self._combatant.get_effect(name, strict=False)

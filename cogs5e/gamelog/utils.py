@@ -24,11 +24,13 @@ def feature_flag(flag_name, default=False):
             # custom attributes/username/etc
             # note: this means that feature flag targeting can only be controlled by global or individual user id
             # but still, better than nothing
-            user_id = gctx.event.user_id
+            user = gctx.bot.ddb.get_ddb_user(gctx.event.user_id)
 
-            flag_on = await gctx.bot.ldclient.variation_for_ddb_user(flag_name, user_id, False, discord_id=gctx.get_discord_user())
+            if not user:
+                raise IgnoreEvent(f"User {gctx.event.user_id} has not connected their account")
+            flag_on = await gctx.bot.ldclient.variation_for_ddb_user(flag_name, user, False, discord_id=gctx.get_discord_user())
             if not flag_on:
-                raise IgnoreEvent(f"Feature flag {flag_name!r} is disabled for user {user_id}")
+                raise IgnoreEvent(f"Feature flag {flag_name!r} is disabled for user {user.username}")
             return await inner(self, gctx, *args, **kwargs)
 
         return wrapped

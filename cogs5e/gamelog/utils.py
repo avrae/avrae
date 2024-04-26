@@ -25,9 +25,7 @@ def feature_flag(flag_name, default=False):
             # note: this means that feature flag targeting can only be controlled by global or individual user id
             # but still, better than nothing
             user_id = gctx.event.user_id
-            # await self.bot.ldclient.variation_for_ddb_user(
-            #     "cog.gamelog.roll_send.enabled", ddb_user, False, discord_id=ctx.author.id
-            # )
+
             flag_on = await gctx.bot.ldclient.variation_for_ddb_user(flag_name, user_id, False, discord_id=gctx.get_discord_user())
             if not flag_on:
                 raise IgnoreEvent(f"Feature flag {flag_name!r} is disabled for user {user_id}")

@@ -345,16 +345,14 @@ class DicecloudV2Parser(SheetLoaderABC):
 
             # 7 was too small so 10 instead
             display_type = "bubble" if uses < 10 else None
-            consumables.append(
-                {
-                    "name": name,
-                    "value": int(attr.get("value", uses)),
-                    "minv": "0",
-                    "maxv": str(uses),
-                    "reset": RESET_MAP.get(attr.get("reset")),
-                    "display_type": display_type,
-                }
-            )
+            consumables.append({
+                "name": name,
+                "value": int(attr.get("value", uses)),
+                "minv": "0",
+                "maxv": str(uses),
+                "reset": RESET_MAP.get(attr.get("reset")),
+                "display_type": display_type,
+            })
 
     def get_levels(self) -> Levels:
         """Returns a dict with the character's level and class levels."""
@@ -433,16 +431,14 @@ class DicecloudV2Parser(SheetLoaderABC):
                 if attack.get("uses"):
                     uses = attack["uses"]["value"]
                     display_type = "bubble" if uses < 10 else None
-                    consumables.append(
-                        {
-                            "name": aname,
-                            "value": attack.get("usesLeft", uses),
-                            "minv": "0",
-                            "maxv": str(uses),
-                            "reset": RESET_MAP.get(attack.get("reset")),
-                            "display_type": display_type,
-                        }
-                    )
+                    consumables.append({
+                        "name": aname,
+                        "value": attack.get("usesLeft", uses),
+                        "minv": "0",
+                        "maxv": str(uses),
+                        "reset": RESET_MAP.get(attack.get("reset")),
+                        "display_type": display_type,
+                    })
 
                 consumables += self._consumables_from_resources(attack["resources"])
 
@@ -609,16 +605,14 @@ class DicecloudV2Parser(SheetLoaderABC):
                 uses = spell["uses"]["value"]
                 display_type = "bubble" if uses < 10 else None
                 action_name = f"{sl_name}: {spell['name']}" if sl_name else spell["name"]
-                spell_consumables.append(
-                    {
-                        "name": action_name,
-                        "value": spell.get("usesLeft", 0),
-                        "minv": "0",
-                        "maxv": str(uses),
-                        "reset": RESET_MAP.get(spell.get("reset")),
-                        "display_type": display_type,
-                    }
-                )
+                spell_consumables.append({
+                    "name": action_name,
+                    "value": spell.get("usesLeft", 0),
+                    "minv": "0",
+                    "maxv": str(uses),
+                    "reset": RESET_MAP.get(spell.get("reset")),
+                    "display_type": display_type,
+                })
 
             spell_consumables += self._consumables_from_resources(spell["resources"])
             consumables += spell_consumables
@@ -757,16 +751,14 @@ class DicecloudV2Parser(SheetLoaderABC):
                 self._seen_consumables.add(full_attr["_id"])
                 uses = full_attr["total"]
                 display_type = "bubble" if uses < 10 else None
-                consumables.append(
-                    {
-                        "name": full_attr["name"],
-                        "value": full_attr.get("value", uses),
-                        "minv": "0",
-                        "maxv": str(uses),
-                        "reset": RESET_MAP.get(full_attr.get("reset")),
-                        "display_type": display_type,
-                    }
-                )
+                consumables.append({
+                    "name": full_attr["name"],
+                    "value": full_attr.get("value", uses),
+                    "minv": "0",
+                    "maxv": str(uses),
+                    "reset": RESET_MAP.get(full_attr.get("reset")),
+                    "display_type": display_type,
+                })
         return consumables
 
 

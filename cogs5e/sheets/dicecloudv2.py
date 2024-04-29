@@ -716,9 +716,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         verb, proper = (
             ("casts", True)
             if atk_prop["type"] == "spell"
-            else ("uses", False)
-            if atk_prop["actionType"] != "attack"
-            else (None, False)
+            else ("uses", False) if atk_prop["actionType"] != "attack" else (None, False)
         )
         log.debug(f"Parsing {atk_prop['type']}")
         activation = ACTIVATION_MAP.get(atk_prop["actionType"], ActivationType.SPECIAL)

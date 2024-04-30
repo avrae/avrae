@@ -290,7 +290,7 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if (ctx.command is ctx.bot.get_command("save death")) or ctx.command is ctx.bot.get_command("g ds"):
+            if ctx.command is ctx.bot.get_command("save death") or ctx.command is ctx.bot.get_command("g ds"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):

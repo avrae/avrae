@@ -92,7 +92,7 @@ def search(
                     results.append(r[0])
 
             # build results sorted by confidence
-            results = sorted(results, key=lambda e: sorted_weighted.index((e, _)))
+            results = sorted(results, key=lambda e: sorted_weighted.index((e)))
         else:
             results = partial_matches
     else:

@@ -1,7 +1,9 @@
 import functools
+import logging
 
 from ddb.gamelog import GameLogEventContext
 from ddb.gamelog.errors import IgnoreEvent
+import ldclient
 
 
 def feature_flag(flag_name, default=False):
@@ -24,10 +26,13 @@ def feature_flag(flag_name, default=False):
             # custom attributes/username/etc
             # note: this means that feature flag targeting can only be controlled by global or individual user id
             # but still, better than nothing
-            user_id = gctx.event.user_id
-            flag_on = await gctx.bot.ldclient.variation(flag_name, {"key": user_id}, default)
+            user = gctx.event.user_id
+
+            if not user:
+                raise IgnoreEvent(f"User {gctx.event.user_id} has not connected their account")
+            flag_on = await gctx.bot.ldclient.variation(flag_name, ldclient.Context.create(user), False)
             if not flag_on:
-                raise IgnoreEvent(f"Feature flag {flag_name!r} is disabled for user {user_id}")
+                raise IgnoreEvent(f"Feature flag {flag_name!r} is disabled for user {user}")
             return await inner(self, gctx, *args, **kwargs)
 
         return wrapped

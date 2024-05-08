@@ -392,16 +392,18 @@ class SimpleCombatant(AliasStatBlock):
             note = str(note)
         self._combatant.notes = note
 
-    def get_effect(self, name: str):
+    def get_effect(self, name: str, strict: bool = False):
         """
-        Gets a SimpleEffect, fuzzy searching (partial match) for a match.
-
+        Gets a SimpleEffect, fuzzy searching (partial match) for the first match or an exact match.
         :param str name: The name of the effect to get.
+        :param bool strict: Whether effect name must be an exact match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         :return: The effect.
         :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """
         name = str(name)
-        effect = self._combatant.get_effect(name, False)
+        effect = self._combatant.get_effect(name, strict)
         if effect:
             return SimpleEffect(effect)
         return None
@@ -513,14 +515,17 @@ class SimpleCombatant(AliasStatBlock):
 
         return SimpleEffect(effect_obj)
 
-    def remove_effect(self, name: str):
+    def remove_effect(self, name: str, strict: bool = False):
         """
-        Removes an effect from the combatant, fuzzy searching on name. If not found, does nothing.
+        Removes an effect from the combatant, fuzzy searching on name or an exact match. If not found, does nothing.
 
         :param str name: The name of the effect to remove.
+        :param bool strict: Whether effect name must be an exact match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         """
         name = str(name)
-        effect = self._combatant.get_effect(name, strict=False)
+        effect = self._combatant.get_effect(name, strict)
         if effect:
             effect.remove()
             self._update_effects()

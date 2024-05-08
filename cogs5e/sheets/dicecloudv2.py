@@ -511,6 +511,10 @@ class DicecloudV2Parser(SheetLoaderABC):
                 # each resistance property can give multiple resistances
                 for dmg_type in dmg_mult["damageTypes"]:
                     if dmg_type in DAMAGE_TYPES:
+                        for exclude in dmg_mult.get("excludeTags", []):
+                            dmg_type = f"non{exclude} {dmg_type}"
+                        for include in dmg_mult.get("includeTags", []):
+                            dmg_type = f"{include} {dmg_type}"
                         # if we're immune, nothing else matters
                         if dmg_type in out["immune"]:
                             continue

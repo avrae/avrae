@@ -413,11 +413,11 @@ class SheetManager(commands.Cog):
 
     @commands.group(aliases=["char"], invoke_without_command=True)
     async def character(self, ctx, *, name: str = None):
-        """If no character name is passed in, it will display the current character and information about the current channel, server and global characters if appropriate. Otherwise it switches the active Global character and unsets any channel or server-specific mappings that existed.
+        """View or change your current active character.
+        Displays the current active character and any assigned channel, server or global character.
 
         __Optional Arguments__
-        `name` - The name of the character you want to switch to. If not passed in it will show active character
-            information. e.g. `!character "Character Name"`
+        `name` - The name of the character you want to use. Example: `!character Froedrick Frankenstien`
         """
         if name is None:
             embed = await self._active_character_embed(ctx)
@@ -482,7 +482,11 @@ class SheetManager(commands.Cog):
             and new_character_to_set.upstream == server_character.upstream
             and server_character.is_active_server(ctx)
         ):
-            message = f"'{server_character.name}' is already the server character. Use the `!char server reset` command if you want to no longer use a server character here."
+            message = (
+                f"'{server_character.name}' is already the server character. "
+                f"Use the `!char server reset` command if you want to no longer "
+                f"use a server character here."
+            )
             embed = await self._active_character_embed(ctx, message)
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
             return
@@ -544,7 +548,11 @@ class SheetManager(commands.Cog):
             and new_character_to_set.upstream == channel_character.upstream
             and channel_character.is_active_channel(ctx)
         ):
-            message = f"'{channel_character.name}' is already the channel character. Use the `!char channel reset` command if you want to no longer use a channel character here."
+            message = (
+                f"'{channel_character.name}' is already the channel character. "
+                f"Use the `!char channel reset` command if you want to no "
+                f"longer use a channel character here."
+            )
             embed = await self._active_character_embed(ctx, message)
             await ctx.send(embed=embed, delete_after=DELETE_AFTER_SECONDS)
             return
@@ -611,7 +619,18 @@ class SheetManager(commands.Cog):
 
     @character.command(name="list")
     async def character_list(self, ctx):
-        """Lists your characters."""
+        """
+        Lists the characters owned by the user.
+
+        This command retrieves all the characters owned by the user from the database, and sends an embed containing
+        the names of these characters. If the user has an active character, it is highlighted in the embed.
+
+        Args:
+            ctx (Context): The context in which the command was called.
+
+        Returns:
+            None
+        """
         user_characters = await self.bot.mdb.characters.find(
             {"owner": str(ctx.author.id)}, ["name", "upstream"]
         ).to_list(None)
@@ -645,7 +664,19 @@ class SheetManager(commands.Cog):
 
     @character.command(name="delete")
     async def character_delete(self, ctx, *, name):
-        """Deletes a character."""
+        """
+        Deletes a character.
+
+        This command deletes a character from the user's character list. The user is asked to confirm the deletion before
+        the character is deleted. If the user has no characters, a message is sent to the user and the command ends.
+
+        Args:
+            ctx (Context): The context in which the command was called.
+            name (str): The name of the character to delete.
+
+        Returns:
+            None
+        """
         user_characters = await self.bot.mdb.characters.find(
             {"owner": str(ctx.author.id)}, ["name", "upstream"]
         ).to_list(None)

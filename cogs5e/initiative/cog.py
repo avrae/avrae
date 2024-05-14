@@ -511,9 +511,10 @@ class InitTracker(commands.Cog):
         combat = await ctx.get_combat()
 
         to_remove = []
-        for co in combat.get_combatants():
-            if isinstance(co, MonsterCombatant) and co.hp <= 0 and co is not combat.current_combatant:
-                to_remove.append(co)
+        if combat.options.deathdelete:
+            for co in combat.get_combatants():
+                if isinstance(co, MonsterCombatant) and co.hp <= 0 and co is not combat.current_combatant:
+                    to_remove.append(co)
 
         messages = combat.skip_rounds(numrounds)
 

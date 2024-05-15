@@ -97,6 +97,8 @@ def search(
                 confidence = fuzz.ratio(value.lower(), key(result).lower())
                 if confidence >= cutoff:
                     sorted_results.append((result, confidence))
+            
+            results = [r[0] for r in sorted_results]
 
         else:
             results = partial_matches

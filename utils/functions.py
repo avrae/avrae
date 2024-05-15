@@ -91,8 +91,13 @@ def search(
                 if r[0] not in results:
                     results.append(r[0])
 
-            # build results sorted by confidence
-            # results = sorted(results, key=lambda e: sorted_weighted.index((e)))
+            # loop through the results, fuzzy testing each one and sorting by confidence
+            sorted_results = []
+            for result in results:
+                confidence = fuzz.ratio(value.lower(), key(result).lower())
+                if confidence >= cutoff:
+                    sorted_results.append((result, confidence))
+
         else:
             results = partial_matches
     else:

@@ -395,6 +395,7 @@ class SimpleCombatant(AliasStatBlock):
     def get_effect(self, name: str, strict: bool = False):
         """
         Gets a SimpleEffect, fuzzy searching (partial match) for the first match or an exact match.
+
         :param str name: The name of the effect to get.
         :param bool strict: Whether effect name must be an exact match.
             If this is ``False``, it returns the first partial match.

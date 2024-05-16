@@ -75,7 +75,7 @@ def search(
         if len(partial_matches) > 1 or not partial_matches:
             names = [key(d).lower() for d in list_to_search]
             fuzzy_map = {key(d).lower(): d for d in list_to_search}
-            fuzzy_results = [r for r in process.extract(value.lower(), names, scorer=fuzz.ratio) if r[1] >= cutoff]
+            fuzzy_results = [r for r in process.extract(value.lower(), names, scorer=fuzz.WRatio) if r[1] >= cutoff]
             fuzzy_sum = sum(r[1] for r in fuzzy_results)
             fuzzy_matches_and_confidences = [(fuzzy_map[r[0]], r[1] / fuzzy_sum) for r in fuzzy_results]
 

@@ -9,7 +9,6 @@ redis==4.6.0
 cachetools==4.2.2
 httplib2==0.19.0
 markdownify==0.9.4
-motor==2.3.1
 psutil==5.8.0
 pydantic~=1.9.0
 pyjwt==2.4.0
@@ -24,14 +23,17 @@ Pillow~=10.2.0
 disnake~=2.9.1
 gspread~=6.0.0
 rapidfuzz~=3.6.1
+motor==3.3.0
 
 # pinned transitive deps
-aiohttp~=3.8.0 # This breaks when we update to 3.9.x.  Disnake Developers are investigating.
+aiohttp~=3.9.5
 boto3==1.20.24  # used by clustering in certain scenarios
 botocore==1.23.24
 dnspython==2.1.0  # used by mongodb
 google-auth==2.13.0
-pymongo==3.11.3  # pin this below 4.0 - TLS config changes in 4.0 are breaking
+
+# Updated Transitive Deps
+pymongo==4.7.2
 
 # Handling for Datadog
 ddtrace>=0.59.1

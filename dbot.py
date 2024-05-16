@@ -272,6 +272,7 @@ async def on_ready():
     log.info(bot.user.id)
     log.info("------")
 
+
 @bot.listen("on_command_error")
 @bot.listen("on_slash_command_error")
 async def command_errors(ctx, error):

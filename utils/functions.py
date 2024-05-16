@@ -90,6 +90,17 @@ def search(
             for r in sorted_weighted:
                 if r[0] not in results:
                     results.append(r[0])
+
+            # print out the results
+            ratio_results = {}
+            for result in results:
+                ratio_results[result] = fuzz.token_set_ratio(value.lower(), key(result).lower())
+
+            # Sort
+            sorted_results = sorted(results, key=lambda e: ratio_results[e], reverse=True)
+            results = sorted_results
+            print(results)
+
         else:
             results = partial_matches
     else:

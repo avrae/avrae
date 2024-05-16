@@ -91,14 +91,17 @@ def search(
                 if r[0] not in results:
                     results.append(r[0])
 
-            # loop through the results, fuzzy testing each one and sorting by confidence
-            sorted_results = []
+            # print out the results
+            ratio_results = {}
             for result in results:
-                confidence = fuzz.ratio(value.lower(), key(result).lower())
-                if confidence >= cutoff:
-                    sorted_results.append((result, confidence))
+                ratio_results[result] = fuzz.ratio(value.lower(), key(result).lower())
 
-            results = [r[0] for r in sorted_results]
+            for item in ratio_results:
+                print (f"{item} - {ratio_results[item]}")
+
+            # Sort
+            sorted_results = sorted(results, key=lambda e: ratio_results[e], reverse=True)
+            results = sorted_results
 
         else:
             results = partial_matches

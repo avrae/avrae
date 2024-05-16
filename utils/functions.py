@@ -94,7 +94,7 @@ def search(
             # print out the results
             ratio_results = {}
             for result in results:
-                ratio_results[result] = fuzz.ratio(value.lower(), key(result).lower())
+                ratio_results[result] = fuzz.token_set_ratio(value.lower(), key(result).lower())
 
             for item in ratio_results:
                 print (f"{item} - {ratio_results[item]}")
@@ -102,6 +102,7 @@ def search(
             # Sort
             sorted_results = sorted(results, key=lambda e: ratio_results[e], reverse=True)
             results = sorted_results
+            print(results)
 
         else:
             results = partial_matches

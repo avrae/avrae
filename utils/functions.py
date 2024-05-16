@@ -75,7 +75,7 @@ def search(
         if len(partial_matches) > 1 or not partial_matches:
             names = [key(d).lower() for d in list_to_search]
             fuzzy_map = {key(d).lower(): d for d in list_to_search}
-            fuzzy_results = [r for r in process.extract(value.lower(), names, scorer=fuzz.ratio) if r[1] >= cutoff]
+            fuzzy_results = [r for r in process.extract(value.lower(), names, scorer=fuzz.WRatio) if r[1] >= cutoff]
             fuzzy_sum = sum(r[1] for r in fuzzy_results)
             fuzzy_matches_and_confidences = [(fuzzy_map[r[0]], r[1] / fuzzy_sum) for r in fuzzy_results]
 
@@ -90,6 +90,17 @@ def search(
             for r in sorted_weighted:
                 if r[0] not in results:
                     results.append(r[0])
+
+            # print out the results
+            ratio_results = {}
+            for result in results:
+                ratio_results[key(result)] = fuzz.token_set_ratio(value.lower(), key(result).lower())
+
+            # Sort
+            sorted_results = sorted(results, key=lambda e: ratio_results[key(e)], reverse=True)
+            results = sorted_results
+            print(results)
+
         else:
             results = partial_matches
     else:

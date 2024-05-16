@@ -94,10 +94,10 @@ def search(
             # print out the results
             ratio_results = {}
             for result in results:
-                ratio_results[result] = fuzz.token_set_ratio(value.lower(), key(result).lower())
+                ratio_results[key(result)] = fuzz.token_set_ratio(value.lower(), key(result).lower())
 
             # Sort
-            sorted_results = sorted(results, key=lambda e: ratio_results[e], reverse=True)
+            sorted_results = sorted(results, key=lambda e: ratio_results[key(e)], reverse=True)
             results = sorted_results
             print(results)
 

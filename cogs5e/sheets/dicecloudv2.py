@@ -134,11 +134,12 @@ class DicecloudV2Parser(SheetLoaderABC):
         subrace = None
         background = None
         for prop in self._by_type["folder"] + self._by_type["feature"] + self._by_type["note"]:
-            if race is None and "race" in prop["tags"]:
+            tags = prop["tags"] + prop.get("libraryTags", [])
+            if race is None and "race" in tags:
                 race = prop.get("name")
-            elif subrace is None and "subrace" in prop["tags"]:
+            elif subrace is None and "subrace" in tags:
                 subrace = prop.get("name")
-            elif background is None and "background" in prop["tags"]:
+            elif background is None and "background" in tags:
                 background = prop.get("name")
             if race is not None and subrace is not None and background is not None:
                 break
@@ -418,7 +419,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions = []
         consumables = []
         for attack in self._by_type["action"]:
-            tags = attack["tags"]
+            tags = attack["tags"] + attack.get("libraryTags", [])
             # we don't want to parse inactive actions
             if not attack.get("inactive") and "avrae:no_import" not in tags:
                 try:
@@ -534,7 +535,7 @@ class DicecloudV2Parser(SheetLoaderABC):
     def get_actions(self):
         actions = []
         for f in self._by_type["feature"]:
-            if not f.get("inactive") and "avrae:no_import" not in f["tags"]:
+            if not f.get("inactive") and "avrae:no_import" not in f["tags"] + f.get("libraryTags", []):
                 actions += self.persist_actions_for_name(f.get("name"))
 
         return actions
@@ -572,7 +573,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         actions = []
 
         for spell in self._by_type["spell"]:
-            if "avrae:no_import" in spell["tags"]:
+            if "avrae:no_import" in spell["tags"] + spell.get("libraryTags", []):
                 continue
 
             # an unnamed spell is not parsable

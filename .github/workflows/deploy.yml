@@ -61,8 +61,8 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1.4.11
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: avrae-live
-          cluster: avrae-bot
+          service: avrae-bot
+          cluster: avrae-live
           wait-for-service-stability: true
 
   # ===== help gen =====

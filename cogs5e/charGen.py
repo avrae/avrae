@@ -110,8 +110,9 @@ async def roll_stats(ctx):
             return embed
     except d20.TooManyRolls:
         embed.description = (
-            "Unable to roll stat rolls that meet the current rule set.\n\n"
-            "Please examine your current randchar settings to ensure that they are achievable."
+            "Unable to roll stats that meet the current rule set.\n\n"
+            "Please examine your current `Custom Stat Roll Settings` using "
+            "`!servsettings` to ensure they are achievable."
         )
         return embed
 

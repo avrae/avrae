@@ -3,6 +3,7 @@ Created on Jan 13, 2017
 
 @author: andrew
 """
+
 from math import sqrt
 
 from disnake.ext import commands
@@ -43,7 +44,7 @@ class PBPUtils(commands.Cog):
         -image <image url>
         -footer <footer text>
         -f "<Field Title>|<Field Text>[|inline]"
-            (e.g. "Donuts|I have 15 donuts|inline" for an inline field, or "Donuts|I have 15 donuts" for one with its own line.)
+            (e.g. "Donuts|I have 15 donuts|inline" for up to 3 inline fields on a single line, or "Donuts|I have 15 donuts" for one with its own line.)
         -color [hex color]
             Leave blank for random color.
         -t <timeout (0..600)>
@@ -80,7 +81,8 @@ class PBPUtils(commands.Cog):
     async def br(self, ctx):
         """Prints a scene break."""
         await try_delete(ctx.message)
-        await ctx.send("```\n \n```")
+        # There is a zero-width space between the \n's, to ensure the code block displays properly on mobile
+        await ctx.send("```\n​\n```")
 
     @commands.command(hidden=True)
     async def pythag(self, ctx, num1: int, num2: int):

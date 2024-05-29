@@ -15,7 +15,6 @@ from urllib.parse import urlparse
 import google.oauth2.service_account
 import gspread
 from d20 import RollSyntaxError
-from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
 from gspread import SpreadsheetNotFound
 from gspread.exceptions import APIError, WorksheetNotFound
@@ -237,7 +236,7 @@ class TempCharacter:
         col = letter2num(_pos.group(1))
         row = int(_pos.group(2)) - 1
         if row > len(source) or col > len(source[row]):
-            raise IndexError("Cell out of bounds.")
+            raise IndexError(f"Cell `{pos}` is out of bounds.")
         value = source[row][col]
         log.debug(f"Cell {pos}: {value}")
         return value
@@ -313,15 +312,11 @@ class GoogleSheet(SheetLoaderABC):
     @staticmethod
     async def _refresh_google_token():
         with GoogleSheet._client_lock():
-
-            def _():
-                GoogleSheet.g_client.auth.refresh(request=Request())
-                GoogleSheet.g_client.session.headers.update(
-                    {"Authorization": "Bearer %s" % GoogleSheet.g_client.auth.token}
-                )
-
             try:
-                await asyncio.get_event_loop().run_in_executor(None, _)
+                await asyncio.get_event_loop().run_in_executor(None, GoogleSheet.g_client.http_client.login)
+                GoogleSheet._token_expiry = datetime.datetime.now() + datetime.timedelta(
+                    seconds=google.oauth2.service_account._DEFAULT_TOKEN_LIFETIME_SECS
+                )
             except:
                 GoogleSheet._client_initializing = False
                 raise
@@ -329,7 +324,7 @@ class GoogleSheet(SheetLoaderABC):
 
     @staticmethod
     def _is_expired():
-        return datetime.datetime.now() > GoogleSheet._token_expiry
+        return datetime.datetime.now() >= GoogleSheet._token_expiry
 
     # load character data
     def _gchar(self):
@@ -358,10 +353,10 @@ class GoogleSheet(SheetLoaderABC):
         owner_id = str(ctx.author.id)
         try:
             await self.get_character()
-        except (KeyError, SpreadsheetNotFound, APIError):
+        except (KeyError, SpreadsheetNotFound, APIError, PermissionError):
             raise ExternalImportError(
                 "Invalid character sheet. Make sure you've shared it with me at "
-                f"`{GoogleSheet.g_client.auth.signer_email}`, or made the sheet viewable to 'Anyone with the link'!"
+                f"`{GoogleSheet.g_client.http_client.auth.service_account_email}`, or made the sheet viewable to 'Anyone with the link'!"
             )
         except Exception:
             raise
@@ -569,6 +564,7 @@ class GoogleSheet(SheetLoaderABC):
         skills = {}
         saves = {}
         is_joat = False
+        is_ra = False
         all_check_bonus = 0
 
         if self.version == (2, 0):
@@ -576,17 +572,27 @@ class GoogleSheet(SheetLoaderABC):
             all_check_bonus = int(character.value("AQ26") or 0)
         elif self.version == (2, 1):
             is_joat = bool(character.value("AQ59"))
+            is_ra = bool(character.value("AQ67"))  # parsing for remarkable athlethe from champion 7
             all_check_bonus = int(character.value("AR58"))
         joat_bonus = int(is_joat and self.get_stats().prof_bonus // 2)
+        # upside-down floor division to do ceiling division for half-prof bonus (rounded up) of remarkable athlethe
+        ra_bonus = int(is_ra and -(self.get_stats().prof_bonus // -2))
 
         # calculate str, dex, con, etc checks
         for cell, skill, advcell in BASE_ABILITY_CHECKS:
             try:
                 # add bonuses manually since the cell does not include them
-                value = int(character.value(cell)) + all_check_bonus + joat_bonus
+                # seperate basic abilities into (dex, str, con) so remarkable athlete half-prof can be added
+                if skill == "dexterity" or skill == "constitution" or skill == "strength":
+                    value = int(character.value(cell)) + all_check_bonus + max(joat_bonus, ra_bonus)
+                else:
+                    value = int(character.value(cell)) + all_check_bonus + joat_bonus
             except (TypeError, ValueError):
                 raise MissingAttribute(skill, cell, character.worksheet.title)
             prof = 0
+            if is_ra:
+                if skill == "dexterity" or skill == "constitution" or skill == "strength":
+                    prof = 0.5
             if is_joat:
                 prof = 0.5
             skl_obj = Skill(value, prof)
@@ -606,6 +612,8 @@ class GoogleSheet(SheetLoaderABC):
             adv = None
             if self.version >= (2, 0) and advcell:
                 advtype = character.unformatted_value(advcell)
+                if isinstance(advtype, str):
+                    advtype = advtype.lower()
                 if advtype in {"a", "adv", "advantage"}:
                     adv = True
                 elif advtype in {"d", "dis", "disadvantage"}:
@@ -615,6 +623,8 @@ class GoogleSheet(SheetLoaderABC):
                 prof = 0.5
             if profcell:
                 proftype = character.unformatted_value(profcell)
+                if isinstance(proftype, str):
+                    proftype = proftype.lower()
                 if proftype == "e":
                     prof = 2
                 elif proftype and proftype != "0":

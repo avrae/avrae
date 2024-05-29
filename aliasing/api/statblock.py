@@ -167,6 +167,8 @@ class AliasStatBlock:
         :param int amount: The amount of HP to add/remove.
         :param bool ignore_temp: If *amount* is negative, whether to damage temp HP first or ignore temp.
         :param bool overflow: If *amount* is positive, whether to allow overhealing or cap at the creature's max HP.
+        :return: A string describing the creature's current, max, and temp HP after the change.
+        :rtype: str
         """
         return self._statblock.modify_hp(int(amount), ignore_temp, overflow)
 
@@ -281,6 +283,16 @@ class AliasBaseStats:
         :rtype: int
         """
         return self._stats.get_mod(str(stat))
+
+    def get(self, stat):
+        """
+        Get the integer value of a stat (case sensitive, lowercase. strength, dexterity, etc).
+
+        :param str stat: The stat to look up
+        :return: The integer value of the stat.
+        :rtype: int
+        """
+        return self._stats.__getitem__(stat)
 
     def __str__(self):
         return str(self._stats)
@@ -551,7 +563,7 @@ class AliasSkills:
 
     def __getattr__(self, item):
         if item not in self._skills.skills:
-            raise ValueError(f"{item} is not a skill.")
+            raise AttributeError(f"{item} is not a skill.")
         return AliasSkill(self._skills.__getattr__(item))
 
     def __getitem__(self, item):
@@ -648,6 +660,34 @@ class AliasResistances:
         :rtype: list[Resistance]
         """
         return self._resistances.neutral
+
+    def is_resistant(self, damage_type: str) -> bool:
+        """
+        Whether or not this AliasResistances contains any resistances that apply to the given damage type string.
+
+        If the AliasResistances contains both a neutral and a resistance that applies, returns False.
+        """
+        return self._resistances.is_resistant(str(damage_type))
+
+    def is_immune(self, damage_type: str) -> bool:
+        """
+        Whether or not this AliasResistances contains any immunities that apply to the given damage type string.
+
+        If the AliasResistances contains both a neutral and an immunity that applies, returns False.
+        """
+        return self._resistances.is_immune(str(damage_type))
+
+    def is_vulnerable(self, damage_type: str) -> bool:
+        """
+        Whether or not this AliasResistances contains any vulnerabilities that apply to the given damage type string.
+
+        If the AliasResistances contains both a neutral and a vulnerability that applies, returns False.
+        """
+        return self._resistances.is_vulnerable(str(damage_type))
+
+    def is_neutral(self, damage_type: str) -> bool:
+        """Whether or not this AliasResistances contains any neutrals that apply to the given damage type string."""
+        return self._resistances.is_neutral(str(damage_type))
 
     def __str__(self):
         return str(self._resistances)
@@ -751,6 +791,17 @@ class AliasSpellbook:
         :rtype: int or None
         """
         return self._spellbook.max_pact_slots
+
+    def find(self, spell_name: str):
+        """
+        Returns a list of the spells of the given name in the spellbook, case-insensitive.
+
+        :rtype: List[AliasSpellbookSpell]
+        """
+        if self._spells is None:
+            self._spells = [AliasSpellbookSpell(s) for s in self._spellbook.spells]
+
+        return [spell for spell in self._spells if spell_name.lower() == spell.name.lower()]
 
     def slots_str(self, level):
         """

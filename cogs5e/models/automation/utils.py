@@ -13,29 +13,32 @@ def maybe_alias_statblock(target):
     """Returns the AliasStatBlock for the target if applicable."""
     if not isinstance(target, (StatBlock, str, type(None))):
         raise ValueError("target must be a statblock, str, or None")
-    return aliasing.api.statblock.AliasStatBlock(target) if isinstance(target, StatBlock) else target
+    if isinstance(target, StatBlock):
+        return aliasing.api.statblock.AliasStatBlock(target)
+
+    return aliasing.api.statblock.AliasStatBlock(StatBlock(name=target or "Target"))
 
 
 def upcast_scaled_dice(effect, autoctx, dice_ast):
     """Scales the dice of the cast to its appropriate amount (handling cantrip scaling and higher level addition)."""
-    if autoctx.is_spell:
-        if effect.cantripScale:
-            level = autoctx.caster.spellbook.caster_level
-            if level < 5:
-                level_dice = 1
-            elif level < 11:
-                level_dice = 2
-            elif level < 17:
-                level_dice = 3
-            else:
-                level_dice = 4
+    if effect.cantripScale:
+        level = autoctx.caster.spellbook.caster_level
+        if level < 5:
+            level_dice = 1
+        elif level < 11:
+            level_dice = 2
+        elif level < 17:
+            level_dice = 3
+        else:
+            level_dice = 4
+        level_dice = autoctx.args.last("cantripdice", default=level_dice, type_=int)
 
-            def mapper(node):
-                if isinstance(node, d20.ast.Dice):
-                    node.num = level_dice
-                return node
+        def mapper(node):
+            if isinstance(node, d20.ast.Dice):
+                node.num = level_dice
+            return node
 
-            dice_ast = d20.utils.tree_map(mapper, dice_ast)
+        dice_ast = d20.utils.tree_map(mapper, dice_ast)
 
     if effect.higher:
         higher = effect.higher.get(str(autoctx.get_cast_level()))

@@ -284,15 +284,13 @@ class PlayingTheGame(Tutorial):
             embed.description = f"""
             Death Saves are a special type of saving throw. Avrae tracks your death saves automatically when you have to make them; to roll one, use `{ctx.prefix}save death`. Try making one now!
             ```
-            {ctx.prefix}save death
+            {ctx.prefix}game deathsave
             ```
             """
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            if (
-                ctx.command is ctx.bot.get_command("save") and "death" in ctx.message.content
-            ) or ctx.command is ctx.bot.get_command("g ds"):
+            if ctx.command is ctx.bot.get_command("save death") or ctx.command is ctx.bot.get_command("g ds"):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):

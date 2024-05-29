@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - nightly
   release:
     types: [ published ]
   workflow_dispatch:
@@ -45,7 +44,7 @@ jobs:
           docker build -t $SERVICE_NAME --build-arg COMMIT=$GITHUB_SHA .
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$DEPLOY_ENV
-          docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:live
+          docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:stg
           docker push -a $ECR_REGISTRY/$ECR_REPOSITORY
 
       - name: Determine whether to run release
@@ -55,7 +54,7 @@ jobs:
       - name: Deploy Amazon ECS task definition
         if: steps.do-release.outputs.result != '0'
         run: |
-          aws ecs update-service --cluster $CLUSTER_NAME-$DEPLOY_ENV --service $SERVICE_NAME --force-new-deployment --region $REGION
+          aws ecs update-service --cluster $CLUSTER_NAME-$DEPLOY_ENV --service $SERVICE_NAME --force-new-deployment --region $REGION --task-definition avrae-bot-ecs-task-definition
 
   # ===== sentry release =====
   sentry:

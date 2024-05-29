@@ -1,7 +1,6 @@
 import itertools
-from typing import Iterator, List, Optional, TYPE_CHECKING, Tuple, Union
-
 import math
+from typing import Iterator, List, Optional, TYPE_CHECKING, Tuple, Union
 
 from cogs5e.models.errors import InvalidArgument
 from utils.argparser import ParsedArguments, argparse
@@ -49,6 +48,7 @@ class InitiativeEffect:
         children: List[InitEffectReference] = None,
         parent: Optional[InitEffectReference] = None,
         desc: str = None,
+        tick_on_combatant_id: Optional[str] = None,
     ):
         if effects is None:
             effects = InitPassiveEffect()
@@ -79,6 +79,7 @@ class InitiativeEffect:
         self.children = children
         self.parent = parent
         self.desc = desc
+        self.tick_on_combatant_id = tick_on_combatant_id
 
     @classmethod
     def new(
@@ -95,6 +96,7 @@ class InitiativeEffect:
         passive_effects: InitPassiveEffect = None,
         attacks: list[AttackInteraction] = None,
         buttons: list[ButtonInteraction] = None,
+        tick_on_combatant_id: Optional[str] = None,
     ):
         # either parse effect_args or passive_effects/attacks
         if effect_args is not None and (passive_effects is not None or attacks is not None):
@@ -110,7 +112,12 @@ class InitiativeEffect:
             passive_effects = InitPassiveEffect.from_args(effect_args)
             attacks = attack_interactions_from_args(effect_args, effect_name=name)
 
-        # duration handling
+        # === duration handling ===
+        # if we would tick on our turn anyway, ignore the extra arg
+        if combatant is not None and combatant.id == tick_on_combatant_id:
+            tick_on_combatant_id = None
+
+        # ensure the duration is a positive nonzero int
         if duration is not None:
             try:
                 duration = int(duration)
@@ -119,14 +126,20 @@ class InitiativeEffect:
             except (ValueError, TypeError):
                 raise InvalidArgument("Effect duration must be an integer or None.")
 
+        # calculate the round the effect ends on
         if combat is not None and duration is not None:
             end_round = combat.round_num + duration
+            tick_on_combatant = combat.combatant_by_id(tick_on_combatant_id) if tick_on_combatant_id else combatant
             # if we are going to tick this effect once this round, subtract 1 from the end round
             will_tick_this_round = (
                 combat is not None
-                and combatant is not None
+                and tick_on_combatant is not None
                 and combat.index is not None
-                and (combat.index <= combatant.index if end_on_turn_end else combat.index < combatant.index)
+                and (
+                    combat.index <= tick_on_combatant.index
+                    if end_on_turn_end
+                    else combat.index < tick_on_combatant.index
+                )
             )
             if will_tick_this_round:
                 end_round -= 1
@@ -146,6 +159,7 @@ class InitiativeEffect:
             end_on_turn_end=end_on_turn_end,
             concentration=concentration,
             desc=desc,
+            tick_on_combatant_id=tick_on_combatant_id,
         )
 
     @classmethod
@@ -178,6 +192,7 @@ class InitiativeEffect:
             children=children,
             parent=parent,
             desc=d["desc"],
+            tick_on_combatant_id=d.get("tick_on_combatant_id"),
         )
 
     def to_dict(self):
@@ -199,6 +214,7 @@ class InitiativeEffect:
             "children": children,
             "parent": parent,
             "desc": self.desc,
+            "tick_on_combatant_id": self.tick_on_combatant_id,
             "_v": 2,
         }
 
@@ -210,19 +226,26 @@ class InitiativeEffect:
 
     # --- properties ---
     @property
+    def tick_on_combatant(self) -> Optional["Combatant"]:
+        """Returns the combatant whose turn this effect's duration ticks on."""
+        if self.tick_on_combatant_id is None:
+            return self.combatant
+        return self.combat.combatant_by_id(self.tick_on_combatant_id) or self.combatant
+
+    @property
     def remaining(self) -> Optional[int]:
         """Returns the number of ticks this effect has remaining, or None if the effect has infinite duration."""
         if self.duration is None or self.end_round is None:
             return None
-        elif self.combat is None:
+        if self.combat is None:
             return self.duration
-        elif self.combatant is None or self.combat.index is None:
+        if self.tick_on_combatant is None or self.combat.index is None:
             return self.end_round - self.combat.round_num
 
         if self.end_on_turn_end:
-            has_ticked_this_round = self.combat.index > self.combatant.index
+            has_ticked_this_round = self.combat.index > self.tick_on_combatant.index
         else:
-            has_ticked_this_round = self.combat.index >= self.combatant.index
+            has_ticked_this_round = self.combat.index >= self.tick_on_combatant.index
         return self.end_round - (self.combat.round_num - (0 if has_ticked_this_round else 1))
 
     # --- stringification ---
@@ -255,10 +278,10 @@ class InitiativeEffect:
         """
         end_round = self.end_round if self.end_round is not None else float("inf")
 
-        if self.combatant is None:
+        if self.tick_on_combatant is None:
             return end_round, 0, 1 if self.end_on_turn_end else 0
 
-        index = self.combatant.index
+        index = self.tick_on_combatant.index
         return end_round, index, 1 if self.end_on_turn_end else 0
 
     def _duration_str(self):
@@ -278,6 +301,8 @@ class InitiativeEffect:
             return ""
 
         # we don't use self.remaining here since we consider a potential lesser duration in a parent
+        # note: .combatant rather than .tick_on_combatant is right here; we compare the tick index to the combatant
+        # index
         if self.combat is None:
             ticks_remaining = self.duration
         elif self.combatant is None or self.combat.index is None:
@@ -336,27 +361,34 @@ class InitiativeEffect:
     # --- hooks ---
     def on_turn(self, num_turns=1):
         """
-        Called on the start of the parent combatant's turn in combat.
+        Called on the start of each combatant's turn in combat.
         Removes itself if the effect is no longer applicable.
         """
         if self.combat is None or self.end_round is None:
             return
 
-        # if we end on the start of turn and it's the round to end and we're going forwards, remove ourselves
-        if (not self.end_on_turn_end) and self.combat.round_num >= self.end_round and num_turns > 0:
-            self.remove()
-
-    def on_turn_end(self, num_turns=1):
-        """
-        Called on the end of the parent combatant's turn in combat.
-        Removes itself if the effect is no longer applicable.
-        """
-        if self.combat is None or self.end_round is None:
+        # conditions to remove effect:
+        # time must be going forward
+        if num_turns <= 0:
             return
-
-        # if we end on the end of turn and it's the round to end and we're going forwards, remove ourselves
-        if self.end_on_turn_end and self.combat.round_num >= self.end_round and num_turns > 0:
+        # must be at least the round it ends on
+        if self.combat.round_num < self.end_round:
+            return
+        # though if we're past the end round remove it anyway
+        if self.combat.round_num > self.end_round:
             self.remove()
+            return
+        # here, it is the round it ends, so check the turn
+        # must be at least the index of the ticking combatant
+        if self.combat.index is None or self.tick_on_combatant is None:
+            return
+        # start/end of turn
+        if self.end_on_turn_end:
+            if self.combat.index > self.tick_on_combatant.index:
+                self.remove()
+        else:
+            if self.combat.index >= self.tick_on_combatant.index:
+                self.remove()
 
     # --- parenting ---
     def get_parent_effect(self) -> Optional["InitiativeEffect"]:

@@ -32,14 +32,12 @@ class Resistances:
 
     @classmethod
     def from_args(cls, args, **kwargs):
-        return cls.from_dict(
-            {
-                "resist": args.get("resist", [], **kwargs),
-                "immune": args.get("immune", [], **kwargs),
-                "vuln": args.get("vuln", [], **kwargs),
-                "neutral": args.get("neutral", [], **kwargs),
-            }
-        )
+        return cls.from_dict({
+            "resist": args.get("resist", [], **kwargs),
+            "immune": args.get("immune", [], **kwargs),
+            "vuln": args.get("vuln", [], **kwargs),
+            "neutral": args.get("neutral", [], **kwargs),
+        })
 
     def to_dict(self):
         return {
@@ -53,6 +51,42 @@ class Resistances:
         return Resistances(self.resist.copy(), self.immune.copy(), self.vuln.copy(), self.neutral.copy())
 
     # ---------- main funcs ----------
+    def is_resistant(self, damage_type: str | set[str]) -> bool:
+        """
+        Whether or not this Resistances contains any resistances that apply to the given damage type string.
+
+        If the Resistances contains both a neutral and a resistance that applies, returns False.
+        """
+        if isinstance(damage_type, str):
+            damage_type = set(t.lower() for t in _resist_tokenize(damage_type))
+        return any(r.applies_to(damage_type) for r in self.resist) and not self.is_neutral(damage_type)
+
+    def is_immune(self, damage_type: str | set[str]) -> bool:
+        """
+        Whether or not this Resistances contains any immunities that apply to the given damage type string.
+
+        If the Resistances contains both a neutral and a immunity that applies, returns False.
+        """
+        if isinstance(damage_type, str):
+            damage_type = set(t.lower() for t in _resist_tokenize(damage_type))
+        return any(r.applies_to(damage_type) for r in self.immune) and not self.is_neutral(damage_type)
+
+    def is_vulnerable(self, damage_type: str | set[str]) -> bool:
+        """
+        Whether or not this Resistances contains any vulnerabilities that apply to the given damage type string.
+
+        If the Resistances contains both a neutral and a vulnerability that applies, returns False.
+        """
+        if isinstance(damage_type, str):
+            damage_type = set(t.lower() for t in _resist_tokenize(damage_type))
+        return any(r.applies_to(damage_type) for r in self.vuln) and not self.is_neutral(damage_type)
+
+    def is_neutral(self, damage_type: str | set[str]) -> bool:
+        """Whether or not this Resistances contains any neutrals that apply to the given damage type string."""
+        if isinstance(damage_type, str):
+            damage_type = set(t.lower() for t in _resist_tokenize(damage_type))
+        return any(r.applies_to(damage_type) for r in self.neutral)
+
     def update(self, other, overwrite=True):
         """
         Updates this Resistances with the resistances of another.

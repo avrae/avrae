@@ -45,6 +45,7 @@ INDICES = {
         IndexModel([("owner", ASCENDING), ("upstream", ASCENDING)], unique=True),
         IndexModel([("owner", ASCENDING), ("active", ASCENDING)], background=True),
         IndexModel([("owner", ASCENDING), ("active_guilds", ASCENDING)], background=True),
+        IndexModel([("owner", ASCENDING), ("active_channels", ASCENDING)], background=True),
     ],
     "combats": [IndexModel("channel", unique=True), IndexModel("lastchanged", expireAfterSeconds=2592000)],
     "lookupsettings": [  # deprecated in feature/settings-menus branch, replaced by guild_settings
@@ -97,6 +98,7 @@ def run(mdb):
 
 if __name__ == "__main__":
     mclient = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"))
+
     mdb = mclient[os.getenv("MONGO_DB", "avrae")]
 
     input(f"Indexing on {mdb.name}. Press enter to continue.")

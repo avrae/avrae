@@ -41,8 +41,7 @@ T = TypeVar("T")
 
 class SupportsFromDict(Protocol):
     @classmethod
-    def from_dict(cls: Type[T], data: dict) -> T:
-        ...
+    def from_dict(cls: Type[T], data: dict) -> T: ...
 
 
 SelfT = TypeVar("SelfT", bound=GameLogCallbackHandler)

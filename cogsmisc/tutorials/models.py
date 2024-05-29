@@ -1,6 +1,7 @@
 """
 Misc data models for tutorials.
 """
+
 import abc
 import asyncio
 import textwrap
@@ -181,7 +182,7 @@ class TutorialEmbed(EmbedWithAuthor):
                 text=f"{tstate.tutorial.name} | {ctx.prefix}tutorial skip to skip | {ctx.prefix}tutorial end to end"
             )
 
-        self._description = self.Empty
+        self._description = None
 
     # custom description handler that strips/dedents so we can use triple-quoted strings in our code
     @property

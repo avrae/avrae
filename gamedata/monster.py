@@ -217,8 +217,8 @@ class Monster(StatBlock, Sourced):
 
     @classmethod
     def from_bestiary(cls, data, source):
-        for key in ("traits", "actions", "reactions", "legactions"):
-            data[key] = [Trait(**t) for t in data.pop(key)]
+        for key in ("traits", "actions", "reactions", "legactions", "bonus_actions", "mythic_actions"):
+            data[key] = [Trait(**t) for t in data.pop(key, [])]
         data["spellcasting"] = MonsterSpellbook.from_dict(data.pop("spellbook"))
         data["saves"] = Saves.from_dict(data["saves"])
         data["skills"] = Skills.from_dict(data["skills"])
@@ -277,16 +277,14 @@ class Monster(StatBlock, Sourced):
 
     def get_hidden_stat_array(self):
         stats = ["Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"]
-        for i, stat in enumerate(
-            (
-                self.stats.strength,
-                self.stats.dexterity,
-                self.stats.constitution,
-                self.stats.intelligence,
-                self.stats.wisdom,
-                self.stats.charisma,
-            )
-        ):
+        for i, stat in enumerate((
+            self.stats.strength,
+            self.stats.dexterity,
+            self.stats.constitution,
+            self.stats.intelligence,
+            self.stats.wisdom,
+            self.stats.charisma,
+        )):
             if stat <= 3:
                 stats[i] = "Very Low"
             elif 3 < stat <= 7:
@@ -353,7 +351,7 @@ class Monster(StatBlock, Sourced):
 
     def get_image_url(self):
         """Returns a monster's image URL."""
-        return self.image_url or ""
+        return self.image_url or None
 
     def get_token_url(self, is_sub=False):
         """Returns a monster's token URL."""

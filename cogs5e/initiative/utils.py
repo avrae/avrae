@@ -11,6 +11,8 @@ from utils import constants
 from utils.functions import smart_trim
 from .types import CombatantType
 
+import ldclient
+
 if TYPE_CHECKING:
     from utils.context import AvraeContext
     from . import Combatant, CombatantGroup, Combat
@@ -46,7 +48,7 @@ async def nlp_feature_flag_enabled(bot):
     return await bot.ldclient.variation(
         "cog.initiative.upenn_nlp.enabled",
         # since NLP recording is keyed on the server ID, we just use a throwaway key
-        {"key": "anonymous", "anonymous": True},
+        ldclient.Context.create("anonymous"),
         default=False,
     )
 
@@ -155,12 +157,10 @@ def _get_combatant_status_inner(
             status = f"{status}\n* This creature is a {combatant.monster_name}."
     else:
         combat = combatant.combat
-        status = "\n".join(
-            [
-                co.get_status(private=show_hidden_attrs and can_see_combatant_details(author, co, combat), **kwargs)
-                for co in combatant.get_combatants()
-            ]
-        )
+        status = "\n".join([
+            co.get_status(private=show_hidden_attrs and can_see_combatant_details(author, co, combat), **kwargs)
+            for co in combatant.get_combatants()
+        ])
     return f"```md\n{status}\n```"
 
 

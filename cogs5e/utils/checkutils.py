@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import Any
 
 from d20 import roll
 
@@ -60,8 +61,11 @@ def run_check(skill_key, caster, args, embed):
 
     # ieffect handling
     if isinstance(caster, init.Combatant):
+        combat_context: dict[str, Any] = {}
+
         # -cb
-        args["b"] = args.get("b") + caster.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
+        combat_context["b"] = caster.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
+
         # -cadv/cdis
         cadv_effects = caster.active_effects(
             mapper=lambda effect: effect.effects.check_adv, reducer=lambda checks: set().union(*checks), default=set()
@@ -70,9 +74,12 @@ def run_check(skill_key, caster, args, embed):
             mapper=lambda effect: effect.effects.check_dis, reducer=lambda checks: set().union(*checks), default=set()
         )
         if skill_key in cadv_effects or base_ability_key in cadv_effects:
-            args["adv"] = True
+            combat_context["adv"] = ["True"]
         if skill_key in cdis_effects or base_ability_key in cdis_effects:
-            args["dis"] = True
+            combat_context["dis"] = ["True"]
+
+        args.add_context("combat", combat_context)
+        args.set_context("combat")
 
     result = _run_common(skill, args, embed, mod_override=mod)
     return CheckResult(rolls=result.rolls, skill=skill, skill_name=skill_name, skill_roll_result=result)
@@ -114,8 +121,9 @@ def run_save(save_key, caster, args, embed):
 
     # ieffect handling
     if isinstance(caster, init.Combatant):
+        combat_context: dict[str, Any] = {}
         # -sb
-        args["b"] = args.get("b") + caster.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
+        combat_context["b"] = caster.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
         # -sadv/sdis
         sadv_effects = caster.active_effects(
             mapper=lambda effect: effect.effects.save_adv, reducer=lambda saves: set().union(*saves), default=set()
@@ -124,9 +132,12 @@ def run_save(save_key, caster, args, embed):
             mapper=lambda effect: effect.effects.save_dis, reducer=lambda saves: set().union(*saves), default=set()
         )
         if stat in sadv_effects:
-            args["adv"] = True  # Because adv() only checks last() just forcibly add them
+            combat_context["adv"] = ["True"]  # Because adv() only checks last() just forcibly add them
         if stat in sdis_effects:
-            args["dis"] = True
+            combat_context["dis"] = ["True"]
+
+        args.add_context("combat", combat_context)
+        args.set_context("combat")
 
     result = _run_common(save, args, embed, rr_format="Save {}")
     return SaveResult(rolls=result.rolls, skill=save, skill_name=stat_name, skill_roll_result=result)
@@ -184,7 +195,8 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
 
     # phrase
     if phrase:
-        desc_out.append(f"*{phrase}*")
+        # blockquote phrase to match actions
+        desc_out.append(f">>> *{phrase}*")
 
     # DC footer
     if iterations > 1 and dc:

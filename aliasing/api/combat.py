@@ -249,6 +249,15 @@ class SimpleCombatant(AliasStatBlock):
         """
         return self._monster_name
 
+    @property
+    def is_hidden(self):
+        """
+        Whether the HP, AC, Resists, etc are hidden.
+
+        :rtype: bool
+        """
+        return bool(self._hidden)
+
     def save(self, ability: str, adv: bool = None):
         """
         Rolls a combatant's saving throw.
@@ -383,16 +392,19 @@ class SimpleCombatant(AliasStatBlock):
             note = str(note)
         self._combatant.notes = note
 
-    def get_effect(self, name: str):
+    def get_effect(self, name: str, strict: bool = False):
         """
-        Gets a SimpleEffect, fuzzy searching (partial match) for a match.
+        Gets a SimpleEffect, fuzzy searching (partial match) for the first match or an exact match.
 
         :param str name: The name of the effect to get.
+        :param bool strict: Whether effect name must be an exact match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         :return: The effect.
         :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """
         name = str(name)
-        effect = self._combatant.get_effect(name, False)
+        effect = self._combatant.get_effect(name, strict)
         if effect:
             return SimpleEffect(effect)
         return None
@@ -409,6 +421,7 @@ class SimpleCombatant(AliasStatBlock):
         passive_effects: dict = None,
         attacks: list[dict] = None,
         buttons: list[dict] = None,
+        tick_on_combatant_id: str = None,
     ):
         """
         Adds an effect to the combatant. Returns the added effect.
@@ -433,6 +446,7 @@ class SimpleCombatant(AliasStatBlock):
         :param passive_effects: The passive effects this effect should grant. See :ref:`ieffectargs`.
         :param attacks: The attacks granted by this effect. See :ref:`ieffectargs`.
         :param buttons: The buttons granted by this effect. See :ref:`ieffectargs`.
+        :param tick_on_combatant_id: The ID of the combatant whose turn the effect duration ticks on (defaults to the combatant who the effect is on).
         :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """  # noqa: E501
         # validate types
@@ -450,6 +464,8 @@ class SimpleCombatant(AliasStatBlock):
             raise ValueError("The parent of a SimpleEffect must be a SimpleEffect.")
         if desc is not None:
             desc = str(desc)
+        if tick_on_combatant_id is not None:
+            tick_on_combatant_id = str(tick_on_combatant_id)
 
         # parse v4.1 models (passive, attacks, buttons)
         parsed_passive = parsed_attacks = parsed_buttons = None
@@ -491,6 +507,7 @@ class SimpleCombatant(AliasStatBlock):
             passive_effects=parsed_passive,
             attacks=parsed_attacks,
             buttons=parsed_buttons,
+            tick_on_combatant_id=tick_on_combatant_id,
         )
         if parent:
             effect_obj.set_parent(parent._effect)
@@ -499,14 +516,17 @@ class SimpleCombatant(AliasStatBlock):
 
         return SimpleEffect(effect_obj)
 
-    def remove_effect(self, name: str):
+    def remove_effect(self, name: str, strict: bool = False):
         """
-        Removes an effect from the combatant, fuzzy searching on name. If not found, does nothing.
+        Removes an effect from the combatant, fuzzy searching on name or an exact match. If not found, does nothing.
 
         :param str name: The name of the effect to remove.
+        :param bool strict: Whether effect name must be an exact match.
+            If this is ``False``, it returns the first partial match.
+            If this is ``True``, it will only return a strict match.
         """
         name = str(name)
-        effect = self._combatant.get_effect(name, strict=False)
+        effect = self._combatant.get_effect(name, strict)
         if effect:
             effect.remove()
             self._update_effects()
@@ -592,6 +612,8 @@ class SimpleEffect:
         self.duration = self._effect.duration
         self.remaining = self._effect.remaining
         self.effect = self._effect.effects.to_dict()
+        self.attacks = [i.to_dict() for i in self._effect.attacks]
+        self.buttons = [i.to_dict() for i in self._effect.buttons]
         self.conc = self._effect.concentration
         self.desc = self._effect.desc
         self.ticks_on_end = self._effect.end_on_turn_end

@@ -48,8 +48,10 @@ class ButtonHandler:
         author_id = inter.author.id
         if not (author_id == combatant.controller_id or author_id == combat.dm_id):
             await inter.send(
-                "You do not have permission to control this combatant. Only the combatant owner and combat DM may use "
-                "this button.",
+                (
+                    "You do not have permission to control this combatant. Only the combatant owner and combat DM may"
+                    " use this button."
+                ),
                 ephemeral=True,
             )
             return
@@ -102,6 +104,7 @@ class ButtonHandler:
             spell=spell,
             spell_level_override=button_interaction.granting_spell_cast_level,
             from_button=True,
+            original_choice=button_interaction.original_choice,
         )
 
         # and send the result

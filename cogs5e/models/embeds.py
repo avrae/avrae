@@ -44,7 +44,7 @@ class EmbedWithCharacter(disnake.Embed):
         super().__init__(**kwargs)
         if name:
             self.set_author(name=character.name)
-        if character.options.embed_image and image:
+        if character.options.embed_image and image and character.image:
             self.set_thumbnail(url=character.image)
         self.colour = character.get_color()
 
@@ -217,14 +217,17 @@ def add_fields_from_args(embed, _fields):
     return embed
 
 
-def get_long_field_args(text, title, inline=False, chunk_size=1024):
+def get_long_field_args(text, title, inline=False, chunk_size=1019):
     """Returns a list of dicts (to pass as kwargs) given a long text."""
     chunks = chunk_text(text, chunk_size)
     if not chunks:
         return []
-    out = [{"name": title, "value": chunks[0].strip(), "inline": inline}]
+    opened_block = chunks[0].count("```") % 2
+    out = [{"name": title, "value": chunks[0].strip() + ("\n```" * opened_block), "inline": inline}]
     for chunk in chunks[1:]:
-        out.append({"name": "** **", "value": chunk.strip(), "inline": inline})
+        chunk = ("```\n" * opened_block) + chunk
+        opened_block = chunk.count("```") % 2
+        out.append({"name": "** **", "value": chunk.strip() + ("\n```" * opened_block), "inline": inline})
     return out
 
 
@@ -234,10 +237,13 @@ def set_maybe_long_desc(embed, desc):
     :param embed: The embed to add the description (and potentially fields) to.
     :param str desc: The description to add. Will overwrite existing description.
     """
-    desc = chunk_text(trim_str(desc, 5000))
-    embed.description = "".join(desc[:2]).strip()
+    desc = chunk_text(trim_str(desc, 5000), max_chunk_size=1000)
+    opened_block = "".join(desc[:2]).strip().count("```") % 2
+    embed.description = "".join(desc[:2]).strip() + ("\n```" * opened_block)
     for piece in desc[2:]:
-        embed.add_field(name="** **", value=piece.strip(), inline=False)
+        piece = ("```\n" * opened_block) + piece
+        opened_block = piece.count("```") % 2
+        embed.add_field(name="** **", value=piece.strip() + ("\n```" * opened_block), inline=False)
 
 
 def add_fields_from_long_text(embed, field_name, text):

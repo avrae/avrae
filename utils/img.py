@@ -1,6 +1,7 @@
 """
 Image processing utilities.
 """
+
 import asyncio
 import hashlib
 import os
@@ -41,13 +42,11 @@ async def generate_token(img_url, is_subscriber=False, token_args=None):
 
         # crop/resize the token image
         width, height = img.size
-        is_taller = height >= width
-        if is_taller:
+        if height >= width:
             box = (0, 0, width, width)
         else:
             box = (width / 2 - height / 2, 0, width / 2 + height / 2, height)
-        img = img.crop(box)
-        img = img.resize(TOKEN_SIZE, Image.ANTIALIAS)
+        img = img.resize(TOKEN_SIZE, Image.Resampling.LANCZOS, box)
 
         # paste mask
         mask_img = Image.open("res/alphatemplate.tif")

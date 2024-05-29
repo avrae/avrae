@@ -20,6 +20,12 @@ class Homebrew(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def clear_cache(self, ctx, entity_type):
+        lookup = self.bot.get_cog("Lookup")
+        if lookup is None:
+            return await ctx.send("Error: Lookup cog not loaded.")
+        await lookup.clear_cache(ctx, entity_type)
+
     @commands.group(invoke_without_command=True)
     async def bestiary(self, ctx, *, name=None):
         """Commands to manage homebrew monsters.
@@ -40,6 +46,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Bestiary not found.")
             await bestiary.set_active(ctx)
+            await self.clear_cache(ctx, "monster")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
         if bestiary.desc:
@@ -78,9 +85,11 @@ class Homebrew(commands.Cog):
 
     @bestiary.command(name="import")
     async def bestiary_import(self, ctx, url):
-        """
-        Imports a bestiary from [CritterDB](https://critterdb.com/).
+        """Imports a bestiary from [Bestiary Builder](https://bestiarybuilder.com) or [CritterDB](https://critterdb.com/).
+        **Bestiary Builder:**
+        To share a bestiary with Avrae, make sure it is Public or Unlisted.
 
+        **CritterDB:**
         To share a bestiary with Avrae, enable Link Sharing in the sharing menu of your bestiary!
 
         If your attacks don't seem to be importing properly, you can add a hidden line to the description to set it:
@@ -93,20 +102,27 @@ class Homebrew(commands.Cog):
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
         # https://critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
         # https://critterdb.com:443/#/bestiary/view/5acfe382de482a4d0ed57b46
-        if not (
-            match := re.match(
-                r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", url
+        # https://bestiarybuilder.com/bestiary-viewer/658df202a17b4b6e2645fa0b
+        if match := re.match(r"https?://(?:www\.)?bestiarybuilder.com/bestiary-viewer/([0-9a-f]+)", url):
+            loading = await ctx.send(
+                "Importing bestiary from Bestiary Builder (this may take a while for large bestiaries)..."
             )
+            bestiary_id = match.group(1)
+            bestiary = await Bestiary.from_bestiary_builder(ctx, bestiary_id)
+        elif match := re.match(
+            r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", url
         ):
-            return await ctx.send(
-                "This is not a valid CritterDB link. Ensure the link is to the bestiary and not an individual creature."
+            loading = await ctx.send(
+                "Importing bestiary from CritterDB (this may take a while for large bestiaries)..."
             )
-
-        loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")
-        bestiary_id = match.group(2)
-        is_published = bool(match.group(1))
-
-        bestiary = await Bestiary.from_critterdb(ctx, bestiary_id, published=is_published)
+            bestiary_id = match.group(2)
+            is_published = bool(match.group(1))
+            bestiary = await Bestiary.from_critterdb(ctx, bestiary_id, published=is_published)
+        else:
+            return await ctx.send((
+                "This is not a valid Bestiary Builder or CritterDB link. "
+                + "Ensure the link is to the bestiary and not an individual creature."
+            ))
 
         await bestiary.subscribe(ctx)
         await bestiary.set_active(ctx)
@@ -123,7 +139,7 @@ class Homebrew(commands.Cog):
 
     @bestiary.command(name="update")
     async def bestiary_update(self, ctx):
-        """Updates the active bestiary from CritterDB."""
+        """Updates the active bestiary from Bestiary Builder or CritterDB."""
         try:
             old_bestiary = await Bestiary.from_ctx(ctx)
         except NoActiveBrew:
@@ -133,7 +149,11 @@ class Homebrew(commands.Cog):
         loading = await ctx.send("Updating bestiary (this may take a while for large bestiaries)...")
 
         old_server_subs = await old_bestiary.server_subscriptions(ctx)
-        bestiary = await Bestiary.from_critterdb(ctx, old_bestiary.upstream, old_bestiary.published)
+
+        if old_bestiary.site_type == "BESTIARY_BUILDER":
+            bestiary = await Bestiary.from_bestiary_builder(ctx, old_bestiary.upstream)
+        else:
+            bestiary = await Bestiary.from_critterdb(ctx, old_bestiary.upstream, old_bestiary.published)
 
         # only do subscription operations if there was actually a change
         if bestiary.sha256 != old_bestiary.sha256:
@@ -210,6 +230,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Pack not found.")
             await pack.set_active(ctx)
+            await self.clear_cache(ctx, "item")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = pack.name
         embed.description = pack.desc
@@ -333,6 +354,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Tome not found.")
             await tome.set_active(ctx)
+            await self.clear_cache(ctx, "spell")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = tome.name
         embed.description = tome.desc

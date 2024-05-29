@@ -393,8 +393,7 @@ class Combat:
     @overload
     async def select_combatant(
         self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[True] = False
-    ) -> Optional[Combatant | CombatantGroup]:
-        ...
+    ) -> Optional[Combatant | CombatantGroup]: ...
 
     async def select_combatant(
         self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[False] = False
@@ -428,9 +427,6 @@ class Combat:
 
         messages = []
 
-        if self.current_combatant:
-            self.current_combatant.on_turn_end()
-
         changed_round = False
         if self.index is None:  # new round, no dynamic reroll
             self._current_index = 0
@@ -445,15 +441,16 @@ class Combat:
             self._current_index += 1
 
         self._turn = self.current_combatant.init
-        self.current_combatant.on_turn()
+        for combatant in self._combatants:
+            combatant.on_turn()
         return changed_round, messages
 
     def rewind_turn(self):
         if len(self._combatants) == 0:
             raise NoCombatants
 
-        if self.current_combatant:
-            self.current_combatant.on_turn_end(num_turns=-1)
+        for combatant in self._combatants:
+            combatant.on_turn(num_turns=-1)
 
         if self.index is None:  # start of combat
             self._current_index = len(self._combatants) - 1
@@ -469,8 +466,8 @@ class Combat:
         if len(self._combatants) == 0:
             raise NoCombatants
 
-        if self.current_combatant:
-            self.current_combatant.on_turn_end(num_turns=0)
+        for combatant in self._combatants:
+            combatant.on_turn(num_turns=0)
 
         if is_combatant:
             if init_num.group:
@@ -491,7 +488,6 @@ class Combat:
         self.round_num += num_rounds
         for com in self.get_combatants():
             com.on_turn(num_rounds)
-            com.on_turn_end(num_rounds)
         if self.options.dynamic:
             messages.append(f"New initiatives:\n{self.reroll_dynamic()}")
 
@@ -550,7 +546,9 @@ class Combat:
             return disnake.AllowedMentions.none()
         mentions = self.get_turn_str_mentions_for(self.current_combatant)
         if self.options.turnnotif and self.next_combatant is not None:
-            mentions.merge(self.get_turn_str_mentions_for(self.next_combatant))
+            next_combatant = self.get_turn_str_mentions_for(self.next_combatant)
+            merged_users = set(next_combatant.users).union(mentions.users)
+            mentions = mentions.merge(disnake.AllowedMentions(users=list(merged_users)))
         return mentions
 
     def get_turn_str_mentions_for(self, combatant) -> disnake.AllowedMentions:

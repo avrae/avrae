@@ -7,6 +7,7 @@ Redis - if the key is present in for a given guild channel, that channel is cons
 This key is set when a combat starts and expired 2 minutes after a combat ends in a channel that has opted in to NLP
 recording.
 """
+
 import datetime
 import logging
 import re
@@ -53,6 +54,7 @@ class RecordedMessage(RecordedEvent):
     message_id: int
     author_id: str
     author_name: str
+    author_bot: Optional[bool]
     created_at: float
     content: str
     embeds: List[dict]  # call disnake.Embed.to_dict() to generate these
@@ -66,6 +68,7 @@ class RecordedMessage(RecordedEvent):
             message_id=message.id,
             author_id=message.author.id,
             author_name=message.author.display_name,
+            author_bot=message.author.bot,
             created_at=message.created_at.timestamp(),
             content=message.content,
             embeds=[embed.to_dict() for embed in message.embeds],
@@ -149,6 +152,7 @@ class RecordedCommandInvocation(RecordedMessage):
             message_id=message.id,
             author_id=message.author.id,
             author_name=message.author.display_name,
+            author_bot=message.author.bot,
             created_at=message.created_at.timestamp(),
             content=message.content,
             embeds=[embed.to_dict() for embed in message.embeds],

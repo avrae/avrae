@@ -41,6 +41,7 @@ class AutomationContext:
         allow_caster_ieffects: bool = True,
         allow_target_ieffects: bool = True,
         from_button: bool = False,
+        original_choice: str = "",
     ):
         # runtime options
         self.ctx = ctx
@@ -58,6 +59,7 @@ class AutomationContext:
             # caster, targets as default (#1335)
             "caster": aliasing.api.statblock.AliasStatBlock(caster),
             "targets": [maybe_alias_statblock(t) for t in targets],
+            "choice": self.args.last("choice", original_choice).lower(),
         }
 
         # spellcasting utils
@@ -71,6 +73,7 @@ class AutomationContext:
 
         self.metavars["spell_attack_bonus"] = self.ab_override or self.caster.spellbook.sab
         self.metavars["spell_dc"] = self.dc_override or self.caster.spellbook.dc
+        self.metavars["spell_level"] = self.spell_level_override
 
         # InitiativeEffect utils
         self.ieffect = ieffect
@@ -121,10 +124,10 @@ class AutomationContext:
         """Adds a line of text to the embed footer."""
         self._footer_queue.append(text)
 
-    def effect_queue(self, text):
+    def effect_queue(self, text, title="Effect"):
         """Adds a line of text to the Effect field (lines are unique)."""
-        if text not in self._effect_queue:
-            self._effect_queue.append(text)
+        if (title, text) not in self._effect_queue:
+            self._effect_queue.append((title, text))
 
     def postflight_queue_field(self, name, value, merge=True):
         """
@@ -162,8 +165,10 @@ class AutomationContext:
 
         # description
         phrase = self.args.join("phrase", "\n")
+
         if phrase:
-            self.embed.description = f"*{phrase}*"
+            # blockquote phrase to specify it is a phrase
+            self.embed.description = f">>> *{phrase}*"
 
         # add meta field (any lingering items in field queue that were not closed added to meta)
         self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)
@@ -172,8 +177,8 @@ class AutomationContext:
         # add fields
         for field in self._field_queue:
             self.embed.add_field(**field)
-        for effect in self._effect_queue:
-            self.embed.add_field(name="Effect", value=effect, inline=False)
+        for title, effect in self._effect_queue:
+            self.embed.add_field(name=title, value=effect, inline=False)
         for field in self._postflight_queue:
             self.embed.add_field(**field)
         self.embed.set_footer(text="\n".join(self._footer_queue))
@@ -313,6 +318,7 @@ class AutomationTarget:
 
     # ==== helpers ====
     def damage(self, autoctx: AutomationContext, amount: int, allow_overheal: bool = True):
+        # add damage footer when we attack a Combatant
         if not self.is_simple:
             result = self.target.modify_hp(-amount, overflow=allow_overheal)
             autoctx.footer_queue(f"{self.target.name}: {result}")
@@ -323,6 +329,9 @@ class AutomationTarget:
 
                 if self.target.is_concentrating() and amount > 0:
                     autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
+        # for a non-init target, we still want to display that a damage node was run in the footer.
+        else:
+            autoctx.footer_queue(f"{self.target or '<No Target>'}: Dealt {amount} damage!")
 
     # ==== target base class helpers ====
     @cached_property

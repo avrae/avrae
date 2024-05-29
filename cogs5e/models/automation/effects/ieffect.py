@@ -1,3 +1,4 @@
+import re
 from typing import List, Optional
 
 import disnake
@@ -42,19 +43,17 @@ class LegacyIEffect(Effect):
 
     def to_dict(self):
         out = super().to_dict()
-        out.update(
-            {
-                "name": self.name,
-                "duration": self.duration,
-                "effects": self.effects,
-                "end": self.tick_on_end,
-                "conc": self.concentration,
-                "desc": self.desc,
-                "stacking": self.stacking,
-                "save_as": self.save_as,
-                "parent": self.parent,
-            }
-        )
+        out.update({
+            "name": self.name,
+            "duration": self.duration,
+            "effects": self.effects,
+            "end": self.tick_on_end,
+            "conc": self.concentration,
+            "desc": self.desc,
+            "stacking": self.stacking,
+            "save_as": self.save_as,
+            "parent": self.parent,
+        })
         return out
 
     def run(self, autoctx):
@@ -173,6 +172,8 @@ class IEffect(Effect):
         stacking: bool = False,
         save_as: str = None,
         parent: str = None,
+        target_self: bool = False,
+        tick_on_caster: bool = False,
         **kwargs,
     ):
         if attacks is None:
@@ -191,6 +192,8 @@ class IEffect(Effect):
         self.stacking = stacking
         self.save_as = save_as
         self.parent = parent
+        self.target_self = target_self
+        self.tick_on_caster = tick_on_caster
 
     @classmethod
     def from_data(cls, data):
@@ -205,21 +208,21 @@ class IEffect(Effect):
     def to_dict(self):
         out = super().to_dict()
         effects = self.effects.data if self.effects is not None else None
-        out.update(
-            {
-                "name": self.name,
-                "duration": self.duration,
-                "effects": effects,
-                "attacks": [a.to_dict() for a in self.attacks],
-                "buttons": [b.to_dict() for b in self.buttons],
-                "end": self.end_on_turn_end,
-                "conc": self.concentration,
-                "desc": self.desc,
-                "stacking": self.stacking,
-                "save_as": self.save_as,
-                "parent": self.parent,
-            }
-        )
+        out.update({
+            "name": self.name,
+            "duration": self.duration,
+            "effects": effects,
+            "attacks": [a.to_dict() for a in self.attacks],
+            "buttons": [b.to_dict() for b in self.buttons],
+            "end": self.end_on_turn_end,
+            "conc": self.concentration,
+            "desc": self.desc,
+            "stacking": self.stacking,
+            "save_as": self.save_as,
+            "parent": self.parent,
+            "target_self": self.target_self,
+            "tick_on_caster": self.tick_on_caster,
+        })
         return out
 
     def run(self, autoctx):
@@ -243,6 +246,7 @@ class IEffect(Effect):
             desc = None
 
         duration = autoctx.args.last("dur", duration, int)
+        parsed_name = autoctx.parse_annostr(self.name)
         if self.effects is not None:
             effects = self.effects.resolve(autoctx)
         else:
@@ -250,13 +254,31 @@ class IEffect(Effect):
         attacks = [a.resolve(autoctx) for a in self.attacks]
         buttons = [b.resolve(autoctx) for b in self.buttons]
 
-        conc_conflict = []
-        if autoctx.target.combatant is not None:
+        if self.target_self:
+            combatant = autoctx.caster
+            effect_target = f" on {combatant.name}"
+            if not isinstance(combatant, init.Combatant):
+                combatant = None
+        else:
             combatant = autoctx.target.combatant
+            effect_target = ""
+
+        tick_on_combatant_id = None
+        if self.tick_on_caster:
+            if isinstance(autoctx.caster, init.Combatant):
+                tick_on_combatant_id = autoctx.caster.id
+            else:
+                autoctx.meta_queue(
+                    f"**Warning**: The effect `{parsed_name}`'s duration may be off by up to 1 round since the caster"
+                    " is not in combat."
+                )
+
+        conc_conflict = []
+        if combatant is not None:
             effect = init.InitiativeEffect.new(
                 combat=combatant.combat,
                 combatant=combatant,
-                name=self.name,
+                name=parsed_name,
                 duration=duration,
                 passive_effects=effects,
                 attacks=attacks,
@@ -264,6 +286,7 @@ class IEffect(Effect):
                 end_on_turn_end=self.end_on_turn_end,
                 concentration=self.concentration,
                 desc=desc,
+                tick_on_combatant_id=tick_on_combatant_id,
             )
             conc_parent = None
             stack_parent = None
@@ -278,10 +301,10 @@ class IEffect(Effect):
             # find the next correct name for the effect and create a new one, without conflicting pieces
             if self.stacking and (stack_parent := combatant.get_effect(effect.name, strict=True)):
                 count = 2
-                new_name = f"{self.name} x{count}"
+                new_name = f"{parsed_name} x{count}"
                 while combatant.get_effect(new_name, strict=True):
                     count += 1
-                    new_name = f"{self.name} x{count}"
+                    new_name = f"{parsed_name} x{count}"
                 effect = init.InitiativeEffect.new(
                     combat=combatant.combat,
                     combatant=combatant,
@@ -299,15 +322,27 @@ class IEffect(Effect):
                     )
                 # noinspection PyProtectedMember
                 explicit_parent = parent_ref._effect
+            # explicit support for parenting to the parent of this ieffect's parent
+            elif self.parent == "ieffect.parent" and (parent_ref := autoctx.metavars.get("ieffect", None)) is not None:
+                if not isinstance(parent_ref, aliasing.api.combat.SimpleEffect):
+                    raise InvalidArgument(
+                        f"Could not set IEffect parent: The variable `{self.parent}` is not an initiative effect "
+                        f"(expected SimpleEffect, got `{type(parent_ref).__name__}`)."
+                    )
+
+                # parent_ref.parent is None in data tests
+                if parent_ref.parent:
+                    # noinspection PyProtectedMember
+                    explicit_parent = parent_ref.parent._effect
 
             if parent_effect := stack_parent or explicit_parent or conc_parent:
                 effect.set_parent(parent_effect)
 
             # add
             effect_result = combatant.add_effect(effect)
-            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
+            autoctx.queue(f"**Effect{effect_target}**: {effect.get_str(description=False)}")
             if conc_conflict := effect_result["conc_conflict"]:
-                autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
+                autoctx.queue(f"**Concentration{effect_target}**: dropped {', '.join([e.name for e in conc_conflict])}")
 
             # save as
             if self.save_as is not None:
@@ -316,7 +351,7 @@ class IEffect(Effect):
             effect = init.InitiativeEffect.new(
                 combat=None,
                 combatant=None,
-                name=self.name,
+                name=parsed_name,
                 duration=duration,
                 passive_effects=effects,
                 attacks=attacks,
@@ -325,13 +360,14 @@ class IEffect(Effect):
                 concentration=self.concentration,
                 desc=desc,
             )
-            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
+            autoctx.queue(f"**Effect{effect_target}**: {effect.get_str(description=False)}")
 
         return IEffectResult(effect=effect, conc_conflict=conc_conflict)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
-        return f"Effect: {self.name}"
+        clean_name = re.sub(r"{+.+?}+", "<<Variable>>", self.name)
+        return f"Effect: {clean_name}"
 
 
 # ==== metavars ====
@@ -379,6 +415,7 @@ class _PassiveEffectsWrapper:
             check_bonus=self.resolve_annotatedstring(autoctx, "check_bonus"),
             check_adv=self.resolve_check_advs(autoctx, "check_adv"),
             check_dis=self.resolve_check_advs(autoctx, "check_dis"),
+            dc_bonus=self.resolve_intexpression(autoctx, "dc_bonus"),
         )
 
     def resolve_annotatedstring(self, autoctx, attr: str) -> str | None:
@@ -482,6 +519,7 @@ class _AttackInteractionWrapper:
             override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
             granting_spell_id=autoctx.spell.entity_id if autoctx.is_spell else None,
             granting_spell_cast_level=autoctx.get_cast_level(),
+            original_choice=autoctx.metavars["choice"],
         )
 
 
@@ -563,6 +601,7 @@ class _ButtonInteractionWrapper:
             override_default_casting_mod=maybe_intexpression(autoctx, self.default_casting_mod),
             granting_spell_id=autoctx.spell.entity_id if autoctx.is_spell else None,
             granting_spell_cast_level=autoctx.get_cast_level(),
+            original_choice=autoctx.metavars["choice"],
         )
 
 

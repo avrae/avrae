@@ -49,3 +49,11 @@ class Timeout(HTTPException):
 
     def __init__(self, msg):
         super(Timeout, self).__init__(429, msg)
+
+
+class AutoParserException(AvraeException):
+    """Something went wrong with the automation parser"""
+
+    def __init__(self, node, msg):
+        super(AvraeException, self).__init__(msg)
+        self.node = node

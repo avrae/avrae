@@ -53,6 +53,7 @@ class Automation:
         allow_caster_ieffects: bool = True,
         allow_target_ieffects: bool = True,
         from_button: bool = False,
+        original_choice: str = "",
     ) -> AutomationResult:
         """
         Runs automation.
@@ -78,6 +79,7 @@ class Automation:
         :param allow_target_ieffects: Whether effects granted by ieffects on a target (usually defensive like
                                       -sb, sadv, -ac, -resist, etc) are considered during execution.
         :param from_button: Whether this automation is being run from a button or not
+        :param original_choice: The -choice arg as granted from a parent ieffect to a ButtonInteraction or AttackInteraction
         """
         if not targets:
             targets = []
@@ -99,6 +101,7 @@ class Automation:
             allow_caster_ieffects=allow_caster_ieffects,
             allow_target_ieffects=allow_target_ieffects,
             from_button=from_button,
+            original_choice=original_choice,
         )
 
         automation_results = []
@@ -135,7 +138,8 @@ class Automation:
         inner = Effect.build_child_str(self.effects, caster, evaluator)
         if not inner:
             inner = ", ".join(e.type for e in self.effects)
-        return disnake.utils.escape_markdown(f"{inner[0].upper()}{inner[1:]}.", as_needed=True)
+        escaped = disnake.utils.escape_markdown(f"{inner[0].upper()}{inner[1:]}.", as_needed=True)
+        return escaped.replace("<<Variable>>", "*Variable*")
 
     def __str__(self):
         return f"Automation ({len(self.effects)} effects)"

@@ -61,7 +61,7 @@ class DDBLink(Tutorial):
         async def transition(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
-            You got it!  If you’re a spellcaster, now you can even cast `{ctx.prefix}cast` those spells, too. It also works with all of the other lookup commands as well, like `{ctx.prefix}monster`,  `{ctx.prefix}item`, or  `{ctx.prefix}feat`.
+            You got it!  If you’re a spellcaster, now you can even cast `{ctx.prefix}cast` those spells, too. It also works with all of the other lookup commands as well, like `{ctx.prefix}monster`,  `{ctx.prefix}item`, or  `/lookup feat`.
 
             Plus, you can share the fun with the rest of your party using D&D Beyond's [Campaign Content Sharing](https://dndbeyond.zendesk.com/hc/en-us/articles/115011257067-Campaign-Content-Sharing-and-You). That lets the whole group share their unlocked game content with each other, and it works here in Avrae, too!
             """

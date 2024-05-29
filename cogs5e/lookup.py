@@ -3,9 +3,11 @@ Created on Nov 29, 2016
 
 @author: andrew
 """
+
 import itertools
 import logging
 
+import cachetools
 import disnake
 from disnake.ext import commands
 
@@ -13,16 +15,22 @@ import gamedata
 import ui
 import utils.settings
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
+from cogs5e.models.errors import RequiresLicense
 from cogsmisc.stats import Stats
 from gamedata import lookuputils
 from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
+from gamedata.lookuputils import create_selectkey, lookup_converter, can_access, slash_match_key
 from gamedata.race import RaceFeature
+from gamedata.shared import CachedSourced, Sourced
 from utils import checks, img
 from utils.argparser import argparse
-from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str, try_delete
+from utils.functions import chunk_text, get_positivity, search_and_select, smart_trim, trim_str, try_delete, search
+from utils.settings import ServerSettings
 
 LARGE_THRESHOLD = 200
+ENTITY_TTL = 5 * 60
+ENTITY_CACHE = cachetools.TTLCache(64, ENTITY_TTL)
 
 log = logging.getLogger(__name__)
 
@@ -33,9 +41,15 @@ class Lookup(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.slash_command(name="lookup")
+    async def slash_lookup(self, inter: disnake.ApplicationCommandInteraction):
+        if inter.author.id in self.bot.muted:
+            await inter.send("You do not have permission to use this command.", ephemeral=True)
+            raise commands.CommandNotFound
+
     # ==== rules/references ====
-    @staticmethod
-    async def _show_reference_options(ctx, destination):
+    async def _show_reference_options(self, ctx):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = "Rules"
         categories = ", ".join(a["type"] for a in compendium.rule_references)
@@ -51,8 +65,8 @@ class Lookup(commands.Cog):
 
         await destination.send(embed=embed)
 
-    @staticmethod
-    async def _show_action_options(ctx, actiontype, destination):
+    async def _show_action_options(self, ctx, actiontype):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = actiontype["fullName"]
 
@@ -70,32 +84,59 @@ class Lookup(commands.Cog):
             name = "condition"
         else:
             name = f"Condition: {name}"
-        # this is an invoke instead of an alias to make more sense in docs
         await self.rule(ctx, name=name)
 
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
-        destination = await self._get_destination(ctx)
-
         if name is None:
-            return await self._show_reference_options(ctx, destination)
+            return await self._show_reference_options(ctx)
 
         options = []
         for actiontype in compendium.rule_references:
             if name == actiontype["type"]:
-                return await self._show_action_options(ctx, actiontype, destination)
+                return await self._show_action_options(ctx, actiontype)
             else:
                 options.extend(actiontype["items"])
 
         result, metadata = await search_and_select(ctx, options, name, lambda e: e["fullName"], return_metadata=True)
         await lookuputils.add_training_data(self.bot.mdb, "reference", name, result["fullName"], metadata=metadata)
 
+        return await self._rule(ctx, result)
+
+    @slash_lookup.sub_command(name="rule", description="Looks up a rule or condition.")
+    async def slash_rule(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name=commands.Param(
+            description="The rule or condition you want to look up", converter=lookup_converter("rule")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Rule not found.", ephemeral=True)
+                return
+            name = name[0]
+        return await self._rule(inter, name)
+
+    @slash_rule.autocomplete("name")
+    async def slash_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        choices = []
+        for actiontype in compendium.rule_references:
+            choices.extend(actiontype["items"])
+
+        result, strict = search(choices, user_input, lambda e: e["fullName"], 25)
+        if strict:
+            return [result["fullName"]]
+        return [r["fullName"] for r in result][:25]
+
+    async def _rule(self, ctx, rule):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
-        embed.title = result["fullName"]
-        embed.description = f"*{result['short']}*"
-        add_fields_from_long_text(embed, "Description", result["desc"])
-        embed.set_footer(text=f"Rule | {result['source']}")
+        embed.title = rule["fullName"]
+        embed.description = f"*{rule['short']}*"
+        add_fields_from_long_text(embed, "Description", rule["desc"])
+        embed.set_footer(text=f"Rule | {rule['source']}")
 
         await destination.send(embed=embed)
 
@@ -104,7 +145,36 @@ class Lookup(commands.Cog):
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
         result: gamedata.Feat = await lookuputils.search_entities(ctx, {"feat": compendium.feats}, name)
+        return await self._feat(ctx, result)
 
+    @slash_lookup.sub_command(name="feat", description="Looks up a feat.")
+    async def slash_feat(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.feat = commands.Param(
+            description="The feat you want to look up", converter=lookup_converter("feat")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Feat not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["feat"])
+        return await self._feat(inter, name)
+
+    @slash_feat.autocomplete("name")
+    async def slash_feat_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {"feat": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "feat")}
+        select_key = create_selectkey(available_ids)
+
+        result, strict = search(compendium.feats, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _feat(self, ctx, result: gamedata.feat):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
@@ -112,7 +182,7 @@ class Lookup(commands.Cog):
             embed.add_field(name="Prerequisite", value=result.prerequisite, inline=False)
         add_fields_from_long_text(embed, "Description", result.desc)
         lookuputils.handle_source_footer(embed, result, "Feat")
-        await (await self._get_destination(ctx)).send(embed=embed)
+        await destination.send(embed=embed)
 
     # ==== races / racefeats ====
     @commands.command()
@@ -121,14 +191,44 @@ class Lookup(commands.Cog):
         result: RaceFeature = await lookuputils.search_entities(
             ctx, {"race": compendium.rfeats, "subrace": compendium.subrfeats}, name, "racefeat"
         )
+        return await self._racefeat(ctx, result)
 
+    @slash_lookup.sub_command(name="racefeat", description="Looks up a racial feature.")
+    async def slash_racefeat(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: RaceFeature = commands.Param(
+            description="The racial feature you want to look up", converter=lookup_converter("racefeat")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Racial feature not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["race", "subrace"])
+        return await self._racefeat(inter, name)
+
+    @slash_racefeat.autocomplete("name")
+    async def slash_racefeat_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in ("race", "subrace")
+        }
+        select_key = create_selectkey(available_ids)
+
+        result, strict = search(compendium.rfeats + compendium.subrfeats, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _racefeat(self, ctx, result: RaceFeature):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
         set_maybe_long_desc(embed, result.text)
         lookuputils.handle_source_footer(embed, result, "Race Feature")
-
-        await (await self._get_destination(ctx)).send(embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def race(self, ctx, *, name: str):
@@ -136,7 +236,38 @@ class Lookup(commands.Cog):
         result: gamedata.Race = await lookuputils.search_entities(
             ctx, {"race": compendium.races, "subrace": compendium.subraces}, name, "race"
         )
+        return await self._race(ctx, result)
 
+    @slash_lookup.sub_command(name="race", description="Looks up a race.")
+    async def slash_race(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.race = commands.Param(
+            description="The race you want to look up", converter=lookup_converter("race")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Race not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["race", "subrace"])
+        return await self._race(inter, name)
+
+    @slash_race.autocomplete("name")
+    async def slash_race_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in ("race", "subrace")
+        }
+        select_key = create_selectkey(available_ids)
+
+        result, strict = search(compendium.races + compendium.subraces, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _race(self, ctx, result: gamedata.race):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
@@ -145,7 +276,7 @@ class Lookup(commands.Cog):
         for t in result.traits:
             add_fields_from_long_text(embed, t.name, t.text)
         lookuputils.handle_source_footer(embed, result, "Race")
-        await (await self._get_destination(ctx)).send(embed=embed)
+        await destination.send(embed=embed)
 
     # ==== classes / classfeats ====
     @commands.command()
@@ -154,23 +285,87 @@ class Lookup(commands.Cog):
         result: ClassFeature = await lookuputils.search_entities(
             ctx, {"class": compendium.cfeats, "class-feature": compendium.optional_cfeats}, name, query_type="classfeat"
         )
+        return await self._classfeat(ctx, result)
 
+    @slash_lookup.sub_command(name="classfeat", description="Looks up a class feature.")
+    async def slash_classfeat(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: ClassFeature = commands.Param(
+            description="The class feature you want to look up", converter=lookup_converter("classfeat")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Class feature not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["class", "class-feature"])
+        return await self._classfeat(inter, name)
+
+    @slash_classfeat.autocomplete("name")
+    async def slash_classfeat_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in ("class", "class-feature")
+        }
+        select_key = create_selectkey(available_ids)
+
+        result, strict = search(compendium.cfeats + compendium.optional_cfeats, user_input, slash_match_key, 25)
+
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _classfeat(self, ctx, result: ClassFeature):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
         set_maybe_long_desc(embed, result.text)
         lookuputils.handle_source_footer(embed, result, "Class Feature")
-
-        await (await self._get_destination(ctx)).send(embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command(name="class")
-    async def _class(self, ctx, name: str, level: int = None):
+    async def classcmd(self, ctx, name: str, level: int = None):
         """Looks up a class, or all features of a certain level."""
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
         result: gamedata.Class = await lookuputils.search_entities(ctx, {"class": compendium.classes}, name)
+        return await self._class(ctx, result, level)
 
+    @slash_lookup.sub_command(name="class", description="Looks up a class, or all features of a certain level.")
+    async def slash_class(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.Class = commands.Param(
+            description="The class you want to look up", converter=lookup_converter("class")
+        ),
+        level: int = commands.Param(
+            description="The level you want to look at. Leave blank for an overview",
+            choices=list(range(1, 21)),
+            default=None,
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Class not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["class"])
+        return await self._class(inter, name, level)
+
+    @slash_class.autocomplete("name")
+    async def slash_class_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {"class": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "class")}
+        select_key = create_selectkey(available_ids)
+        result, strict = search(compendium.classes, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _class(self, ctx, result: gamedata.Class, level):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
         if level is None:
@@ -199,7 +394,7 @@ class Lookup(commands.Cog):
             embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
 
             lookuputils.handle_source_footer(
-                embed, result, f"Use {ctx.prefix}classfeat to look up a feature.", add_source_str=False
+                embed, result, f"Use /lookup classfeat to look up a feature.", add_source_str=False
             )
         else:
             embed.title = f"{result.name}, Level {level}"
@@ -211,13 +406,17 @@ class Lookup(commands.Cog):
                     embed.add_field(name=resource, value=value)
 
             for f in level_features:
-                embed.add_field(name=f.name, value=trim_str(f.text, 1024), inline=False)
+                embed.add_field(
+                    name=f.name,
+                    value=smart_trim(f.text, 1024, f"> Use `/lookup classfeat name:{f.name}` to view full text"),
+                    inline=False,
+                )
 
             lookuputils.handle_source_footer(
-                embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.", add_source_str=False
+                embed, result, f"Use /lookup classfeat to look up a feature if it is cut off.", add_source_str=False
             )
 
-        await (await self._get_destination(ctx)).send(embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def subclass(self, ctx, *, name: str):
@@ -225,6 +424,35 @@ class Lookup(commands.Cog):
         result: gamedata.Subclass = await lookuputils.search_entities(
             ctx, {"class": compendium.subclasses}, name, query_type="subclass"
         )
+        return await self._subclass(ctx, result)
+
+    @slash_lookup.sub_command(name="subclass", description="Looks up a subclass.")
+    async def slash_subclass(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.Subclass = commands.Param(
+            description="The subclass you want to look up", converter=lookup_converter("subclass")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Subclass not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["class"])
+        return await self._subclass(inter, name)
+
+    @slash_subclass.autocomplete("name")
+    async def slash_subclass_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {"class": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "class")}
+        select_key = create_selectkey(available_ids)
+        result, strict = search(compendium.subclasses, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _subclass(self, ctx, result: gamedata.Subclass):
+        destination = await self._get_destination(ctx)
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -233,14 +461,16 @@ class Lookup(commands.Cog):
 
         for level in result.levels:
             for feature in level:
-                text = smart_trim(feature.text, 1024)
+                text = smart_trim(
+                    feature.text, 1024, f"> Use `/lookup classfeat name:{feature.name}` to view full text"
+                )
                 embed.add_field(name=feature.name, value=text, inline=False)
 
         lookuputils.handle_source_footer(
-            embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off", add_source_str=True
+            embed, result, f"Use /lookup classfeat to look up a feature if it is cut off", add_source_str=True
         )
 
-        await (await self._get_destination(ctx)).send(embed=embed)
+        await destination.send(embed=embed)
 
     # ==== backgrounds ====
     @commands.command()
@@ -249,7 +479,35 @@ class Lookup(commands.Cog):
         result: gamedata.Background = await lookuputils.search_entities(
             ctx, {"background": compendium.backgrounds}, name
         )
+        return await self._background(ctx, result)
 
+    @slash_lookup.sub_command(name="background", description="Looks up a background.")
+    async def slash_background(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.Background = commands.Param(
+            description="The background you want to look up", converter=lookup_converter("background")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Background not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["background"])
+        return await self._background(inter, name)
+
+    @slash_background.autocomplete("name")
+    async def slash_background_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {"background": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "background")}
+        select_key = create_selectkey(available_ids)
+        result, strict = search(compendium.backgrounds, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _background(self, ctx, result: gamedata.Background):
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
         embed.title = result.name
@@ -259,7 +517,7 @@ class Lookup(commands.Cog):
             text = trim_str(trait.text, 1024)
             embed.add_field(name=trait.name, value=text, inline=False)
 
-        await (await self._get_destination(ctx)).send(embed=embed)
+        await destination.send(embed=embed)
 
     # ==== monsters ====
     @commands.command()
@@ -274,6 +532,49 @@ class Lookup(commands.Cog):
         if ctx.guild is not None:
             guild_settings = await ctx.get_server_settings()
             pm = guild_settings.lookup_pm_result
+        else:
+            pm = False
+
+        # #1741 -h arg for monster lookup
+        mon_args = argparse(name)
+        hide_name = mon_args.get("h", False, bool)
+        name = name.replace(" -h", "").rstrip()
+        pm_lookup = pm or hide_name
+        choices = await lookuputils.get_monster_choices(ctx)
+        monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=pm_lookup)
+
+        if hide_name:
+            await try_delete(ctx.message)
+
+        return await self._monster(ctx, monster, hide_name)
+
+    @slash_lookup.sub_command(name="monster", description="Looks up a monster.")
+    async def slash_monster(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.Monster = commands.Param(
+            description="The monster you want to look up", converter=lookup_converter("monster")
+        ),
+        hide_name: bool = commands.Param(
+            description="Shows the obfuscated stat block, even if you can see the full stat block.", default=False
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Monster not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["monster"])
+        return await self._monster(inter, name, hide_name)
+
+    async def _monster(self, ctx, monster: gamedata.Monster, hide_name):
+        destination = await self._get_destination(ctx)
+        if ctx.guild is not None:
+            if hasattr(ctx, "get_server_settings"):
+                guild_settings = await ctx.get_server_settings()
+            else:
+                guild_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+            pm = guild_settings.lookup_pm_result
             pm_dm = guild_settings.lookup_pm_dm
             req_dm_monster = guild_settings.lookup_dm_required
             visible = (not req_dm_monster) or guild_settings.is_dm(ctx.author)
@@ -283,23 +584,12 @@ class Lookup(commands.Cog):
             req_dm_monster = False
             visible = True
 
-        # #1741 -h arg for monster lookup
-        mon_args = argparse(name)
-        hide_name = mon_args.get("h", False, bool)
-        name = name.replace(" -h", "").rstrip()
-        pm_lookup = pm or hide_name
-
-        if hide_name:
-            visible = False
-            await try_delete(ctx.message)
-
-        choices = await lookuputils.get_monster_choices(ctx)
-        monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=pm_lookup)
-
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
 
-        if not hide_name:
+        if hide_name:
+            visible = False
+        else:
             embed_queue[-1].title = monster.name
         embed_queue[-1].url = monster.url
 
@@ -416,11 +706,16 @@ class Lookup(commands.Cog):
 
         embed_queue[0].set_thumbnail(url=monster.get_image_url())
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
-        for embed in embed_queue:
+
+        for i, embed in enumerate(embed_queue):
             if pm or (visible and pm_dm and req_dm_monster):
                 await ctx.author.send(embed=embed)
+            elif i == 0:
+                # Ensure the first embed is sent as a reply
+                await destination.send(embed=embed)
             else:
-                await ctx.send(embed=embed)
+                # and the rest are to the channel
+                await destination.channel.send(embed=embed)
 
     @commands.command()
     async def monimage(self, ctx, *, name: str):
@@ -438,6 +733,28 @@ class Lookup(commands.Cog):
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
+        await self._monimage(ctx, monster, hide_name)
+
+    @slash_lookup.sub_command(name="monimage", description="Shows a monster's image.")
+    async def slash_monimage(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.Monster = commands.Param(
+            description="The monster you want to look up. (Excludes monsters without images)",
+            converter=lookup_converter("monster"),
+        ),
+        hide_name: bool = commands.Param(description="Hides the monster statblock name.", default=False),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Monster not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["monster"])
+        return await self._monimage(inter, name, hide_name)
+
+    async def _monimage(self, ctx, monster: gamedata.Monster, hide_name):
+        destination = await self._get_destination(ctx)
         url = monster.get_image_url()
         embed = EmbedWithAuthor(ctx)
         if not hide_name:
@@ -448,25 +765,27 @@ class Lookup(commands.Cog):
             return await ctx.channel.send("This monster has no image.")
 
         embed.set_image(url=url)
-        await ctx.send(embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
-    async def token(self, ctx, name=None, *args):
+    async def token(self, ctx, name=None, *, args=""):
         """
         Shows a monster or your character's token.
         __Valid Arguments__
         -border <plain|none (player token only)> - Overrides the token border.
+        -h - Hides the monster statblock name.
         """
         if name is None or name.startswith("-"):
             token_cmd = self.bot.get_command("playertoken")
             if token_cmd is None:
                 return await ctx.send("Error: SheetManager cog not loaded.")
             if name:
-                args = (name, *args)
-            return await ctx.invoke(token_cmd, *args)
+                args = name + " " + args
+            return await ctx.invoke(token_cmd, args=args)
 
         # select monster
         token_args = argparse(args)
+        plain_border = token_args.last("border") == "plain"
         hide_name = token_args.get("h", False, bool)
         if hide_name:
             await try_delete(ctx.message)
@@ -475,6 +794,54 @@ class Lookup(commands.Cog):
         monster = await lookuputils.search_entities(ctx, {"monster": choices}, name, pm=hide_name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
+        await self._token(ctx, monster, plain_border, hide_name)
+
+    @slash_lookup.sub_command(name="token", description="Shows a monster token.")
+    async def slash_token(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.Monster = commands.Param(
+            description="The monster you want to look up. (Excludes monsters without images)",
+            converter=lookup_converter("monster"),
+        ),
+        plain_border: bool = commands.Param(
+            description="Show the plain border instead of the subscriber border, if available.", default=False
+        ),
+        hide_name: bool = commands.Param(
+            description="Shows the obfuscated stat block, even if you can see the full stat block.", default=False
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Monster not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["monster"])
+        return await self._token(inter, name, plain_border, hide_name)
+
+    @slash_monster.autocomplete("name")
+    @slash_monimage.autocomplete("name")
+    @slash_token.autocomplete("name")
+    async def slash_monster_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        choices = await self._get_entities(inter, "monster", lookuputils.get_monster_choices)
+
+        # If this autocomplete is for token or monimage, filter out monsters without tokens or images
+        lookup_command = list(inter.options)[0]
+        if lookup_command == "token":
+            choices = list(filter(lambda x: x.has_token, choices))
+        elif lookup_command == "monimage":
+            choices = list(filter(lambda x: x.has_image, choices))
+
+        available_ids = {"monster": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "monster")}
+        select_key = create_selectkey(available_ids)
+        result, strict = search(choices, user_input, slash_match_key)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _token(self, ctx, monster: gamedata.Monster, plain_border, hide_name):
+        destination = await self._get_destination(ctx)
+
         # select border
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         is_subscriber = ddb_user and ddb_user.is_subscriber
@@ -482,19 +849,23 @@ class Lookup(commands.Cog):
         if monster.homebrew:
             # homebrew: generate token
             if not monster.get_image_url():
-                return await ctx.send("This monster has no image.")
+                return await destination.send("This monster has no image.")
             try:
+                token_args = None
+                # Not the cleanest but leaves it open to additional args in the future
+                if plain_border:
+                    token_args = "-border plain"
                 image = await img.generate_token(monster.get_image_url(), is_subscriber, token_args)
             except Exception as e:
-                return await ctx.send(f"Error generating token: {e}")
+                return await destination.send(f"Error generating token: {e}")
         else:
             # official monsters
             token_url = monster.get_token_url(is_subscriber)
-            if token_args.last("border") == "plain":
+            if plain_border:
                 token_url = monster.get_token_url(False)
 
             if not token_url:
-                return await ctx.send("This monster has no image.")
+                return await destination.send("This monster has no image.")
 
             image = await img.fetch_monster_image(token_url)
 
@@ -505,7 +876,7 @@ class Lookup(commands.Cog):
 
         file = disnake.File(image, filename="image.png")
         embed.set_image(url="attachment://image.png")
-        await ctx.send(embed=embed, file=file)
+        await destination.send(embed=embed, file=file)
 
     # ==== spells ====
     @commands.command()
@@ -513,6 +884,48 @@ class Lookup(commands.Cog):
         """Looks up a spell."""
         choices = await lookuputils.get_spell_choices(ctx)
         spell = await lookuputils.search_entities(ctx, {"spell": choices}, name)
+
+        return await self._spell(ctx, spell)
+
+    @slash_lookup.sub_command(name="spell", description="Looks up a spell.")
+    async def slash_spell(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.Spell = commands.Param(
+            description="The spell you want to look up", converter=lookup_converter("spell")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Spell not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["spell"])
+        return await self._spell(inter, name)
+
+    @slash_spell.autocomplete("name")
+    async def slash_spell_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        choices = await self._get_entities(inter, "spell", lookuputils.get_spell_choices)
+
+        available_ids = {"spell": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "spell")}
+        select_key = create_selectkey(available_ids)
+        result, strict = search(choices, user_input, slash_match_key, 25)
+
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _spell(self, ctx, spell: gamedata.spell):
+        destination = await self._get_destination(ctx)
+
+        if ctx.guild is not None:
+            if hasattr(ctx, "get_server_settings"):
+                guild_settings = await ctx.get_server_settings()
+            else:
+                guild_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+            pm = guild_settings.lookup_pm_result
+        else:
+            pm = False
 
         embed = EmbedWithAuthor(ctx)
         embed.url = spell.url
@@ -562,17 +975,63 @@ class Lookup(commands.Cog):
             embed_queue[0].set_thumbnail(url=spell.image)
 
         await Stats.increase_stat(ctx, "spells_looked_up_life")
-        destination = await self._get_destination(ctx)
-        for embed in embed_queue:
-            await destination.send(embed=embed)
+
+        for i, embed in enumerate(embed_queue):
+            if pm:
+                await ctx.author.send(embed=embed)
+            elif i == 0:
+                # Ensure the first embed is sent as a reply
+                await destination.send(embed=embed)
+            else:
+                # and the rest are to the channel
+                await destination.channel.send(embed=embed)
 
     # ==== items ====
     @commands.command(name="item")
-    async def item_lookup(self, ctx, *, name):
+    async def item_lookup(self, ctx, *, name: str):
         """Looks up an item."""
         choices = await lookuputils.get_item_entitlement_choice_map(ctx)
         item = await lookuputils.search_entities(ctx, choices, name, query_type="item")
 
+        return await self._item(ctx, item)
+
+    @slash_lookup.sub_command(name="item", description="Looks up an item.")
+    async def slash_item(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.item = commands.Param(
+            description="The item you want to look up", converter=lookup_converter("item")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Item not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["adventuring-gear", "armor", "magic-item", "weapon"])
+        return await self._item(inter, name)
+
+    @slash_item.autocomplete("name")
+    async def slash_item_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        choices = await self._get_entities(inter, "item", lookuputils.get_item_entitlement_choice_map)
+
+        choice_dict = {}
+        for choice in choices:
+            if choice.entity_type not in choice_dict:
+                choice_dict[choice.entity_type] = []
+            choice_dict[choice.entity_type].append(choice)
+
+        available_ids = {k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in choice_dict}
+
+        select_key = create_selectkey(available_ids)
+        result, strict = search(choices, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    async def _item(self, ctx, item: gamedata.item):
+        """Looks up an item."""
+        destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
 
         embed.title = item.name
@@ -594,13 +1053,13 @@ class Lookup(commands.Cog):
         lookuputils.handle_source_footer(embed, item, "Item")
 
         await Stats.increase_stat(ctx, "items_looked_up_life")
-        await (await self._get_destination(ctx)).send(embed=embed)
+        await destination.send(embed=embed)
 
     # ==== server settings ====
     @commands.command(hidden=True)
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def lookup_settings(self, ctx, *args):
+    async def lookup_settings(self, ctx, *, args=""):
         """This command has been replaced by `!servsettings`. If you're used to it, it still works like before!"""
         guild_settings = await ctx.get_server_settings()
         if not args:
@@ -633,10 +1092,84 @@ class Lookup(commands.Cog):
     # ==== helpers ====
     @staticmethod
     async def _get_destination(ctx):
-        guild_settings = await ctx.get_server_settings()
+        guild_settings = None
+        if hasattr(ctx, "get_server_settings"):
+            guild_settings = await ctx.get_server_settings()
+            slash_command = False
+        else:
+            if ctx.guild is not None:
+                guild_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+            slash_command = True
         if guild_settings is None:
             return ctx
+        if slash_command and guild_settings.lookup_pm_result:
+            dm_link = await ctx.author.create_dm()
+            await ctx.send(f"Result sent to your [Direct Messages]({dm_link.jump_url})", ephemeral=True)
         return ctx.author if guild_settings.lookup_pm_result else ctx
+
+    async def _check_access(self, inter, entity: Sourced, entity_choices: list[str]):
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in entity_choices
+        }
+        if not can_access(entity, available_ids[entity.entitlement_entity_type]):
+            raise RequiresLicense(entity, available_ids[entity.entitlement_entity_type] is not None)
+
+    async def _get_entities(self, ctx, entity_type, entity_source):
+        """
+        Caches a minimal version of each entity of a given type available to a user for a particular context
+        """
+        if ctx.guild is None:
+            key = f"{entity_type}.{ctx.author.id}"
+        else:
+            key = f"{entity_type}.{ctx.guild.id}.{ctx.author.id}"
+
+        # L1: Memory
+        l1_entity_cache = ENTITY_CACHE.get(key)
+        if l1_entity_cache is not None:
+            log.debug("found available entities in l1 (memory) cache")
+            return l1_entity_cache
+
+        # L2: Redis
+        l2_entity_cache = await ctx.bot.rdb.jget(key)
+        if l2_entity_cache is not None:
+            log.debug("found available entities in l2 (redis) cache")
+            return [CachedSourced.from_dict(e) for e in l2_entity_cache]
+
+        # fetch it all
+        available_entities = await entity_source(ctx)
+
+        # Items have 4 entity types and as such return a dict
+        if isinstance(available_entities, dict):
+            available_entities = list(itertools.chain.from_iterable(available_entities.values()))
+
+        converted_entities = [
+            CachedSourced(
+                name=e.name,
+                entity_type=e.entity_type,
+                has_image=False if entity_type != "monster" else bool(e.image_url),
+                has_token=False if entity_type != "monster" else bool(e.token_free_fp or e.token_sub_fp),
+                source=e.source,
+                homebrew=e.homebrew,
+                entity_id=e.entity_id,
+                is_free=e.is_free,
+                is_legacy=e.is_legacy,
+            )
+            for e in available_entities
+        ]
+
+        # cache monsters
+        ENTITY_CACHE[key] = converted_entities
+        await self.bot.rdb.jsetex(key, [m.to_dict() for m in converted_entities], ENTITY_TTL)
+        return converted_entities
+
+    async def clear_cache(self, ctx, entity_type):
+        if ctx.guild is None:
+            key = f"{entity_type}.{ctx.author.id}"
+        else:
+            key = f"{entity_type}.{ctx.guild.id}.{ctx.author.id}"
+        if key in ENTITY_CACHE:
+            del ENTITY_CACHE[key]
+        await self.bot.rdb.delete(key)
 
     # ==== listeners ====
     @commands.Cog.listener()

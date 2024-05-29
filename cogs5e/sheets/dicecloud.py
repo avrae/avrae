@@ -34,7 +34,7 @@ CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiority
 CLASS_RESOURCE_NAMES = {
     "expertiseDice": "Expertise Dice",
     "ki": "Ki",
-    "rages": "Rages",
+    "rages": "Rage",
     "sorceryPoints": "Sorcery Points",
     "superiorityDice": "Superiority Dice",
 }
@@ -45,8 +45,8 @@ CLASS_RESOURCE_RESETS = {
     "sorceryPoints": "long",
     "superiorityDice": "short",
 }
-API_BASE = "https://dicecloud.com/character/"
-DICECLOUD_URL_RE = re.compile(r"(?:https?://)?dicecloud\.com/character/([\d\w]+)/?")
+API_BASE = "https://v1.dicecloud.com/character/"
+DICECLOUD_URL_RE = re.compile(r"(?:https?://)?v1\.dicecloud\.com/character/([\d\w]+)/?")
 
 
 class DicecloudParser(SheetLoaderABC):

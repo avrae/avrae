@@ -3,6 +3,7 @@ Created on Sep 23, 2016
 
 @author: andrew
 """
+
 import asyncio
 import copy
 import io
@@ -77,16 +78,18 @@ class AdminUtils(commands.Cog):
         }
         while True:  # if we ever disconnect from pubsub, wait 5s and try reinitializing
             try:  # connect to the pubsub channel
-                channel = (await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL))[0]
-            except:
-                log.warning("Could not connect to pubsub! Waiting to reconnect...")
+                channel = await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL)
+            except Exception as e:
+                log.warning(f"Could not connect to pubsub! Waiting to reconnect...[{e}]")
                 await asyncio.sleep(5)
                 continue
 
             log.info("Connected to pubsub.")
-            async for msg in channel.iter(encoding="utf-8"):
+            async for msg in channel.listen():
                 try:
-                    await self._ps_recv(msg)
+                    if msg["type"] == "subscribe":
+                        continue
+                    await self._ps_recv(msg["data"])
                 except Exception as e:
                     log.error(str(e))
             log.warning("Disconnected from Redis pubsub! Waiting to reconnect...")
@@ -339,10 +342,12 @@ class AdminUtils(commands.Cog):
         num_shards = len(self.bot.shard_ids) if self.bot.shard_ids is not None else 1
         if not await confirm(
             ctx,
-            f"Are you absolutely sure you want to kill cluster {cluster_id}? (Reply with yes/no)\n"
-            f"**This will terminate approximately {num_shards} shards, which "
-            f"will take at least {num_shards * 5} seconds to restart, and "
-            f"impact about {len(self.bot.guilds)} servers.**",
+            (
+                f"Are you absolutely sure you want to kill cluster {cluster_id}? (Reply with yes/no)\n"
+                f"**This will terminate approximately {num_shards} shards, which "
+                f"will take at least {num_shards * 5} seconds to restart, and "
+                f"impact about {len(self.bot.guilds)} servers.**"
+            ),
         ):
             return await ctx.send("ok, not killing")
         resp = await self.pscall("kill_cluster", kwargs={"cluster_id": cluster_id}, expected_replies=1)

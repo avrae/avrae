@@ -94,6 +94,15 @@ class Check(Effect):
         if invalid_abilities := set(ability_list).difference(constants.SKILL_NAMES):
             raise AutomationException(f"Invalid skill names in check node: {', '.join(invalid_abilities)}")
 
+        # ==== user args for user's checks in contested check automation ====
+        contest_ability_list = autoctx.args.get("selfability") or self.contest_ability_list
+        self_check_bonus = autoctx.args.get("selfcb", ephem=True)
+        self_adv = reconcile_adv(
+            adv=autoctx.args.last("selfcadv", type_=bool, ephem=True) or self.adv == enums.AdvantageType.ADV,
+            dis=autoctx.args.last("selfcdis", type_=bool, ephem=True) or self.adv == enums.AdvantageType.DIS,
+        )
+        self_min = autoctx.args.last("selfmc", type_=int, ephem=True)
+
         # ==== setup ====
         skill_name = natural_join([camel_to_title(a) for a in ability_list], "or")
         check_roll = None
@@ -128,11 +137,18 @@ class Check(Effect):
         contest_skill_name = None
         contest_roll = None
         contest_did_tie = False
+        contest_out = ""
         if self.contest_ability is not None:
-            contest_skill, contest_skill_key = get_highest_skill(autoctx.caster, self.contest_ability_list)
+            contest_skill, contest_skill_key = get_highest_skill(autoctx.caster, contest_ability_list)
             contest_skill_name = camel_to_title(contest_skill_key)
             contest_dice = get_check_dice_for_statblock(
-                autoctx, statblock_holder=autoctx, skill=contest_skill, skill_key=contest_skill_key
+                autoctx,
+                statblock_holder=autoctx,
+                skill=contest_skill,
+                skill_key=contest_skill_key,
+                bonus=self_check_bonus,
+                base_adv=self_adv,
+                min_check=self_min,
             )
             contest_roll = d20.roll(contest_dice)
 
@@ -140,7 +156,7 @@ class Check(Effect):
             autoctx.metavars["lastContestNaturalRoll"] = d20.utils.leftmost(contest_roll.expr).total
             autoctx.metavars["lastContestAbility"] = contest_skill_name
 
-            autoctx.queue(f"**{contest_skill_name} Contest ({autoctx.caster.name})**: {contest_roll.result}")
+            contest_out = f"**{contest_skill_name} Contest ({autoctx.caster.name})**: {contest_roll.result}"
 
         # ==== execution ====
         skill_key = None  # In case the target is simple
@@ -170,15 +186,19 @@ class Check(Effect):
             autoctx.metavars["lastCheckAbility"] = skill_name
 
             success_str = ""
+            display_name = ""
             if check_dc is not None:
                 is_success = check_roll.total >= check_dc
                 success_str = "; Success!" if is_success else "; Failure!"
             elif contest_roll is not None:
+                display_name = f" ({autoctx.target.target.name})"
                 if check_roll.total > contest_roll.total:
                     is_success = True
-                    success_str = "; Success!"
+                    success_str = "; Win!"
+                    contest_out += "; Lose!"
                 elif check_roll.total == contest_roll.total:
                     success_str = "; Tie!"
+                    contest_out += "; Tie!"
                     autoctx.metavars["lastContestDidTie"] = True
                     contest_did_tie = True
                     if self.contest_tie_behaviour == "fail" or self.contest_tie_behaviour is None:
@@ -187,9 +207,11 @@ class Check(Effect):
                         is_success = True
                 else:
                     is_success = False
-                    success_str = "; Failure!"
+                    success_str = "; Lose!"
+                    contest_out += "; Win!"
+                autoctx.queue(contest_out)
 
-            out = f"**{skill_name} Check**: {check_roll.result}{success_str}"
+            out = f"**{skill_name} Check{display_name}**: {check_roll.result}{success_str}"
 
             if not hide:
                 autoctx.queue(out)

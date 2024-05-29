@@ -6,6 +6,8 @@ import logging
 import os
 from typing import Callable, List, Type, TypeVar
 
+import motor.motor_asyncio
+
 import gamedata.spell
 from gamedata.action import Action
 from gamedata.background import Background
@@ -18,6 +20,7 @@ from gamedata.monster import Monster
 from gamedata.race import Race, RaceFeature, SubRace
 from gamedata.shared import Sourced
 from utils import config
+import ldclient
 
 log = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -128,7 +131,18 @@ class Compendium:
 
         self.raw_classes = lookup.get("classes", [])
         self.raw_feats = lookup.get("feats", [])
-        self.raw_monsters = lookup.get("monsters", [])
+
+        ldclient.set_config(ldclient.Config(sdk_key=config.LAUNCHDARKLY_SDK_KEY))
+
+        # TODO: Try importing Context as a standalone method
+        context = ldclient.Context.create("anonymous-user-start-bot")
+        if ldclient.get().variation("data.monsters.gridfs", context, False):
+            fs = motor.motor_asyncio.AsyncIOMotorGridFSBucket(mdb)
+            data = await fs.open_download_stream_by_name(filename="monsters")
+            gridout = await data.read()
+            self.raw_monsters = json.loads(gridout)
+        else:
+            self.raw_monsters = lookup.get("monsters", [])
         self.raw_backgrounds = lookup.get("backgrounds", [])
         self.raw_adventuring_gear = lookup.get("adventuring-gear", [])
         self.raw_armor = lookup.get("armor", [])
@@ -192,6 +206,7 @@ class Compendium:
         seen = set()
 
         def handle_class(cls_or_sub):
+            # Certain features are for action/limited use import only
             # load classfeats
             for i, level in enumerate(cls_or_sub.levels):
                 for feature in level:

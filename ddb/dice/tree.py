@@ -18,6 +18,7 @@ https://github.com/DnDBeyond/ddb-integrated-dice/blob/master/packages/ddb-dice/s
         - RollType
         - RollKind
 """
+
 import uuid
 
 import d20
@@ -55,7 +56,7 @@ class RollRequest:
         return {"action": self.action, "rolls": rolls, "context": context, "rollId": self.roll_id, "setId": self.set_id}
 
     @classmethod
-    def new(cls, rolls, context=None, action="custom", set_id="00101"):
+    def new(cls, rolls, context=None, action="custom", set_id="00102"):
         """
         Creates a new RollRequest.
 

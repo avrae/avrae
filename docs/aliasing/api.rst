@@ -250,12 +250,14 @@ Python Builtins
     :return: The smallest integer >= x.
     :rtype: int
 
-.. function:: enumerate(x)
+.. function:: enumerate(x[, start=0)
 
     Returns a iterable of tuples containing a count and the values from the iterable.
 
     :param x: The value to convert.
     :type x: iterable
+    :param start: The starting value for the count
+    :type start: int
     :return: enumerate of count and objects.
     :rtype: iterable[tuple[int, any]]
 
@@ -391,7 +393,24 @@ Python Builtins
 Draconic Functions
 ^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: utils.argparser.argparse(args)
+.. function:: argparse(args, parse_ephem=True)
+
+    Given an argument string or list, returns the parsed arguments using the argument nondeterministic finite automaton.
+
+    If *parse_ephem* is False, arguments like ``-d1`` are saved literally rather than as an ephemeral argument.
+
+    .. note::
+
+        Arguments must begin with a letter and not end with a number (e.g. ``d``, ``e12s``, ``a!!``). Values immediately
+        following a flag argument (i.e. one that starts with ``-``) will not be parsed as arguments unless they are also
+        a flag argument.
+
+        There are three exceptions to this rule: ``-i``, ``-h``, and ``-v``, none of which take additional values.
+
+    :param args: A list or string of arguments.
+    :param bool parse_ephem:  Whether to treat args like ``-d1`` as ephemeral arguments or literal ones.
+    :return: The parsed arguments
+    :rtype: :class:`~utils.argparser.ParsedArguments()`
 
     >>> args = argparse("adv -rr 2 -b 1d4[bless]")
     >>> args.adv()
@@ -435,11 +454,11 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_gvar(address)
 
-.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name)
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name[, default=None])
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_uvars()
 
-.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_uvar()
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_uvar(name[, default=None])
 
 .. function:: randint(stop)
               randint(start, stop[, step])
@@ -480,9 +499,9 @@ Draconic Functions
     :param population: The itterable to choose random items from.
     :type population: iterable.
     :param weights: The odds for each item in the ``population`` iterable.
-    :type weights: list of ints
+    :type weights: list of integers, floats, and fractions but not decimals
     :param cum_weights: The cumulative odds for each item in the ``population`` itterable.
-    :type cum_weights: list of ints
+    :type cum_weights: list of integers, floats, and fractions but not decimals
     :param k: The length of the output.
     :type k: int
     :return: A list of random items from the iterable.
@@ -694,6 +713,32 @@ the ``hello`` and ``hello_utils`` example modules used above for an example!
 
     Because all gvars are public to anyone who knows the address, modules are open-source by default.
 
+Catching Exceptions
+-------------------
+
+Draconic supports a modified version of Python's exception handling ("try-except") syntax, the most significant
+difference being that exceptions must be caught explicitly by passing the *exact name* of the exception type to the
+``except`` clause as a string or tuple of strings. A bare ``except`` may also be used to catch any exception in the
+``try`` block.
+
+For example, to cast an arbitrary string to an integer and catch errors raised by ``int()``:
+
+.. code-block:: text
+
+    !test <drac2>
+    some_string = "123"
+    try:
+        return int(some_string)
+    except ("ValueError", "TypeError"):
+        return "I couldn't parse an int!"
+    </drac2>
+
+.. note::
+
+    Unlike Python, only the exact exception type given by a string will be matched, without subclass checking.
+
+Draconic ``try`` statements also support ``else`` and ``finally`` blocks, similar to Python.
+
 See Also
 --------
 
@@ -706,6 +751,7 @@ Draconic's syntax is very similar to Python. Other Python features supported in 
 * `List Comprehensions <https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions>`_
 * `Functions <https://docs.python.org/3/tutorial/controlflow.html#defining-functions>`_
 * `Lambda Expressions <https://docs.python.org/3/tutorial/controlflow.html#lambda-expressions>`_
+* `Argument Unpacking <https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists>`_
 
 Initiative Models
 -----------------
@@ -879,6 +925,18 @@ SimpleEffect
         Whether the effect duration ticks at the end of the combatant's turn or at the start.
 
         :type: bool
+
+    .. attribute:: attacks
+
+        A list of the attacks granted by the effect.
+
+        :type: list
+
+    .. attribute:: buttons
+
+        A list of the buttons granted by the effect.
+
+        :type: list
 
 .. _ieffectargs:
 

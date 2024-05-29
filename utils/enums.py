@@ -3,6 +3,7 @@ import enum
 
 # NOTE: if writing new enums for the automation engine, make sure to update automation-common too!
 
+
 # action activation type
 class ActivationType(enum.IntEnum):
     ACTION = 1
@@ -15,6 +16,23 @@ class ActivationType(enum.IntEnum):
     LEGENDARY = 9
     MYTHIC = 10
     LAIR = 11
+
+    def __str__(self):
+        match self.value:
+            case 1:
+                return "Action"
+            case 3:
+                return "Bonus Action"
+            case 4:
+                return "Reaction"
+            case 2 | 6 | 7 | 8:
+                return "Special"
+            case 9:
+                return "Legendary Action"
+            case 10:
+                return "Mythic Action"
+            case 11:
+                return "Lair Action"
 
 
 class AdvantageType(enum.IntEnum):

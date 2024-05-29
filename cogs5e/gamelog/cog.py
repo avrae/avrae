@@ -44,12 +44,14 @@ class GameLog(commands.Cog):
 
         You must be the DM of the campaign to link it to a channel.
 
+        This link should be the url visible on your web browser when you are viewing your campaign and *not* the join link.
+
         Not seeing a player's rolls? Link their D&D Beyond and Discord accounts [here](https://www.dndbeyond.com/account), and check with the `!ddb` command!
         """
         if campaign_link is None:
             return await self.campaign_list(ctx)
 
-        link_match = re.match(r"(?:https?://)?(?:www\.)?dndbeyond\.com/campaigns/(\d+)(?:$|/)", campaign_link)
+        link_match = re.match(r"(?:https?://)?(?:www\.|stg\.)?dndbeyond\.com/campaigns/(\d+)(?:$|/)", campaign_link)
         invite_link_match = re.match(r"(?:https?://)?ddb\.ac/campaigns/join/(\d+)\d{10}(?:$|/)", campaign_link)
         if link_match is None and invite_link_match is None:
             return await ctx.send("This is not a D&D Beyond campaign link.")

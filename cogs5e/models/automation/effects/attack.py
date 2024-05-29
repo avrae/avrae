@@ -58,9 +58,9 @@ class Attack(Effect):
         # ==== caster options ====
         # character-specific arguments
         if autoctx.character:
-            if "reroll" not in args:
+            if args.last("reroll") is None:
                 reroll = autoctx.character.options.reroll
-            if "criton" not in args:
+            if args.last("criton") is None:
                 criton = autoctx.character.options.crit_on
 
         # explicit advantage

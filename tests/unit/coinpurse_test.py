@@ -1,5 +1,6 @@
 import pytest
 
+from aliasing.api.functions import parse_coins
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.coinpurse import Coinpurse, CoinsArgs
 from cogs5e.utils.gameutils import parse_coin_args, resolve_strict_coins
@@ -75,6 +76,7 @@ async def test_coin_autoconvert_up():
     assert Coinpurse(pp=10, gp=9, ep=1, sp=4, cp=1234).consolidate_coins() == CoinsArgs(
         pp=2, gp=-7, ep=-1, sp=-2, cp=-1230
     )
+    assert Coinpurse(pp=0, gp=410, ep=1, sp=4, cp=9).consolidate_coins() == CoinsArgs(pp=41, gp=-410)
 
 
 async def test_coin_compactstring():
@@ -112,3 +114,13 @@ async def test_coin_coin_string():
         == "<:DDBElectrum:948681048932364401> 11 ep (-234)"
     )
     assert Coinpurse(cp=1).coin_string("pp", delta=-2334) == "<:DDBPlatinum:948681049326624849> 0 pp (-2,334)"
+
+
+async def test_parse_coin_draconic():
+    assert parse_coins("+10") == {"pp": 0, "gp": 10, "ep": 0, "sp": 0, "cp": 0, "total": 10}
+    assert parse_coins("-10.47") == {"pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": -1047, "total": -10.47}
+    assert parse_coins("+10.388888", include_total=False) == {"pp": 0, "gp": 10, "ep": 0, "sp": 3, "cp": 8}
+    assert parse_coins("+10cp +10gp -8ep") == {"pp": 0, "gp": 10, "ep": -8, "sp": 0, "cp": 10, "total": 6.1}
+    assert parse_coins("+10cp10gp") == {"pp": 0, "gp": 10, "ep": 0, "sp": 0, "cp": 10, "total": 10.1}
+    assert parse_coins("10cp-10   gp", include_total=False) == {"pp": 0, "gp": -10, "ep": 0, "sp": 0, "cp": 10}
+    assert parse_coins("10     cp10    gp") == {"pp": 0, "gp": 10, "ep": 0, "sp": 0, "cp": 10, "total": 10.1}

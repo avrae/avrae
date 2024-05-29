@@ -93,6 +93,11 @@ class BeyondClient(BeyondClientBase):
             if entity.is_free or user_licenses & entity.license_ids:
                 accessible.add(entity.entity_id)
 
+        # source 14 is TftYP, and 16-22 are the modules within.
+        # DDB only gives entitlements for the modules
+        if entity_type == "source" and {16, 17, 18, 19, 20, 21, 22}.issubset(user_licenses):
+            accessible.add(14)
+
         log.debug(f"Discord user {user_id} can see {entity_type}s {accessible}")
 
         return accessible
@@ -261,6 +266,7 @@ class BeyondClient(BeyondClientBase):
         return [
             entitlements.EntityEntitlements.from_dict(e)
             async for e in self.query(
+                Limit=1000,
                 TableName=DYNAMO_ENTITLEMENTS_TABLE,
                 KeyConditionExpression="PartitionKey = :entityTypeKey",
                 ExpressionAttributeValues={":entityTypeKey": {"S": f"ENTITY#{etype}"}},

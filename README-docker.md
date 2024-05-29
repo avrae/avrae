@@ -4,18 +4,25 @@
 
 - [Docker Compose](https://docs.docker.com/compose/install/).
 - [Discord](https://discordapp.com/) account.
-- [Dicecloud](https://www.dicecloud.com) account - do NOT register with Google, create a normal account.
+- [Dicecloud v1](https://v1.dicecloud.com) account - do NOT register with Google, create a normal account.
+- [Dicecloud v2](https://dicecloud.com) account - do NOT register with Google, create a normal account.
 - [Google Drive Service Account](https://gspread.readthedocs.io/en/latest/oauth2.html).
     - Follow steps 1-7 in the **For Bots: Using Service Account** portion. The contents of this JSON file is
       your `GOOGLE_SERVICE_ACCOUNT` env var.
     - Alternatively, save that json file in the root project directory as `avrae-google.json`.
 
-### Dicecloud
+### Dicecloud v1
 
 - Click Username in top left top open Account page
 - `DICECLOUD_USER` is the login username
 - `DICECLOUD_PASS` is your password (recommended to use a dedicated bot account with a random generated password)
 - `DICECLOUD_TOKEN` is the `API KEY` revealed by `SHOW`
+
+### Dicecloud v2
+
+- Click gear in top left top open Account page
+- `DICECLOUDV2_USER` is the login username
+- `DICECLOUDV2_PASS` is your password (recommended to use a dedicated bot account with a random generated password)
 
 ### Discord setup
 
@@ -48,10 +55,13 @@
     DICECLOUD_USER=b
     DICECLOUD_PASS=c
     DICECLOUD_TOKEN=d
+    
+    DICECLOUDV2_USER=e
+    DICECLOUDV2_PASS=f
 
     # set these to these literal values
     MONGO_URL=mongodb://root:topsecret@mongo:27017
     REDIS_URL=redis://redis:6379/0
     
     # set this to the contents of the JSON file downloaded in the Google Drive Service Account step
-    GOOGLE_SERVICE_ACCOUNT=e
+    GOOGLE_SERVICE_ACCOUNT=g

@@ -14,6 +14,7 @@ venv/
 /.idea/
 temp/
 tempvenv/
+.vscode/
 
 /.*cache/
 
@@ -27,3 +28,10 @@ credentials.py
 docker/env
 
 docs/_build/
+
+**/.run
+
+# Adding for Changelog Creation
+**/WorkingChangelog.md
+
+/shared/coverage.xml

@@ -3,6 +3,7 @@ This file sets up the "globals" we need for our tests
 namely, it creates the Avrae instance and overrides its http and gateway handlers
 and defines a bunch of helper methods
 """
+
 import asyncio
 import json
 import logging
@@ -37,12 +38,12 @@ def event_loop():
 
 # the http fixture
 @pytest.fixture(scope="session")
-def dhttp():
+def dhttp(event_loop):
     """
     The HTTP proxy
     We use this to check what the bot has sent and make sure it's right
     """
-    return MockDiscordHTTP()
+    return MockDiscordHTTP(loop=event_loop)
 
 
 # the ldclient fixture

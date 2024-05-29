@@ -169,8 +169,9 @@ async def get_collectable_named(
         return personal_obj
     # conflicting name errors
     if personal_obj is not None and subscribed_obj_ids:
+        subbed_name = obj_name if len(subscribed_obj_ids) == 1 else obj_name_pl
         raise AliasNameConflict(
-            f"I found both a personal {obj_name} and {len(subscribed_obj_ids)} workshop {obj_name}(es) "
+            f"I found both a local {obj_name} and {len(subscribed_obj_ids)} workshop {subbed_name} "
             f"named {ctx.prefix}{name}. Use `{ctx.prefix}{obj_command_name} autofix` to automatically assign "
             f"all conflicting {obj_name_pl} unique names, or `{ctx.prefix}{obj_command_name} rename {name} <new name>` "
             "to manually rename it."
@@ -350,7 +351,7 @@ async def update_gvar(ctx, gid, value):
 
 
 # snippets
-async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
+async def parse_snippets(args, ctx, statblock=None, character=None, base_args=None) -> [str]:
     """
     Parses user and server snippets, including any inline scripting.
 
@@ -358,13 +359,18 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
     :param ctx: The Context.
     :param statblock: The statblock to populate locals from.
     :param character: If passed, provides the base character to use character-scoped functions against.
-    :return: The string, with snippets replaced.
+    :param base_args: The args to pass through to the snippet code via &ARGS&
+    :return: The list of args, with snippets replaced.
     """
     # make args a list of str
     if isinstance(args, str):
         args = argsplit(args)
     if not isinstance(args, list):
         args = list(args)
+
+    original_args = str((base_args or []) + args)
+
+    new_args = []
 
     # set up the evaluator
     evaluator = await evaluators.ScriptingEvaluator.new(ctx)
@@ -387,10 +393,13 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
                 await workshop_entitlements_check(ctx, the_snippet)
 
             if the_snippet:
+                the_snippet.code = the_snippet.code.replace("&ARGS&", original_args)
                 # enter the evaluator
                 execution_scope = ExecutionScope.SERVER_SNIPPET if server_invoker else ExecutionScope.PERSONAL_SNIPPET
-                args[index] = await evaluator.transformed_str_async(
-                    the_snippet.code, execution_scope=execution_scope, invoking_object=the_snippet
+                new_args += argsplit(
+                    await evaluator.transformed_str_async(
+                        the_snippet.code, execution_scope=execution_scope, invoking_object=the_snippet
+                    )
                 )
                 # analytics
                 await the_snippet.log_invocation(ctx, server_invoker)
@@ -402,11 +411,11 @@ async def parse_snippets(args, ctx, statblock=None, character=None) -> str:
             else:
                 # in case the user is using old-style on the fly templating
                 arg = await evaluator.transformed_str_async(arg, execution_scope=ExecutionScope.PERSONAL_SNIPPET)
-                args[index] = argquote(arg)
+                new_args.append(arg)
     finally:
         await evaluator.run_commits()
         await send_warnings(ctx, evaluator.warnings)
-    return " ".join(args)
+    return new_args
 
 
 # transformers

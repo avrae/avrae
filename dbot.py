@@ -5,16 +5,20 @@ import random
 import sys
 import time
 import traceback
+import gc
 
-import aioredis
+
+from redis import asyncio as redis
 import d20
 import disnake
 import motor.motor_asyncio
 import psutil
 import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
-from disnake.errors import Forbidden, HTTPException, InvalidArgument, NotFound
+from disnake import ApplicationCommandInteraction
+from disnake.errors import Forbidden, HTTPException, NotFound
 from disnake.ext import commands
+from disnake.ext.commands import CommandSyncFlags
 from disnake.ext.commands.errors import CommandInvokeError
 
 from aliasing.errors import CollectableRequiresLicenses, EvaluationError
@@ -28,6 +32,11 @@ from utils import clustering, config, context
 from utils.feature_flags import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
+
+# This method will load the variables from .env into the environment for running in local
+# from dotenv import load_dotenv
+# load_dotenv()
+
 
 # -----COGS-----
 COGS = (
@@ -58,18 +67,27 @@ async def get_prefix(the_bot, message):
 
 class Avrae(commands.AutoShardedBot):
     def __init__(self, prefix, description=None, **options):
+        sync_flags = CommandSyncFlags(
+            sync_commands=False,  # this is set by launch_shard below, to prevent multiple clusters racing).
+            sync_commands_debug=config.TESTING,
+        )
         super().__init__(
             prefix,
             help_command=help_command,
             description=description,
-            sync_commands=False,  # this is set by launch_shard below, to prevent multiple clusters racing
-            sync_commands_debug=config.TESTING,
-            **options,
+            command_sync_flags=sync_flags,
+            activity=options.get("activity"),
+            allowed_mentions=options.get("allowed_mentions"),
+            intents=options.get("intents"),
+            chunk_guilds_at_startup=options.get("chunk_guilds_at_startup"),
         )
+        self.pm_help = options.get("pm_help")
+        self.testing = options.get("testing")
         self.state = "init"
 
         # dbs
         self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
 
@@ -102,7 +120,7 @@ class Avrae(commands.AutoShardedBot):
         self.glclient.init()
 
     async def setup_rdb(self):
-        return RedisIO(await aioredis.create_redis_pool(config.REDIS_URL, db=config.REDIS_DB_NUM))
+        return RedisIO(await redis.from_url(url=config.REDIS_URL))
 
     async def get_guild_prefix(self, guild: disnake.Guild) -> str:
         guild_id = str(guild.id)
@@ -142,7 +160,7 @@ class Avrae(commands.AutoShardedBot):
                     scope.set_tag("guild.name", str(ctx.guild))
             sentry_sdk.capture_exception(exception)
 
-    async def launch_shards(self):
+    async def launch_shards(self, ignore_session_start_limit: bool = False):
         # set up my shard_ids
         async with clustering.coordination_lock(self.rdb):
             await clustering.coordinate_shards(self)
@@ -255,13 +273,9 @@ async def on_ready():
     log.info("------")
 
 
-@bot.event
-async def on_resumed():
-    log.info("resumed.")
-
-
-@bot.event
-async def on_command_error(ctx, error):
+@bot.listen("on_command_error")
+@bot.listen("on_slash_command_error")
+async def command_errors(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         return
 
@@ -315,7 +329,7 @@ async def on_command_error(ctx, error):
         elif isinstance(original, NotFound):
             return await ctx.send("Error: I tried to edit or delete a message that no longer exists.")
 
-        elif isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError)):
+        elif isinstance(original, (ClientResponseError, asyncio.TimeoutError, ClientOSError)):
             return await ctx.send("Error in Discord API. Please try again.")
 
         elif isinstance(original, HTTPException):
@@ -335,7 +349,10 @@ async def on_command_error(ctx, error):
         "Please join <https://support.avrae.io> and let us know about the error!"
     )
 
-    log.warning("Error caused by message: `{}`".format(ctx.message.content))
+    if isinstance(ctx, ApplicationCommandInteraction):
+        log.warning(f"Error caused by slash command: `/{ctx.data.name}` with options: {ctx.options}")
+    else:
+        log.warning(f"Error caused by message: `{ctx.message.content}`")
     for line in traceback.format_exception(type(error), error, error.__traceback__):
         log.warning(line)
 

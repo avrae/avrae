@@ -20,9 +20,11 @@ class TestInitiativeSimple:
             "```md\nCurrent initiative: 0 (round 0)\n===============================\n```", regex=False
         )
         await dhttp.receive_message(
-            "Everyone roll for initiative!\nIf you have a character set up with SheetManager: "
-            "`!init join`\nIf it's a 5e monster: `!init madd <monster name>`\nOtherwise: "
-            "`!init add <modifier> <name>`",
+            (
+                "Everyone roll for initiative!\nIf you have a character set up with SheetManager: "
+                "`!init join`\nIf it's a 5e monster: `!init madd <monster name>`\nOtherwise: "
+                "`!init add <modifier> <name>`"
+            ),
             regex=False,
         )
 
@@ -169,10 +171,10 @@ class TestYourStandardInitiative:
             await dhttp.drain()
 
             avrae.message(f'!i hp "{combatant}" set 100')
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foo] silvered')
+            avrae.message(f'!i a test -t "{combatant}" hit custom -d 10[foo] silvered')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[foo]')
+            avrae.message(f'!i a test -t "{combatant}" hit custom -d 10[foo]')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
 
@@ -183,10 +185,10 @@ class TestYourStandardInitiative:
             await dhttp.drain()
 
             avrae.message(f'!i hp "{combatant}" set 100')
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[bar] magical')
+            avrae.message(f'!i a test -t "{combatant}" hit custom -d 10[bar] magical')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 90
-            avrae.message(f'!i a test -t "{combatant}" hit -custom -d 10[bar]')
+            avrae.message(f'!i a test -t "{combatant}" hit custom -d 10[bar]')
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp == 85
 
@@ -206,6 +208,12 @@ class TestYourStandardInitiative:
             assert len(effects) == 1
 
             avrae.message(f'!i re "{combatant}"')
+            await dhttp.receive_delete()
+            await dhttp.receive_message(
+                f"Are you sure you want to remove all effects (1) from {combatant}? (Reply with yes/no)", regex=False
+            )
+            avrae.message(f"yes")
+            await dhttp.receive_delete()
             await dhttp.drain()
 
     async def test_effect_granted_attacks(self, avrae, dhttp):

@@ -225,6 +225,7 @@ class RollResult(EffectResult):
 class TextResult(EffectResult):
     type = "text"
     text: str
+    title: str = "Effect"
 
 
 @dataclass(frozen=True)

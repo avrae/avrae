@@ -1,6 +1,6 @@
 import abc
 
-__all__ = ("Sourced", "Trait", "LimitedUse")
+__all__ = ("Sourced", "Trait", "LimitedUse", "CachedSourced")
 
 
 class Sourced(abc.ABC):
@@ -21,6 +21,7 @@ class Sourced(abc.ABC):
         is_legacy: bool = False,
         entitlement_entity_type: str = None,
         entitlement_entity_id: int = None,
+        limited_use_only: bool = False,
     ):
         """
         :param homebrew: Whether or not this entity is homebrew.
@@ -30,8 +31,9 @@ class Sourced(abc.ABC):
         :param url: The URL that this entity can be found at.
         :param is_free: Whether or not this entity requires a purchase to view.
         :param is_legacy: Whether this entity is a legacy entity.
-        :param entitlement_entity_type: If this entity's access is controlled by access to another entity, the type of that entuty.
+        :param entitlement_entity_type: If this entity's access is controlled by access to another entity, the type of that entity.
         :param entitlement_entity_id: The entity ID of the entitlement entity.
+        :param limited_use_only: Whether this entity is to be used for limited use only, or be allowed in lookup
         """
         self.homebrew = homebrew
         self.source = source
@@ -42,6 +44,7 @@ class Sourced(abc.ABC):
         self.is_legacy = is_legacy
         self.entitlement_entity_type = entitlement_entity_type or self.entity_type
         self.entitlement_entity_id = entitlement_entity_id or entity_id
+        self.limited_use_only = limited_use_only
 
     @classmethod
     def lookup(cls, entity_id: int):
@@ -76,7 +79,7 @@ class Sourced(abc.ABC):
     def __repr__(self):
         return (
             f"<{type(self).__name__} name={self.name!r} entity_id={self.entity_id!r} "
-            f"entity_type={self.entity_type!r} url={self._url!r}>"
+            f"entity_type={self.entity_type!r} url={self._url!r} limited_use_only={self.limited_use_only!r}>"
         )
 
 
@@ -116,3 +119,48 @@ class LimitedUse(Sourced):
             entitlement_entity_id=parent.entitlement_entity_id,
             entitlement_entity_type=parent.entitlement_entity_type,
         )
+
+
+class CachedSourced(Sourced):
+    def __init__(self, name, entity_type, has_image=False, has_token=False, **kwargs):
+        self.name = name
+        self.entity_type = entity_type
+        self.has_image = has_image
+        self.has_token = has_token
+        Sourced.__init__(
+            self,
+            homebrew=kwargs["homebrew"],
+            source=kwargs["source"],
+            entity_id=kwargs.get("entity_id"),
+            page=kwargs.get("page"),
+            url=kwargs.get("url"),
+            is_free=kwargs.get("is_free"),
+            is_legacy=kwargs.get("is_legacy"),
+        )
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(
+            d["name"],
+            d["entity_type"],
+            d.get("has_image", False),
+            d.get("has_token", False),
+            homebrew=d["homebrew"],
+            source=d["source"],
+            entity_id=d["entity_id"],
+            is_free=d["is_free"],
+            is_legacy=d["is_legacy"],
+        )
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "entity_type": self.entity_type,
+            "has_image": self.has_image,
+            "has_token": self.has_token,
+            "homebrew": self.homebrew,
+            "source": self.source,
+            "entity_id": self.entity_id,
+            "is_free": self.is_free,
+            "is_legacy": self.is_legacy,
+        }

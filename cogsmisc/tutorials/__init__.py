@@ -2,6 +2,7 @@
 Main entrypoint for the tutorials extension. The tutorials themselves can be found in this module, and
 are registered here. The tutorial commands are also registered here, as part of the Help cog.
 """
+
 import textwrap
 
 import disnake
@@ -43,6 +44,10 @@ class Tutorials(commands.Cog):
     @commands.slash_command(name="help")
     async def slash_help(self, inter: disnake.ApplicationCommandInteraction):
         """View information about how to use Avrae."""
+        if inter.author.id in self.bot.muted:
+            await inter.send("You do not have permission to use this command.", ephemeral=True)
+            return
+
         if inter.guild is not None:
             guild_prefix = await self.bot.get_guild_prefix(inter.guild)
         else:
@@ -53,8 +58,8 @@ class Tutorials(commands.Cog):
             name="Using Slash Commands With Avrae",
             value=(
                 "It looks like you're trying to use slash commands! Due to the complexity of certain Avrae commands,"
-                " Avrae does not support Discord's slash command framework. To use Avrae commands, add a *prefix*"
-                f" before the command you want to use - like `{guild_prefix}roll 1d20`."
+                " Avrae does not support Discord's slash command framework for every command. To use most of Avrae's "
+                f"commands, add a *prefix* before the command you want to use - like `{guild_prefix}roll 1d20`."
             ),
             inline=False,
         )
@@ -139,7 +144,7 @@ class Tutorials(commands.Cog):
         # confirm
         result = await confirm(ctx, "Are you sure you want to skip the current tutorial objective? (Reply with yes/no)")
         if not result:
-            return await ctx.send("Ok, aborting.")
+            return await ctx.send("Ok, cancelling.")
         # run tutorial state transition
         # commit new state map
         await state.transition(ctx, user_state)
@@ -154,7 +159,7 @@ class Tutorials(commands.Cog):
         # confirm
         result = await confirm(ctx, "Are you sure you want to end the current tutorial? (Reply with yes/no)")
         if not result:
-            return await ctx.send("Ok, aborting.")
+            return await ctx.send("Ok, cancelling.")
         # delete tutorial state map
         await user_state.end_tutorial(ctx)
         await ctx.send("Ok, ended the tutorial.")
@@ -213,8 +218,8 @@ class Tutorials(commands.Cog):
         embed.description = textwrap.dedent(
             f"""
             :wave: Hi there! Thanks for adding me to {guild.name}!
-            
-            I'm ready to roll, but before we get started, let's take a look at some of the things I can do! 
+
+            I'm ready to roll, but before we get started, let's take a look at some of the things I can do!
             """
         ).strip()
 

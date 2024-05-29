@@ -10,7 +10,7 @@ from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument, InvalidSpellLevel, RequiresLicense
 from cogs5e.models.sheet.action import Action, Actions
 from cogs5e.models.sheet.attack import Attack, AttackList
-from gamedata import lookuputils
+from gamedata import lookuputils, monster
 from utils import constants
 from utils.enums import CritDamageType
 from utils.functions import a_or_an, confirm, maybe_http_url, natural_join, search_and_select, smart_trim, verbose_stat
@@ -103,12 +103,14 @@ async def run_action(
     else:
         name = "An unknown creature"
 
+    verb = args.last("verb", "uses")
+
     if args.last("title") is not None:
-        embed.title = args.last("title").replace("[name]", name).replace("[aname]", action.name)
+        embed.title = args.last("title").replace("[name]", name).replace("[aname]", action.name).replace("[verb]", verb)
     else:
         embed.title = f"{name} uses {action.name}!"
 
-    if action.automation is not None:
+    if action.automation:
         result = await run_automation(ctx, embed, args, caster, action.automation, targets, combat)
     else:
         # else, show action description and note that it can't be automated
@@ -245,8 +247,10 @@ async def cast_spell(
         ab_override = mod + prof_bonus
         spell_override = mod
     elif with_arg is not None:
-        if with_arg not in constants.STAT_ABBREVIATIONS:
+        abbr_with = with_arg[:3].lower()
+        if abbr_with not in constants.STAT_ABBREVIATIONS:
             raise InvalidArgument(f"{with_arg} is not a valid stat to cast with.")
+        with_arg = abbr_with
         mod = caster.stats.get_mod(with_arg)
         dc_override = 8 + mod + caster.stats.prof_bonus
         ab_override = mod + caster.stats.prof_bonus
@@ -298,6 +302,7 @@ async def cast_spell(
             ab_override=ab_override,
             dc_override=dc_override,
             spell_override=spell_override,
+            spell_level_override=cast_level,
         )
     else:
         # no automation, display spell description
@@ -317,7 +322,10 @@ async def cast_spell(
         embed.add_field(name="At Higher Levels", value=smart_trim(spell.higherlevels), inline=False)
 
     if cast_level > 0 and not ignore:
-        embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(spell, cast_level))
+        remaining_casts = caster.spellbook.remaining_casts_of(spell, cast_level)
+        if not (isinstance(caster.spellbook, monster.MonsterSpellbook) and spell.name in caster.spellbook.at_will):
+            remaining_casts += " (-1)"
+        embed.add_field(name="Spell Slots", value=remaining_casts)
 
     if conc_conflict:
         conflicts = ", ".join(e.name for e in conc_conflict)
@@ -451,18 +459,16 @@ async def send_action_list(
     display_legendary = "legendary" in args
     display_mythic = "mythic" in args
     display_lair = "lair" in args
-    is_display_filtered = any(
-        (
-            display_attacks,
-            display_actions,
-            display_bonus,
-            display_reactions,
-            display_other,
-            display_legendary,
-            display_mythic,
-            display_lair,
-        )
-    )
+    is_display_filtered = any((
+        display_attacks,
+        display_actions,
+        display_bonus,
+        display_reactions,
+        display_other,
+        display_legendary,
+        display_mythic,
+        display_lair,
+    ))
     filtered_action_type_strs = list(
         itertools.compress(
             (

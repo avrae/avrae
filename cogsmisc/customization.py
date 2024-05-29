@@ -3,6 +3,7 @@ Created on Jan 30, 2017
 
 @author: andrew
 """
+
 import asyncio
 import io
 import re
@@ -224,13 +225,14 @@ class CollectableManagementGroup(commands.Group):
 
         # build the resulting embed
         if collections:
+            amt_per_page = 20
             total = len(collections)
-            maxpage = ceil(total / 25)
+            maxpage = ceil(total / amt_per_page)
             page = max(1, min(page, maxpage))
-            pages = [collections[i : i + 25] for i in range(0, total, 25)]
+            pages = [collections[i : i + amt_per_page] for i in range(0, total, amt_per_page)]
             for name, bindings_str in pages[page - 1]:
                 ep.add_field(name, bindings_str)
-            if total > 25:
+            if total > amt_per_page:
                 ep.set_footer(value=f"Page [{page}/{maxpage}] | {ctx.prefix}{self.command_group_name} list <page>")
         else:
             ep.add_description(
@@ -357,12 +359,14 @@ class CollectableManagementGroup(commands.Group):
         changes = "\n".join([f"`{old}` ({collection}) -> `{new}`" for old, new, collection in rename_tris])
         response = await confirm(
             ctx,
-            f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
-            "Do you want to continue? (Reply with yes/no)\n"
-            f"{changes}",
+            (
+                f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
+                "Do you want to continue? (Reply with yes/no)\n"
+                f"{changes}"
+            ),
         )
         if not response:
-            return await ctx.send("Ok, aborting.")
+            return await ctx.send("Ok, cancelling.")
 
         # execute the pending changes
         await asyncio.gather(*to_do)
@@ -426,12 +430,14 @@ class CollectableManagementGroup(commands.Group):
             collection = personal_obj.collection
             response = await confirm(
                 ctx,
-                f"This action will subscribe the server to the `{collection.name}` workshop collection, found at "
-                f"<{collection.url}>. This will add {collection.alias_count} aliases and "
-                f"{collection.snippet_count} snippets to the server. Do you want to continue? (Reply with yes/no)",
+                (
+                    f"This action will subscribe the server to the `{collection.name}` workshop collection, found at "
+                    f"<{collection.url}>. This will add {collection.alias_count} aliases and "
+                    f"{collection.snippet_count} snippets to the server. Do you want to continue? (Reply with yes/no)"
+                ),
             )
             if not response:
-                return await ctx.send("Ok, aborting.")
+                return await ctx.send("Ok, cancelling.")
             await collection.set_server_active(ctx)  # this loads the aliases/snippets
 
             embed = EmbedWithAuthor(ctx)
@@ -455,8 +461,10 @@ class CollectableManagementGroup(commands.Group):
         # check if it overwrites anything
         if existing_server_obj is not None and not await confirm(
             ctx,
-            f"There is already an existing server {self.obj_name} named `{name}`. Do you want to overwrite it? "
-            "(Reply with yes/no)",
+            (
+                f"There is already an existing server {self.obj_name} named `{name}`. Do you want to overwrite it? "
+                "(Reply with yes/no)"
+            ),
         ):
             return await ctx.send("Ok, aborting.")
 
@@ -521,8 +529,8 @@ async def _snippet_before_edit(ctx, name=None, delete=False):
     name = name.lower()
     if name in SPECIAL_ARGS or name.startswith("-"):
         confirmation = (
-            f"**Warning:** Creating a snippet named `{name}` will prevent you from using the built-in `{name}` argument"
-            " in Avrae commands.\nAre you sure you want to create this snippet? (Reply with yes/no)"
+            f"**Warning:** Creating a snippet named `{name}` will prevent you from using a built-in argument `{name}`"
+            " if one exists.\nAre you sure you want to create this snippet? (Reply with yes/no)"
         )
     # roll string checking
     try:
@@ -583,15 +591,19 @@ class Customization(commands.Cog):
         if prefix.startswith("/"):
             if not await confirm(
                 ctx,
-                "Setting a prefix that begins with / may cause issues. "
-                "Are you sure you want to continue? (Reply with yes/no)",
+                (
+                    "Setting a prefix that begins with / may cause issues. "
+                    "Are you sure you want to continue? (Reply with yes/no)"
+                ),
             ):
                 return await ctx.send("Ok, cancelling.")
         else:
             if not await confirm(
                 ctx,
-                f"Are you sure you want to set my prefix to `{prefix}`? This will affect "
-                "everyone on this server! (Reply with yes/no)",
+                (
+                    f"Are you sure you want to set my prefix to `{prefix}`? This will affect "
+                    "everyone on this server! (Reply with yes/no)"
+                ),
             ):
                 return await ctx.send("Ok, cancelling.")
 
@@ -648,9 +660,11 @@ class Customization(commands.Cog):
         """Deletes ALL user aliases."""
         if not await confirm(
             ctx,
-            f"This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
-            f"Are you *absolutely sure* you want to continue?\n"
-            f"Type `Yes, I am sure` to confirm.",
+            (
+                "This will delete **ALL** of your personal user aliases (it will not affect workshop subscriptions). "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm."
+            ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
@@ -701,9 +715,11 @@ class Customization(commands.Cog):
         """Deletes ALL user snippets."""
         if not await confirm(
             ctx,
-            f"This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
-            f"Are you *absolutely sure* you want to continue?\n"
-            f"Type `Yes, I am sure` to confirm.",
+            (
+                "This will delete **ALL** of your personal user snippets (it will not affect workshop subscriptions). "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm."
+            ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
@@ -731,7 +747,9 @@ class Customization(commands.Cog):
 
     @commands.command()
     async def test(self, ctx, *, teststr):
-        """Parses `str` as if it were in an alias, for testing."""
+        """Parses `teststr` as if it were in an alias, for testing.
+        Note: Not recommended to be used in actual aliases, as it can lead to unexpected behaviour. You will probably want to use `!echo` instead.
+        """
         try:
             char = await ctx.get_character()
         except NoCharacter:
@@ -747,7 +765,9 @@ class Customization(commands.Cog):
 
     @commands.command()
     async def tembed(self, ctx, *, teststr):
-        """Parses `str` as if it were in an alias, for testing, then creates and prints an Embed.
+        """Parses `teststr` as if it were in an alias, for testing, then creates and prints an Embed.
+        Note: Not recommended to be used in actual aliases, as it can lead to unexpected behaviour. You will probably want to use `!embed` instead.
+
         Arguments: -title [title]
         -desc [description text]
         -thumb [image url]
@@ -788,7 +808,9 @@ class Customization(commands.Cog):
             cvar = character.get_scope_locals().get(name)
             if cvar is None:
                 return await ctx.send("This cvar is not defined.")
-            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=cvar)
+            return await send_long_code_text(
+                ctx, outside_codeblock=f"**{name}**:".replace("_", "\_"), inside_codeblock=cvar
+            )
 
         helpers.set_cvar(character, name, value)
 
@@ -813,9 +835,11 @@ class Customization(commands.Cog):
         char: Character = await ctx.get_character()
         if not await confirm(
             ctx,
-            f"This will delete **ALL** of your character variables for {char.name}. "
-            "Are you *absolutely sure* you want to continue?\n"
-            "Type `Yes, I am sure` to confirm.",
+            (
+                f"This will delete **ALL** of your character variables for {char.name}. "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm."
+            ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")
@@ -830,7 +854,9 @@ class Customization(commands.Cog):
         """Lists all cvars for the currently active character."""
         character: Character = await ctx.get_character()
         await ctx.send(
-            "{}'s character variables:\n{}".format(character.name, ", ".join(sorted(character.cvars.keys())))
+            "{}'s character variables:\n{}".format(character.name, ", ".join(sorted(character.cvars.keys()))).replace(
+                "_", "\_"
+            )
         )
 
     @commands.group(invoke_without_command=True, aliases=["uvar"])
@@ -876,9 +902,11 @@ class Customization(commands.Cog):
         """Deletes ALL user variables."""
         if not await confirm(
             ctx,
-            f"This will delete **ALL** of your user variables (uvars). "
-            f"Are you *absolutely sure* you want to continue?\n"
-            f"Type `Yes, I am sure` to confirm.",
+            (
+                "This will delete **ALL** of your user variables (uvars). "
+                "Are you *absolutely sure* you want to continue?\n"
+                "Type `Yes, I am sure` to confirm."
+            ),
             response_check=lambda r: r == "Yes, I am sure",
         ):
             return await ctx.send("Unconfirmed. Aborting.")

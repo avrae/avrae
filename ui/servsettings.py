@@ -185,8 +185,10 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         self.select_dm_roles.disabled = True
         await self.refresh_content(interaction)
         await interaction.send(
-            "Choose the DM roles by sending a message to this channel. You can mention the roles, or use a "
-            "comma-separated list of role names or IDs. Type `reset` to reset the role list to the default.",
+            (
+                "Choose the DM roles by sending a message to this channel. You can mention the roles, or use a "
+                "comma-separated list of role names or IDs. Type `reset` to reset the role list to the default."
+            ),
             ephemeral=True,
         )
 
@@ -464,8 +466,10 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
         async with self.disable_component(interaction, button):
             randchar_dice = await self.prompt_message(
                 interaction,
-                "Choose a new dice string to roll by sending a message in this channel. If you wish to "
-                "use the default dice (4d6kh3), respond with 'default'.",
+                (
+                    "Choose a new dice string to roll by sending a message in this channel. If you wish to "
+                    "use the default dice (4d6kh3), respond with 'default'."
+                ),
             )
             if randchar_dice is None:
                 await interaction.send(f"No valid dice found. Press `{button.label}` to try again.", ephemeral=True)
@@ -504,7 +508,6 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
 
     @disnake.ui.button(label="Set Number of Stats", style=disnake.ButtonStyle.primary)
     async def select_stats(self, button: disnake.ui.Button, interaction: disnake.Interaction):
-
         async with self.disable_component(interaction, button):
             randchar_stats = await self.prompt_message(
                 interaction, "Choose a new number of stats to roll by sending a message in this channel."
@@ -536,9 +539,11 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
             async with self.disable_component(interaction, button):
                 randchar_stat_names = await self.prompt_message(
                     interaction,
-                    "Choose the stat names to automatically assign the rolled stats to, separated by commas.\n"
-                    "If you wish to use the default stats, respond with 'default'. This will only work if your number "
-                    "of stats is 6.",
+                    (
+                        "Choose the stat names to automatically assign the rolled stats to, separated by commas.\nIf"
+                        " you wish to use the default stats, respond with 'default'. This will only work if your number"
+                        " of stats is 6."
+                    ),
                 )
                 if randchar_stat_names is None:
                     await interaction.send(
@@ -554,8 +559,10 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
                     stat_names = randchar_stat_names.replace(", ", ",").split(",")
                 if len(stat_names) != self.settings.randchar_num:
                     await interaction.send(
-                        f"Number of stat names does not match the number of stats. Press `{button.label}` to try"
-                        " again.",
+                        (
+                            f"Number of stat names does not match the number of stats. Press `{button.label}` to try"
+                            " again."
+                        ),
                         ephemeral=True,
                     )
                     self.settings.randchar_straight = False
@@ -574,8 +581,10 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
         async with self.disable_component(interaction, button):
             randchar_min = await self.prompt_message(
                 interaction,
-                "Choose a new minimum roll total by sending a message in this channel. "
-                "To reset it, respond with 'reset'.",
+                (
+                    "Choose a new minimum roll total by sending a message in this channel. "
+                    "To reset it, respond with 'reset'."
+                ),
             )
             if randchar_min is None:
                 await interaction.send(f"No valid minimum found. Press `{button.label}` to try again.", ephemeral=True)
@@ -595,8 +604,10 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
         async with self.disable_component(interaction, button):
             randchar_max = await self.prompt_message(
                 interaction,
-                "Choose a new maximum roll total by sending a message in this channel. "
-                "To reset it, respond with 'reset'.",
+                (
+                    "Choose a new maximum roll total by sending a message in this channel. "
+                    "To reset it, respond with 'reset'."
+                ),
             )
             if randchar_max is None:
                 await interaction.send(f"No valid maximum found. Press `{button.label}` to try again.", ephemeral=True)
@@ -616,9 +627,11 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
         async with self.disable_component(interaction, button):
             randchar_rule = await self.prompt_message(
                 interaction,
-                "Add a new score rule by sending a message in this channel.\n"
-                'Please use the format "number>score" or "number<score", for example "1>15" for at least one over 15, '
-                'or "2<10" for at least two under 10.',
+                (
+                    'Add a new score rule by sending a message in this channel.\nPlease use the format "number>score"'
+                    ' or "number<score", for example "1>15" for at least one over 15, or "2<10" for at least two'
+                    " under 10."
+                ),
             )
             if randchar_rule is None:
                 await interaction.send(

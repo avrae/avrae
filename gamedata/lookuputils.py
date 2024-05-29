@@ -3,19 +3,25 @@ Created on Jan 13, 2017
 
 @author: andrew
 """
+
 import itertools
 import logging
-from typing import Dict, List, TYPE_CHECKING, TypeVar
+from typing import Dict, List, TYPE_CHECKING, TypeVar, Callable
 
+import disnake
+
+import gamedata
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew, RequiresLicense
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
 from utils.constants import HOMEBREW_EMOJI, HOMEBREW_ICON
-from utils.functions import get_selection, search_and_select
+from utils.functions import get_selection, search_and_select, search
 from utils.settings.guild import LegacyPreference
 from .compendium import compendium
+from .klass import ClassFeature
+from .race import RaceFeature
 
 if TYPE_CHECKING:
     from utils.context import AvraeContext
@@ -39,6 +45,12 @@ async def available(ctx, entities: List["_SourcedT"], entity_type: str, user_id:
     """
     if user_id is None:
         user_id = ctx.author.id
+
+    # Remove limited use only items from entity list
+    try:
+        entities = list(filter(lambda a: not a.limited_use_only, entities))
+    except AttributeError:
+        pass
 
     available_ids = await ctx.bot.ddb.get_accessible_entities(ctx, user_id, entity_type)
     if available_ids is None:
@@ -114,7 +126,7 @@ def handle_source_footer(
     :param allow_overwrite: Whether or not to allow overwriting an existing footer text.
     """
     text_pieces = []
-    icon_url = embed.Empty
+    icon_url = None
     book = compendium.book_by_source(sourced.source)
     if text is not None:
         text_pieces.append(text)
@@ -142,7 +154,7 @@ def handle_source_footer(
         text_pieces.append("Legacy content.")
 
     # do the writing
-    text = " | ".join(text_pieces) or embed.Empty
+    text = " | ".join(text_pieces) or " "
     if not allow_overwrite:
         if embed.footer.text:
             text = embed.footer.text
@@ -201,14 +213,18 @@ def _create_selector(available_ids: dict[str, set[int]]):
     return legacy_entity_selector
 
 
-def _create_selectkey(available_ids: dict[str, set[int]]):
-    def selectkey(e: "Sourced"):
+def create_selectkey(available_ids: dict[str, set[int]]):
+    def selectkey(e: "Sourced", slash: bool = False):
+        legacy = "legacy" if slash else "*legacy*"
+        no_access = "*" if slash else "\\*"
+        homebrew = "🍺" if slash else HOMEBREW_EMOJI
+
         if e.homebrew:
-            return f"{e.name} ({HOMEBREW_EMOJI} {e.source})"
-        entity_source = e.source if not e.is_legacy else f"{e.source}; *legacy*"
+            return f"{e.name} ({homebrew} - {e.source})"
+        entity_source = e.source if not e.is_legacy else f"{e.source}; {legacy}"
         if can_access(e, available_ids[e.entitlement_entity_type]):
             return f"{e.name} ({entity_source})"
-        return f"{e.name} ({entity_source})\\*"
+        return f"{e.name} ({entity_source}){no_access}"
 
     return selectkey
 
@@ -220,6 +236,112 @@ async def add_training_data(mdb, lookup_type, query, result_name, metadata=None,
         data["chosen_index"] = metadata.get("chosen_index", 0)
         data["homebrew"] = metadata.get("homebrew", False)
     await mdb.nn_training.insert_one(data)
+
+
+def slash_match_key(entity):
+    return f"{entity.name} ({'🍺 - ' if entity.homebrew else ''}{entity.source})"
+
+
+def lookup_converter(entity_type: str) -> Callable:
+    async def monster_converter(inter: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.monster:
+        choices = await get_monster_choices(inter)
+        result: gamedata.monster = search(choices, arg, slash_match_key)[0]
+        if result is None:
+            raise ValueError("That monster doesn't exist")
+        return result
+
+    async def item_converter(inter: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.item:
+        choices = await get_item_entitlement_choice_map(inter)
+        result: gamedata.monster = search(list(itertools.chain.from_iterable(choices.values())), arg, slash_match_key)[
+            0
+        ]
+        if result is None:
+            raise ValueError("That item doesn't exist")
+        return result
+
+    async def spell_converter(inter: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.spell:
+        choices = await get_spell_choices(inter)
+        result: gamedata.spell = search(choices, arg, slash_match_key)[0]
+        if result is None:
+            raise ValueError("That spell doesn't exist")
+        return result
+
+    def rule_converter(_: disnake.ApplicationCommandInteraction, arg: str):
+        choices = []
+        for actiontype in compendium.rule_references:
+            choices.extend(actiontype["items"])
+        result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
+        if result is None:
+            raise ValueError("That rule doesn't exist")
+        return result
+
+    def background_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.Background:
+        result: gamedata.Background = search(compendium.backgrounds, arg, slash_match_key)[0]
+        if result is None:
+            raise ValueError("That background doesn't exist")
+        return result
+
+    def feat_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.feat:
+        result: gamedata.feat = search(compendium.feats, arg, slash_match_key)[0]
+        if result is None:
+            raise ValueError("That feat doesn't exist")
+        return result
+
+    def race_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.race:
+        result: gamedata.race = search(compendium.races + compendium.subraces, arg, slash_match_key)[0]
+        if result is None:
+            raise ValueError("That race doesn't exist")
+        return result
+
+    def racefeat_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> RaceFeature:
+        result: RaceFeature = search(compendium.rfeats + compendium.subrfeats, arg, slash_match_key)[0]
+        if result is None:
+            raise ValueError("That racial feature doesn't exist")
+        return result
+
+    def class_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.Class:
+        result: gamedata.Class = search(compendium.classes, arg, slash_match_key)[0]
+        if result is None:
+            raise ValueError("That class doesn't exist")
+        return result
+
+    def subclass_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.Subclass:
+        result: gamedata.Subclass = search(compendium.subclasses, arg, slash_match_key)[0]
+        if result is None:
+            raise ValueError("That class doesn't exist")
+        return result
+
+    def classfeat_converter(_: disnake.ApplicationCommandInteraction, arg: str) -> ClassFeature:
+        result: ClassFeature = search(compendium.cfeats + compendium.optional_cfeats, arg, slash_match_key)[0]
+        if result is None:
+            raise ValueError("That class feature doesn't exist")
+        return result
+
+    match entity_type:
+        case "monster":
+            return monster_converter
+        case "item":
+            return item_converter
+        case "spell":
+            return spell_converter
+        case "rule":
+            return rule_converter
+        case "background":
+            return background_converter
+        case "feat":
+            return feat_converter
+        case "race":
+            return race_converter
+        case "racefeat":
+            return racefeat_converter
+        case "class":
+            return class_converter
+        case "subclass":
+            return subclass_converter
+        case "classfeat":
+            return classfeat_converter
+        case _:
+            raise ValueError("That converter does not exist")
 
 
 async def search_entities(
@@ -251,7 +373,7 @@ async def search_entities(
         list(itertools.chain.from_iterable(entities.values())),
         query,
         lambda e: e.name,
-        selectkey=_create_selectkey(available_ids),
+        selectkey=create_selectkey(available_ids),
         selector=_create_selector(available_ids),
         return_metadata=True,
         **kwargs,

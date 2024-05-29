@@ -24,19 +24,29 @@ log = logging.getLogger(__name__)
 
 # presented to the hash first - update this when bestiary or monster schema changes
 # to invalidate the existing cache of data
-BESTIARY_SCHEMA_VERSION = b"1"
+BESTIARY_SCHEMA_VERSION = b"2"
 
 
 class Bestiary(CommonHomebrewMixin):
+    # site_type = CRITTER_DB or BESTIARY_BUILDER
     def __init__(
-        self, _id, sha256: str, upstream: str, published: bool, name: str, monsters: list = None, desc: str = None, **_
+        self,
+        _id,
+        sha256: str,
+        upstream: str,
+        published: bool,
+        site_type: str,
+        name: str,
+        monsters: list = None,
+        desc: str = None,
+        **_,
     ):
         # metadata - should never change
         super().__init__(_id)
         self.sha256 = sha256
         self.upstream = upstream
         self.published = published
-
+        self.site_type = site_type
         # content
         self.name = name
         self.desc = desc
@@ -48,6 +58,8 @@ class Bestiary(CommonHomebrewMixin):
             d["monsters"] = [Monster.from_bestiary(m, d["name"]) for m in d["monsters"]]
         if "published" not in d:  # versions prior to v1.5.11 don't have this tag, default to True
             d["published"] = True
+        if "site_type" not in d:  # versions prior to v4.3 don't have this tag, default to CRITTER_DB
+            d["site_type"] = "CRITTER_DB"
         return cls(**d)
 
     @classmethod
@@ -65,8 +77,50 @@ class Bestiary(CommonHomebrewMixin):
         return cls.from_dict(bestiary)
 
     @classmethod
+    async def from_bestiary_builder(cls, ctx, url):
+        log.info(f"Getting Bestiary Builder ID {url}")
+        api_base = "https://bestiarybuilder.com/api/export/bestiary"
+        sha256_hash = hashlib.sha256()
+        sha256_hash.update(BESTIARY_SCHEMA_VERSION)
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{api_base}/{url}") as resp:
+                try:
+                    raw = await resp.json()
+                    sha256_hash.update(await resp.read())
+                except (ValueError, aiohttp.ContentTypeError):
+                    raise ExternalImportError("Error importing bestiary: bad data. Are you sure the link is right?")
+
+                if raw.get("error", None):
+                    raise ExternalImportError(f"Error importing bestiary: {raw['error']}")
+
+                creatures = raw["creatures"]
+                metadata = raw["metadata"]
+                name = metadata["name"]
+                desc = metadata["description"]
+                sha256_hash.update(name.encode() + desc.encode())
+
+        # try and find a bestiary by looking up upstream|hash
+        # if it exists, return it
+        # otherwise commit a new one to the db and return that
+        sha256 = sha256_hash.hexdigest()
+        log.debug(f"Bestiary hash: {sha256}")
+        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one(
+            {"upstream": url, "sha256": sha256, "site_type": "BESTIARY_BUILDER"}
+        )
+        if existing_bestiary:
+            log.info("This bestiary already exists")
+            existing_bestiary = Bestiary.from_dict(existing_bestiary)
+            return existing_bestiary
+
+        parsed_creatures = [_monster_factory_bestiary_builder(c, name) for c in creatures]
+        b = cls(None, sha256, url, False, "BESTIARY_BUILDER", name, parsed_creatures, desc)
+        await b.write_to_db(ctx)
+        return b
+
+    @classmethod
     async def from_critterdb(cls, ctx, url, published=True):
-        log.info(f"Getting bestiary ID {url}...")
+        log.info(f"Getting CritterDB bestiary ID {url}...")
         api_base = (
             "https://critterdb.com:443/api/publishedbestiaries"
             if published
@@ -94,14 +148,16 @@ class Bestiary(CommonHomebrewMixin):
         # otherwise commit a new one to the db and return that
         sha256 = sha256_hash.hexdigest()
         log.debug(f"Bestiary hash: {sha256}")
-        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one({"upstream": url, "sha256": sha256})
+        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one(
+            {"upstream": url, "sha256": sha256, "site_type": "CRITTER_DB"}
+        )
         if existing_bestiary:
             log.info("This bestiary already exists")
             existing_bestiary = Bestiary.from_dict(existing_bestiary)
             return existing_bestiary
 
-        parsed_creatures = [_monster_factory(c, name) for c in creatures]
-        b = cls(None, sha256, url, published, name, parsed_creatures, desc)
+        parsed_creatures = [_monster_factory_critterdb(c, name) for c in creatures]
+        b = cls(None, sha256, url, published, "CRITTER_DB", name, parsed_creatures, desc)
         await b.write_to_db(ctx)
         return b
 
@@ -126,6 +182,7 @@ class Bestiary(CommonHomebrewMixin):
             "sha256": self.sha256,
             "upstream": self.upstream,
             "published": self.published,
+            "site_type": self.site_type,
             "name": self.name,
             "desc": self.desc,
             "monsters": monsters,
@@ -240,7 +297,7 @@ async def get_published_bestiary_creatures(url, session, api_base, sha256_hash):
         async with session.get(f"{api_base}/{url}/creatures/{index}") as resp:
             if not 199 < resp.status < 300:
                 raise ExternalImportError("Error importing bestiary: HTTP error. Are you sure the link is right?")
-            raw_creatures = await parse_critterdb_response(resp, sha256_hash)
+            raw_creatures = await parse_response(resp, sha256_hash)
             if not raw_creatures:
                 break
             creatures.extend(raw_creatures)
@@ -257,11 +314,11 @@ async def get_link_shared_bestiary_creatures(url, session, api_base, sha256_hash
             )
         elif not 199 < resp.status < 300:
             raise ExternalImportError("Error importing bestiary: HTTP error. Are you sure the link is right?")
-        creatures = await parse_critterdb_response(resp, sha256_hash)
+        creatures = await parse_response(resp, sha256_hash)
     return creatures
 
 
-async def parse_critterdb_response(resp, sha256_hash):
+async def parse_response(resp, sha256_hash):
     try:
         raw_creatures = await resp.json()
         sha256_hash.update(await resp.read())
@@ -270,7 +327,210 @@ async def parse_critterdb_response(resp, sha256_hash):
     return raw_creatures
 
 
-# critterdb -> bestiary helpers
+def spaced_to_camel(spaced):
+    return re.sub(r"\s+(\w)", lambda m: m.group(1).upper(), spaced.lower())
+
+
+def _monster_factory_bestiary_builder(data, bestiary_name):
+    if data["hitdice"] is None:
+        raise ExternalImportError(f"Monster is missing hit die ({data['name']}).")
+
+    proficiency = data["ability_scores"]["prof_bonus"]
+    if proficiency is None:
+        raise ExternalImportError(f"Monster's proficiency bonus is nonexistent ({data['name']}).")
+
+    ability_scores = BaseStats(
+        data["ability_scores"]["prof_bonus"] or 0,
+        data["ability_scores"]["strength"] or 10,
+        data["ability_scores"]["dexterity"] or 10,
+        data["ability_scores"]["constitution"] or 10,
+        data["ability_scores"]["intelligence"] or 10,
+        data["ability_scores"]["wisdom"] or 10,
+        data["ability_scores"]["charisma"] or 10,
+    )
+
+    resistances = Resistances.from_dict(
+        dict(
+            vuln=data["vulnerabilities"],
+            resist=data["resistances"],
+            immune=data["immunities"],
+        )
+    )
+
+    attacks = AttackList()
+    traits, atks = parse_bestiary_builder_traits(data, "traits")
+    attacks.extend(atks)
+    actions, atks = parse_bestiary_builder_traits(data, "actions")
+    attacks.extend(atks)
+    bonus_actions, atks = parse_bestiary_builder_traits(data, "bonus_actions")
+    attacks.extend(atks)
+    reactions, atks = parse_bestiary_builder_traits(data, "reactions")
+    attacks.extend(atks)
+    legactions, atks = parse_bestiary_builder_traits(data, "legactions")
+    attacks.extend(atks)
+    mythic_actions, atks = parse_bestiary_builder_traits(data, "mythic")
+    attacks.extend(atks)
+    # Avrae does not display these but we can at least parse their automation
+    _, atks = parse_bestiary_builder_traits(data, "lair")
+    attacks.extend(atks)
+    _, atks = parse_bestiary_builder_traits(data, "regional")
+    attacks.extend(atks)
+
+    name_duplications = {}
+    for atk in attacks:
+        if atk.name in name_duplications:
+            name_duplications[atk.name] += 1
+            atk.name += str(name_duplications[atk.name])
+        else:
+            name_duplications[atk.name] = 1
+
+    spellcasting = parse_bestiary_builder_spellcasting(data["spellcasting"])
+    return Monster(
+        name=data["name"],
+        size=data["size"],
+        race=data["race"],
+        alignment=data["alignment"],
+        ac=data["ac"],
+        armortype=data["armortype"],
+        hp=data["hp"],
+        hitdice=data["hitdice"],
+        speed=data["speed"],
+        ability_scores=ability_scores,
+        saves=Saves.from_dict(data["saves"]),
+        skills=Skills.from_dict(data["skills"]),
+        passiveperc=data["passiveperc"],
+        senses=data["senses"],
+        resistances=resistances,
+        display_resists=resistances,
+        condition_immune=data["condition_immune"],
+        languages=data["languages"],
+        cr=str(data["cr"]),
+        xp=data["xp"],
+        traits=traits,
+        actions=actions,
+        bonus_actions=bonus_actions,
+        mythic_actions=mythic_actions,
+        reactions=reactions,
+        legactions=legactions,
+        la_per_round=data["la_per_round"],
+        attacks=attacks,
+        proper=data["proper"],
+        image_url=data["image_url"],
+        spellcasting=spellcasting,
+        homebrew=True,
+        source=bestiary_name,
+    )
+
+
+def parse_bestiary_builder_traits(data, key):
+    traits = []
+    attacks = []
+    for trait in data[key]:
+        name = trait["name"]
+        desc = markdownify(trait["description"]).strip()
+        automation = trait["automation"]
+
+        if automation is not None:
+            if not isinstance(automation, list):
+                automation = [automation]
+
+            try:
+                normalized_obj = pydantic.parse_obj_as(
+                    List[automation_common.validation.models.AttackModel], automation, type_name="AttackList"
+                )
+            except pydantic.ValidationError as e:
+                err_fmt = automation_common.validation.utils.format_validation_error(e)
+                raise ExternalImportError(
+                    f"An automation YAML for {data['name']} contained an invalid attack: ```py\n{err_fmt}\n```"
+                )
+
+            attacks.extend(Attack.from_dict(a.dict()) for a in normalized_obj)
+
+        traits.append(Trait(name, desc))
+    return traits, attacks
+
+
+def parse_bestiary_builder_spellcasting(data):
+    known_spells = []
+    will_spells = []
+    daily_spells = {}
+
+    def extract_spells(key, dc, sab, mod, isWill=False, times=0):
+        spells = data["known_spells"][key]
+        if times:
+            spells = data["known_spells"][key][times]
+
+        for name in spells:
+            # remove any (parenthetical stuff) except (UA)
+            # in theory users of Bestiary Builder shouldn't set this but just in case
+            name = re.sub(r"\((?!ua\)).+\)", "", name.lower())
+            s = name.strip("* _").replace(".", "").replace("$", "")
+            try:
+                real_name = next(sp for sp in gd.compendium.spells if sp.name.lower() == s).name
+                strict = True
+            except StopIteration:
+                real_name = s
+                strict = False
+
+            known_spells.append(SpellbookSpell(real_name, strict=strict, dc=dc, sab=sab, mod=mod))
+
+            if isWill:
+                will_spells.append(real_name)
+            if times:
+                daily_spells[real_name] = int(times)
+
+    # caster type casting
+    caster_dc = data["caster_dc"]
+    caster_sab = data["caster_sab"]
+    caster_mod = data["caster_mod"]
+    extract_spells("caster_spells", caster_dc, caster_sab, caster_mod)
+
+    # innate type casting
+    innate_dc = data["innate_dc"]
+    innate_sab = data["innate_sab"]
+    innate_mod = data["innate_mod"]
+    # at will
+    extract_spells("at_will", innate_dc, innate_sab, innate_mod, True)
+    # daily
+    for times in data["known_spells"]["daily_spells"].keys():
+        extract_spells("daily_spells", innate_dc, innate_sab, innate_mod, False, times)
+
+    usual_dc = caster_dc
+    usual_sab = caster_sab
+    usual_mod = caster_mod
+
+    amt_innate = len(will_spells) + len(daily_spells.keys())
+    amt_caster = len(known_spells) - amt_innate
+    if amt_innate > amt_caster:
+        usual_dc = innate_dc
+        usual_sab = innate_sab
+        usual_mod = innate_mod
+
+    spellbook = MonsterSpellbook(
+        slots=data["slots"],
+        max_slots=data["slots"],
+        spells=known_spells,
+        dc=usual_dc,
+        sab=usual_sab,
+        caster_level=data["caster_level"],
+        spell_mod=usual_mod,
+        at_will=will_spells,
+        daily=daily_spells,
+    )
+
+    for spell in spellbook.spells:  # remove redundant data
+        if spell.dc == spellbook.dc:
+            spell.dc = None
+        if spell.sab == spellbook.sab:
+            spell.sab = None
+        if spell.mod == spellbook.spell_mod:
+            spell.mod = None
+
+    log.debug(f"Bestiary builder spellbook: {spellbook.to_dict()}")
+    return spellbook
+
+
+# criitterdb -> bestiary helpers
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(
     r"<avrae hidden>(?:(?P<simple>(.*?)\|([+-]?\d*)\|(.*?))|" r"(?P<freeform>.*?))</avrae>", re.IGNORECASE | re.DOTALL
 )
@@ -280,7 +540,7 @@ ATTACK_RE = re.compile(
     r"(?P<damageTypeBase>[aA-zZ ]+) damage[., ]??(?: in melee[.,]?? or [+-]?(?:\d+ "
     r"\((?P<damageRangedDice>.+?)\)|(?P<damageRangedInt>\d+)) (?P<damageTypeRanged>[aA-zZ ]+) "
     r"damage at range[,.]?)?(?:,? or [+-]?(?:\d+ \((?P<damageDiceVers>.+?)\)|(?P<damageIntVers>\d+))"
-    r" (?P<damageTypeVers>[aA-zZ ]+) damage if used with two hands to make a melee attack)?"
+    r" (?P<damageTypeVers>[aA-zZ ]+) damage if used with two hands(?: to make a melee attack)?)?"
     r"(?:,? (?:plus|and) [+-]?(?:\d+ \((?P<damageBonusDice>.+?)\)|(?P<damageBonusInt>\d+)) "
     r"(?P<damageTypeBonus>[aA-zZ ]+) damage)?",
     re.IGNORECASE,
@@ -288,11 +548,7 @@ ATTACK_RE = re.compile(
 JUST_DAMAGE_RE = re.compile(r"[+-]?\d+ \((.+?)\) (\w+) damage", re.IGNORECASE)
 
 
-def spaced_to_camel(spaced):
-    return re.sub(r"\s+(\w)", lambda m: m.group(1).upper(), spaced.lower())
-
-
-def _monster_factory(data, bestiary_name):
+def _monster_factory_critterdb(data, bestiary_name):
     ability_scores = BaseStats(
         data["stats"]["proficiencyBonus"] or 0,
         data["stats"]["abilityScores"]["strength"] or 10,
@@ -305,8 +561,8 @@ def _monster_factory(data, bestiary_name):
     cr = {0.125: "1/8", 0.25: "1/4", 0.5: "1/2"}.get(
         data["stats"]["challengeRating"], str(data["stats"]["challengeRating"])
     )
-    num_hit_die = data["stats"]["numHitDie"]
-    hit_die_size = data["stats"]["hitDieSize"]
+    num_hit_die = data["stats"].get("numHitDie")
+    hit_die_size = data["stats"].get("hitDieSize")
     if num_hit_die is None or hit_die_size is None:
         raise ExternalImportError(f"Monster is missing hit die or hit die size ({data['name']}).")
     con_by_level = num_hit_die * ability_scores.get_mod("con")
@@ -421,14 +677,12 @@ def parse_critterdb_traits(data, key):
             for override in overrides:
                 if override.group("simple"):
                     attacks.append(
-                        Attack.from_dict(
-                            {
-                                "name": override.group(2) or name,
-                                "attackBonus": override.group(3) or None,
-                                "damage": override.group(4) or None,
-                                "details": desc,
-                            }
-                        )
+                        Attack.from_dict({
+                            "name": override.group(2) or name,
+                            "attackBonus": override.group(3) or None,
+                            "damage": override.group(4) or None,
+                            "details": desc,
+                        })
                     )
                 elif freeform_override := override.group("freeform"):
                     try:
@@ -548,7 +802,7 @@ def parse_critterdb_spellcasting(traits, base_stats):
         for type_leveled_spells in re.finditer(
             r"(?:"
             r"(?P<level>\d)[stndrh]{2}\slevel \((?P<slots>\d+) slots?\)"
-            r"|Cantrip \(at will\)): "
+            r"|Cantrip(?:s)? \(at will\)): "
             r"(?P<spells>.+)$",
             desc,
             re.MULTILINE,

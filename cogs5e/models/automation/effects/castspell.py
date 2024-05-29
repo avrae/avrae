@@ -1,14 +1,23 @@
+import aliasing.api.combat
 import gamedata
 import gamedata.lookuputils
-from cogs5e.models.errors import RequiresLicense
+from cogs5e.models.errors import RequiresLicense, InvalidArgument
 from utils.functions import smart_trim
 from . import Effect
+from .ieffect import IEffectMetaVar
 from ..results import CastSpellResult
 
 
 class CastSpell(Effect):
     def __init__(
-        self, id: int, level: int = None, dc: str = None, attackBonus: str = None, castingMod: str = None, **kwargs
+        self,
+        id: int,
+        level: int = None,
+        dc: str = None,
+        attackBonus: str = None,
+        castingMod: str = None,
+        parent: str = None,
+        **kwargs,
     ):
         super().__init__("spell", **kwargs)
         self.id = id
@@ -16,18 +25,18 @@ class CastSpell(Effect):
         self.dc = dc
         self.attack_bonus = attackBonus
         self.casting_mod = castingMod
+        self.parent = parent
 
     def to_dict(self):
         out = super().to_dict()
-        out.update(
-            {
-                "id": self.id,
-                "level": self.level,
-                "dc": self.dc,
-                "attackBonus": self.attack_bonus,
-                "castingMod": self.casting_mod,
-            }
-        )
+        out.update({
+            "id": self.id,
+            "level": self.level,
+            "dc": self.dc,
+            "attackBonus": self.attack_bonus,
+            "castingMod": self.casting_mod,
+            "parent": self.parent,
+        })
         return out
 
     async def preflight(self, autoctx):
@@ -51,6 +60,7 @@ class CastSpell(Effect):
         if not spell.level <= cast_level <= 9:
             autoctx.meta_queue(f"**Error**: Unable to cast {spell.name} at level {cast_level} (invalid level).")
             return CastSpellResult(success=False, spell_id=self.id)
+
         if autoctx.is_spell:
             autoctx.meta_queue(f"**Error**: Unable to cast another spell inside a spell.")
             return CastSpellResult(success=False, spell_id=self.id)
@@ -62,6 +72,22 @@ class CastSpell(Effect):
             old_dc_override = autoctx.dc_override
             old_spell_override = autoctx.evaluator.builtins.get("spell")
             old_level_override = autoctx.spell_level_override
+            autoctx.metavars["spell_level"] = (
+                old_spell_level := autoctx.spell_level_override if autoctx.spell_level_override else cast_level
+            )
+
+            # parenting
+            explicit_parent = None
+            if self.parent is not None and (parent_ref := autoctx.metavars.get(self.parent, None)) is not None:
+                if not isinstance(parent_ref, (IEffectMetaVar, aliasing.api.combat.SimpleEffect)):
+                    raise InvalidArgument(
+                        f"Could not set IEffect parent: The variable `{self.parent}` is not an IEffectMetaVar "
+                        f"(got `{type(parent_ref).__name__}`)."
+                    )
+                # noinspection PyProtectedMember
+                explicit_parent = parent_ref._effect
+
+            autoctx.conc_effect = explicit_parent
 
             # run the spell using the given values
             if self.attack_bonus is not None:
@@ -72,7 +98,9 @@ class CastSpell(Effect):
                 spell_override = autoctx.evaluator.builtins["spell"] = autoctx.parse_intexpression(self.casting_mod)
             if self.level is not None:
                 autoctx.spell_level_override = self.level
+                autoctx.metavars["spell_level"] = autoctx.spell_level_override
             autoctx.spell = spell
+
             results = self.run_children(spell.automation.effects, autoctx)
 
             # and restore them
@@ -81,6 +109,7 @@ class CastSpell(Effect):
             autoctx.evaluator.builtins["spell"] = old_spell_override
             autoctx.spell_level_override = old_level_override
             autoctx.spell = None
+            autoctx.metavars["spell_level"] = old_spell_level
 
             # display higher level info
             if cast_level != spell.level and spell.higherlevels:

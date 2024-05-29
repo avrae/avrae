@@ -3,6 +3,7 @@ import collections
 import d20
 
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, NoReset
+from aliasing.errors import EvaluationError
 from utils import constants
 from utils.functions import bubble_format
 from .attack import AttackList
@@ -192,9 +193,16 @@ class CustomCounter:
 
         if reset_by is not None:
             try:
-                d20.parse(character.evaluate_annostr(str(reset_by)))
+                evaluated_str = character.evaluate_annostr(str(reset_by))
+            except EvaluationError:
+                raise InvalidArgument(f"`{reset_by}` (`resetby`) has invalid annotations")
+
+            try:
+                d20.parse(evaluated_str)
             except d20.RollSyntaxError:
-                raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
+                raise InvalidArgument(
+                    f"`{evaluated_str}` (`resetby`) cannot be interpreted as a number or dice string."
+                )
 
         # set initial value if not already set
         if initial_value is None:

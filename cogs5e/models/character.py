@@ -4,8 +4,6 @@ from collections import namedtuple
 import cachetools
 from disnake.ext.commands import NoPrivateMessage
 
-import re
-
 import aliasing.evaluators
 from cogs5e.models.ddbsync import DDBSheetSync
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
@@ -350,7 +348,7 @@ class Character(StatBlock):
         try:
             return evaluator.transformed_str(varstr)
         except Exception as e:
-            raise InvalidArgument(f"Cannot evaluate {varstr}: {e}")
+            raise InvalidArgument(f"Cannot evaluate `{varstr}`: {e}")
 
     def set_cvar(self, name: str, val: str):
         """Sets a cvar to a string value."""

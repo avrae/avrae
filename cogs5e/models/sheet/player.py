@@ -3,6 +3,7 @@ import collections
 import d20
 
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, NoReset
+from aliasing.errors import EvaluationError
 from utils import constants
 from utils.functions import bubble_format
 from .attack import AttackList
@@ -192,9 +193,16 @@ class CustomCounter:
 
         if reset_by is not None:
             try:
-                d20.parse(str(reset_by))
+                evaluated_str = character.evaluate_annostr(str(reset_by))
+            except EvaluationError:
+                raise InvalidArgument(f"`{reset_by}` (`resetby`) has invalid annotations")
+
+            try:
+                d20.parse(evaluated_str)
             except d20.RollSyntaxError:
-                raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
+                raise InvalidArgument(
+                    f"`{evaluated_str}` (`resetby`) cannot be interpreted as a number or dice string."
+                )
 
         # set initial value if not already set
         if initial_value is None:
@@ -258,6 +266,11 @@ class CustomCounter:
             return None
         return self._character.evaluate_math(self.reset_to)
 
+    def get_reset_by(self):
+        if self.reset_by is None:
+            return None
+        return self._character.evaluate_annostr(self.reset_by)
+
     @property
     def value(self):
         return self._value
@@ -299,7 +312,7 @@ class CustomCounter:
 
         # reset by: modify current value
         elif self.reset_by is not None:
-            roll_result = d20.roll(self.reset_by)
+            roll_result = d20.roll(self.get_reset_by())
             target_value = old_value + roll_result.total
             new_value = self.set(target_value)
             delta = f"+{roll_result.result}"

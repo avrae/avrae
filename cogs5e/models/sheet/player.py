@@ -3,7 +3,6 @@ import collections
 import d20
 
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, NoReset
-from aliasing.errors import EvaluationError
 from utils import constants
 from utils.functions import bubble_format
 from .attack import AttackList
@@ -192,10 +191,7 @@ class CustomCounter:
                 raise InvalidArgument(f"Reset to value {reset_to_value} is greater than max value {max_value}.")
 
         if reset_by is not None:
-            try:
-                evaluated_str = character.evaluate_annostr(str(reset_by))
-            except EvaluationError:
-                raise InvalidArgument(f"`{reset_by}` (`resetby`) has invalid annotations")
+            evaluated_str = character.evaluate_annostr(str(reset_by))
 
             try:
                 d20.parse(evaluated_str)

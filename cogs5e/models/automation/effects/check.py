@@ -2,7 +2,8 @@ from typing import TYPE_CHECKING, Tuple, Union
 
 import d20
 
-from utils import constants, enums
+from utils import constants
+from utils.enums import AdvantageType
 from utils.functions import camel_to_title, maybe_mod, natural_join, reconcile_adv
 from . import Effect
 from ..errors import AutomationException, InvalidIntExpression, TargetException
@@ -42,8 +43,6 @@ class Check(Effect):
             data["success"] = Effect.deserialize(data["success"])
         if data.get("fail"):
             data["fail"] = Effect.deserialize(data["fail"])
-        if data.get("adv") is not None:
-            data["adv"] = enums.AdvantageType(data["adv"])
         return super().from_data(data)
 
     def to_dict(self):
@@ -92,8 +91,8 @@ class Check(Effect):
         auto_fail = autoctx.args.last("cfail", type_=bool, ephem=True)
         check_bonus = autoctx.args.get("cb", ephem=True)
         base_adv = reconcile_adv(
-            adv=autoctx.args.last("cadv", type_=bool, ephem=True) or explicit_adv == enums.AdvantageType.ADV,
-            dis=autoctx.args.last("cdis", type_=bool, ephem=True) or explicit_adv == enums.AdvantageType.DIS,
+            adv=autoctx.args.last("cadv", type_=bool, ephem=True) or explicit_adv == AdvantageType.ADV,
+            dis=autoctx.args.last("cdis", type_=bool, ephem=True) or explicit_adv == AdvantageType.DIS,
         )
         min_check = autoctx.args.last("mc", type_=int, ephem=True)
         hide = autoctx.args.last("h", type_=bool)
@@ -107,8 +106,8 @@ class Check(Effect):
         contest_ability_list = autoctx.args.get("selfability") or self.contest_ability_list
         self_check_bonus = autoctx.args.get("selfcb", ephem=True)
         self_adv = reconcile_adv(
-            adv=autoctx.args.last("selfcadv", type_=bool, ephem=True) or explicit_adv == enums.AdvantageType.ADV,
-            dis=autoctx.args.last("selfcdis", type_=bool, ephem=True) or explicit_adv == enums.AdvantageType.DIS,
+            adv=autoctx.args.last("selfcadv", type_=bool, ephem=True) or explicit_adv == AdvantageType.ADV,
+            dis=autoctx.args.last("selfcdis", type_=bool, ephem=True) or explicit_adv == AdvantageType.DIS,
         )
         self_min = autoctx.args.last("selfmc", type_=int, ephem=True)
 
@@ -274,6 +273,13 @@ class Check(Effect):
         else:
             return f"{skill_name} Check"
 
+        if self.adv:
+            match stringify_intexpr(evaluator, self.adv):
+                case AdvantageType.ADV:
+                    out += ", with advantage"
+                case AdvantageType.DIS:
+                    out += ", with disdvantage"
+
         if self.fail:
             fail_out = self.build_child_str(self.fail, caster, evaluator)
             if fail_out:
@@ -313,7 +319,7 @@ def get_check_dice_for_statblock(
     skill: "Skill",
     skill_key: str,
     bonus: list[str] = None,
-    base_adv: enums.AdvantageType = None,
+    base_adv: AdvantageType = None,
     min_check: int = None,
 ) -> str:
     """
@@ -346,14 +352,14 @@ def get_check_dice_for_statblock(
         )
 
         base_adv = reconcile_adv(
-            adv=base_adv == enums.AdvantageType.ADV or skill_key in cadv_effects or base_ability_key in cadv_effects,
-            dis=base_adv == enums.AdvantageType.DIS or skill_key in cdis_effects or base_ability_key in cdis_effects,
+            adv=base_adv == AdvantageType.ADV or skill_key in cadv_effects or base_ability_key in cadv_effects,
+            dis=base_adv == AdvantageType.DIS or skill_key in cdis_effects or base_ability_key in cdis_effects,
         )
 
     # build final dice
-    if base_adv == enums.AdvantageType.ADV:
+    if base_adv == AdvantageType.ADV:
         boolwise_adv = True
-    elif base_adv == enums.AdvantageType.DIS:
+    elif base_adv == AdvantageType.DIS:
         boolwise_adv = False
     else:
         boolwise_adv = None

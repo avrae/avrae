@@ -24,7 +24,7 @@ class Check(Effect):
         success: list[Effect] = None,
         fail: list[Effect] = None,
         contestTie: str = None,
-        adv: enums.AdvantageType = None,
+        adv: str = None,
         **kwargs,
     ):
         super().__init__("check", **kwargs)
@@ -60,7 +60,7 @@ class Check(Effect):
         if self.contest_tie_behaviour:
             out["contestTie"] = self.contest_tie_behaviour
         if self.adv:
-            out["adv"] = self.adv.value
+            out["adv"] = self.adv
         return out
 
     def run(self, autoctx: "AutomationContext"):
@@ -78,13 +78,22 @@ class Check(Effect):
             raise AutomationException("Cannot specify both a check's DC and a contest ability.")
 
         # ==== args ====
+
+        # explicit advantage
+        explicit_adv = None
+        if self.adv:
+            try:
+                explicit_adv = autoctx.parse_intexpression(self.adv)
+            except Exception:
+                raise AutomationException(f"{self.adv!r} cannot be interpreted as an advantage type.")
+
         ability_list = autoctx.args.get("ability") or self.ability_list
         auto_pass = autoctx.args.last("cpass", type_=bool, ephem=True)
         auto_fail = autoctx.args.last("cfail", type_=bool, ephem=True)
         check_bonus = autoctx.args.get("cb", ephem=True)
         base_adv = reconcile_adv(
-            adv=autoctx.args.last("cadv", type_=bool, ephem=True) or self.adv == enums.AdvantageType.ADV,
-            dis=autoctx.args.last("cdis", type_=bool, ephem=True) or self.adv == enums.AdvantageType.DIS,
+            adv=autoctx.args.last("cadv", type_=bool, ephem=True) or explicit_adv == enums.AdvantageType.ADV,
+            dis=autoctx.args.last("cdis", type_=bool, ephem=True) or explicit_adv == enums.AdvantageType.DIS,
         )
         min_check = autoctx.args.last("mc", type_=int, ephem=True)
         hide = autoctx.args.last("h", type_=bool)
@@ -98,8 +107,8 @@ class Check(Effect):
         contest_ability_list = autoctx.args.get("selfability") or self.contest_ability_list
         self_check_bonus = autoctx.args.get("selfcb", ephem=True)
         self_adv = reconcile_adv(
-            adv=autoctx.args.last("selfcadv", type_=bool, ephem=True) or self.adv == enums.AdvantageType.ADV,
-            dis=autoctx.args.last("selfcdis", type_=bool, ephem=True) or self.adv == enums.AdvantageType.DIS,
+            adv=autoctx.args.last("selfcadv", type_=bool, ephem=True) or explicit_adv == enums.AdvantageType.ADV,
+            dis=autoctx.args.last("selfcdis", type_=bool, ephem=True) or explicit_adv == enums.AdvantageType.DIS,
         )
         self_min = autoctx.args.last("selfmc", type_=int, ephem=True)
 

@@ -342,7 +342,7 @@ class Monster(StatBlock, Sourced):
             desc += "**Languages** --\n"
 
         if not self.hide_cr:
-            desc += f"**Challenge** {self.cr} ({self.xp} XP)"
+            desc += f"**Challenge** {self.cr} ({self.xp:,} XP)"
         return desc
 
     def get_title_name(self):

@@ -264,21 +264,23 @@ class Check(Effect):
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
         skill_name = natural_join([camel_to_title(a) for a in self.ability_list], "or")
-        if self.dc is not None:
-            dc = stringify_intexpr(evaluator, self.dc)
-            out = f"DC {dc} {skill_name} Check"
-        elif self.contest_ability is not None:
-            contest_skill_name = natural_join([camel_to_title(a) for a in self.contest_ability_list], "or")
-            out = f"{skill_name} Check vs. caster's {contest_skill_name} Check"
-        else:
-            return f"{skill_name} Check"
 
+        adv = ""
         if self.adv:
             match stringify_intexpr(evaluator, self.adv):
                 case AdvantageType.ADV:
-                    out += ", with advantage"
+                    adv = ", with advantage"
                 case AdvantageType.DIS:
-                    out += ", with disdvantage"
+                    adv = ", with disdvantage"
+
+        if self.dc is not None:
+            dc = stringify_intexpr(evaluator, self.dc)
+            out = f"DC {dc} {skill_name} Check" + adv
+        elif self.contest_ability is not None:
+            contest_skill_name = natural_join([camel_to_title(a) for a in self.contest_ability_list], "or")
+            out = f"{skill_name} Check vs. caster's {contest_skill_name} Check" + adv
+        else:
+            return f"{skill_name} Check" + adv
 
         if self.fail:
             fail_out = self.build_child_str(self.fail, caster, evaluator)

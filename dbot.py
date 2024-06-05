@@ -7,7 +7,6 @@ import time
 import traceback
 
 
-import certifi
 from redis import asyncio as redis
 import d20
 import disnake
@@ -86,7 +85,7 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
 
         # dbs
-        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL, tlsCAFile=certifi.where())
+        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
 
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())

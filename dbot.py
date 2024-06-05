@@ -85,7 +85,7 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
 
         # dbs
-        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL, retryWrites=False)
 
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())

@@ -612,19 +612,19 @@ class Lookup(commands.Cog):
         if visible:
             embed_queue[-1].description = monster.get_meta()
             if monster.traits:
-                trait = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.traits)
+                trait = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.traits)
                 if trait:
                     safe_append("Special Abilities", trait)
             if monster.actions:
-                action = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.actions)
+                action = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.actions)
                 if action:
                     safe_append("Actions", action)
             if monster.bonus_actions:
-                bonus_action = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.bonus_actions)
+                bonus_action = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.bonus_actions)
                 if bonus_action:
                     safe_append("Bonus Actions", bonus_action)
             if monster.reactions:
-                reaction = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.reactions)
+                reaction = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.reactions)
                 if reaction:
                     safe_append("Reactions", reaction)
             if monster.legactions:
@@ -637,13 +637,13 @@ class Lookup(commands.Cog):
                 ]
                 for a in monster.legactions:
                     if a.name:
-                        legendary.append(f"**{a.name}:** {a.desc}")
+                        legendary.append(f"***{a.name}.*** {a.desc}")
                     else:
                         legendary.append(a.desc)
                 if legendary:
                     safe_append("Legendary Actions", "\n\n".join(legendary))
             if monster.mythic_actions:
-                mythic_action = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.mythic_actions)
+                mythic_action = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.mythic_actions)
                 if mythic_action:
                     safe_append("Mythic Actions", mythic_action)
 
@@ -681,10 +681,10 @@ class Lookup(commands.Cog):
             languages = len(monster.languages)
 
             embed_queue[-1].description = (
-                f"{size} {_type}.\n"
-                f"**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {monster.speed}\n"
+                f"*{size} {_type}*\n"
+                f"**AC** {ac}\n**HP** {hp}\n**Speed** {monster.speed}\n"
                 f"{monster.get_hidden_stat_array()}\n"
-                f"**Languages:** {languages}\n"
+                f"**Languages** {languages}\n"
             )
 
             if monster.traits:

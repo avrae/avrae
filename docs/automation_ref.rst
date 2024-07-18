@@ -821,7 +821,7 @@ Run certain effects if a certain condition is met, or other effects otherwise. A
 
     .. attribute:: errorBehaviour
 
-        How to behave if the condition raises an error:
+        *optional* - How to behave if the condition raises an error:
 
         - ``"true"``: Run the ``onTrue`` effects.
         - ``"false"``: Run the ``onFalse`` effects. (*default*)

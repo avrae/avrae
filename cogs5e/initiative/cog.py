@@ -103,7 +103,7 @@ class InitTracker(commands.Cog):
                 log.exception("Failed to handle init effect button click interaction:")
 
     # ==== commands ====
-    @commands.group(aliases=["i"], invoke_without_command=True)
+    @commands.group(aliases=["i", "I"], invoke_without_command=True)
     async def init(self, ctx):
         """Commands to help track initiative."""
         await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")

@@ -462,6 +462,11 @@ class DicecloudParser(SheetLoaderABC):
                     continue
                 except KeyError:
                     raise
+                except Exception as e:
+                    raise ExternalImportError(
+                        f"`{e}`\n> Error evaluating stat `{stat}` (in feature/group `{effect['parent']['group']}`) ="
+                        f" `{calculation}`"
+                    )
             if not isinstance(value, (int, float)):
                 continue
             if operation == "base" and value > base:

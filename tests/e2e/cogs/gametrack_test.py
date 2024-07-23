@@ -253,6 +253,18 @@ class TestCustomCounters:
         avrae.message("!cc create TESTLIMITS -min 0 -max 100")
         await dhttp.receive_message("Custom counter created.")
 
+        avrae.message("!cc create TESTRESETTO1 -min 0 -max 100 -resetto 10")
+        await dhttp.receive_message("Custom counter created.")
+
+        avrae.message("!cc create TESTRESETTO2 -min 0 -max 100 -resetto level")
+        await dhttp.receive_message("Custom counter created.")
+
+        avrae.message("!cc create TESTRESETBY1 -min 0 -max 100 -resetby 5")
+        await dhttp.receive_message("Custom counter created.")
+
+        avrae.message("!cc create TESTRESETBY2 -min 0 -max 100 -resetby {level}")
+        await dhttp.receive_message("Custom counter created.")
+
     async def test_cc_summary(self, avrae, dhttp):
         avrae.message("!cc")
         char = await active_character(avrae)
@@ -296,9 +308,82 @@ class TestCustomCounters:
         await dhttp.receive_message(r"(\w+: )(\d+\/\d+ )(\((\+|-)\d+\))")
         assert test_cc_limits.value == 100
 
+    async def test_cc_reset_to(self, avrae, dhttp):
+        char = await active_character(avrae)
+        cc_embed = Embed()
+        cc_embed.add_field(name=r".+", value=r"((\d+)|(\d+\/\d+)) (\((\+|-)\d+\))(\n)*(\(\d+ .+\))*")
+
+        test_cc_resetto_1 = next(cc for cc in char.consumables if cc.name == "TESTRESETTO1")
+        test_cc_resetto_2 = next(cc for cc in char.consumables if cc.name == "TESTRESETTO2")
+
+        avrae.message("!cc TESTRESETTO1 set 0")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(embed=cc_embed)
+        assert test_cc_resetto_1.value == 0
+
+        avrae.message("!cc TESTRESETTO2 set 0")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(embed=cc_embed)
+        assert test_cc_resetto_2.value == 0
+
+        avrae.message("!cc reset TESTRESETTO1")
+        await dhttp.receive_message(r"(\w+: )(\d+\/\d+ )(\((\+|-)\d+\))")
+        assert test_cc_resetto_1.value == 10
+
+        avrae.message("!cc reset TESTRESETTO2")
+        await dhttp.receive_message(r"(\w+: )(\d+\/\d+ )(\((\+|-)\d+\))")
+        assert test_cc_resetto_2.value == char.levels.total_level
+
+    async def test_cc_reset_by(self, avrae, dhttp):
+        char = await active_character(avrae)
+        cc_embed = Embed()
+        cc_embed.add_field(name=r".+", value=r"((\d+)|(\d+\/\d+)) (\((\+|-)\d+\))(\n)*(\(\d+ .+\))*")
+
+        test_cc_resetby_1 = next(cc for cc in char.consumables if cc.name == "TESTRESETBY1")
+        test_cc_resetby_2 = next(cc for cc in char.consumables if cc.name == "TESTRESETBY2")
+
+        avrae.message("!cc TESTRESETBY1 set 0")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(embed=cc_embed)
+        assert test_cc_resetby_1.value == 0
+
+        avrae.message("!cc TESTRESETBY2 set 0")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(embed=cc_embed)
+        assert test_cc_resetby_2.value == 0
+
+        avrae.message("!cc reset TESTRESETBY1")
+        await dhttp.receive_message(r"(\w+: )(\d+\/\d+ )(\((\+|-)\d+ = `\d+`\))")
+        assert test_cc_resetby_1.value == 5
+
+        avrae.message("!cc reset TESTRESETBY1")
+        await dhttp.receive_message(r"(\w+: )(\d+\/\d+ )(\((\+|-)\d+ = `\d+`\))")
+        assert test_cc_resetby_1.value == 10
+
+        level = char.levels.total_level
+        avrae.message("!cc reset TESTRESETBY2")
+        await dhttp.receive_message(r"(\w+: )(\d+\/\d+ )(\((\+|-)\d+ = `\d+`\))")
+        assert test_cc_resetby_2.value == level
+
+        avrae.message("!cc reset TESTRESETBY2")
+        await dhttp.receive_message(r"(\w+: )(\d+\/\d+ )(\((\+|-)\d+ = `\d+`\))")
+        assert test_cc_resetby_2.value == level * 2
+
     async def test_cc_delete(self, avrae, dhttp):
         avrae.message("!cc delete TESTCC")
         await dhttp.receive_message("Deleted counter TESTCC.")
 
         avrae.message("!cc delete TESTLIMITS")
         await dhttp.receive_message("Deleted counter TESTLIMITS.")
+
+        avrae.message("!cc delete TESTRESETTO1")
+        await dhttp.receive_message("Deleted counter TESTRESETTO1.")
+
+        avrae.message("!cc delete TESTRESETTO2")
+        await dhttp.receive_message("Deleted counter TESTRESETTO2.")
+
+        avrae.message("!cc delete TESTRESETBY1")
+        await dhttp.receive_message("Deleted counter TESTRESETBY1.")
+
+        avrae.message("!cc delete TESTRESETBY2")
+        await dhttp.receive_message("Deleted counter TESTRESETBY2.")

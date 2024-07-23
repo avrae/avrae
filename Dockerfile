@@ -16,6 +16,6 @@ RUN pip install --user --no-warn-script-location -r requirements.txt
 COPY --chown=avrae:avrae . .
 
 # Download AWS pubkey to connect to documentDB
-RUN if [ "$ENVIRONMENT" = "production" ]; then wget https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem; fi
+RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
 ENTRYPOINT python dbot.py $DBOT_ARGS

@@ -103,7 +103,7 @@ class InitTracker(commands.Cog):
                 log.exception("Failed to handle init effect button click interaction:")
 
     # ==== commands ====
-    @commands.group(aliases=["i"], invoke_without_command=True)
+    @commands.group(aliases=["i", "I"], invoke_without_command=True)
     async def init(self, ctx):
         """Commands to help track initiative."""
         await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
@@ -512,9 +512,10 @@ class InitTracker(commands.Cog):
         combat = await ctx.get_combat()
 
         to_remove = []
-        for co in combat.get_combatants():
-            if isinstance(co, MonsterCombatant) and co.hp <= 0 and co is not combat.current_combatant:
-                to_remove.append(co)
+        if combat.options.deathdelete:
+            for co in combat.get_combatants():
+                if isinstance(co, MonsterCombatant) and co.hp <= 0 and co is not combat.current_combatant:
+                    to_remove.append(co)
 
         messages = combat.skip_rounds(numrounds)
 

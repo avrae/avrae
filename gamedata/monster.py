@@ -318,36 +318,36 @@ class Monster(StatBlock, Sourced):
         """
         size = self.size
         type_ = self.creature_type
-        alignment = self.alignment
+        alignment = ", " + self.alignment if self.alignment else ""
         ac = str(self.ac) + (f" ({self.armortype})" if self.armortype else "")
         hp = f"{self.hp} ({self.hitdice})"
         speed = self.speed
 
-        desc = f"{size} {type_}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n"
+        desc = f"*{size} {type_}{alignment}*\n**AC** {ac}\n**HP** {hp}\n**Speed** {speed}\n"
         desc += f"{self.get_stat_array()}\n"
 
         if str(self.saves):
-            desc += f"**Saving Throws:** {self.saves}\n"
+            desc += f"**Saving Throws** {self.saves}\n"
         if str(self.skills):
-            desc += f"**Skills:** {self.skills}\n"
-        desc += f"**Senses:** {self.get_senses_str()}.\n"
+            desc += f"**Skills** {self.skills}\n"
+        desc += f"**Senses** {self.get_senses_str()}\n"
         if self._displayed_resistances.vuln:
-            desc += f"**Vulnerabilities:** {', '.join(str(r) for r in self._displayed_resistances.vuln)}\n"
+            desc += f"**Vulnerabilities** {', '.join(str(r) for r in self._displayed_resistances.vuln)}\n"
         if self._displayed_resistances.resist:
-            desc += f"**Resistances:** {', '.join(str(r) for r in self._displayed_resistances.resist)}\n"
+            desc += f"**Resistances** {', '.join(str(r) for r in self._displayed_resistances.resist)}\n"
         if self._displayed_resistances.immune:
-            desc += f"**Damage Immunities:** {', '.join(str(r) for r in self._displayed_resistances.immune)}\n"
+            desc += f"**Damage Immunities** {', '.join(str(r) for r in self._displayed_resistances.immune)}\n"
         if self._displayed_resistances.absorb:
-            desc += f"**Absorbing:** {', '.join(str(r) for r in self._displayed_resistances.absorb)}\n"
+            desc += f"**Absorbing** {', '.join(str(r) for r in self._displayed_resistances.absorb)}\n"
         if self.condition_immune:
-            desc += f"**Condition Immunities:** {', '.join(map(str, self.condition_immune))}\n"
+            desc += f"**Condition Immunities** {', '.join(map(str, self.condition_immune))}\n"
         if self.languages:
-            desc += f"**Languages:** {', '.join(self.languages)}\n"
+            desc += f"**Languages** {', '.join(self.languages)}\n"
         else:
-            desc += "**Languages:** --\n"
+            desc += "**Languages** --\n"
 
         if not self.hide_cr:
-            desc += f"**CR:** {self.cr} ({self.xp} XP)"
+            desc += f"**Challenge** {self.cr} ({self.xp:,} XP)"
         return desc
 
     def get_title_name(self):

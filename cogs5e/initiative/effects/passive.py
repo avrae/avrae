@@ -164,6 +164,12 @@ class InitPassiveEffect:
         deserializer=lambda data: [Resistance.from_dict(r) for r in data],
         serializer=lambda data: [r.to_dict() for r in data],
     )
+    absorptions: List[Resistance] = _PassiveEffect(
+        default=[],
+        stringifier=_abstract_list_attr("Absorbing"),
+        deserializer=lambda data: [Resistance.from_dict(r) for r in data],
+        serializer=lambda data: [r.to_dict() for r in data],
+    )
     ignored_resistances: List[Resistance] = _PassiveEffect(
         default=[],
         stringifier=_abstract_list_attr("Neutral"),
@@ -248,6 +254,7 @@ class InitPassiveEffect:
             resistances=[Resistance.from_str(v) for v in args.get("resist")],
             immunities=[Resistance.from_str(v) for v in args.get("immune")],
             vulnerabilities=[Resistance.from_str(v) for v in args.get("vuln")],
+            absorptions=[Resistance.from_str(v) for v in args.get("absorb")],
             ignored_resistances=[Resistance.from_str(v) for v in args.get("neutral")],
             ac_value=ac_value,
             ac_bonus=ac_bonus,

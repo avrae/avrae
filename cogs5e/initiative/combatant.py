@@ -101,17 +101,19 @@ class Combatant(BaseCombatant, StatBlock):
 
     def to_dict(self):
         d = super().to_dict()
-        d.update({
-            "controller_id": self.controller_id,
-            "init": self.init,
-            "private": self.is_private,
-            "index": self.index,
-            "notes": self.notes,
-            "effects": [e.to_dict() for e in self._effects],
-            "group_id": self._group_id,
-            "type": self.type.value,
-            "id": self.id,
-        })
+        d.update(
+            {
+                "controller_id": self.controller_id,
+                "init": self.init,
+                "private": self.is_private,
+                "index": self.index,
+                "notes": self.notes,
+                "effects": [e.to_dict() for e in self._effects],
+                "group_id": self._group_id,
+                "type": self.type.value,
+                "id": self.id,
+            }
+        )
         return d
 
     @property
@@ -214,6 +216,11 @@ class Combatant(BaseCombatant, StatBlock):
                 ),
                 neutral=self.active_effects(
                     mapper=lambda effect: effect.effects.ignored_resistances,
+                    reducer=lambda resists: list(itertools.chain(*resists)),
+                    default=[],
+                ),
+                absorb=self.active_effects(
+                    mapper=lambda effect: effect.effects.absorptions,
                     reducer=lambda resists: list(itertools.chain(*resists)),
                     default=[],
                 ),
@@ -491,6 +498,8 @@ class Combatant(BaseCombatant, StatBlock):
                 resist_str += "\n> Vulnerabilities: " + ", ".join([str(r) for r in self.resistances.vuln])
             if len(self.resistances.neutral) > 0:
                 resist_str += "\n> Ignored: " + ", ".join([str(r) for r in self.resistances.neutral])
+            if len(self.resistances.absorb) > 0:
+                resist_str += "\n> Absorbing: " + ", ".join([str(r) for r in self.resistances.absorb])
         return resist_str
 
     def __str__(self):

@@ -91,6 +91,7 @@ __Damage Types__
 *-resist <damage type>* - Gives the target resistance to the given damage type.
 *-immune <damage type>* - Gives the target immunity to the given damage type.
 *-vuln <damage type>* - Gives the target vulnerability to the given damage type.
+*-absorb <damage type>* - Gives the target absorption to the given damage type.
 *-neutral <damage type>* - Removes the target's immunity, resistance, or vulnerability to the given damage type.
 
 **Effects**

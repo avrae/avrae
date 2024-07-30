@@ -341,7 +341,9 @@ class AutomationTarget:
 
             if isinstance(self.target, init.Combatant):
                 if self.target.is_private:
-                    autoctx.add_pm(self.target.controller_id, f"{self.target.name}'s HP: {self.target.hp_str(True)}{delta_str}")
+                    autoctx.add_pm(
+                        self.target.controller_id, f"{self.target.name}'s HP: {self.target.hp_str(True)}{delta_str}"
+                    )
                     # don't reveal HP/temp delta breakdown in the footer.
                     if delta_str:
                         delta_str = f" ({total_delta:+})"

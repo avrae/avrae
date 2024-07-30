@@ -331,8 +331,8 @@ class AutomationTarget:
             if self.target.hp != initial_hp:
                 deltas.append(f"{self.target.hp - initial_hp:+}")
             total_delta = self.target.temp_hp + self.target.hp - initial_temp_hp - initial_hp
-            if amount != total_delta:
-                deltas.append(f"{abs(amount - total_delta)} overflow")
+            if -amount != total_delta:
+                deltas.append(f"{abs(amount + total_delta)} overflow")
 
             if deltas:
                 delta_str = f" ({', '.join(deltas)})"

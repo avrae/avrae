@@ -1109,7 +1109,7 @@ class InitTracker(commands.Cog):
         Rolls an attack against another combatant.
         __**Valid Arguments**__
         {VALID_AUTOMATION_ARGS}
-        custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+        custom - Modifier to indicate that the (arbitrarily-named) attack is custom, with custom to hit and damage values. Use `-b` and `-d` like this: `!init attack "pizza" custom -b 3 -d 1`
         """,
     )
     async def attack(self, ctx, atk_name=None, *, args=""):
@@ -1138,7 +1138,7 @@ class InitTracker(commands.Cog):
         Rolls an attack as another combatant.
         __**Valid Arguments**__
         {VALID_AUTOMATION_ARGS}
-        custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+        custom - Modifier to indicate that the (arbitrarily-named) attack is custom, with custom to hit and damage values. Use `-b` and `-d` like this: `!init attack "pizza" custom -b 3 -d 1`
         """,
     )
     async def aoo(self, ctx, combatant_name, atk_name=None, *, args=""):

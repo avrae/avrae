@@ -320,15 +320,39 @@ class AutomationTarget:
     def damage(self, autoctx: AutomationContext, amount: int, allow_overheal: bool = True):
         # add damage footer when we attack a Combatant
         if not self.is_simple:
+            initial_hp = self.target.hp
+            initial_temp_hp = self.target.temp_hp
             result = self.target.modify_hp(-amount, overflow=allow_overheal)
-            autoctx.footer_queue(f"{self.target.name}: {result}")
+            result_str = f"{self.target.name}: {result}"
+
+            deltas = []
+            if self.target.temp_hp != initial_temp_hp:
+                deltas.append(f"{self.target.temp_hp - initial_temp_hp:+} temp")
+            if self.target.hp != initial_hp:
+                deltas.append(f"{self.target.hp - initial_hp:+} HP")
+            total_delta = self.target.temp_hp + self.target.hp - initial_temp_hp - initial_hp
+            if -amount != total_delta:
+                deltas.append(f"{abs(amount + total_delta)} overflow")
+
+            if deltas:
+                delta_str = f" ({', '.join(deltas)})"
+            else:
+                delta_str = ""
 
             if isinstance(self.target, init.Combatant):
                 if self.target.is_private:
-                    autoctx.add_pm(self.target.controller_id, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
+                    autoctx.add_pm(
+                        self.target.controller_id, f"{self.target.name}'s HP: {self.target.hp_str(True)}{delta_str}"
+                    )
+                    # don't reveal HP/temp delta breakdown in the footer.
+                    if delta_str:
+                        delta_str = f" ({total_delta:+})"
 
                 if self.target.is_concentrating() and amount > 0:
                     autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
+
+            autoctx.footer_queue(result_str + delta_str)
+
         # for a non-init target, we still want to display that a damage node was run in the footer.
         else:
             autoctx.footer_queue(f"{self.target or '<No Target>'}: Dealt {amount} damage!")

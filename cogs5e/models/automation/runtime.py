@@ -320,16 +320,21 @@ class AutomationTarget:
     def damage(self, autoctx: AutomationContext, amount: int, allow_overheal: bool = True):
         # add damage footer when we attack a Combatant
         if not self.is_simple:
-            initial_hp = self.target.hp
-            initial_temp_hp = self.target.temp_hp
+            initial_hp = self.target.hp or 0
+            initial_temp_hp = self.target.temp_hp or 0
             result = self.target.modify_hp(-amount, overflow=allow_overheal)
             result_str = f"{self.target.name}: {result}"
 
             deltas = []
             if self.target.temp_hp != initial_temp_hp:
                 deltas.append(f"{self.target.temp_hp - initial_temp_hp:+} temp")
+
+            if self.target.hp is None:
+                return
+        
             if self.target.hp != initial_hp:
                 deltas.append(f"{self.target.hp - initial_hp:+} HP")
+
             total_delta = self.target.temp_hp + self.target.hp - initial_temp_hp - initial_hp
             if -amount != total_delta:
                 deltas.append(f"{abs(amount + total_delta)} overflow")

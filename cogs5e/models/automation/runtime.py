@@ -330,6 +330,7 @@ class AutomationTarget:
                 deltas.append(f"{self.target.temp_hp - initial_temp_hp:+} temp")
 
             if self.target.hp is None:
+                autoctx.footer_queue(f"{self.target or '<No Target>'}: Dealt {amount} damage!")
                 return
 
             if self.target.hp != initial_hp:

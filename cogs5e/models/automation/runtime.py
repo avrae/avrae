@@ -331,7 +331,7 @@ class AutomationTarget:
 
             if self.target.hp is None:
                 return
-        
+
             if self.target.hp != initial_hp:
                 deltas.append(f"{self.target.hp - initial_hp:+} HP")
 

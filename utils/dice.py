@@ -4,8 +4,8 @@ import d20
 class VerboseMDStringifier(d20.MarkdownStringifier):
     def _str_expression(self, node):
         if node.comment:
-            comment = node.comment.rstrip('\\')
-            
+            comment = node.comment.rstrip("\\")
+
             if len(comment) == 0:
                 comment = None
         else:

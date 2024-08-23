@@ -193,7 +193,7 @@ class Lookup(commands.Cog):
         )
         return await self._racefeat(ctx, result)
 
-    @slash_lookup.sub_command(name="racefeat", description="Looks up a species feature.", aliases=["speciesfeat"])
+    @slash_lookup.sub_command(name="racefeat", description="Looks up a species feature.")
     async def slash_racefeat(
         self,
         inter: disnake.ApplicationCommandInteraction,
@@ -221,6 +221,34 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
+    @slash_lookup.sub_command(name="speciesfeat", description="Looks up a species feature.")
+    async def slash_speciesfeat(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: RaceFeature = commands.Param(
+            description="The species feature you want to look up", converter=lookup_converter("racefeat")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Species feature not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["subrace"])
+        return await self._racefeat(inter, name)
+
+    @slash_speciesfeat.autocomplete("name")
+    async def slash_speciesfeat_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in ("race", "subrace")
+        }
+        select_key = create_selectkey(available_ids)
+
+        result, strict = search(compendium.rfeats + compendium.subrfeats, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
     async def _racefeat(self, ctx, result: RaceFeature):
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
@@ -238,7 +266,7 @@ class Lookup(commands.Cog):
         )
         return await self._race(ctx, result)
 
-    @slash_lookup.sub_command(name="race", description="Looks up a race.", aliases=["species"])
+    @slash_lookup.sub_command(name="race", description="Looks up a race.")
     async def slash_race(
         self,
         inter: disnake.ApplicationCommandInteraction,
@@ -256,6 +284,34 @@ class Lookup(commands.Cog):
 
     @slash_race.autocomplete("name")
     async def slash_race_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in ("race", "subrace")
+        }
+        select_key = create_selectkey(available_ids)
+
+        result, strict = search(compendium.races + compendium.subraces, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    @slash_lookup.sub_command(name="species", description="Looks up a species.")
+    async def slash_species(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.race = commands.Param(
+            description="The species you want to look up", converter=lookup_converter("race")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Species not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["race", "subrace"])
+        return await self._race(inter, name)
+
+    @slash_species.autocomplete("name")
+    async def slash_species_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         available_ids = {
             k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in ("race", "subrace")
         }

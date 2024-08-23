@@ -185,25 +185,25 @@ class Lookup(commands.Cog):
         await destination.send(embed=embed)
 
     # ==== races / racefeats ====
-    @commands.command()
+    @commands.command(aliases=["speciesfeat"])
     async def racefeat(self, ctx, *, name: str):
-        """Looks up a racial feature."""
+        """Looks up a species feature."""
         result: RaceFeature = await lookuputils.search_entities(
             ctx, {"race": compendium.rfeats, "subrace": compendium.subrfeats}, name, "racefeat"
         )
         return await self._racefeat(ctx, result)
 
-    @slash_lookup.sub_command(name="racefeat", description="Looks up a racial feature.")
+    @slash_lookup.sub_command(name="racefeat", description="Looks up a species feature.", aliases=["speciesfeat"])
     async def slash_racefeat(
         self,
         inter: disnake.ApplicationCommandInteraction,
         name: RaceFeature = commands.Param(
-            description="The racial feature you want to look up", converter=lookup_converter("racefeat")
+            description="The species feature you want to look up", converter=lookup_converter("racefeat")
         ),
     ):
         if isinstance(name, list):
             if not name:
-                await inter.send("Racial feature not found.", ephemeral=True)
+                await inter.send("Species feature not found.", ephemeral=True)
                 return
             name = name[0]
         await self._check_access(inter, name, ["race", "subrace"])
@@ -227,28 +227,28 @@ class Lookup(commands.Cog):
         embed.title = result.name
         embed.url = result.url
         set_maybe_long_desc(embed, result.text)
-        lookuputils.handle_source_footer(embed, result, "Race Feature")
+        lookuputils.handle_source_footer(embed, result, "Species Feature")
         await destination.send(embed=embed)
 
-    @commands.command()
+    @commands.command(aliases=["species"])
     async def race(self, ctx, *, name: str):
-        """Looks up a race."""
+        """Looks up a species."""
         result: gamedata.Race = await lookuputils.search_entities(
             ctx, {"race": compendium.races, "subrace": compendium.subraces}, name, "race"
         )
         return await self._race(ctx, result)
 
-    @slash_lookup.sub_command(name="race", description="Looks up a race.")
+    @slash_lookup.sub_command(name="race", description="Looks up a race.", aliases=["species"])
     async def slash_race(
         self,
         inter: disnake.ApplicationCommandInteraction,
         name: gamedata.race = commands.Param(
-            description="The race you want to look up", converter=lookup_converter("race")
+            description="The species you want to look up", converter=lookup_converter("race")
         ),
     ):
         if isinstance(name, list):
             if not name:
-                await inter.send("Race not found.", ephemeral=True)
+                await inter.send("Species not found.", ephemeral=True)
                 return
             name = name[0]
         await self._check_access(inter, name, ["race", "subrace"])
@@ -275,7 +275,7 @@ class Lookup(commands.Cog):
         embed.add_field(name="Size", value=result.size)
         for t in result.traits:
             add_fields_from_long_text(embed, t.name, t.text)
-        lookuputils.handle_source_footer(embed, result, "Race")
+        lookuputils.handle_source_footer(embed, result, "Species")
         await destination.send(embed=embed)
 
     # ==== classes / classfeats ====

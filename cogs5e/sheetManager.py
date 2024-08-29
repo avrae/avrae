@@ -900,6 +900,12 @@ class SheetManager(commands.Cog):
             try:
                 url = extract_gsheet_id_from_url(url)
             except ExternalImportError:
+                if re.match(
+                    r"https?://(?:www\.)?bestiarybuilder.com/bestiary-viewer/([0-9a-f]+)", url) 
+                or re.match(
+                    r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", url
+                ):
+                    return await ctx.send("Bestiaries must be imported with the `!bestiary import` command.")
                 return await ctx.send("Sheet type did not match accepted formats.")
             loading = await ctx.send("Loading character data from Google...")
             prefix = "google"

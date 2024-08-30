@@ -353,6 +353,16 @@ class AdminUtils(commands.Cog):
         resp = await self.pscall("kill_cluster", kwargs={"cluster_id": cluster_id}, expected_replies=1)
         await self._send_replies(ctx, resp)
 
+    @admin.command(hidden=True, name="register_commands")
+    @checks.is_owner()
+    async def registerslash(self, ctx):
+        """Registers all slash commands."""
+        try:
+            await self.bot._sync_application_commands()
+            await ctx.send("Registered slash commands succesfully.")
+        except Exception as e:
+            await ctx.send(f"Error registering slash commands: {e}")
+
     # ---- workshop ----
     @admin.group(name="workshop", invoke_without_command=True)
     @checks.is_owner()

@@ -365,7 +365,6 @@ class AdminUtils(commands.Cog):
         except Exception as e:
             await ctx.send(f"Error registering slash commands: {e}")
 
-
     # ---- workshop ----
     @admin.group(name="workshop", invoke_without_command=True)
     @checks.is_owner()

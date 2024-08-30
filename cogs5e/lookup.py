@@ -93,7 +93,7 @@ class Lookup(commands.Cog):
 
         if name:
             version = name.split()[-1] if name.split()[-1] in valid_versions else "2024"
-            name = name.replace(version, "") if name.split()[-1] in valid_versions else name
+            name = name.replace(version, "").strip() if name.split()[-1] in valid_versions else name
         else:
             version = "2024"
 

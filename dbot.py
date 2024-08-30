@@ -169,7 +169,7 @@ class Avrae(commands.AutoShardedBot):
 
         # if we are cluster 0, we are responsible for handling application command sync
         if self.is_cluster_0:
-            self._sync_commands = True
+            self._command_sync_flags.sync_commands = True
 
         # release lock and launch
         await super().launch_shards()

@@ -344,15 +344,6 @@ class Lookup(commands.Cog):
         lookuputils.handle_source_footer(embed, result, "Species")
         await destination.send(embed=embed)
 
-    @commands.command()
-    async def kevin(self, ctx):
-        """Test command, prints 'Kevin is a good bot'."""
-        await ctx.send("Kevin is a good bot.")
-
-    @slash_lookup.sub_command(name="kevin", description="Test command, prints 'Kevin is a good bot'.")
-    async def slash_kevin(self, inter: disnake.ApplicationCommandInteraction):
-        await inter.send("Kevin is a good bot.")
-
     # ==== classes / classfeats ====
     @commands.command()
     async def classfeat(self, ctx, *, name: str):

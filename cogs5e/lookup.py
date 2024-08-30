@@ -112,8 +112,6 @@ class Lookup(commands.Cog):
 
         return await self._rule(ctx, result, version)
 
-    # test command to mimic the !reference command with mocked data
-
     @slash_lookup.sub_command(name="rule", description="Looks up a rule or condition.")
     async def slash_rule(
         self,
@@ -132,7 +130,33 @@ class Lookup(commands.Cog):
     @slash_rule.autocomplete("name")
     async def slash_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         choices = []
-        for actiontype in compendium.rule_references:
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2024" or "version" not in a):
+            choices.extend(actiontype["items"])
+
+        result, strict = search(choices, user_input, lambda e: e["fullName"], 25)
+        if strict:
+            return [result["fullName"]]
+        return [r["fullName"] for r in result][:25]
+
+    @slash_lookup.sub_command(name="rules2014", description="Looks up a 2014 rule.")
+    async def slash_2014_rule(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name=commands.Param(
+            description="The rule or condition you want to look up", converter=lookup_converter("rule2014")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Rule not found.", ephemeral=True)
+                return
+            name = name[0]
+        return await self._rule(inter, name, "2014")
+
+    @slash_2014_rule.autocomplete("name")
+    async def slash_2014_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        choices = []
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2014" or "version" not in a):
             choices.extend(actiontype["items"])
 
         result, strict = search(choices, user_input, lambda e: e["fullName"], 25)
@@ -343,15 +367,6 @@ class Lookup(commands.Cog):
             add_fields_from_long_text(embed, t.name, t.text)
         lookuputils.handle_source_footer(embed, result, "Species")
         await destination.send(embed=embed)
-
-    @commands.command()
-    async def kevin(self, ctx):
-        """Test command, prints 'Kevin is a good bot'."""
-        await ctx.send("Kevin is a good bot.")
-
-    @slash_lookup.sub_command(name="kevin", description="Test command, prints 'Kevin is a good bot'.")
-    async def slash_kevin(self, inter: disnake.ApplicationCommandInteraction):
-        await inter.send("Kevin is a good bot.")
 
     # ==== classes / classfeats ====
     @commands.command()

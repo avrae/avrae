@@ -119,7 +119,7 @@ class Avrae(commands.AutoShardedBot):
         self.glclient.init()
 
     async def setup_rdb(self):
-        return RedisIO(await redis.from_url(url=config.REDIS_URL, health_check_interval=30))
+        return RedisIO(await redis.from_url(url=config.REDIS_URL, health_check_interval=60))
 
     async def get_guild_prefix(self, guild: disnake.Guild) -> str:
         guild_id = str(guild.id)

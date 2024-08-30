@@ -268,7 +268,16 @@ def lookup_converter(entity_type: str) -> Callable:
 
     def rule_converter(_: disnake.ApplicationCommandInteraction, arg: str):
         choices = []
-        for actiontype in compendium.rule_references:
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2024" or "version" not in a):
+            choices.extend(actiontype["items"])
+        result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
+        if result is None:
+            raise ValueError("That rule doesn't exist")
+        return result
+
+    def rule2014_converter(_: disnake.ApplicationCommandInteraction, arg: str):
+        choices = []
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2014" or "version" not in a):
             choices.extend(actiontype["items"])
         result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
         if result is None:
@@ -340,6 +349,8 @@ def lookup_converter(entity_type: str) -> Callable:
             return subclass_converter
         case "classfeat":
             return classfeat_converter
+        case "rule2014":
+            return rule2014_converter
         case _:
             raise ValueError("That converter does not exist")
 

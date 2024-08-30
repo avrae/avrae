@@ -48,13 +48,13 @@ class Lookup(commands.Cog):
             raise commands.CommandNotFound
 
     # ==== rules/references ====
-    async def _show_reference_options(self, ctx):
+    async def _show_reference_options(self, ctx, version="2024"):
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = "Rules"
-        categories = ", ".join(a["type"] for a in compendium.rule_references)
+        categories = ", ".join(a["type"] for a in compendium.rule_references if a["version"] == version)
         embed.description = (
-            f"Use `{ctx.prefix}{ctx.invoked_with} <category>` to look at all actions of "
+            f"Use `{ctx.prefix}{ctx.invoked_with} <category> <version(defaults to 2024)>` to look at all actions of "
             f"a certain type.\nCategories: {categories}"
         )
 
@@ -89,11 +89,19 @@ class Lookup(commands.Cog):
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
+        valid_versions = [ "2024", "2014"] #TODO: move to a global variable
+
+        if name:
+            version = name.split()[-1] if name.split()[-1] in valid_versions else "2024"
+            name = name.replace(version, "") if name.split()[-1] in valid_versions else name
+        else:
+            version = "2024"
+
         if name is None:
             return await self._show_reference_options(ctx)
 
         options = []
-        for actiontype in compendium.rule_references:
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == version or "version" not in a):
             if name == actiontype["type"]:
                 return await self._show_action_options(ctx, actiontype)
             else:
@@ -102,7 +110,9 @@ class Lookup(commands.Cog):
         result, metadata = await search_and_select(ctx, options, name, lambda e: e["fullName"], return_metadata=True)
         await lookuputils.add_training_data(self.bot.mdb, "reference", name, result["fullName"], metadata=metadata)
 
-        return await self._rule(ctx, result)
+        return await self._rule(ctx, result, version)
+
+    # test command to mimic the !reference command with mocked data
 
     @slash_lookup.sub_command(name="rule", description="Looks up a rule or condition.")
     async def slash_rule(
@@ -130,13 +140,13 @@ class Lookup(commands.Cog):
             return [result["fullName"]]
         return [r["fullName"] for r in result][:25]
 
-    async def _rule(self, ctx, rule):
+    async def _rule(self, ctx, rule, version="2024"):
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = rule["fullName"]
         embed.description = f"*{rule['short']}*"
         add_fields_from_long_text(embed, "Description", rule["desc"])
-        embed.set_footer(text=f"Rule | {rule['source']}")
+        embed.set_footer(text=f"Rule | {rule['source']} | {version}")
 
         await destination.send(embed=embed)
 
@@ -333,6 +343,15 @@ class Lookup(commands.Cog):
             add_fields_from_long_text(embed, t.name, t.text)
         lookuputils.handle_source_footer(embed, result, "Species")
         await destination.send(embed=embed)
+
+    @commands.command()
+    async def kevin(self, ctx):
+        """Test command, prints 'Kevin is a good bot'."""
+        await ctx.send("Kevin is a good bot.")
+
+    @slash_lookup.sub_command(name="kevin", description="Test command, prints 'Kevin is a good bot'.")
+    async def slash_kevin(self, inter: disnake.ApplicationCommandInteraction):
+        await inter.send("Kevin is a good bot.")
 
     # ==== classes / classfeats ====
     @commands.command()

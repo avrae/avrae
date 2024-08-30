@@ -355,11 +355,13 @@ class AdminUtils(commands.Cog):
 
     @admin.command(hidden=True, name="register_commands")
     @checks.is_owner()
-    async def registerslash(self, ctx):
+    async def register_slash(self, ctx):
         """Registers all slash commands."""
         try:
+            self.bot._command_sync_flags.sync_commands = True
             await self.bot._sync_application_commands()
             await ctx.send("Registered slash commands succesfully.")
+            self.bot._command_sync_flags.sync_commands = False
         except Exception as e:
             await ctx.send(f"Error registering slash commands: {e}")
 

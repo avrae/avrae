@@ -89,7 +89,7 @@ class Lookup(commands.Cog):
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
-        valid_versions = [ "2024", "2014"] #TODO: move to a global variable
+        valid_versions = ["2024", "2014"]  # TODO: move to a global variable
 
         if name:
             version = name.split()[-1] if name.split()[-1] in valid_versions else "2024"

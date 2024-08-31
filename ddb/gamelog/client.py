@@ -32,13 +32,15 @@ class GameLogClient(BaseClient):
         self.ddb = bot.ddb  # type: ddb.BeyondClient
         self.rdb = bot.rdb
         self.loop = bot.loop
+        self.gl_task = None
         self._event_handlers = {}
 
     def init(self):
-        self.loop.create_task(self.main_loop())
+        self.gl_task = self.loop.create_task(self.main_loop())
 
     async def close(self):
         await self.http.close()
+        self.gl_task.cancel()
 
     # ==== campaign helpers ====
     async def create_campaign_link(self, ctx, campaign_id: str, overwrite=False):

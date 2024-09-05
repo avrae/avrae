@@ -1,7 +1,7 @@
 import d20
 
 from cogs5e.models.errors import InvalidSaveType
-from utils import enums
+from utils.enums import AdvantageType
 from utils.functions import maybe_mod, reconcile_adv, verbose_stat
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
@@ -10,7 +10,7 @@ from ..utils import stringify_intexpr
 
 
 class Save(Effect):
-    def __init__(self, stat: str, fail: list, success: list, dc: str = None, adv: enums.AdvantageType = None, **kwargs):
+    def __init__(self, stat: str, fail: list, success: list, dc: str = None, adv: str = None, **kwargs):
         super().__init__("save", **kwargs)
         self.stat = stat
         self.fail = fail
@@ -22,8 +22,6 @@ class Save(Effect):
     def from_data(cls, data):
         data["fail"] = Effect.deserialize(data["fail"])
         data["success"] = Effect.deserialize(data["success"])
-        if data.get("adv") is not None:
-            data["adv"] = enums.AdvantageType(data["adv"])
         return super().from_data(data)
 
     def to_dict(self):
@@ -34,7 +32,7 @@ class Save(Effect):
         if self.dc is not None:
             out["dc"] = self.dc
         if self.adv is not None:
-            out["adv"] = self.adv.value
+            out["adv"] = self.adv
         return out
 
     def run(self, autoctx):
@@ -107,9 +105,18 @@ class Save(Effect):
         sdis = stat in sdis_effects
 
         # ==== adv ====
+
+        # explicit advantage
+        explicit_adv = None
+        if self.adv:
+            try:
+                explicit_adv = autoctx.parse_intexpression(self.adv)
+            except Exception:
+                raise AutomationException(f"{self.adv!r} cannot be interpreted as an advantage type.")
+
         adv = reconcile_adv(
-            adv=autoctx.args.last("sadv", type_=bool, ephem=True) or sadv or self.adv == enums.AdvantageType.ADV,
-            dis=autoctx.args.last("sdis", type_=bool, ephem=True) or sdis or self.adv == enums.AdvantageType.DIS,
+            adv=autoctx.args.last("sadv", type_=bool, ephem=True) or sadv or explicit_adv == AdvantageType.ADV,
+            dis=autoctx.args.last("sdis", type_=bool, ephem=True) or sdis or explicit_adv == AdvantageType.DIS,
         )
 
         # ==== execution ====
@@ -180,6 +187,12 @@ class Save(Effect):
             dc = stringify_intexpr(evaluator, self.dc)
 
         out = f"DC {dc} {self.stat[:3].upper()} Save"
+        if self.adv:
+            match stringify_intexpr(evaluator, self.adv):
+                case AdvantageType.ADV:
+                    out += ", with advantage"
+                case AdvantageType.DIS:
+                    out += ", with disdvantage"
         if self.fail:
             fail_out = self.build_child_str(self.fail, caster, evaluator)
             if fail_out:

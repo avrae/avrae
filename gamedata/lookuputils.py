@@ -11,6 +11,7 @@ from typing import Dict, List, TYPE_CHECKING, TypeVar, Callable
 import disnake
 
 import gamedata
+from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew, RequiresLicense
 from cogs5e.models.homebrew import Pack, Tome
@@ -480,7 +481,15 @@ async def get_spell_choices(ctx, homebrew=True):
     :param homebrew: Whether to include homebrew entities.
     """
     if not homebrew:
-        return compendium.spells
+        # return compendium.spells
+        character: Character = await ctx.get_character()
+        version = character.options.version
+        if version == "2024":
+            return [spell for spell in compendium.spells if spell.source == "PHB-2024" or spell.source == "free-rules"]
+        elif version == "2014":
+            return [spell for spell in compendium.spells if spell.source == "PHB" or spell.source == "BR"]
+        else:
+            return compendium.spells
 
     # personal active tome
     try:

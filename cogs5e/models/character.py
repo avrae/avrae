@@ -604,7 +604,8 @@ class Character(StatBlock):
         """Adds a spell to the character's known spell list."""
         if spell.name in self.spellbook:
             raise InvalidArgument("You already know this spell.")
-        sbs = SpellbookSpell.from_spell(spell, dc, sab, mod)
+        sbs = SpellbookSpell.from_spell(spell, dc, sab, mod, self.options.version)
+        
         self.spellbook.spells.append(sbs)
         self.overrides.spells.append(sbs)
 

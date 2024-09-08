@@ -115,7 +115,8 @@ class CharacterSettingsUI(CharacterSettingsMenuBase):
                 f"**Reroll**: {self.settings.reroll}\n"
                 f"**Ignore Crits**: {self.settings.ignore_crit}\n"
                 f"**Reliable Talent**: {self.settings.talent}\n"
-                f"**Reset All Spell Slots on Short Rest**: {self.settings.srslots}"
+                f"**Reset All Spell Slots on Short Rest**: {self.settings.srslots}\n"
+                f"**Version**: {self.settings.version}"
             ),
             inline=False,
         )
@@ -287,6 +288,16 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(CharacterSettingsUI, interaction)
 
+    # Switch between 2014 and 2024 version from character.py Gameplay Settings
+    @disnake.ui.button(label="Switch version", style=disnake.ButtonStyle.primary, row=3)
+    async def switch_version(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        if self.settings.version == "2024":
+            self.settings.version = "2014"
+        else:
+            self.settings.version = "2024"
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
     async def get_content(self):
         embed = embeds.EmbedWithCharacter(
             self.character, title=f"Character Settings ({self.character.name}) / Gameplay Settings"
@@ -345,6 +356,14 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
                 f"**{self.settings.srslots}**\n"
                 "*If this is enabled, all of your spell slots (including non-pact slots) will reset on a short "
                 f"rest.{sr_slot_note}*"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="D&D 5e Version",
+            value=(
+            f"**{self.settings.version}**\n"
+            "*Toggle the version of D&D 5e rules you want to use.*"
             ),
             inline=False,
         )

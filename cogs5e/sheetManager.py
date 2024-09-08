@@ -38,7 +38,7 @@ from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.enums import ActivationType
 from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title, chunk_text
-from utils.settings.character import CHARACTER_SETTINGS
+from utils.settings.character import CHARACTER_SETTINGS, CSetting
 
 log = logging.getLogger(__name__)
 DELETE_AFTER_SECONDS = 20
@@ -842,7 +842,7 @@ class SheetManager(commands.Cog):
 
     @commands.command(name="import")
     @commands.max_concurrency(1, BucketType.user)
-    async def import_sheet(self, ctx, url: str, *, args=""):
+    async def import_sheet(self, ctx, url: str, version: str = "2024", *, args=""):
         """
         Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
@@ -918,6 +918,11 @@ class SheetManager(commands.Cog):
         character = await self._load_sheet(ctx, parser, args, loading)
         if character and beyond_match:
             await send_ddb_ctas(ctx, character)
+
+        # Update charsetting based on the version argument
+        character.options.version = version
+        await character.options.commit(ctx.bot.mdb, character)
+
 
     @commands.command(hidden=True, aliases=["gsheet", "dicecloud"])
     @commands.max_concurrency(1, BucketType.user)

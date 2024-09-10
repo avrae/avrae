@@ -491,6 +491,17 @@ async def get_spell_choices(ctx, homebrew=True):
         else:
             return compendium.spells
 
+    # This is ugly, but we don't want to change the compendium at this moment
+    # Instead of appending the compendium.spells to the choices list, we append the spells that the character settings
+    character: Character = await ctx.get_character()
+    version = character.options.version
+    if version == "2024":
+        compendium_list = [spell for spell in compendium.spells if spell.source == "PHB-2024" or spell.source == "free-rules"]
+    elif version == "2014":
+        compendium_list = [spell for spell in compendium.spells if spell.source == "PHB" or spell.source == "BR"]
+    else:
+        compendium_list = compendium.spells
+
     # personal active tome
     try:
         tome = await Tome.from_ctx(ctx)
@@ -501,7 +512,7 @@ async def get_spell_choices(ctx, homebrew=True):
         tome_id = None
 
     # server tomes
-    choices = list(itertools.chain(compendium.spells, custom_spells))
+    choices = list(itertools.chain(compendium_list, custom_spells)) # replace compendium.spells with compendium_list
     if ctx.guild:
         async for servtome in Tome.server_active(ctx):
             if servtome.id != tome_id:

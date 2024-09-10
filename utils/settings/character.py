@@ -25,7 +25,7 @@ class CharacterSettings(SettingsBaseModel):
     talent: bool = False
     srslots: bool = False
     autoconvert_coins: CoinsAutoConvert = CoinsAutoConvert.ASK
-    version: str = "2024" # Versions: 2024(Free Rules/PHB 2024) or 2014(BR/PHB 2014)
+    version: str = "2024"  # Versions: 2024(Free Rules/PHB 2024) or 2014(BR/PHB 2014)
 
     # character sync
     sync_outbound: bool = True  # avrae to upstream

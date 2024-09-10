@@ -361,10 +361,7 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
         )
         embed.add_field(
             name="D&D 5e Version",
-            value=(
-            f"**{self.settings.version}**\n"
-            "*Toggle the version of D&D 5e rules you want to use.*"
-            ),
+            value=(f"**{self.settings.version}**\n" "*Toggle the version of D&D 5e rules you want to use.*"),
             inline=False,
         )
         return {"embed": embed}

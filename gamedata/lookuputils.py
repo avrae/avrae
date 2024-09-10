@@ -496,7 +496,9 @@ async def get_spell_choices(ctx, homebrew=True):
     character: Character = await ctx.get_character()
     version = character.options.version
     if version == "2024":
-        compendium_list = [spell for spell in compendium.spells if spell.source == "PHB-2024" or spell.source == "free-rules"]
+        compendium_list = [
+            spell for spell in compendium.spells if spell.source == "PHB-2024" or spell.source == "free-rules"
+        ]
     elif version == "2014":
         compendium_list = [spell for spell in compendium.spells if spell.source == "PHB" or spell.source == "BR"]
     else:
@@ -512,7 +514,7 @@ async def get_spell_choices(ctx, homebrew=True):
         tome_id = None
 
     # server tomes
-    choices = list(itertools.chain(compendium_list, custom_spells)) # replace compendium.spells with compendium_list
+    choices = list(itertools.chain(compendium_list, custom_spells))  # replace compendium.spells with compendium_list
     if ctx.guild:
         async for servtome in Tome.server_active(ctx):
             if servtome.id != tome_id:

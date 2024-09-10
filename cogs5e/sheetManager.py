@@ -919,7 +919,6 @@ class SheetManager(commands.Cog):
         if character and beyond_match:
             await send_ddb_ctas(ctx, character)
 
-
     @commands.command(hidden=True, aliases=["gsheet", "dicecloud"])
     @commands.max_concurrency(1, BucketType.user)
     async def beyond(self, ctx, url: str, *, args=""):

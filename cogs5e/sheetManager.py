@@ -915,13 +915,9 @@ class SheetManager(commands.Cog):
             return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         # Load the parsed sheet
-        character = await self._load_sheet(ctx, parser, args, loading)
+        character = await self._load_sheet(ctx, parser, args, loading, version)
         if character and beyond_match:
             await send_ddb_ctas(ctx, character)
-
-        # Update charsetting based on the version argument
-        character.options.version = version
-        await character.options.commit(ctx.bot.mdb, character)
 
 
     @commands.command(hidden=True, aliases=["gsheet", "dicecloud"])
@@ -933,7 +929,7 @@ class SheetManager(commands.Cog):
         await self.import_sheet(ctx, url, args=args)
 
     @staticmethod
-    async def _load_sheet(ctx, parser, args, loading):
+    async def _load_sheet(ctx, parser, args, loading, version):
         try:
             character = await parser.load_character(ctx, argparse(args))
         except ExternalImportError as eep:
@@ -946,6 +942,9 @@ class SheetManager(commands.Cog):
             return
 
         await loading.edit(content=f"Loaded and saved data for {character.name}!")
+
+        # Update charsetting based on the version argument
+        character.options.version = version
 
         await character.commit(ctx)
         await character.set_active(ctx)

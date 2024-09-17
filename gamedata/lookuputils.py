@@ -480,29 +480,26 @@ async def get_spell_choices(ctx, homebrew=True):
     :param ctx: The context.
     :param homebrew: Whether to include homebrew entities.
     """
-    if not homebrew:
-        # return compendium.spells
-        character: Character = await ctx.get_character()
-        version = character.options.version
-        if version == "2024":
-            return [spell for spell in compendium.spells if spell.source == "PHB-2024" or spell.source == "free-rules"]
-        elif version == "2014":
-            return [spell for spell in compendium.spells if spell.source == "PHB" or spell.source == "BR"]
-        else:
-            return compendium.spells
 
-    # This is ugly, but we don't want to change the compendium at this moment
-    # Instead of appending the compendium.spells to the choices list, we append the spells that the character settings
     character: Character = await ctx.get_character()
     version = character.options.version
-    if version == "2024":
+
+    if not homebrew:
+        # return compendium.spells
+        if version is None:
+            return [spell for spell in compendium.spells if spell.rulesVersion == "2024"]
+        else:
+            # return compendium.spells
+            return [spell for spell in compendium.spells if spell.rulesVersion == version]
+
+    
+    if version is None:
         compendium_list = [
-            spell for spell in compendium.spells if spell.source == "PHB-2024" or spell.source == "free-rules"
+            spell for spell in compendium.spells if spell.rulesVersion == "2024"
         ]
-    elif version == "2014":
-        compendium_list = [spell for spell in compendium.spells if spell.source == "PHB" or spell.source == "BR"]
     else:
-        compendium_list = compendium.spells
+        # compendium_list = compendium.spells
+        compendium_list = [spell for spell in compendium.spells if spell.rulesVersion == version]
 
     # personal active tome
     try:

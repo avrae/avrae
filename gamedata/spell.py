@@ -28,7 +28,6 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         higherlevels: str = None,
         concentration: bool = False,
         image: str = None,
-        rulesVersion: str = None,
         **kwargs,
     ):
         if classes is None:
@@ -56,7 +55,6 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         self.higherlevels = higherlevels
         self.concentration = concentration
         self.image = image
-        self.rulesVersion = rulesVersion
 
         if self.concentration and "Concentration" not in self.duration:
             self.duration = f"Concentration, up to {self.duration}"
@@ -72,7 +70,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             d["components"],
             d["duration"],
             d["description"],
-            d["rulesVersion"],
+            rulesVersion=d["rulesVersion"],
             homebrew=False,
             classes=d["classes"],
             subclasses=d["subclasses"],

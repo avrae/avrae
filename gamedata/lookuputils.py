@@ -482,12 +482,12 @@ async def get_spell_choices(ctx, homebrew=True):
     """
 
     character: Character = await ctx.get_character()
-    version = character.options.version
+    version = character.options.version if character.options.version else "2024" # default to 2024 if no version is set
 
     if not homebrew:
         # return compendium.spells
         if version is None:
-            return [spell for spell in compendium.spells if spell.rulesVersion == "2024"]
+            return [spell for spell in compendium.spells]
         else:
             # return compendium.spells
             return [spell for spell in compendium.spells if spell.rulesVersion == version]
@@ -495,7 +495,7 @@ async def get_spell_choices(ctx, homebrew=True):
     
     if version is None:
         compendium_list = [
-            spell for spell in compendium.spells if spell.rulesVersion == "2024"
+            spell for spell in compendium.spells
         ]
     else:
         # compendium_list = compendium.spells

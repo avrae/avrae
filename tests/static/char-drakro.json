@@ -274,7 +274,9 @@
   "temp_hp": 0,
   "cvars": {},
   "options": {
-    "options": {}
+    "options": {
+      "version": "2024"
+    }
   },
   "overrides": {
     "desc": null,

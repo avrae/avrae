@@ -283,9 +283,10 @@ class BeyondSheetParser(SheetLoaderABC):
             result = compendium.lookup_entity(gamedata.Spell.entity_type, spell["id"])
 
             if result:
-                spells.append(
-                    SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared)
-                )
+                if result.name not in [spell.name for spell in spells]:
+                    spells.append(
+                        SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared)
+                    )
             else:
                 spells.append(
                     SpellbookSpell(

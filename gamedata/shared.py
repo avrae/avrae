@@ -22,6 +22,7 @@ class Sourced(abc.ABC):
         entitlement_entity_type: str = None,
         entitlement_entity_id: int = None,
         limited_use_only: bool = False,
+        rulesVersion: str = None,
     ):
         """
         :param homebrew: Whether or not this entity is homebrew.
@@ -45,6 +46,7 @@ class Sourced(abc.ABC):
         self.entitlement_entity_type = entitlement_entity_type or self.entity_type
         self.entitlement_entity_id = entitlement_entity_id or entity_id
         self.limited_use_only = limited_use_only
+        self.rulesVersion = rulesVersion
 
     @classmethod
     def lookup(cls, entity_id: int):

@@ -25,6 +25,7 @@ class CharacterSettings(SettingsBaseModel):
     talent: bool = False
     srslots: bool = False
     autoconvert_coins: CoinsAutoConvert = CoinsAutoConvert.ASK
+    version: str = "2024"  # Versions: 2024(Free Rules/PHB 2024) or 2014(BR/PHB 2014)
 
     # character sync
     sync_outbound: bool = True  # avrae to upstream
@@ -188,5 +189,12 @@ CHARACTER_SETTINGS = {
         ),
         default="ask everytime",
         display_func=lambda val: "ask everytime" if val == 0 else "always convert" if val == 1 else "never convert",
+    ),
+    "version": CSetting(
+        "version",
+        "number",
+        description="version of the ruleset to use",
+        default="2024",
+        display_func=lambda val: "2024" if val == 2024 else "2014",
     ),
 }

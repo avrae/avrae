@@ -41,6 +41,7 @@
       }
     ],
     "source": "BR",
+    "rulesVersion": "2014",
     "page": 242,
     "id": 2103,
     "url": "https://www.dndbeyond.com/spells/fire-bolt",
@@ -112,6 +113,7 @@
       }
     ],
     "source": "BR",
+    "rulesVersion": "2014",
     "page": 241,
     "id": 2102,
     "url": "https://www.dndbeyond.com/spells/fireball",
@@ -159,6 +161,175 @@
       }
     ],
     "source": "BR",
+    "rulesVersion": "2014",
+    "page": 242,
+    "id": -2103,
+    "url": "https://www.dndbeyond.com/spells/fire-bolt",
+    "isFree": false
+  },
+  {
+    "name": "Fire Bolt",
+    "level": 0,
+    "school": "Evocation",
+    "classes": [
+      "Sorcerer",
+      "Wizard",
+      "Artificer"
+    ],
+    "subclasses": [],
+    "casttime": "1 action",
+    "range": "120 feet",
+    "components": "V, S",
+    "duration": "Instantaneous",
+    "description": "You hurl a mote of fire at a creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried.\n\nThis spell's damage increases by 1d10 when you reach 5th level (2d10), 11th level (3d10), and 17th level (4d10).",
+    "ritual": false,
+    "higherlevels": null,
+    "concentration": false,
+    "automation": [
+      {
+        "type": "target",
+        "target": "each",
+        "effects": [
+          {
+            "type": "attack",
+            "hit": [
+              {
+                "type": "damage",
+                "damage": "1d10[fire]",
+                "cantripScale": true
+              }
+            ],
+            "miss": []
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried."
+      }
+    ],
+    "source": "free-rules",
+    "rulesVersion": "2024",
+    "page": 242,
+    "id": 2103,
+    "url": "https://www.dndbeyond.com/spells/fire-bolt",
+    "isFree": true
+  },
+  {
+    "name": "Fireball",
+    "level": 3,
+    "school": "Evocation",
+    "classes": [
+      "Sorcerer",
+      "Wizard"
+    ],
+    "subclasses": [
+      "Light Domain",
+      "Circle of Wildfire (UA)",
+      "The Fiend",
+      "Artillerist"
+    ],
+    "casttime": "1 action",
+    "range": "150 feet (20 ft. sphere)",
+    "components": "V, S, M (a tiny ball of bat guano and sulfur)",
+    "duration": "Instantaneous",
+    "description": "A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot-radius sphere centered on that point must make a Dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one.\n\nThe fire spreads around corners. It ignites flammable objects in the area that aren't being worn or carried.",
+    "ritual": false,
+    "higherlevels": "When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd.",
+    "concentration": false,
+    "automation": [
+      {
+        "type": "target",
+        "target": "all",
+        "effects": [
+          {
+            "type": "save",
+            "stat": "dex",
+            "fail": [
+              {
+                "type": "damage",
+                "damage": "{damage}"
+              }
+            ],
+            "success": [
+              {
+                "type": "damage",
+                "damage": "({damage})/2"
+              }
+            ]
+          }
+        ],
+        "meta": [
+          {
+            "type": "roll",
+            "dice": "8d6[fire]",
+            "name": "damage",
+            "higher": {
+              "4": "1d6[fire]",
+              "5": "2d6[fire]",
+              "6": "3d6[fire]",
+              "7": "4d6[fire]",
+              "8": "5d6[fire]",
+              "9": "6d6[fire]"
+            }
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "Each creature in a 20-foot radius must make a Dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one."
+      }
+    ],
+    "source": "free-rules",
+    "rulesVersion": "2024",
+    "page": 241,
+    "id": 2102,
+    "url": "https://www.dndbeyond.com/spells/fireball",
+    "isFree": true
+  },
+  {
+    "name": "Non-Free Fire Bolt",
+    "level": 0,
+    "school": "Evocation",
+    "classes": [
+      "Sorcerer",
+      "Wizard",
+      "Artificer"
+    ],
+    "subclasses": [],
+    "casttime": "1 action",
+    "range": "120 feet",
+    "components": "V, S",
+    "duration": "Instantaneous",
+    "description": "You hurl a mote of fire at a creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried.\n\nThis spell's damage increases by 1d10 when you reach 5th level (2d10), 11th level (3d10), and 17th level (4d10).",
+    "ritual": false,
+    "higherlevels": null,
+    "concentration": false,
+    "automation": [
+      {
+        "type": "target",
+        "target": "each",
+        "effects": [
+          {
+            "type": "attack",
+            "hit": [
+              {
+                "type": "damage",
+                "damage": "1d10[fire]",
+                "cantripScale": true
+              }
+            ],
+            "miss": []
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried."
+      }
+    ],
+    "source": "free-rules",
+    "rulesVersion": "2024",
     "page": 242,
     "id": -2103,
     "url": "https://www.dndbeyond.com/spells/fire-bolt",

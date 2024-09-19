@@ -238,7 +238,7 @@ class SpellbookSpell:
         self.prepared = prepared
 
     @classmethod
-    def from_spell(cls, spell, dc=None, sab=None, mod=None, prepared=True):
+    def from_spell(cls, spell, dc=None, sab=None, mod=None, prepared=True, version="2024"):
         strict = spell.source != "homebrew"
         return cls(spell.name, strict, spell.level, dc, sab, mod, prepared)
 

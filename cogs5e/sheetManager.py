@@ -38,7 +38,7 @@ from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.enums import ActivationType
 from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title, chunk_text
-from utils.settings.character import CHARACTER_SETTINGS
+from utils.settings.character import CHARACTER_SETTINGS, CSetting
 
 log = logging.getLogger(__name__)
 DELETE_AFTER_SECONDS = 20
@@ -842,7 +842,7 @@ class SheetManager(commands.Cog):
 
     @commands.command(name="import")
     @commands.max_concurrency(1, BucketType.user)
-    async def import_sheet(self, ctx, url: str, *, args=""):
+    async def import_sheet(self, ctx, url: str, version: str = "2024", *, args=""):
         """
         Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
@@ -915,7 +915,7 @@ class SheetManager(commands.Cog):
             return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         # Load the parsed sheet
-        character = await self._load_sheet(ctx, parser, args, loading)
+        character = await self._load_sheet(ctx, parser, args, loading, version)
         if character and beyond_match:
             await send_ddb_ctas(ctx, character)
 
@@ -928,7 +928,7 @@ class SheetManager(commands.Cog):
         await self.import_sheet(ctx, url, args=args)
 
     @staticmethod
-    async def _load_sheet(ctx, parser, args, loading):
+    async def _load_sheet(ctx, parser, args, loading, version):
         try:
             character = await parser.load_character(ctx, argparse(args))
         except ExternalImportError as eep:
@@ -941,6 +941,9 @@ class SheetManager(commands.Cog):
             return
 
         await loading.edit(content=f"Loaded and saved data for {character.name}!")
+
+        # Update charsetting based on the version argument
+        character.options.version = version
 
         await character.commit(ctx)
         await character.set_active(ctx)

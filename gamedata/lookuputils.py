@@ -11,8 +11,9 @@ from typing import Dict, List, TYPE_CHECKING, TypeVar, Callable
 import disnake
 
 import gamedata
+from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import NoActiveBrew, RequiresLicense
+from cogs5e.models.errors import NoActiveBrew, NoCharacter, RequiresLicense
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
@@ -479,8 +480,21 @@ async def get_spell_choices(ctx, homebrew=True):
     :param ctx: The context.
     :param homebrew: Whether to include homebrew entities.
     """
+
+    try:
+        character: Character = await ctx.get_character()
+        version = character.options.version if character.options.version else "2024"
+    except NoCharacter:
+        version = "2024"
+
     if not homebrew:
-        return compendium.spells
+        # return compendium.spells
+        return [spell for spell in compendium.spells if spell.rulesVersion == version or spell.rulesVersion is None]
+
+    # compendium_list = compendium.spells
+    compendium_list = [
+        spell for spell in compendium.spells if spell.rulesVersion == version or spell.rulesVersion is None
+    ]
 
     # personal active tome
     try:
@@ -492,7 +506,7 @@ async def get_spell_choices(ctx, homebrew=True):
         tome_id = None
 
     # server tomes
-    choices = list(itertools.chain(compendium.spells, custom_spells))
+    choices = list(itertools.chain(compendium_list, custom_spells))  # replace compendium.spells with compendium_list
     if ctx.guild:
         async for servtome in Tome.server_active(ctx):
             if servtome.id != tome_id:

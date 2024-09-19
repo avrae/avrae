@@ -273,8 +273,8 @@
   "hp": 64,
   "temp_hp": 0,
   "cvars": {},
-  "options": {
-    "options": {}
+  "options_v2": {
+    "version": "2014"
   },
   "overrides": {
     "desc": null,

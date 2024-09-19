@@ -1243,6 +1243,7 @@ class Lookup(commands.Cog):
                 entity_id=e.entity_id,
                 is_free=e.is_free,
                 is_legacy=e.is_legacy,
+                rulesVersion=e.rulesVersion,
             )
             for e in available_entities
         ]

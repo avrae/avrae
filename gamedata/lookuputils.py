@@ -13,7 +13,7 @@ import disnake
 import gamedata
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import NoActiveBrew, RequiresLicense
+from cogs5e.models.errors import NoActiveBrew, NoCharacter, RequiresLicense
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
@@ -481,8 +481,11 @@ async def get_spell_choices(ctx, homebrew=True):
     :param homebrew: Whether to include homebrew entities.
     """
 
-    character: Character = await ctx.get_character()
-    version = character.options.version if character.options.version else "2024"
+    try:
+        character: Character = await ctx.get_character()
+        version = character.options.version if character.options.version else "2024"
+    except NoCharacter:
+        version = "2024"
 
     if not homebrew:
         # return compendium.spells

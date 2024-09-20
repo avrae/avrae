@@ -322,7 +322,9 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         )
         embed.add_field(
             name="D&D 5e Version",
-            value=(f"**{self.settings.version}**\n" "*Toggle the version of D&D 5e rules you want to use in this server.*"),
+            value=(
+                f"**{self.settings.version}**\n" "*Toggle the version of D&D 5e rules you want to use in this server.*"
+            ),
             inline=False,
         )
         return {"embed": embed}

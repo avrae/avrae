@@ -285,7 +285,9 @@ class BeyondSheetParser(SheetLoaderABC):
             if result:
                 if result.name not in [spell.name for spell in spells]:
                     spells.append(
-                        SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared)
+                        SpellbookSpell.from_spell(
+                            result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                        )
                     )
             else:
                 spells.append(

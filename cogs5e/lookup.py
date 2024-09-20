@@ -48,7 +48,10 @@ class Lookup(commands.Cog):
             raise commands.CommandNotFound
 
     # ==== rules/references ====
-    async def _show_reference_options(self, ctx, version="2024"):
+    async def _show_reference_options(self, ctx, version=None):
+        if version is None:
+            serverSettings = await ctx.get_server_settings()
+            version = serverSettings.version
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = "Rules"
@@ -164,7 +167,10 @@ class Lookup(commands.Cog):
             return [result["fullName"]]
         return [r["fullName"] for r in result][:25]
 
-    async def _rule(self, ctx, rule, version="2024"):
+    async def _rule(self, ctx, rule, version=None):
+        if version is None:
+            serverSettings = await ctx.get_server_settings()
+            version = serverSettings.version
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = rule["fullName"]

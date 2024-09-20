@@ -176,6 +176,16 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
+    # Switch between 2014 and 2024 version from guild.py Server Settings
+    @disnake.ui.button(label="Switch Version", style=disnake.ButtonStyle.primary)
+    async def switch_version(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        if self.settings.version == "2024":
+            self.settings.version = "2014"
+        else:
+            self.settings.version = "2024"
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
     @disnake.ui.button(label="Back", style=disnake.ButtonStyle.grey, row=4)
     async def back(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         await self.defer_to(ServerSettingsUI, interaction)
@@ -309,6 +319,11 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
                 "thing, whether to prefer the latest version, the legacy version, or always ask the user to select "
                 "between the two.*"
             ),
+        )
+        embed.add_field(
+            name="D&D 5e Version",
+            value=(f"**{self.settings.version}**\n" "*Toggle the version of D&D 5e rules you want to use in this server.*"),
+            inline=False,
         )
         return {"embed": embed}
 

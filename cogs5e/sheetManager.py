@@ -842,7 +842,7 @@ class SheetManager(commands.Cog):
 
     @commands.command(name="import")
     @commands.max_concurrency(1, BucketType.user)
-    async def import_sheet(self, ctx, url: str, version: str = "2024", *, args=""):
+    async def import_sheet(self, ctx, url: str, version: str = None, *, args=""):
         """
         Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
@@ -871,6 +871,9 @@ class SheetManager(commands.Cog):
 
 
         """  # noqa: E501
+        if version is None:
+            serverSettings = await ctx.get_server_settings()
+            version = serverSettings.version
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet
         if beyond_match := DDB_URL_RE.match(url):

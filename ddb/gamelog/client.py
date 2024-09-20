@@ -106,16 +106,20 @@ class GameLogClient(BaseClient):
                 await asyncio.sleep(5)
                 continue
 
-            log.info("Connected to pubsub.")
-            async for msg in channel.listen():
-                try:
-                    if msg["type"] == "subscribe":
-                        continue
-                    await self._recv(msg["data"])
-                except Exception as e:
-                    log.error(str(e))
-            log.warning("Disconnected from Redis pubsub! Waiting to reconnect...")
-            await asyncio.sleep(5)
+            try:
+                log.info("Connected to pubsub.")
+                async for msg in channel.listen():
+                    try:
+                        if msg["type"] == "subscribe":
+                            continue
+                        await self._recv(msg["data"])
+                    except Exception as e:
+                        log.error(str(e))
+                log.warning("Disconnected from Redis pubsub! Waiting to reconnect...")
+                await asyncio.sleep(5)
+            except Exception as e:
+                log.exception(e)
+                continue
 
     async def _recv(self, msg):
         log.debug(f"Received message: {msg}")

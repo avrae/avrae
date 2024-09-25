@@ -92,6 +92,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
                 f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
                 f"**Direct Message Results**: {self.settings.lookup_pm_result}\n"
                 f"**Prefer Legacy Content**: {legacy_preference_desc(self.settings.legacy_preference)}"
+                f"**5e Rules Version**: {self.settings.version}"
             ),
             inline=False,
         )

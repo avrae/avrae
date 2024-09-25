@@ -855,6 +855,10 @@ class SheetManager(commands.Cog):
         `-nocc` - Do not automatically create custom counters for class resources and features.
         `-noprep` - Import all known spells as prepared.
 
+        __Valid Versions__
+        `2014` - 2014 D&D 5e Ruleset.
+        `2024` - 2024 D&D 5e Ruleset.
+
         __Sheet-specific Notes__
         D&D Beyond:
             Private sheets can be imported if you have linked your DDB and Discord accounts.  Otherwise, the sheet needs to be publicly shared.

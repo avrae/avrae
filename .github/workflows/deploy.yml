@@ -125,7 +125,7 @@ jobs:
         run: aws s3 cp shared/commands.json s3://media.avrae.io/ --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --region $REGION
 
       - name: Upload manifest as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: help-manifest
           path: shared/commands.json

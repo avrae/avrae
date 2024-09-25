@@ -289,7 +289,7 @@ class _GameplaySettingsUI(CharacterSettingsMenuBase):
         await self.defer_to(CharacterSettingsUI, interaction)
 
     # Switch between 2014 and 2024 version from character.py Gameplay Settings
-    @disnake.ui.button(label="Switch version", style=disnake.ButtonStyle.primary, row=3)
+    @disnake.ui.button(label="Switch Version", style=disnake.ButtonStyle.primary, row=3)
     async def switch_version(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         if self.settings.version == "2024":
             self.settings.version = "2014"

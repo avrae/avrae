@@ -91,7 +91,7 @@ class ServerSettingsUI(ServerSettingsMenuBase):
                 f"**Monsters Require DM**: {self.settings.lookup_dm_required}\n"
                 f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
                 f"**Direct Message Results**: {self.settings.lookup_pm_result}\n"
-                f"**Prefer Legacy Content**: {legacy_preference_desc(self.settings.legacy_preference)}"
+                f"**Prefer Legacy Content**: {legacy_preference_desc(self.settings.legacy_preference)}\n"
                 f"**5e Rules Version**: {self.settings.version}"
             ),
             inline=False,

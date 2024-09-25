@@ -482,11 +482,14 @@ async def get_spell_choices(ctx, homebrew=True):
     """
 
     serverSettings = await ctx.get_server_settings()
-    version = serverSettings.version
+    if serverSettings:
+        version = serverSettings.version
+    else:
+        version = "2024"
 
     try:
         character: Character = await ctx.get_character()
-        version = character.options.version if character.options.version else serverSettings.version
+        version = character.options.version if character.options.version else version
     except NoCharacter:
         pass
 

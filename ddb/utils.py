@@ -15,6 +15,7 @@ async def update_user_map(ctx, ddb_id, discord_id):
         await ctx.bot.mdb.ddb_account_map.update_one(
             {"ddb_id": ddb_id}, {"$set": {"discord_id": discord_id}}, upsert=True
         )
+        test525=5
     elif existing_mapping["ddb_id"] != ddb_id:
         await ctx.bot.mdb.ddb_account_map.delete_one({"discord_id": discord_id})
         await ctx.bot.mdb.ddb_account_map.update_one(

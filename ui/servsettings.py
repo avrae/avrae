@@ -92,7 +92,8 @@ class ServerSettingsUI(ServerSettingsMenuBase):
                 f"**Direct Message DM**: {self.settings.lookup_pm_dm}\n"
                 f"**Direct Message Results**: {self.settings.lookup_pm_result}\n"
                 f"**Prefer Legacy Content**: {legacy_preference_desc(self.settings.legacy_preference)}\n"
-                f"**5e Rules Version**: {self.settings.version}"
+                f"**5e Rules Version**: {self.settings.version}\n"
+                f"**Allow Character Override**: {self.settings.allow_character_override}"
             ),
             inline=False,
         )
@@ -184,6 +185,13 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
             self.settings.version = "2014"
         else:
             self.settings.version = "2024"
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    # Allow character override
+    @disnake.ui.button(label="Toggle Allow Character Override", style=disnake.ButtonStyle.primary)
+    async def toggle_character_override(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        self.settings.allow_character_override = not self.settings.allow_character_override
         await self.commit_settings()
         await self.refresh_content(interaction)
 
@@ -325,6 +333,14 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
             name="D&D 5e Version",
             value=(
                 f"**{self.settings.version}**\n" "*Toggle the version of D&D 5e rules you want to use in this server.*"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Allow Character Override",
+            value=(
+                f"**{self.settings.allow_character_override}**\n"
+                "*If this is enabled, ... Add an appropriate description.*"
             ),
             inline=False,
         )

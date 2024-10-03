@@ -49,7 +49,7 @@ jobs:
 
       - name: Determine whether to run release
         id: do-release
-        run: echo '::set-output name=result::${{secrets.DO_RELEASE}}'
+        run: echo "result=${{ secrets.DO_RELEASE }}" >> $GITHUB_OUTPUT
 
       - name: Deploy Amazon ECS task definition
         if: steps.do-release.outputs.result != '0'

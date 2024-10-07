@@ -40,6 +40,7 @@ class ServerSettings(SettingsBaseModel):
     crit_type: CritDamageType = CritDamageType.NORMAL
     legacy_preference: LegacyPreference = LegacyPreference.LATEST
     version: str = "2024"  # Versions: 2024(Free Rules/PHB 2024) or 2014(BR/PHB 2014)
+    allow_character_override: bool = False
 
     randchar_dice: str = "4d6kh3"
     randchar_sets: int = 1

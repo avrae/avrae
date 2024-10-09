@@ -55,7 +55,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: avrae-bot
-          image: ${{ steps.build-image.outputs.IMAGE_NAME }}
+          image: ${{ env.IMAGE_NAME }}
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1.4.11

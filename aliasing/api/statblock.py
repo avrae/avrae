@@ -564,7 +564,9 @@ class AliasSkill:
         return int(self._skill)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} value={self.value!r} prof={self.prof!r} bonus={self.bonus!r} adv={self.adv!r}>"
+        return (
+            f"<{self.__class__.__name__} value={self.value!r} prof={self.prof!r} bonus={self.bonus!r} adv={self.adv!r}>"
+        )
 
     def __gt__(self, other):
         return self.value > other
@@ -833,9 +835,7 @@ class AliasSpellbook:
         if self._spells is None:
             self._spells = [AliasSpellbookSpell(s) for s in self._spellbook.spells]
 
-        return [
-            spell for spell in self._spells if spell_name.lower() == spell.name.lower()
-        ]
+        return [spell for spell in self._spells if spell_name.lower() == spell.name.lower()]
 
     def slots_str(self, level):
         """

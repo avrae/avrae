@@ -173,7 +173,7 @@ class AliasStatBlock:
         :rtype: CreatureSize
         """
         return self._statblock.creature_size
-    
+
     def set_creature_size(self, size):
         """
         Sets the creature size.

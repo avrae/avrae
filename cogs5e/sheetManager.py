@@ -876,8 +876,11 @@ class SheetManager(commands.Cog):
 
         """  # noqa: E501
         if version is None:
-            serverSettings = await ctx.get_server_settings()
-            version = serverSettings.version
+            try:
+                serverSettings = await ctx.get_server_settings()
+                version = serverSettings.version
+            except AttributeError:
+                version = "2024"
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet
         if beyond_match := DDB_URL_RE.match(url):

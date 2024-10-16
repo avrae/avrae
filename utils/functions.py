@@ -180,8 +180,7 @@ async def get_selection(
             embed.add_field(
                 name="Instructions",
                 value=(
-                    f"Type your choice in {ctx.channel.mention}. This message was PMed to "
-                    "you to hide the monster name."
+                    f"Type your choice in {ctx.channel.mention}. This message was PMed to you to hide the monster name."
                 ),
                 inline=False,
             )

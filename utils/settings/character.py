@@ -195,6 +195,6 @@ CHARACTER_SETTINGS = {
         "number",
         description="version of the ruleset to use",
         default="2024",
-        display_func=lambda val: "2024" if val == 2024 else "2014",
+        display_func=lambda val: "2024" if val == "2024" else "2014",
     ),
 }

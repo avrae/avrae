@@ -487,11 +487,15 @@ async def get_spell_choices(ctx, homebrew=True):
     else:
         version = "2024"
 
-    try:
-        character: Character = await ctx.get_character()
-        version = character.options.version if character.options.version else version
-    except NoCharacter:
-        pass
+    # If allow_character_override is enabled, check for a character and use its version. Else, use the server version.
+    if serv_settings.allow_character_override:
+        try:
+            character: Character = await ctx.get_character()
+            version = character.options.version if character.options.version else version
+        except NoCharacter:
+            pass
+    else:
+        version = version
 
     if not homebrew:
         if version == "2024":

@@ -340,7 +340,7 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
             name="Allow Character Override",
             value=(
                 f"**{self.settings.allow_character_override}**\n"
-                "*If this is enabled, ... Add an appropriate description.*"
+                "*If this is enabled, users are able to use their own character version vs being locked to the server version.*"
             ),
             inline=False,
         )

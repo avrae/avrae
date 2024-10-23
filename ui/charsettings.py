@@ -11,6 +11,7 @@ from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from utils.enums import CoinsAutoConvert
 from utils.settings import CharacterSettings
+from utils.settings import ServerSettings
 from .menu import MenuBase
 
 _AvraeT = TypeVar("_AvraeT", bound=disnake.Client)

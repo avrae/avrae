@@ -567,7 +567,7 @@ class InitTracker(commands.Cog):
         """
         Changes the settings of the active combat.
         __Valid Settings__
-        `dyn` - Dynamic initiative; Rerolls all initiatves at the start of a round.
+        `dyn` - Dynamic initiative; Rerolls all initiatives at the start of a round.
         `turnnotif` - Notifies the controller of the next combatant in initiative.
         `deathdelete` - Toggles removing monsters below 0 HP.
         `-name <name>` - Sets a name for the combat instance.

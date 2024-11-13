@@ -18,7 +18,6 @@ jobs:
       TAG_ENV: nightly
       CLUSTER_ENV: live
       REGION: us-east-1
-      DO_RELEASE: ${{ secrets.DO_RELEASE }}
 
     steps:
       - name: Checkout
@@ -51,7 +50,7 @@ jobs:
 
       - name: Determine whether to run release
         id: do-release
-        run: echo "${{ env.DO_RELEASE }}" > $GITHUB_OUTPUT
+        run: echo ${{ secrets.DO_RELEASE }} > $GITHUB_OUTPUT
 
       - name: Deploy Amazon ECS task definition
         if: steps.do-release.outputs.result != '0'

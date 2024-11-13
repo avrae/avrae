@@ -49,7 +49,6 @@ jobs:
           docker push -a $ECR_REGISTRY/$ECR_REPOSITORY
 
       - name: Deploy Amazon ECS task definition
-        if: ${{ secrets.DO_RELEASE }} != '0'
         run: |
           aws ecs update-service --cluster $CLUSTER_NAME-$CLUSTER_ENV --service $SERVICE_NAME --force-new-deployment --region $REGION --task-definition avrae-bot-nightly-ecs-task-definition
 

@@ -48,12 +48,8 @@ jobs:
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$TAG_ENV
           docker push -a $ECR_REGISTRY/$ECR_REPOSITORY
 
-      - name: Determine whether to run release
-        id: do-release
-        run: echo ${{ secrets.DO_RELEASE }} > $GITHUB_OUTPUT
-
       - name: Deploy Amazon ECS task definition
-        if: steps.do-release.outputs.result != '0'
+        if: ${{ secrets.DO_RELEASE }} != '0'
         run: |
           aws ecs update-service --cluster $CLUSTER_NAME-$CLUSTER_ENV --service $SERVICE_NAME --force-new-deployment --region $REGION --task-definition avrae-bot-nightly-ecs-task-definition
 

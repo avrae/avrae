@@ -5,6 +5,10 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+  id-token: write
+  
 jobs:
   launchDarklyCodeReferences:
     name: LaunchDarkly Code References

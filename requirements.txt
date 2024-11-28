@@ -9,7 +9,7 @@ redis==5.0.4
 cachetools==5.3.3
 markdownify==0.9.4
 psutil==5.9.8
-pydantic~=1.9.0
+pydantic==1.10.19
 pyjwt==2.4.0
 python-meteor==0.1.6
 pyyaml==6.0.1

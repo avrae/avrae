@@ -5,7 +5,11 @@ on:
   pull_request:
   repository_dispatch:
     types: [ ci-approve-command ]
-
+    
+permissions:
+  contents: read
+  id-token: write
+  
 env:
   # push/1st party PR uses the GH context ref, repo_dispatch (3pp PR) uses the ref in the payload
   REF_UNDER_TEST: ${{ github.event_name != 'repository_dispatch' && github.ref || format('refs/pull/{0}/merge', github.event.client_payload.pull_request.number) }}
@@ -37,24 +41,24 @@ jobs:
 
     steps:
       - name: Set up Python 3.10
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
       - name: Checkout Avrae
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.REF_UNDER_TEST }}
 
       - name: Checkout Gamedata repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: avrae-data
           repository: avrae/avrae-data
           token: ${{ secrets.ORG_REPO_ACCESS_TOKEN }}
 
       - name: Cache pip
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'avrae/tests/requirements.txt') }}

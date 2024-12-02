@@ -48,13 +48,16 @@ class Lookup(commands.Cog):
             raise commands.CommandNotFound
 
     # ==== rules/references ====
-    async def _show_reference_options(self, ctx):
+    async def _show_reference_options(self, ctx, version=None):
+        if version is None:
+            serverSettings = await ctx.get_server_settings()
+            version = serverSettings.version
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = "Rules"
-        categories = ", ".join(a["type"] for a in compendium.rule_references)
+        categories = ", ".join(a["type"] for a in compendium.rule_references if a["version"] == version)
         embed.description = (
-            f"Use `{ctx.prefix}{ctx.invoked_with} <category>` to look at all actions of "
+            f"Use `{ctx.prefix}{ctx.invoked_with} <category> <version(defaults to 2024)>` to look at all actions of "
             f"a certain type.\nCategories: {categories}"
         )
 
@@ -89,11 +92,19 @@ class Lookup(commands.Cog):
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
+        valid_versions = ["2024", "2014"]  # TODO: move to a global variable
+
+        if name:
+            version = name.split()[-1] if name.split()[-1] in valid_versions else "2024"
+            name = name.replace(version, "").strip() if name.split()[-1] in valid_versions else name
+        else:
+            version = "2024"
+
         if name is None:
             return await self._show_reference_options(ctx)
 
         options = []
-        for actiontype in compendium.rule_references:
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == version or "version" not in a):
             if name == actiontype["type"]:
                 return await self._show_action_options(ctx, actiontype)
             else:
@@ -102,7 +113,7 @@ class Lookup(commands.Cog):
         result, metadata = await search_and_select(ctx, options, name, lambda e: e["fullName"], return_metadata=True)
         await lookuputils.add_training_data(self.bot.mdb, "reference", name, result["fullName"], metadata=metadata)
 
-        return await self._rule(ctx, result)
+        return await self._rule(ctx, result, version)
 
     @slash_lookup.sub_command(name="rule", description="Looks up a rule or condition.")
     async def slash_rule(
@@ -122,7 +133,7 @@ class Lookup(commands.Cog):
     @slash_rule.autocomplete("name")
     async def slash_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         choices = []
-        for actiontype in compendium.rule_references:
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2024" or "version" not in a):
             choices.extend(actiontype["items"])
 
         result, strict = search(choices, user_input, lambda e: e["fullName"], 25)
@@ -130,13 +141,42 @@ class Lookup(commands.Cog):
             return [result["fullName"]]
         return [r["fullName"] for r in result][:25]
 
-    async def _rule(self, ctx, rule):
+    @slash_lookup.sub_command(name="rules2014", description="Looks up a 2014 rule.")
+    async def slash_2014_rule(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name=commands.Param(
+            description="The rule or condition you want to look up", converter=lookup_converter("rule2014")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Rule not found.", ephemeral=True)
+                return
+            name = name[0]
+        return await self._rule(inter, name, "2014")
+
+    @slash_2014_rule.autocomplete("name")
+    async def slash_2014_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        choices = []
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2014" or "version" not in a):
+            choices.extend(actiontype["items"])
+
+        result, strict = search(choices, user_input, lambda e: e["fullName"], 25)
+        if strict:
+            return [result["fullName"]]
+        return [r["fullName"] for r in result][:25]
+
+    async def _rule(self, ctx, rule, version=None):
+        if version is None:
+            serverSettings = await ctx.get_server_settings()
+            version = serverSettings.version
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = rule["fullName"]
         embed.description = f"*{rule['short']}*"
         add_fields_from_long_text(embed, "Description", rule["desc"])
-        embed.set_footer(text=f"Rule | {rule['source']}")
+        embed.set_footer(text=f"Rule | {rule['source']} | {version}")
 
         await destination.send(embed=embed)
 
@@ -185,25 +225,25 @@ class Lookup(commands.Cog):
         await destination.send(embed=embed)
 
     # ==== races / racefeats ====
-    @commands.command()
+    @commands.command(aliases=["speciesfeat"])
     async def racefeat(self, ctx, *, name: str):
-        """Looks up a racial feature."""
+        """Looks up a species feature."""
         result: RaceFeature = await lookuputils.search_entities(
             ctx, {"race": compendium.rfeats, "subrace": compendium.subrfeats}, name, "racefeat"
         )
         return await self._racefeat(ctx, result)
 
-    @slash_lookup.sub_command(name="racefeat", description="Looks up a racial feature.")
+    @slash_lookup.sub_command(name="racefeat", description="Looks up a species feature.")
     async def slash_racefeat(
         self,
         inter: disnake.ApplicationCommandInteraction,
         name: RaceFeature = commands.Param(
-            description="The racial feature you want to look up", converter=lookup_converter("racefeat")
+            description="The species feature you want to look up", converter=lookup_converter("racefeat")
         ),
     ):
         if isinstance(name, list):
             if not name:
-                await inter.send("Racial feature not found.", ephemeral=True)
+                await inter.send("Species feature not found.", ephemeral=True)
                 return
             name = name[0]
         await self._check_access(inter, name, ["race", "subrace"])
@@ -221,18 +261,46 @@ class Lookup(commands.Cog):
             return [select_key(result, True)]
         return [select_key(r, True) for r in result][:25]
 
+    @slash_lookup.sub_command(name="speciesfeat", description="Looks up a species feature.")
+    async def slash_speciesfeat(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: RaceFeature = commands.Param(
+            description="The species feature you want to look up", converter=lookup_converter("racefeat")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Species feature not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["subrace"])
+        return await self._racefeat(inter, name)
+
+    @slash_speciesfeat.autocomplete("name")
+    async def slash_speciesfeat_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in ("race", "subrace")
+        }
+        select_key = create_selectkey(available_ids)
+
+        result, strict = search(compendium.rfeats + compendium.subrfeats, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
     async def _racefeat(self, ctx, result: RaceFeature):
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
         set_maybe_long_desc(embed, result.text)
-        lookuputils.handle_source_footer(embed, result, "Race Feature")
+        lookuputils.handle_source_footer(embed, result, "Species Feature")
         await destination.send(embed=embed)
 
-    @commands.command()
+    @commands.command(aliases=["species"])
     async def race(self, ctx, *, name: str):
-        """Looks up a race."""
+        """Looks up a species."""
         result: gamedata.Race = await lookuputils.search_entities(
             ctx, {"race": compendium.races, "subrace": compendium.subraces}, name, "race"
         )
@@ -243,12 +311,12 @@ class Lookup(commands.Cog):
         self,
         inter: disnake.ApplicationCommandInteraction,
         name: gamedata.race = commands.Param(
-            description="The race you want to look up", converter=lookup_converter("race")
+            description="The species you want to look up", converter=lookup_converter("race")
         ),
     ):
         if isinstance(name, list):
             if not name:
-                await inter.send("Race not found.", ephemeral=True)
+                await inter.send("Species not found.", ephemeral=True)
                 return
             name = name[0]
         await self._check_access(inter, name, ["race", "subrace"])
@@ -256,6 +324,34 @@ class Lookup(commands.Cog):
 
     @slash_race.autocomplete("name")
     async def slash_race_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        available_ids = {
+            k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in ("race", "subrace")
+        }
+        select_key = create_selectkey(available_ids)
+
+        result, strict = search(compendium.races + compendium.subraces, user_input, slash_match_key, 25)
+        if strict:
+            return [select_key(result, True)]
+        return [select_key(r, True) for r in result][:25]
+
+    @slash_lookup.sub_command(name="species", description="Looks up a species.")
+    async def slash_species(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        name: gamedata.race = commands.Param(
+            description="The species you want to look up", converter=lookup_converter("race")
+        ),
+    ):
+        if isinstance(name, list):
+            if not name:
+                await inter.send("Species not found.", ephemeral=True)
+                return
+            name = name[0]
+        await self._check_access(inter, name, ["race", "subrace"])
+        return await self._race(inter, name)
+
+    @slash_species.autocomplete("name")
+    async def slash_species_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         available_ids = {
             k: await self.bot.ddb.get_accessible_entities(inter, inter.author.id, k) for k in ("race", "subrace")
         }
@@ -275,7 +371,7 @@ class Lookup(commands.Cog):
         embed.add_field(name="Size", value=result.size)
         for t in result.traits:
             add_fields_from_long_text(embed, t.name, t.text)
-        lookuputils.handle_source_footer(embed, result, "Race")
+        lookuputils.handle_source_footer(embed, result, "Species")
         await destination.send(embed=embed)
 
     # ==== classes / classfeats ====
@@ -612,19 +708,19 @@ class Lookup(commands.Cog):
         if visible:
             embed_queue[-1].description = monster.get_meta()
             if monster.traits:
-                trait = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.traits)
+                trait = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.traits)
                 if trait:
                     safe_append("Special Abilities", trait)
             if monster.actions:
-                action = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.actions)
+                action = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.actions)
                 if action:
                     safe_append("Actions", action)
             if monster.bonus_actions:
-                bonus_action = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.bonus_actions)
+                bonus_action = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.bonus_actions)
                 if bonus_action:
                     safe_append("Bonus Actions", bonus_action)
             if monster.reactions:
-                reaction = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.reactions)
+                reaction = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.reactions)
                 if reaction:
                     safe_append("Reactions", reaction)
             if monster.legactions:
@@ -637,13 +733,13 @@ class Lookup(commands.Cog):
                 ]
                 for a in monster.legactions:
                     if a.name:
-                        legendary.append(f"**{a.name}:** {a.desc}")
+                        legendary.append(f"***{a.name}.*** {a.desc}")
                     else:
                         legendary.append(a.desc)
                 if legendary:
                     safe_append("Legendary Actions", "\n\n".join(legendary))
             if monster.mythic_actions:
-                mythic_action = "\n\n".join(f"**{a.name}:** {a.desc}" for a in monster.mythic_actions)
+                mythic_action = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.mythic_actions)
                 if mythic_action:
                     safe_append("Mythic Actions", mythic_action)
 
@@ -681,10 +777,10 @@ class Lookup(commands.Cog):
             languages = len(monster.languages)
 
             embed_queue[-1].description = (
-                f"{size} {_type}.\n"
-                f"**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {monster.speed}\n"
+                f"*{size} {_type}*\n"
+                f"**AC** {ac}\n**HP** {hp}\n**Speed** {monster.speed}\n"
                 f"{monster.get_hidden_stat_array()}\n"
-                f"**Languages:** {languages}\n"
+                f"**Languages** {languages}\n"
             )
 
             if monster.traits:
@@ -1153,6 +1249,7 @@ class Lookup(commands.Cog):
                 entity_id=e.entity_id,
                 is_free=e.is_free,
                 is_legacy=e.is_legacy,
+                rulesVersion=e.rulesVersion,
             )
             for e in available_entities
         ]

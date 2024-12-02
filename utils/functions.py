@@ -94,10 +94,10 @@ def search(
             # print out the results
             ratio_results = {}
             for result in results:
-                ratio_results[result] = fuzz.token_set_ratio(value.lower(), key(result).lower())
+                ratio_results[key(result)] = fuzz.token_set_ratio(value.lower(), key(result).lower())
 
             # Sort
-            sorted_results = sorted(results, key=lambda e: ratio_results[e], reverse=True)
+            sorted_results = sorted(results, key=lambda e: ratio_results[key(e)], reverse=True)
             results = sorted_results
 
         else:
@@ -179,8 +179,7 @@ async def get_selection(
             embed.add_field(
                 name="Instructions",
                 value=(
-                    "Type your response in the channel you called the command. This message was PMed to "
-                    "you to hide the monster name."
+                    f"Type your choice in {ctx.channel.mention}. This message was PMed to you to hide the monster name."
                 ),
                 inline=False,
             )

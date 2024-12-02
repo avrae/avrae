@@ -337,6 +337,19 @@ class Character(StatBlock):
         except Exception as e:
             raise InvalidArgument(f"Cannot evaluate {varstr}: {e}")
 
+    def evaluate_annostr(self, varstr):
+        """
+        Evaluates annotated string using AutomationEvaluator with character.
+        :param varstr - the string to search and replace.
+        :returns str - the string with annotations evaluated
+        """
+        evaluator = aliasing.evaluators.AutomationEvaluator.with_character(self)
+
+        try:
+            return evaluator.transformed_str(varstr)
+        except Exception as e:
+            raise InvalidArgument(f"Cannot evaluate `{varstr}`: {e}")
+
     def set_cvar(self, name: str, val: str):
         """Sets a cvar to a string value."""
         if not name.isidentifier():
@@ -591,7 +604,8 @@ class Character(StatBlock):
         """Adds a spell to the character's known spell list."""
         if spell.name in self.spellbook:
             raise InvalidArgument("You already know this spell.")
-        sbs = SpellbookSpell.from_spell(spell, dc, sab, mod)
+        sbs = SpellbookSpell.from_spell(spell, dc, sab, mod, self.options.version)
+
         self.spellbook.spells.append(sbs)
         self.overrides.spells.append(sbs)
 

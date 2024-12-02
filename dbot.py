@@ -5,7 +5,6 @@ import random
 import sys
 import time
 import traceback
-import gc
 
 
 from redis import asyncio as redis
@@ -86,7 +85,7 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
 
         # dbs
-        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL, retryWrites=False)
 
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
@@ -120,7 +119,7 @@ class Avrae(commands.AutoShardedBot):
         self.glclient.init()
 
     async def setup_rdb(self):
-        return RedisIO(await redis.from_url(url=config.REDIS_URL))
+        return RedisIO(await redis.from_url(url=config.REDIS_URL, health_check_interval=60))
 
     async def get_guild_prefix(self, guild: disnake.Guild) -> str:
         guild_id = str(guild.id)
@@ -170,7 +169,7 @@ class Avrae(commands.AutoShardedBot):
 
         # if we are cluster 0, we are responsible for handling application command sync
         if self.is_cluster_0:
-            self._sync_commands = True
+            self._command_sync_flags.sync_commands = True
 
         # release lock and launch
         await super().launch_shards()

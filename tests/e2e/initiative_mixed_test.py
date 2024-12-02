@@ -125,7 +125,7 @@ async def attack_I(avrae, dhttp, name="KO1", attack_command="!attack", delete_fi
         await dhttp.receive_delete()
     embed = disnake.Embed(title=rf".* attacks with a {DAGGER_PATTER}!")
     embed.add_field(name=name, value=ATTACK_PATTERN, inline=False)
-    embed.set_footer(text=rf"{name}: <-?\d+/\d+ HP>")
+    embed.set_footer(text=rf"{name}: <-?\d+/\d+ HP>( \([-+]\d+ HP\))+")
     await dhttp.receive_edit()
     await dhttp.receive_message(embed=embed)
     await dhttp.drain()
@@ -152,7 +152,7 @@ async def cast_I(avrae, dhttp, names=("KO2", "KO3"), cast_command="!cast"):
     embed.add_field(name="Meta", value=rf"{DAMAGE_PATTERN}\n\*\*DC\*\*: \d+", inline=False)
     for target in names:
         embed.add_field(name=target, value=SAVE_PATTERN, inline=False)
-    footer = "\n".join(rf"{name}: <-?\d+/\d+ HP>" for name in names)
+    footer = "\n".join(rf"{name}: <-?\d+/\d+ HP>( \([-+]\d+ HP\))?" for name in names)
     embed.set_footer(text=footer)
     await dhttp.receive_message(embed=embed)
     await dhttp.drain()

@@ -70,6 +70,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
             d["components"],
             d["duration"],
             d["description"],
+            rulesVersion=d["rulesVersion"],
             homebrew=False,
             classes=d["classes"],
             subclasses=d["subclasses"],

@@ -103,7 +103,7 @@ class InitTracker(commands.Cog):
                 log.exception("Failed to handle init effect button click interaction:")
 
     # ==== commands ====
-    @commands.group(aliases=["i"], invoke_without_command=True)
+    @commands.group(aliases=["i", "I"], invoke_without_command=True)
     async def init(self, ctx):
         """Commands to help track initiative."""
         await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
@@ -567,7 +567,7 @@ class InitTracker(commands.Cog):
         """
         Changes the settings of the active combat.
         __Valid Settings__
-        `dyn` - Dynamic initiative; Rerolls all initiatves at the start of a round.
+        `dyn` - Dynamic initiative; Rerolls all initiatives at the start of a round.
         `turnnotif` - Notifies the controller of the next combatant in initiative.
         `deathdelete` - Toggles removing monsters below 0 HP.
         `-name <name>` - Sets a name for the combat instance.
@@ -1109,7 +1109,7 @@ class InitTracker(commands.Cog):
         Rolls an attack against another combatant.
         __**Valid Arguments**__
         {VALID_AUTOMATION_ARGS}
-        custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+        custom - Modifier to indicate that the (arbitrarily-named) attack is custom, with custom to hit and damage values. Use `-b` and `-d` like this: `!init attack "pizza" custom -b 3 -d 1`
         """,
     )
     async def attack(self, ctx, atk_name=None, *, args=""):
@@ -1138,7 +1138,7 @@ class InitTracker(commands.Cog):
         Rolls an attack as another combatant.
         __**Valid Arguments**__
         {VALID_AUTOMATION_ARGS}
-        custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+        custom - Modifier to indicate that the (arbitrarily-named) attack is custom, with custom to hit and damage values. Use `-b` and `-d` like this: `!init attack "pizza" custom -b 3 -d 1`
         """,
     )
     async def aoo(self, ctx, combatant_name, atk_name=None, *, args=""):

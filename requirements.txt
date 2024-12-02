@@ -24,7 +24,6 @@ gspread~=6.1.1
 rapidfuzz~=3.6.1
 motor==3.4.0
 
-
 # Updated Transitive Deps
 pymongo==4.7.2
 

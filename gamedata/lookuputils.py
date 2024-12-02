@@ -11,8 +11,9 @@ from typing import Dict, List, TYPE_CHECKING, TypeVar, Callable
 import disnake
 
 import gamedata
+from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import NoActiveBrew, RequiresLicense
+from cogs5e.models.errors import NoActiveBrew, NoCharacter, RequiresLicense
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
@@ -239,7 +240,7 @@ async def add_training_data(mdb, lookup_type, query, result_name, metadata=None,
 
 
 def slash_match_key(entity):
-    return f"{entity.name} {entity.source} {'homebrew' if entity.homebrew else ''}"
+    return f"{entity.name} ({'🍺 - ' if entity.homebrew else ''}{entity.source})"
 
 
 def lookup_converter(entity_type: str) -> Callable:
@@ -268,7 +269,16 @@ def lookup_converter(entity_type: str) -> Callable:
 
     def rule_converter(_: disnake.ApplicationCommandInteraction, arg: str):
         choices = []
-        for actiontype in compendium.rule_references:
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2024" or "version" not in a):
+            choices.extend(actiontype["items"])
+        result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
+        if result is None:
+            raise ValueError("That rule doesn't exist")
+        return result
+
+    def rule2014_converter(_: disnake.ApplicationCommandInteraction, arg: str):
+        choices = []
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2014" or "version" not in a):
             choices.extend(actiontype["items"])
         result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
         if result is None:
@@ -340,6 +350,8 @@ def lookup_converter(entity_type: str) -> Callable:
             return subclass_converter
         case "classfeat":
             return classfeat_converter
+        case "rule2014":
+            return rule2014_converter
         case _:
             raise ValueError("That converter does not exist")
 
@@ -468,8 +480,52 @@ async def get_spell_choices(ctx, homebrew=True):
     :param ctx: The context.
     :param homebrew: Whether to include homebrew entities.
     """
+
+    serv_settings = await ctx.get_server_settings()
+    if serv_settings:
+        version = serv_settings.version
+    else:
+        version = "2024"
+
+    # If allow_character_override is enabled, check for a character and use its version. Else, use the server version.
+    if serv_settings.allow_character_override:
+        try:
+            character: Character = await ctx.get_character()
+            version = character.options.version if character.options.version else version
+        except NoCharacter:
+            pass
+    else:
+        version = version
+
     if not homebrew:
-        return compendium.spells
+        if version == "2024":
+            the_spells = [spell for spell in compendium.spells if spell.rulesVersion in ["2024", ""]]
+
+            spell_dict = {}
+            for spell in the_spells:
+                if spell.name not in spell_dict or spell.rulesVersion == "2024":
+                    spell_dict[spell.name] = spell
+
+            return list(spell_dict.values())
+        else:
+            the_spells = [spell for spell in compendium.spells if spell.rulesVersion != "2024"]
+
+            return the_spells
+
+    # compendium_list = compendium.spells
+    if version == "2024":
+        the_spells = [spell for spell in compendium.spells if spell.rulesVersion in ["2024", ""]]
+
+        spell_dict = {}
+        for spell in the_spells:
+            if spell.name not in spell_dict or spell.rulesVersion == "2024":
+                spell_dict[spell.name] = spell
+
+        compendium_list = list(spell_dict.values())
+    else:
+        the_spells = [spell for spell in compendium.spells if spell.rulesVersion != "2024"]
+
+        compendium_list = the_spells
 
     # personal active tome
     try:
@@ -481,7 +537,7 @@ async def get_spell_choices(ctx, homebrew=True):
         tome_id = None
 
     # server tomes
-    choices = list(itertools.chain(compendium.spells, custom_spells))
+    choices = list(itertools.chain(compendium_list, custom_spells))  # replace compendium.spells with compendium_list
     if ctx.guild:
         async for servtome in Tome.server_active(ctx):
             if servtome.id != tome_id:

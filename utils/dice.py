@@ -3,7 +3,15 @@ import d20
 
 class VerboseMDStringifier(d20.MarkdownStringifier):
     def _str_expression(self, node):
-        return f"**{node.comment or 'Result'}**: {self._stringify(node.roll)}\n**Total**: {int(node.total)}"
+        if node.comment:
+            comment = node.comment.rstrip("\\")
+
+            if len(comment) == 0:
+                comment = None
+        else:
+            comment = None
+
+        return f"**{comment or 'Result'}**: {self._stringify(node.roll)}\n**Total**: {int(node.total)}"
 
 
 class PersistentRollContext(d20.RollContext):

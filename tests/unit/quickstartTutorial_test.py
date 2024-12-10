@@ -7,6 +7,7 @@ from unittest.mock import Mock, AsyncMock, patch
 from cogsmisc.tutorials.quickstart import Quickstart
 from cogsmisc.tutorials.models import TutorialState
 
+
 @pytest.fixture
 def ctx_mock():
     ctx = Mock()
@@ -49,9 +50,9 @@ async def test_quickstarttutorial_start(
 
     for method_name in ["objective", "listener", "transition"]:
         method = getattr(start_state, method_name, None)
-        assert inspect.getmodule(method) is not inspect.getmodule(TutorialState), (
-            f"Method '{method_name}' must be overridden in {start_state.__class__.__name__}"
-        )
+        assert inspect.getmodule(method) is not inspect.getmodule(
+            TutorialState
+        ), f"Method '{method_name}' must be overridden in {start_state.__class__.__name__}"
 
     with patch.object(
         start_state, "objective", AsyncMock(return_value=asyncio.Future())
@@ -77,9 +78,9 @@ async def test_quickstarttutorial_import_character(
 
     for method_name in ["objective", "listener", "transition"]:
         method = getattr(import_state, method_name, None)
-        assert inspect.getmodule(method) is not inspect.getmodule(TutorialState), (
-            f"Method '{method_name}' must be overridden in {import_state.__class__.__name__}"
-        )
+        assert inspect.getmodule(method) is not inspect.getmodule(
+            TutorialState
+        ), f"Method '{method_name}' must be overridden in {import_state.__class__.__name__}"
 
     with patch.object(
         import_state, "objective", AsyncMock(return_value=asyncio.Future())
@@ -105,9 +106,9 @@ async def test_quickstarttutorial_checks_attacks_saves(
 
     for method_name in ["objective", "listener", "transition"]:
         method = getattr(checks_state, method_name, None)
-        assert inspect.getmodule(method) is not inspect.getmodule(TutorialState), (
-            f"Method '{method_name}' must be overridden in {checks_state.__class__.__name__}"
-        )
+        assert inspect.getmodule(method) is not inspect.getmodule(
+            TutorialState
+        ), f"Method '{method_name}' must be overridden in {checks_state.__class__.__name__}"
 
     with patch.object(
         checks_state, "objective", AsyncMock(return_value=asyncio.Future())
@@ -133,9 +134,9 @@ async def test_quickstarttutorial_actions(
 
     for method_name in ["objective", "listener", "transition"]:
         method = getattr(actions_state, method_name, None)
-        assert inspect.getmodule(method) is not inspect.getmodule(TutorialState), (
-            f"Method '{method_name}' must be overridden in {actions_state.__class__.__name__}"
-        )
+        assert inspect.getmodule(method) is not inspect.getmodule(
+            TutorialState
+        ), f"Method '{method_name}' must be overridden in {actions_state.__class__.__name__}"
 
     with patch.object(
         actions_state, "objective", AsyncMock(return_value=asyncio.Future())

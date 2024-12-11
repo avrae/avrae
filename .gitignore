@@ -16,6 +16,8 @@ venv/
 temp/
 tempvenv/
 .vscode/
+.env
+/avrae-env
 
 /.*cache/
 

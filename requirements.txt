@@ -34,4 +34,4 @@ botocore==1.23.24
 google-auth==2.13.0
 
 # Handling for Datadog
-ddtrace>=0.59.1
+ddtrace~=2.8.2

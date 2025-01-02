@@ -206,6 +206,9 @@ class AliasAuthor:
         self._id = author.id
         self._discriminator = author.discriminator
         self._display_name = author.display_name
+        self._roles = []
+        if isinstance(author, disnake.Member):
+            self._roles = [AliasRole(role) for role in author.roles]
 
     @property
     def name(self):
@@ -243,12 +246,53 @@ class AliasAuthor:
         """
         return self._display_name
 
+    @property
+    def roles(self):
+        """
+        The user's roles. When used in a DM, it is always empty.
+        """
+        return self._roles
+
+
     def __str__(self):
         return f"{self.name}#{self.discriminator}"
 
     def __repr__(self):
         return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
 
+class AliasRole:
+    """
+    Represents a Discord Role.
+    """
+    def __init__(self, role):
+        """
+        :type role: disnake.Role
+        """
+        self._role = role
+
+    @property
+    def name(self):
+        """
+        The role's name (not including the discriminator).
+
+        :rtype: str
+        """
+        return self._role.name
+
+    @property
+    def id(self):
+        """
+        The role's ID.
+
+        :rtype: int
+        """
+        return self._role.id
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
 
 class AliasCategory:
     """

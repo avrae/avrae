@@ -253,12 +253,12 @@ class AliasAuthor:
         """
         return self._roles
 
-
     def __str__(self):
         return f"{self.name}#{self.discriminator}"
 
     def __repr__(self):
         return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
+
 
 class AliasRole:
     """
@@ -293,6 +293,7 @@ class AliasRole:
 
     def __repr__(self):
         return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
+
 
 class AliasCategory:
     """

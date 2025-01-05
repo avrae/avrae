@@ -264,7 +264,7 @@ class AliasRole:
     """
     Represents a Discord Role.
     """
-    
+
     def __init__(self, role):
         """
         :type role: disnake.Role

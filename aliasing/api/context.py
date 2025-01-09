@@ -246,12 +246,13 @@ class AliasAuthor:
         """
         return self._display_name
 
-    @property
-    def roles(self):
+    def get_roles(self):
         """
         The user's roles. When used in a DM, it is always empty.
+
+        :rtype: list of :class:`~aliasing.api.context.AliasRole`
         """
-        return self._roles
+        return self._roles.copy()
 
     def __str__(self):
         return f"{self.name}#{self.discriminator}"

@@ -40,6 +40,7 @@ All Automation runs provide the following variables:
   targeted by this automation (i.e. the ``-t`` argument).
 - ``spell_attack_bonus`` (:class:`int` or None) - The attack bonus for the spell, or the caster's default attack bonus.
 - ``spell_dc`` (:class:`int` or None) - The DC for the spell, or the caster's default DC.
+- ``spell`` (:class:`int` or None) - The casting mod for the spell, or the caster's default casting mod.
 - ``spell_level`` (:class:`int` or None) - The level used to cast the spell, or None
 - ``choice`` (:class:`str`) - The input provided by the ``-choice`` argument, always lowercase. If the arg was not used, it will be an empty string.
 

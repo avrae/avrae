@@ -22,6 +22,7 @@ class Attack:
         thumb: str = None,
         extra_crit_damage: str = None,
         activation_type: enums.ActivationType = None,
+        list_display_override: str = None,
         **_,
     ):
         self.name = name
@@ -33,6 +34,7 @@ class Attack:
         self.thumb = thumb
         self.extra_crit_damage = extra_crit_damage
         self.activation_type = activation_type
+        self.list_display_override = list_display_override
 
     # ==== ser / deser ====
     @classmethod
@@ -57,6 +59,7 @@ class Attack:
             thumb=d.get("thumb"),
             extra_crit_damage=d.get("extra_crit_damage"),
             activation_type=activation_type,
+            list_display_override=d.get("list_display_override"),
         )
 
     @classmethod
@@ -80,7 +83,7 @@ class Attack:
         if self.proper:
             base["proper"] = True
 
-        for optattr in ("verb", "criton", "phrase", "thumb", "extra_crit_damage"):
+        for optattr in ("verb", "criton", "phrase", "thumb", "extra_crit_damage", "list_display_override"):
             if (val := getattr(self, optattr)) is not None:
                 base[optattr] = val
 
@@ -103,6 +106,7 @@ class Attack:
         thumb: Optional[str] = None,
         extra_crit_damage: Optional[str] = None,
         activation_type: Optional[enums.ActivationType] = None,
+        list_display_override: Optional[str] = None,
     ):
         """Creates a new attack for a character."""
         if bonus_calc is not None:
@@ -118,6 +122,7 @@ class Attack:
             thumb=thumb,
             extra_crit_damage=extra_crit_damage,
             activation_type=activation_type,
+            list_display_override=list_display_override,
         )
 
     @classmethod
@@ -133,10 +138,11 @@ class Attack:
             other.thumb,
             other.extra_crit_damage,
             other.activation_type,
+            other.list_display_override,
         )
 
     def build_str(self, caster):
-        return f"**{self.name}**: {self.automation.build_str(caster)}"
+        return f"**{self.name}**: {self.list_display_override or self.automation.build_str(caster)}"
 
     def __str__(self):
         return f"**{self.name}**: {str(self.automation)}"

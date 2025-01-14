@@ -1477,6 +1477,7 @@ Custom Attack Structure
         thumb?: string;
         extra_crit_damage?: string;
         activation_type?: number;
+        list_display_override?: str;
     }
 
 In order to use Automation, it needs to be contained within a custom attack or spell. We recommend building these on
@@ -1542,6 +1543,11 @@ Hand-written custom attacks may be written in JSON or YAML and imported using th
             LEGENDARY = 9
             MYTHIC = 10
             LAIR = 11
+
+    .. attribute:: list_display_override
+
+        *optional* - Overrides the default display of the attack on ``!a list``
+
 
 .. _class_feature_dc_impl:
 

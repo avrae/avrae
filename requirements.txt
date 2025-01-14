@@ -19,7 +19,7 @@ sentry-sdk==2.2.0
 # Top Level Deps
 launchdarkly-server-sdk==9.0
 Pillow~=10.2.0
-disnake~=2.10.1
+disnake=2.10.0
 gspread~=6.1.1
 rapidfuzz~=3.6.1
 motor==3.4.0

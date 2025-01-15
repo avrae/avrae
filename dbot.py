@@ -32,6 +32,18 @@ from utils.feature_flags import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
+from ddtrace import tracer
+from ddtrace.sampler import DatadogSampler, SamplingRule
+
+tracer.configure(
+    sampler=DatadogSampler(
+        rules=[
+            # Sample all 'avrae-bot' traces at 90.00%:
+            SamplingRule(sample_rate=0.9000, service="avrae-bot")
+        ]
+    )
+)
+
 # This method will load the variables from .env into the environment for running in local
 # from dotenv import load_dotenv
 # load_dotenv()

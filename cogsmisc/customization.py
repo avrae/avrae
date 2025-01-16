@@ -144,12 +144,14 @@ class CollectableManagementGroup(commands.Group):
 
     # noinspection PyUnusedLocal
     # d.py passes the cog in as the first argument (which is weird for this custom case)
-    async def create_or_view(self, cog, ctx, name=None, *, code=None):
-        if name is None:
+    async def create_or_view(self, cog, ctx, *args, code=None):
+        if not args:
             return await self.list(ctx)
 
+        name = args[0]
+
         if code is None:
-            return await self._view(ctx, name)
+            code = " ".join(args[1:]) or " ".join(ctx.message.content.split()[2:])
 
         if self.before_edit_check:
             await self.before_edit_check(ctx, name)

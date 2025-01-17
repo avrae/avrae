@@ -99,7 +99,6 @@ def search(
             # Sort
             sorted_results = sorted(results, key=lambda e: ratio_results[key(e)], reverse=True)
             results = sorted_results
-            print(results)
 
         else:
             results = partial_matches

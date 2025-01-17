@@ -21,12 +21,12 @@ async def test_variables(avrae, dhttp):
     address = match.group(1)
 
     avrae.message(
-        "!alias foobar echo <foobar> {foobar} {{foobar}}\n" + f"{{{{get_gvar('{address}')}}}}"
+        "!alias foobar echo <foobar> {foobar} {{foobar}} " + f"{{{{get_gvar('{address}')}}}}"
     )  # {{get_gvar('1234...')}}
     await dhttp.receive_message()
     avrae.message("!foobar")
     await dhttp.receive_delete()
-    await dhttp.receive_message(".+: Hello world 0 Hello world\nI am a gvar")
+    await dhttp.receive_message(".+: Hello world 0 Hello world I am a gvar")
 
 
 async def test_alias_percent_arguments(avrae, dhttp):
@@ -131,7 +131,7 @@ class TestCharacterAliases:
     async def test_echo_attributes(self, avrae, dhttp):
         character = await active_character(avrae)
         avrae.message(
-            "!alias foobar echo {charismaMod} {proficiencyBonus} {charismaMod+proficiencyBonus}\n<name> <color>"
+            "!alias foobar echo {charismaMod} {proficiencyBonus} {charismaMod+proficiencyBonus} <name> <color>"
         )
         await dhttp.receive_message()
 
@@ -139,7 +139,7 @@ class TestCharacterAliases:
         await dhttp.receive_delete()
         await dhttp.receive_message(
             f".+: {character.stats.get_mod('cha')} {character.stats.prof_bonus} "
-            f"{character.stats.get_mod('cha') + character.stats.prof_bonus}\n"
+            f"{character.stats.get_mod('cha') + character.stats.prof_bonus} "
             f"{character.get_title_name()} [0-9a-f]+"
         )
 

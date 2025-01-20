@@ -230,6 +230,7 @@ DUMMY_APPLICATION_INFO = {
                 "discriminator": "4211",
                 "public_flags": 131072,
             },
+            "role": "admin",
             "team_id": "592425568222445573",
             "membership_state": 2,
             "permissions": ["*"],

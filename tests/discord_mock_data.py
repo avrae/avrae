@@ -129,17 +129,19 @@ DUMMY_GUILD_CREATE = {
     "discovery_splash": None,
     "preferred_locale": "en-US",
     "application_id": "207919515336441856",
-    "channels": [{
-        "type": 0,
-        "topic": None,
-        "rate_limit_per_user": 0,
-        "position": 0,
-        "permission_overwrites": [],
-        "parent_id": None,
-        "name": "test-channel",
-        "last_message_id": None,
-        "id": str(TEST_CHANNEL_ID),
-    }],
+    "channels": [
+        {
+            "type": 0,
+            "topic": None,
+            "rate_limit_per_user": 0,
+            "position": 0,
+            "permission_overwrites": [],
+            "parent_id": None,
+            "name": "test-channel",
+            "last_message_id": None,
+            "id": str(TEST_CHANNEL_ID),
+        }
+    ],
     "mfa_level": 0,
     "unavailable": False,
     "guild_scheduled_events": [],
@@ -172,16 +174,18 @@ DUMMY_GUILD_CREATE = {
     "rules_channel_id": None,
     "system_channel_flags": 0,
     "max_members": 250000,
-    "roles": [{
-        "position": 0,
-        "permissions": "6442451968",
-        "name": "@everyone",
-        "mentionable": False,
-        "managed": False,
-        "id": str(TEST_GUILD_ID),
-        "hoist": False,
-        "color": 0,
-    }],
+    "roles": [
+        {
+            "position": 0,
+            "permissions": "6442451968",
+            "name": "@everyone",
+            "mentionable": False,
+            "managed": False,
+            "id": str(TEST_GUILD_ID),
+            "hoist": False,
+            "color": 0,
+        }
+    ],
     "premium_subscription_count": 0,
     "presences": [],
     "guild_hashes": {
@@ -222,18 +226,21 @@ DUMMY_APPLICATION_INFO = {
         "icon": None,
         "name": "Avrae Team",
         "owner_user_id": DEFAULT_OWNER_ID,
-        "members": [{
-            "user": {
-                "id": DEFAULT_OWNER_ID,
-                "username": "zhu.exe",
-                "avatar": None,
-                "discriminator": "4211",
-                "public_flags": 131072,
-            },
-            "team_id": "592425568222445573",
-            "membership_state": 2,
-            "permissions": ["*"],
-        }],
+        "members": [
+            {
+                "user": {
+                    "id": DEFAULT_OWNER_ID,
+                    "username": "zhu.exe",
+                    "avatar": None,
+                    "discriminator": "4211",
+                    "public_flags": 131072,
+                },
+                "role": "admin",
+                "team_id": "592425568222445573",
+                "membership_state": 2,
+                "permissions": ["*"],
+            }
+        ],
     },
     "rpc_origins": None,
 }

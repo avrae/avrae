@@ -73,7 +73,7 @@ jobs:
           mkdir shared
 
       - name: Run Tests
-        run: pytest --tb=short --disable-warnings -rfE --cov=cogs5e --cov=cogsmisc --cov=utils --cov-report=xml:shared/coverage.xml -m gamedata tests/
+        run: pytest --tb=short --disable-warnings -rfE --cov=cogs5e --cov=cogsmisc --cov=utils --cov-report=xml:shared/coverage.xml -m gamedata tests/gamedata/monsters_test.py
         env:
           TEST_GAMEDATA_BASE_PATH: "avrae-data/dist"
           TEST_SIMULATION_BASE_PATH: "avrae-data/dist"

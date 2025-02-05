@@ -151,7 +151,7 @@ class CollectableManagementGroup(commands.Group):
         name = args[0]
 
         if code is None:
-            code = " ".join(ctx.message.content.split(" ")[2:])
+            code = " ".join(args[1:]) or " ".join(ctx.message.content.split()[2:])
 
         if self.before_edit_check:
             await self.before_edit_check(ctx, name)

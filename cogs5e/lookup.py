@@ -128,7 +128,7 @@ class Lookup(commands.Cog):
                 await inter.send("Rule not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._rule(inter, name)
+        return await self._rule(inter, name, "2024")
 
     @slash_rule.autocomplete("name")
     async def slash_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):

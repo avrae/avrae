@@ -28,6 +28,7 @@ from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.functions import a_or_an, confirm, get_selection, search_and_select, user_from_id
+from typing import Optional
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
@@ -142,16 +143,100 @@ class CollectableManagementGroup(commands.Group):
         kwargs.setdefault("checks", self.checks)  # inherit all checks of parent command
         return super().command(*args, **kwargs)
 
+    def quotations_check(self, name: str) -> bool:
+        """
+        Validates quotation marks in an alias name.
+
+        Rules:
+        - Quotation marks, if present, must wrap the entire alias (i.e., at the beginning and end).
+        - If an opening quotation is found at the start, a corresponding closing quotation must be at the end.
+        - No quotation marks are allowed inside the alias unless they are part of the wrapping pair.
+
+        Valid Examples:
+            - alias "name"
+            - alias name
+
+        Invalid Examples:
+            - alias nam"e (Quote inside the name)
+            - alias name" (Unmatched closing quote)
+            - alias "name (Unmatched opening quote)
+            - alias "some'thing" (Invalid quote inside a quoted alias)
+
+        :param name: The alias name to validate.
+        :return: True if the alias follows the quotation rules, False otherwise.
+        """
+
+        if not name:
+            return False
+
+        _quotes = {
+            '"': '"',
+            "‘": "’",
+            "‚": "‛",
+            "“": "”",
+            "„": "‟",
+            "⹂": "⹂",
+            "「": "」",
+            "『": "』",
+            "〝": "〞",
+            "﹁": "﹂",
+            "﹃": "﹄",
+            "＂": "＂",
+            "｢": "｣",
+            "«": "»",
+            "‹": "›",
+            "《": "》",
+            "〈": "〉",
+        }
+
+        _all_quotes = set(_quotes.keys()) | set(_quotes.values())
+
+        first_char, last_char = name[0], name[-1]
+
+        if first_char in _quotes:
+            closing_quote = _quotes[first_char]
+
+            # Ensure closing quote is at the end and no other quotes exist inside
+            return last_char == closing_quote and all(c not in _all_quotes for c in name[1:-1])
+
+        # If not quoted, just ensure no misplaced quotes in the middle
+        return all(c not in _all_quotes for c in name)
+
     # noinspection PyUnusedLocal
     # d.py passes the cog in as the first argument (which is weird for this custom case)
-    async def create_or_view(self, cog, ctx, *args, code=None):
-        if not args:
+    async def create_or_view(self, *args, **kwargs):
+        """
+        Handles alias creation and viewing, depending on the user input.
+
+        Function Behavior:
+        - If only `!alias` is used, it lists all available aliases.
+        - If a valid alias name is provided but no code, it displays the alias content.
+        - If an alias name and code are provided, it creates or updates the alias.
+
+        :param args: Can contain `[cog, ctx]` or just `[ctx]`, depending on how Disnake passes arguments.
+        :param kwargs: Additional keyword arguments (not used directly here).
+        """
+
+        # Due to Disnake’s internal implementation, `args` may contain:
+        # - [cog, ctx] → when called as a cog method
+        # - [ctx] → when called as a standalone function
+        ctx = args[1] if len(args) > 1 else args[0]
+        content = ctx.message.content
+        content_array = content.split(" ")
+
+        # If the command is just `!alias` (without additional arguments), list aliases.
+        if not len(content_array) > 1:
             return await self.list(ctx)
 
-        name = args[0]
+        name = content_array[1]
+        if not self.quotations_check(name):
+            raise Exception(f"Unexpected quote mark on {name}")
 
-        if code is None:
-            code = " ".join(ctx.message.content.split(" ")[2:])
+        code = " ".join(content_array[2:])
+
+        # If only the alias name is provided, view its contents instead of creating it.
+        if not code:
+            return await self._view(ctx, name)
 
         if self.before_edit_check:
             await self.before_edit_check(ctx, name)

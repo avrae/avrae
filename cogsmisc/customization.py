@@ -213,7 +213,6 @@ class CollectableManagementGroup(commands.Group):
         - If an alias name and code are provided, it creates or updates the alias.
 
         :param args: Can contain `[cog, ctx]` or just `[ctx]`, depending on how Disnake passes arguments.
-        :param kwargs: Additional keyword arguments (not used directly here).
         """
 
         # Due to Disnake’s internal implementation, `args` may contain:

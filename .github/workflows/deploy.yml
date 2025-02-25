@@ -133,23 +133,3 @@ jobs:
         with:
           name: help-manifest
           path: shared/commands.json
-
-  # ===== sentry release =====
-  sentry:
-    name: Create Sentry Release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Create Sentry release
-        uses: getsentry/action-release@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: fandom-tabletop
-          SENTRY_PROJECT: avrae-bot
-        with:
-          environment: production
-          version: ${{ github.event.release.tag_name }}
-          set_commits: skip

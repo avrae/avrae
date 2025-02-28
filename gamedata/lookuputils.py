@@ -481,18 +481,19 @@ async def get_spell_choices(ctx, homebrew=True):
     :param homebrew: Whether to include homebrew entities.
     """
     version = "2024"
-
-    if ctx.guild:
-        serv_settings = await ctx.get_server_settings()
+    
+    serv_settings = await ctx.get_server_settings() if ctx.guild else None
+    if serv_settings:
         version = serv_settings.version
-    else:
-        serv_settings = await ctx.get_server_settings()
-        if serv_settings and serv_settings.allow_character_override:
-            try:
-                character: Character = await ctx.get_character()
-                version = character.options.version if character.options.version else version
-            except NoCharacter:
-                pass
+    
+    allow_override = serv_settings.allow_character_override if serv_settings else True
+    
+    try:
+        character: Character = await ctx.get_character()
+        if allow_override and character.options.version:
+            version = character.options.version
+    except NoCharacter:
+        pass
 
     if not homebrew:
         if version == "2024":

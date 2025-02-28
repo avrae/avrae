@@ -486,7 +486,7 @@ async def get_spell_choices(ctx, homebrew=True):
         serv_settings = await ctx.get_server_settings()
         version = serv_settings.version
 
-    if not ctx.guild or (serv_settings and serv_settings.allow_character_override):
+    if serv_settings and serv_settings.allow_character_override:
         try:
             character: Character = await ctx.get_character()
             version = character.options.version if character.options.version else version

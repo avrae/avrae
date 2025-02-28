@@ -35,3 +35,6 @@ google-auth==2.13.0
 
 # Handling for Datadog
 ddtrace>=0.59.1
+
+# BI Data Collection
+confluent-kafka

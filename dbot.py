@@ -7,6 +7,8 @@ if config.DD_SERVICE is not None:
 
     datadog.do_patches()
     datadog.start_profiler()
+    from utils.datadog import datadog_logger
+
 
 import asyncio
 import faulthandler
@@ -142,7 +144,10 @@ class Avrae(commands.AutoShardedBot):
 
     @staticmethod
     def log_exception(exception=None, ctx: context.AvraeContext = None):
-        log.error(str(exception), stack_info=True, exc_info=True)
+        if config.DD_SERVICE is not None:
+            datadog_logger.error(exception, exc_info=exception)
+        else:
+            log.error(exception, exc_info=exception if exception.__traceback__ else True)
 
     async def launch_shards(self, ignore_session_start_limit: bool = False):
         # set up my shard_ids

@@ -485,13 +485,14 @@ async def get_spell_choices(ctx, homebrew=True):
     if ctx.guild:
         serv_settings = await ctx.get_server_settings()
         version = serv_settings.version
-
-    if serv_settings and serv_settings.allow_character_override:
-        try:
-            character: Character = await ctx.get_character()
-            version = character.options.version if character.options.version else version
-        except NoCharacter:
-            pass
+    else:
+        serv_settings = await ctx.get_server_settings()
+        if serv_settings and serv_settings.allow_character_override:
+            try:
+                character: Character = await ctx.get_character()
+                version = character.options.version if character.options.version else version
+            except NoCharacter:
+                pass
 
     if not homebrew:
         if version == "2024":

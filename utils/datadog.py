@@ -16,8 +16,6 @@ class JSONFormatter(logging.Formatter):
         log_record = {
             "log": record.getMessage(),
             "level": record.levelname,
-            "dd.env": f"{config.ENVIRONMENT}",
-            "dd.version": "1.0",
         }
         # Add error fields if it's an error log
         if record.levelno >= logging.ERROR:

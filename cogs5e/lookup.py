@@ -50,8 +50,9 @@ class Lookup(commands.Cog):
     # ==== rules/references ====
     async def _show_reference_options(self, ctx, version=None):
         if version is None:
-            serverSettings = await ctx.get_server_settings()
-            version = serverSettings.version
+            serv_settings = await ctx.get_server_settings() if ctx.guild else None
+            if serv_settings:
+                version = serv_settings.version
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = "Rules"
@@ -169,8 +170,9 @@ class Lookup(commands.Cog):
 
     async def _rule(self, ctx, rule, version=None):
         if version is None:
-            serverSettings = await ctx.get_server_settings()
-            version = serverSettings.version
+            serv_settings = await ctx.get_server_settings() if ctx.guild else None
+            if serv_settings:
+                version = serv_settings.version
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = rule["fullName"]

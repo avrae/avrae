@@ -19,7 +19,7 @@ from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
 from utils.constants import HOMEBREW_EMOJI, HOMEBREW_ICON
 from utils.functions import get_selection, search_and_select, search
-from utils.settings.guild import LegacyPreference
+from utils.settings.guild import LegacyPreference, ServerSettings
 from .compendium import compendium
 from .klass import ClassFeature
 from .race import RaceFeature
@@ -482,18 +482,25 @@ async def get_spell_choices(ctx, homebrew=True):
     """
     version = "2024"
 
-    serv_settings = await ctx.get_server_settings() if ctx.guild else None
+    if hasattr(ctx, "get_server_settings"):
+        serv_settings = await ctx.get_server_settings() if ctx.guild else None
+    else:
+        serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+
     if serv_settings:
         version = serv_settings.version
 
-    allow_override = serv_settings.allow_character_override if serv_settings else True
+    if serv_settings and serv_settings.allow_character_override:
+        try:
+            if hasattr(ctx, "get_character"):
+                character: Character = await ctx.get_character()
+            else:
+                character: Character = await Character.from_ctx(ctx)
 
-    try:
-        character: Character = await ctx.get_character()
-        if allow_override and character.options.version:
-            version = character.options.version
-    except NoCharacter:
-        pass
+            if character.options.version:
+                version = character.options.version
+        except NoCharacter:
+            pass
 
     if not homebrew:
         if version == "2024":

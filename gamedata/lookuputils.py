@@ -19,7 +19,7 @@ from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
 from utils.constants import HOMEBREW_EMOJI, HOMEBREW_ICON
 from utils.functions import get_selection, search_and_select, search
-from utils.settings.guild import LegacyPreference
+from utils.settings.guild import LegacyPreference, ServerSettings
 from .compendium import compendium
 from .klass import ClassFeature
 from .race import RaceFeature
@@ -111,6 +111,32 @@ async def handle_required_license(ctx, err):
 
         embed.set_footer(text="Already unlocked? It may take up to a minute for Avrae to recognize the purchase.")
     await ctx.send(embed=embed)
+
+
+async def get_lookup_version(ctx) -> str:
+    version = "2024"
+
+    if hasattr(ctx, "get_server_settings"):
+        serv_settings = await ctx.get_server_settings() if ctx.guild else None
+    else:
+        serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+
+    if serv_settings:
+        version = serv_settings.version
+
+    if serv_settings and serv_settings.allow_character_override:
+        try:
+            if hasattr(ctx, "get_character"):
+                character: Character = await ctx.get_character()
+            else:
+                character: Character = await Character.from_ctx(ctx)
+
+            if character.options.version:
+                version = character.options.version
+        except NoCharacter:
+            pass
+
+    return version
 
 
 # ---- helpers ----
@@ -480,20 +506,7 @@ async def get_spell_choices(ctx, homebrew=True):
     :param ctx: The context.
     :param homebrew: Whether to include homebrew entities.
     """
-    version = "2024"
-
-    serv_settings = await ctx.get_server_settings() if ctx.guild else None
-    if serv_settings:
-        version = serv_settings.version
-
-    allow_override = serv_settings.allow_character_override if serv_settings else True
-
-    try:
-        character: Character = await ctx.get_character()
-        if allow_override and character.options.version:
-            version = character.options.version
-    except NoCharacter:
-        pass
+    version = await get_lookup_version(ctx)
 
     if not homebrew:
         if version == "2024":

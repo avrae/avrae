@@ -123,7 +123,7 @@ class AliasGuild:
     def servsettings(self):
         """
         Retrieves and returns the dict of server settings.
-        
+
         :return: A dict of server settings.
         :rtype: dict or None
         """

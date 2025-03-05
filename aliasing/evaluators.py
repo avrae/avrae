@@ -43,6 +43,7 @@ from aliasing.workshop import WorkshopCollectableObject
 from cogs5e.models.errors import InvalidArgument
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
+from utils.settings import ServerSettings
 
 DEFAULT_BUILTINS = {
     # builtins

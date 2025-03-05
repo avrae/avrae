@@ -136,7 +136,7 @@ class Lookup(commands.Cog):
     async def slash_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         choices = []
         if "version" not in inter.filled_options:
-            version = await get_lookup_version(ctx)
+            version = await get_lookup_version(inter)
         else:
             version = inter.filled_options["version"]
 

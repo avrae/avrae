@@ -1146,6 +1146,12 @@ AliasAuthor
 .. autoclass:: aliasing.api.context.AliasAuthor()
     :members:
 
+AliasRole
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasRole()
+    :members:
+
 AliasCharacter
 --------------
 

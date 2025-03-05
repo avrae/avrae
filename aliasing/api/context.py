@@ -9,11 +9,11 @@ class AliasContext:
     You can access this in an alias by using the ``ctx`` local.
     """
 
-    def __init__(self, ctx):
+    def __init__(self, ctx, servsettings):
         """
         :type ctx: disnake.ext.commands.Context
         """
-        self._guild = None if ctx.guild is None else AliasGuild(ctx.guild)
+        self._guild = None if ctx.guild is None else AliasGuild(ctx.guild, servsettings)
         self._channel = AliasChannel(ctx.channel)
         self._author = AliasAuthor(ctx.author)
         self._prefix = ctx.prefix
@@ -94,12 +94,13 @@ class AliasGuild:
     Represents the Discord guild (server) an alias was invoked in.
     """
 
-    def __init__(self, guild):
+    def __init__(self, guild, servsettings):
         """
         :type guild: disnake.Guild
         """
         self._name = guild.name
         self._id = guild.id
+        self._servsettings = servsettings
 
     @property
     def name(self):
@@ -118,6 +119,15 @@ class AliasGuild:
         :rtype: int
         """
         return self._id
+
+    def servsettings(self):
+        """
+        Retrieves and returns the dict of server settings.
+
+        :return: A dict of server settings.
+        :rtype: dict or None
+        """
+        return self._servsettings()
 
     def __str__(self):
         return self.name

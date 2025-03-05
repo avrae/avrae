@@ -138,6 +138,7 @@ class CachedSourced(Sourced):
             url=kwargs.get("url"),
             is_free=kwargs.get("is_free"),
             is_legacy=kwargs.get("is_legacy"),
+            rulesVersion=kwargs.get("rulesVersion"),
         )
 
     @classmethod
@@ -152,6 +153,7 @@ class CachedSourced(Sourced):
             entity_id=d["entity_id"],
             is_free=d["is_free"],
             is_legacy=d["is_legacy"],
+            rulesVersion=d["rulesVersion"],
         )
 
     def to_dict(self):
@@ -165,4 +167,5 @@ class CachedSourced(Sourced):
             "entity_id": self.entity_id,
             "is_free": self.is_free,
             "is_legacy": self.is_legacy,
+            "rulesVersion": self.rulesVersion,
         }

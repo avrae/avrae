@@ -31,6 +31,7 @@ from utils.settings import ServerSettings
 LARGE_THRESHOLD = 200
 ENTITY_TTL = 5 * 60
 ENTITY_CACHE = cachetools.TTLCache(64, ENTITY_TTL)
+VALID_VERSIONS = ["2024", "2014"]  # TODO: move to a global variable - Closer.....
 
 log = logging.getLogger(__name__)
 
@@ -91,11 +92,9 @@ class Lookup(commands.Cog):
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
-        valid_versions = ["2024", "2014"]  # TODO: move to a global variable
-
         if name:
-            version = name.split()[-1] if name.split()[-1] in valid_versions else "2024"
-            name = name.replace(version, "").strip() if name.split()[-1] in valid_versions else name
+            version = name.split()[-1] if name.split()[-1] in VALID_VERSIONS else "2024"
+            name = name.replace(version, "").strip() if name.split()[-1] in VALID_VERSIONS else name
         else:
             version = "2024"
 
@@ -118,47 +117,30 @@ class Lookup(commands.Cog):
     async def slash_rule(
         self,
         inter: disnake.ApplicationCommandInteraction,
+        version=commands.Param(description="Ruleset of the rule or condition", choices=VALID_VERSIONS),
         name=commands.Param(
             description="The rule or condition you want to look up", converter=lookup_converter("rule")
         ),
     ):
+        if version not in VALID_VERSIONS:
+            version = "2024"
+
         if isinstance(name, list):
             if not name:
                 await inter.send("Rule not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._rule(inter, name)
+        return await self._rule(inter, name, version)
 
     @slash_rule.autocomplete("name")
     async def slash_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         choices = []
-        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2024" or "version" not in a):
-            choices.extend(actiontype["items"])
+        if "version" not in inter.filled_options:
+            version = "2024"
+        else:
+            version = inter.filled_options["version"]
 
-        result, strict = search(choices, user_input, lambda e: e["fullName"], 25)
-        if strict:
-            return [result["fullName"]]
-        return [r["fullName"] for r in result][:25]
-
-    @slash_lookup.sub_command(name="rules2014", description="Looks up a 2014 rule.")
-    async def slash_2014_rule(
-        self,
-        inter: disnake.ApplicationCommandInteraction,
-        name=commands.Param(
-            description="The rule or condition you want to look up", converter=lookup_converter("rule2014")
-        ),
-    ):
-        if isinstance(name, list):
-            if not name:
-                await inter.send("Rule not found.", ephemeral=True)
-                return
-            name = name[0]
-        return await self._rule(inter, name, "2014")
-
-    @slash_2014_rule.autocomplete("name")
-    async def slash_2014_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
-        choices = []
-        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2014" or "version" not in a):
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == version or "version" not in a):
             choices.extend(actiontype["items"])
 
         result, strict = search(choices, user_input, lambda e: e["fullName"], 25)

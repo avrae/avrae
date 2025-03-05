@@ -93,7 +93,7 @@ class Lookup(commands.Cog):
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
         if name:
-            version = name.split()[-1] if name.split()[-1] in VALID_VERSIONS else get_lookup_version(ctx)
+            version = name.split()[-1] if name.split()[-1] in VALID_VERSIONS else await get_lookup_version(ctx)
             name = name.replace(version, "").strip() if name.split()[-1] in VALID_VERSIONS else name
         else:
             version = await get_lookup_version(ctx)
@@ -958,8 +958,16 @@ class Lookup(commands.Cog):
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
+        if name:
+            version = name.split()[-1] if name.split()[-1] in VALID_VERSIONS else await get_lookup_version(ctx)
+            name = name.replace(version, "").strip() if name.split()[-1] in VALID_VERSIONS else name
+        else:
+            version = await get_lookup_version(ctx)
+
         choices = await lookuputils.get_spell_choices(ctx)
-        spell = await lookuputils.search_entities(ctx, {"spell": choices}, name)
+        spell = await lookuputils.search_entities(
+            ctx, {"spell": choices}, name, list_filter=lambda s: s.rulesVersion in [version, ""]
+        )
 
         return await self._spell(ctx, spell)
 

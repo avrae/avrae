@@ -93,10 +93,10 @@ class Lookup(commands.Cog):
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
         if name:
-            version = name.split()[-1] if name.split()[-1] in VALID_VERSIONS else "2024"
+            version = name.split()[-1] if name.split()[-1] in VALID_VERSIONS else get_lookup_version(ctx)
             name = name.replace(version, "").strip() if name.split()[-1] in VALID_VERSIONS else name
         else:
-            version = "2024"
+            version = await get_lookup_version(ctx)
 
         if name is None:
             return await self._show_reference_options(ctx)
@@ -123,7 +123,7 @@ class Lookup(commands.Cog):
         ),
     ):
         if version not in VALID_VERSIONS:
-            version = "2024"
+            version = get_lookup_version(inter)
 
         if isinstance(name, list):
             if not name:
@@ -136,7 +136,7 @@ class Lookup(commands.Cog):
     async def slash_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         choices = []
         if "version" not in inter.filled_options:
-            version = "2024"
+            version = await get_lookup_version(ctx)
         else:
             version = inter.filled_options["version"]
 

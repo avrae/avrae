@@ -1477,7 +1477,7 @@ Custom Attack Structure
         thumb?: string;
         extra_crit_damage?: string;
         activation_type?: number;
-        list_display_override?: AnnotatedString
+        list_display_override?: AnnotatedString;
     }
 
 In order to use Automation, it needs to be contained within a custom attack or spell. We recommend building these on
@@ -1533,7 +1533,7 @@ Hand-written custom attacks may be written in JSON or YAML and imported using th
 
     ...attribute:: list_display_override
         
-        *optional* - The display text to display in the action list (such as ``!a list`` )
+        *optional* - The display text to display in the action list (such as ``!a list`` ).
 
         .. code-block:: text
 

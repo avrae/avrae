@@ -27,7 +27,7 @@ class JSONFormatter(logging.Formatter):
 
 
 def do_patches():
-    ddtrace.config.env = config.ENVIRONMENT
+    ddtrace.config.env = "live" if config.ENVIRONMENT in ("production", "nightly") else config.ENVIRONMENT
     ddtrace.config.service = config.DD_SERVICE
     ddtrace.config.version = config.GIT_COMMIT_SHA
     ddtrace.tracer.configure(

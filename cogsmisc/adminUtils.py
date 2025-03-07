@@ -108,7 +108,6 @@ class AdminUtils(commands.Cog):
 
         await paginated_embed.send_to(ctx.channel)
 
-
     @commands.command(hidden=True)
     @checks.is_owner()
     async def changepresence(self, ctx, status=None, *, msg=None):

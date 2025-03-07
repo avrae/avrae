@@ -121,6 +121,16 @@ class AdminUtils(commands.Cog):
         """Owner-only admin commands."""
         await ctx.send("hello yes please give me a subcommand")
 
+    @admin.command(hidden=True, name="refreshteam")
+    @checks.is_owner()
+    async def admin_refreshteam(self, ctx):
+        self.bot.owner_id = None
+        self.bot.owner_ids = None
+
+        # noinspection PyProtectedMember
+        await self.bot._fill_owners()
+        await ctx.send("Owner IDs refreshed from Discord.")
+
     @admin.command(hidden=True, name="eval")
     @checks.is_owner()
     async def admin_eval(self, ctx, *, body: str):

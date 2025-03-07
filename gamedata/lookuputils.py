@@ -124,7 +124,7 @@ async def get_lookup_version(ctx) -> str:
     if serv_settings:
         version = serv_settings.version
 
-    if serv_settings and serv_settings.allow_character_override:
+    if serv_settings and serv_settings.allow_character_override or not ctx.guild:
         try:
             if hasattr(ctx, "get_character"):
                 character: Character = await ctx.get_character()
@@ -293,18 +293,14 @@ def lookup_converter(entity_type: str) -> Callable:
             raise ValueError("That spell doesn't exist")
         return result
 
-    def rule_converter(_: disnake.ApplicationCommandInteraction, arg: str):
+    def rule_converter(inter: disnake.ApplicationCommandInteraction, arg: str):
         choices = []
-        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2024" or "version" not in a):
-            choices.extend(actiontype["items"])
-        result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
-        if result is None:
-            raise ValueError("That rule doesn't exist")
-        return result
+        if "version" not in inter.filled_options:
+            version = "2024"
+        else:
+            version = inter.filled_options["version"]
 
-    def rule2014_converter(_: disnake.ApplicationCommandInteraction, arg: str):
-        choices = []
-        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2014" or "version" not in a):
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == version or "version" not in a):
             choices.extend(actiontype["items"])
         result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
         if result is None:
@@ -376,8 +372,6 @@ def lookup_converter(entity_type: str) -> Callable:
             return subclass_converter
         case "classfeat":
             return classfeat_converter
-        case "rule2014":
-            return rule2014_converter
         case _:
             raise ValueError("That converter does not exist")
 
@@ -506,37 +500,11 @@ async def get_spell_choices(ctx, homebrew=True):
     :param ctx: The context.
     :param homebrew: Whether to include homebrew entities.
     """
-    version = await get_lookup_version(ctx)
+
+    compendium_list = compendium.spells
 
     if not homebrew:
-        if version == "2024":
-            the_spells = [spell for spell in compendium.spells if spell.rulesVersion in ["2024", ""]]
-
-            spell_dict = {}
-            for spell in the_spells:
-                if spell.name not in spell_dict or spell.rulesVersion == "2024":
-                    spell_dict[spell.name] = spell
-
-            return list(spell_dict.values())
-        else:
-            the_spells = [spell for spell in compendium.spells if spell.rulesVersion != "2024"]
-
-            return the_spells
-
-    # compendium_list = compendium.spells
-    if version == "2024":
-        the_spells = [spell for spell in compendium.spells if spell.rulesVersion in ["2024", ""]]
-
-        spell_dict = {}
-        for spell in the_spells:
-            if spell.name not in spell_dict or spell.rulesVersion == "2024":
-                spell_dict[spell.name] = spell
-
-        compendium_list = list(spell_dict.values())
-    else:
-        the_spells = [spell for spell in compendium.spells if spell.rulesVersion != "2024"]
-
-        compendium_list = the_spells
+        return compendium_list
 
     # personal active tome
     try:

@@ -124,7 +124,7 @@ async def get_lookup_version(ctx) -> str:
     if serv_settings:
         version = serv_settings.version
 
-    if serv_settings and serv_settings.allow_character_override:
+    if serv_settings and serv_settings.allow_character_override or not ctx.guild:
         try:
             if hasattr(ctx, "get_character"):
                 character: Character = await ctx.get_character()

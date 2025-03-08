@@ -115,16 +115,18 @@ async def handle_required_license(ctx, err):
 
 async def get_lookup_version(ctx) -> str:
     version = "2024"
+    serv_settings = None
 
-    if hasattr(ctx, "get_server_settings"):
-        serv_settings = await ctx.get_server_settings() if ctx.guild else None
-    else:
-        serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+    if ctx.guild:
+        if hasattr(ctx, "get_server_settings"):
+            serv_settings = await ctx.get_server_settings() if ctx.guild else None
+        else:
+            serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
 
     if serv_settings:
         version = serv_settings.version
 
-    if serv_settings and serv_settings.allow_character_override or not ctx.guild:
+    if serv_settings and serv_settings.allow_character_override or not serv_settings:
         try:
             if hasattr(ctx, "get_character"):
                 character: Character = await ctx.get_character()

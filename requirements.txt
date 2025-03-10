@@ -28,4 +28,4 @@ boto3==1.34.106
 pymongo==4.7.2
 
 # Handling for Datadog
-ddtrace~=2.8.2
+ddtrace~=2.21.3

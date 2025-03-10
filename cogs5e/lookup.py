@@ -12,6 +12,7 @@ import disnake
 from disnake.ext import commands
 
 import gamedata
+from gamedata.lookuputils import VALID_VERSIONS, extract_and_set_version
 import ui
 import utils.settings
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
@@ -31,8 +32,6 @@ from utils.settings import ServerSettings
 LARGE_THRESHOLD = 200
 ENTITY_TTL = 5 * 60
 ENTITY_CACHE = cachetools.TTLCache(64, ENTITY_TTL)
-VALID_VERSIONS = ["2024", "2014"]  # TODO: move to a global variable - Closer.....
-
 log = logging.getLogger(__name__)
 
 
@@ -92,11 +91,7 @@ class Lookup(commands.Cog):
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
-        if name:
-            version = name.split()[-1] if name.split()[-1] in VALID_VERSIONS else await get_lookup_version(ctx)
-            name = name.replace(version, "").strip() if name.split()[-1] in VALID_VERSIONS else name
-        else:
-            version = await get_lookup_version(ctx)
+        version, name = await extract_and_set_version(ctx, name)
 
         if name is None:
             return await self._show_reference_options(ctx)
@@ -958,11 +953,7 @@ class Lookup(commands.Cog):
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
-        if name:
-            version = name.split()[-1] if name.split()[-1] in VALID_VERSIONS else await get_lookup_version(ctx)
-            name = name.replace(version, "").strip() if name.split()[-1] in VALID_VERSIONS else name
-        else:
-            version = await get_lookup_version(ctx)
+        version, name = await extract_and_set_version(ctx, name)
 
         choices = await lookuputils.get_spell_choices(ctx)
         spell = await lookuputils.search_entities(

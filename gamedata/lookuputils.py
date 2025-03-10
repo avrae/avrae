@@ -113,18 +113,41 @@ async def handle_required_license(ctx, err):
     await ctx.send(embed=embed)
 
 
+def get_version_from_string(text: str = None) -> (str, str):
+    try:
+        version = text.split()[-1] if text.split()[-1] in VALID_VERSIONS else None
+        search_str = text.replace(version, "").strip() if text.split()[-1] in VALID_VERSIONS else text
+    except:
+        version = None
+        search_str = text
+
+    return version, search_str
+
+
+async def extract_and_set_version(ctx, text: str = None) -> tuple[str, str]:
+    version, search_str = get_version_from_string(text)
+
+    if not version:
+        version = await get_lookup_version(ctx)
+
+    return version, search_str
+
+
 async def get_lookup_version(ctx) -> str:
     version = "2024"
 
-    if hasattr(ctx, "get_server_settings"):
-        serv_settings = await ctx.get_server_settings() if ctx.guild else None
-    else:
-        serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+    try:
+        if hasattr(ctx, "get_server_settings"):
+            serv_settings = await ctx.get_server_settings() if ctx.guild else None
+        else:
+            serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+    except:
+        serv_settings = None
 
     if serv_settings:
         version = serv_settings.version
 
-    if serv_settings and serv_settings.allow_character_override or not ctx.guild:
+    if serv_settings and serv_settings.allow_character_override or not serv_settings:
         try:
             if hasattr(ctx, "get_character"):
                 character: Character = await ctx.get_character()
@@ -577,3 +600,6 @@ async def available_races(ctx, filter_by_license=True):
         races = compendium.races + compendium.subraces
 
     return races
+
+
+VALID_VERSIONS = ["2024", "2014"]  # TODO: move to a global variable - Closer.....

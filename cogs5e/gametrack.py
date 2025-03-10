@@ -410,8 +410,9 @@ class GameTrack(commands.Cog):
         flag_show_prepared_help = False
         flag_show_prepared_underline_help = False
 
+        version = await get_lookup_version(ctx)
         spells_known = collections.defaultdict(lambda: [])
-        choices = await get_spell_choices(ctx)
+        choices = list(filter(lambda s: s.rulesVersion == version, await get_spell_choices(ctx)))
         for sb_spell in character.spellbook.spells:
             if not (sb_spell.prepared or show_unprepared):
                 flag_show_prepared_help = True

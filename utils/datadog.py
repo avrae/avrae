@@ -31,7 +31,7 @@ def do_patches():
     ddtrace.config.service = config.DD_SERVICE
     ddtrace.config.version = config.GIT_COMMIT_SHA
     ddtrace.tracer.configure(
-        sampler=ddtrace.sampler.DatadogSampler(rules=[ddtrace.sampler.SamplingRule(sample_rate=0.90)])
+        sampler=ddtrace.sampler.DatadogSampler(rules=[ddtrace.sampler.SamplingRule(sample_rate=0.01)])
     )
     ddtrace.patch_all(logging=True)
     _patch_logging()

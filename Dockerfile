@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 python:3.12
+FROM --platform=linux/amd64 python:3.10
 
 ARG DBOT_ARGS
 ARG ENVIRONMENT=production
@@ -18,4 +18,4 @@ COPY --chown=avrae:avrae . .
 # Download AWS pubkey to connect to documentDB
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
-ENTRYPOINT /home/avrae/.local/bin/ddtrace-run python dbot.py $DBOT_ARGS
+ENTRYPOINT python dbot.py $DBOT_ARGS

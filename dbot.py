@@ -2,12 +2,12 @@ from utils import config
 
 # datadog - if DD_SERVICE not set, don't do any tracing/patching
 # patches all happen before any imports
-if config.DD_SERVICE is not None:
-    from utils import datadog
+# if config.DD_SERVICE is not None:
+#     from utils import datadog
 
-    datadog.do_patches()
-    datadog.start_profiler()
-    from utils.datadog import datadog_logger
+#     datadog.do_patches()
+#     datadog.start_profiler()
+#     from utils.datadog import datadog_logger
 
 
 import asyncio

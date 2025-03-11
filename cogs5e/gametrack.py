@@ -21,7 +21,7 @@ from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelecti
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.gameutils import resolve_strict_coins
 from cogs5e.utils.help_constants import *
-from gamedata.lookuputils import get_lookup_version, get_spell_choices, select_spell_full
+from gamedata.lookuputils import filter_spells_by_version, get_spell_choices, select_spell_full
 from utils.constants import COUNTER_BUBBLES
 from utils.argparser import argparse
 from utils.functions import confirm, maybe_mod, search, search_and_select, try_delete
@@ -410,9 +410,10 @@ class GameTrack(commands.Cog):
         flag_show_prepared_help = False
         flag_show_prepared_underline_help = False
 
-        version = await get_lookup_version(ctx)
         spells_known = collections.defaultdict(lambda: [])
-        choices = list(filter(lambda s: s.rulesVersion in [version, ""], await get_spell_choices(ctx)))
+        choices = await get_spell_choices(ctx)
+        choices = await filter_spells_by_version(ctx, choices)
+
         for sb_spell in character.spellbook.spells:
             if not (sb_spell.prepared or show_unprepared):
                 flag_show_prepared_help = True
@@ -487,8 +488,7 @@ class GameTrack(commands.Cog):
         -b <sab> - When cast, this spell always uses this spell attack bonus.
         -mod <mod> - When cast, this spell always uses this as the value of its casting stat (usually for healing spells).
         """  # noqa: E501
-        version = await get_lookup_version(ctx)
-        spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.rulesVersion in [version, ""])
+        spell = await select_spell_full(ctx, spell_name)
         character: Character = await ctx.get_character()
         args = argparse(args)
 
@@ -822,23 +822,20 @@ class GameTrack(commands.Cog):
         await try_delete(ctx.message)
 
         char: Character = await ctx.get_character()
-        version = await get_lookup_version(ctx)
 
         args = await helpers.parse_snippets(args, ctx, character=char, base_args=[spell_name])
         args = argparse(args)
 
         if not args.last("i", type_=bool):
             try:
-                spell = await select_spell_full(
-                    ctx, spell_name, list_filter=lambda s: s.name in char.spellbook and s.rulesVersion in [version, ""]
-                )
+                spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.spellbook)
             except NoSelectionElements:
                 return await ctx.send(
                     "No matching spells found. Make sure this spell is in your "
                     f"`{ctx.prefix}spellbook`, or cast with the `-i` argument to ignore restrictions!"
                 )
         else:
-            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.rulesVersion in [version, ""])
+            spell = await select_spell_full(ctx, spell_name)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         result = await actionutils.cast_spell(spell, ctx, caster, targets, args, combat=combat)

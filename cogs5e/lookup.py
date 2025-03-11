@@ -12,7 +12,7 @@ import disnake
 from disnake.ext import commands
 
 import gamedata
-from gamedata.lookuputils import VALID_VERSIONS, extract_and_set_version
+from gamedata.lookuputils import VALID_VERSIONS, extract_and_set_version, filter_spells_by_version
 import ui
 import utils.settings
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
@@ -956,9 +956,8 @@ class Lookup(commands.Cog):
         version, name = await extract_and_set_version(ctx, name)
 
         choices = await lookuputils.get_spell_choices(ctx)
-        spell = await lookuputils.search_entities(
-            ctx, {"spell": choices}, name, list_filter=lambda s: s.rulesVersion in [version, ""]
-        )
+        choices = await filter_spells_by_version(ctx, choices, version)
+        spell = await lookuputils.search_entities(ctx, {"spell": choices}, name)
 
         return await self._spell(ctx, spell)
 

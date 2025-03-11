@@ -32,6 +32,8 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+VALID_VERSIONS = ["2024", "2014", "Homebrew"]
+
 
 # ==== entitlement search helpers ====
 async def available(ctx, entities: List["_SourcedT"], entity_type: str, user_id: int = None) -> List["_SourcedT"]:
@@ -507,6 +509,8 @@ async def select_spell_full(ctx, name, extra_choices=None, **kwargs):
     :rtype: :class:`gamedata.Spell`
     """
     choices = await get_spell_choices(ctx)
+    choices = await filter_spells_by_version(ctx, choices)
+
     await Stats.increase_stat(ctx, "spells_looked_up_life")
 
     # #881
@@ -514,6 +518,28 @@ async def select_spell_full(ctx, name, extra_choices=None, **kwargs):
         choices.extend(extra_choices)
 
     return await search_entities(ctx, {"spell": choices}, name, **kwargs)
+
+
+async def filter_spells_by_version(ctx, spells: [], version: str = None):
+    if not version:
+        version = await get_lookup_version(ctx)
+    out = []
+    spell_names = set()
+
+    # Priority Spells for versions/homebrew
+    for spell in spells:
+        if spell.rulesVersion in [version, "Homebrew"]:
+            out.append(spell)
+
+            if spell.rulesVersion == version:
+                spell_names.add(spell.name)
+
+    # Check no version spells
+    for spell in spells:
+        if spell.rulesVersion == "" and spell.name not in spell_names:
+            out.append(spell)
+
+    return out
 
 
 async def get_spell_choices(ctx, homebrew=True):
@@ -600,6 +626,3 @@ async def available_races(ctx, filter_by_license=True):
         races = compendium.races + compendium.subraces
 
     return races
-
-
-VALID_VERSIONS = ["2024", "2014"]  # TODO: move to a global variable - Closer.....

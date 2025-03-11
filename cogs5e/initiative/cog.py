@@ -16,7 +16,7 @@ from cogs5e.models.sheet.attack import Attack
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
-from gamedata.lookuputils import get_lookup_version, select_monster_full, select_spell_full
+from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import checks, constants
 from utils.argparser import argparse
 from utils.functions import (
@@ -1399,14 +1399,12 @@ class InitTracker(commands.Cog):
             args = await helpers.parse_snippets(args, ctx, statblock=combatant, base_args=[combatant.name, spell_name])
         args = argparse(args)
 
-        version = await get_lookup_version(ctx)
-
         if not args.last("i", type_=bool):
             try:
                 spell = await select_spell_full(
                     ctx,
                     spell_name,
-                    list_filter=lambda s: s.name in combatant.spellbook and s.rulesVersion in [version, ""],
+                    list_filter=lambda s: s.name in combatant.spellbook,
                 )
             except NoSelectionElements:
                 return await ctx.send(
@@ -1414,7 +1412,7 @@ class InitTracker(commands.Cog):
                     "with the `-i` argument to ignore restrictions!"
                 )
         else:
-            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.rulesVersion in [version, ""])
+            spell = await select_spell_full(ctx, spell_name)
 
         targets = await targetutils.definitely_combat(ctx, combat, args, allow_groups=True)
         result = await actionutils.cast_spell(spell, ctx, combatant, targets, args, combat=combat)

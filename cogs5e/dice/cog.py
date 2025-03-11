@@ -10,7 +10,7 @@ from cogs5e.utils import actionutils, checkutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata import Monster
-from gamedata.lookuputils import get_lookup_version, handle_source_footer, select_monster_full, select_spell_full
+from gamedata.lookuputils import handle_source_footer, select_monster_full, select_spell_full
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.dice import PersistentRollContext, VerboseMDStringifier
@@ -258,7 +258,6 @@ class Dice(commands.Cog):
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
         args = await helpers.parse_snippets(args, ctx, statblock=monster, base_args=[monster_name, spell_name])
-        version = await get_lookup_version(ctx)
         args = argparse(args)
 
         if not args.last("i", type_=bool):
@@ -266,7 +265,7 @@ class Dice(commands.Cog):
                 spell = await select_spell_full(
                     ctx,
                     spell_name,
-                    list_filter=lambda s: s.name in monster.spellbook and s.rulesVersion in [version, ""],
+                    list_filter=lambda s: s.name in monster.spellbook,
                 )
             except NoSelectionElements:
                 return await ctx.send(
@@ -274,7 +273,7 @@ class Dice(commands.Cog):
                     "with the `-i` argument to ignore restrictions!"
                 )
         else:
-            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.rulesVersion in [version, ""])
+            spell = await select_spell_full(ctx, spell_name)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args)
         result = await actionutils.cast_spell(spell, ctx, caster, targets, args, combat=combat)

@@ -1527,13 +1527,13 @@ Hand-written custom attacks may be written in JSON or YAML and imported using th
         doubling damage dice. For example, if this attack normally deals 1d6 damage with ``extra_crit_damage: "1d8"``,
         it will deal 2d6 + 1d8 damage on a crit.
 
+    .. attribute:: list_display_override
+        
+        *optional* - The display text to display in the action list (such as ``!a list`` ).
+
     .. attribute:: activation_type
 
         *optional* - What action type to display this attack as in an action list (such as ``!a list``).
-
-    ...attribute:: list_display_override
-        
-        *optional* - The display text to display in the action list (such as ``!a list`` ).
 
         .. code-block:: text
 

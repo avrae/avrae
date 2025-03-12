@@ -117,8 +117,9 @@ async def handle_required_license(ctx, err):
 
 def get_version_from_string(text: str = None) -> (str, str):
     try:
-        version = text.split()[-1] if text.split()[-1] in VALID_VERSIONS else None
-        search_str = text.replace(version, "").strip() if text.split()[-1] in VALID_VERSIONS else text
+        version = text.split()[-1] if text.split()[-1].title() in VALID_VERSIONS else None
+        search_str = text.replace(version, "").strip() if text.split()[-1].title() in VALID_VERSIONS else text
+        version = version.title()
     except:
         version = None
         search_str = text
@@ -126,13 +127,15 @@ def get_version_from_string(text: str = None) -> (str, str):
     return version, search_str
 
 
-async def extract_and_set_version(ctx, text: str = None) -> tuple[str, str]:
+async def extract_and_set_version(ctx, text: str = None) -> tuple[str, str, str]:
     version, search_str = get_version_from_string(text)
+    strict = True
 
     if not version:
+        strict = False
         version = await get_lookup_version(ctx)
 
-    return version, search_str
+    return version, search_str, strict
 
 
 async def get_lookup_version(ctx) -> str:
@@ -520,7 +523,7 @@ async def select_spell_full(ctx, name, extra_choices=None, **kwargs):
     return await search_entities(ctx, {"spell": choices}, name, **kwargs)
 
 
-async def filter_spells_by_version(ctx, spells: [], version: str = None):
+async def filter_spells_by_version(ctx, spells: [], version: str = None, strict: bool = False):
     if not version:
         version = await get_lookup_version(ctx)
     out = []
@@ -528,7 +531,7 @@ async def filter_spells_by_version(ctx, spells: [], version: str = None):
 
     # Priority Spells for versions/homebrew
     for spell in spells:
-        if spell.rulesVersion in [version, "Homebrew"]:
+        if strict and spell.rulesVersion == version or (not strict and spell.rulesVersion in [version, "Homebrew"]):
             out.append(spell)
 
             if spell.rulesVersion == version:

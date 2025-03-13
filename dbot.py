@@ -1,11 +1,20 @@
+from utils import config
+
+# datadog - if DD_SERVICE not set, don't do any tracing/patching
+# patches all happen before any imports
+# if config.DD_SERVICE is not None:
+#     from utils import datadog
+
+#     datadog.do_patches()
+#     datadog.start_profiler()
+#     from utils.datadog import datadog_logger
+
+
 import asyncio
 import faulthandler
 import logging
 import random
-import sys
 import time
-import traceback
-import gc
 
 
 from redis import asyncio as redis
@@ -13,7 +22,6 @@ import d20
 import disnake
 import motor.motor_asyncio
 import psutil
-import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
 from disnake import ApplicationCommandInteraction
 from disnake.errors import Forbidden, HTTPException, NotFound
@@ -86,7 +94,7 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
 
         # dbs
-        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL, retryWrites=False)
 
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
@@ -98,13 +106,6 @@ class Avrae(commands.AutoShardedBot):
 
         # launch concurrency
         self.launch_max_concurrency = 1
-
-        # sentry
-        if config.SENTRY_DSN is not None:
-            release = None
-            if config.GIT_COMMIT_SHA:
-                release = f"avrae-bot@{config.GIT_COMMIT_SHA}"
-            sentry_sdk.init(dsn=config.SENTRY_DSN, environment=config.ENVIRONMENT.title(), release=release)
 
         # ddb entitlements
         if config.TESTING and config.DDB_AUTH_SERVICE_URL is None:
@@ -119,11 +120,8 @@ class Avrae(commands.AutoShardedBot):
         self.glclient = GameLogClient(self)
         self.glclient.init()
 
-        # lock for garbage collection
-        self.gc_lock = asyncio.Lock()
-
     async def setup_rdb(self):
-        return RedisIO(await redis.from_url(url=config.REDIS_URL))
+        return RedisIO(await redis.from_url(url=config.REDIS_URL, health_check_interval=60))
 
     async def get_guild_prefix(self, guild: disnake.Guild) -> str:
         guild_id = str(guild.id)
@@ -146,22 +144,10 @@ class Avrae(commands.AutoShardedBot):
 
     @staticmethod
     def log_exception(exception=None, ctx: context.AvraeContext = None):
-        if config.SENTRY_DSN is None:
-            return
-
-        with sentry_sdk.push_scope() as scope:
-            if ctx:
-                # noinspection PyDunderSlots,PyUnresolvedReferences
-                # for some reason pycharm doesn't pick up the attribute setter here
-                scope.user = {"id": ctx.author.id, "username": str(ctx.author)}
-                scope.set_tag("message.content", ctx.message.content)
-                scope.set_tag("is_private_message", ctx.guild is None)
-                scope.set_tag("channel.id", ctx.channel.id)
-                scope.set_tag("channel.name", str(ctx.channel))
-                if ctx.guild is not None:
-                    scope.set_tag("guild.id", ctx.guild.id)
-                    scope.set_tag("guild.name", str(ctx.guild))
-            sentry_sdk.capture_exception(exception)
+        if config.DD_SERVICE is not None:
+            datadog_logger.error(exception, exc_info=exception)
+        else:
+            log.error(exception, exc_info=exception if exception.__traceback__ else True)
 
     async def launch_shards(self, ignore_session_start_limit: bool = False):
         # set up my shard_ids
@@ -173,7 +159,7 @@ class Avrae(commands.AutoShardedBot):
 
         # if we are cluster 0, we are responsible for handling application command sync
         if self.is_cluster_0:
-            self._sync_commands = True
+            self._command_sync_flags.sync_commands = True
 
         # release lock and launch
         await super().launch_shards()
@@ -259,12 +245,6 @@ bot = Avrae(
     chunk_guilds_at_startup=False,
 )
 
-log_formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(log_formatter)
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
 log = logging.getLogger("bot")
 
 
@@ -274,17 +254,6 @@ async def on_ready():
     log.info(bot.user.name)
     log.info(bot.user.id)
     log.info("------")
-
-
-@bot.event
-async def on_resumed():
-    if bot.gc_lock.locked():
-        return
-
-    async with bot.gc_lock:
-        await asyncio.sleep(2.0)  # Wait for 2 seconds
-        collected = gc.collect()  # Perform garbage collection
-        log.info(f"Garbage collector: collected {collected} objects.")
 
 
 @bot.listen("on_command_error")
@@ -352,7 +321,7 @@ async def command_errors(ctx, error):
             elif 499 < original.response.status < 600:
                 return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
 
-    # send error to sentry.io
+    # send error to datadog
     if isinstance(error, CommandInvokeError):
         bot.log_exception(error.original, ctx)
     else:
@@ -367,8 +336,6 @@ async def command_errors(ctx, error):
         log.warning(f"Error caused by slash command: `/{ctx.data.name}` with options: {ctx.options}")
     else:
         log.warning(f"Error caused by message: `{ctx.message.content}`")
-    for line in traceback.format_exception(type(error), error, error.__traceback__):
-        log.warning(line)
 
 
 @bot.event

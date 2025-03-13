@@ -100,12 +100,13 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def pingall(self, ctx):
         resp = await self.pscall("ping")
-        embed = disnake.Embed(title="Cluster Pings")
+        paginated_embed = embeds.EmbedPaginator(first_embed=disnake.Embed(title="Cluster Pings"))
         for cluster, pings in sorted(resp.items(), key=lambda i: i[0]):
             pingstr = "\n".join(f"Shard {shard}: {floor(ping * 1000)}ms" for shard, ping in pings.items())
             avgping = floor((sum(pings.values()) / len(pings)) * 1000)
-            embed.add_field(name=f"Cluster {cluster}: {avgping}ms", value=pingstr)
-        await ctx.send(embed=embed)
+            paginated_embed.add_field(name=f"Cluster {cluster}: {avgping}ms", value=pingstr)
+
+        await paginated_embed.send_to(ctx.channel)
 
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -119,6 +120,16 @@ class AdminUtils(commands.Cog):
     async def admin(self, ctx):
         """Owner-only admin commands."""
         await ctx.send("hello yes please give me a subcommand")
+
+    @admin.command(hidden=True, name="refreshteam")
+    @checks.is_owner()
+    async def admin_refreshteam(self, ctx):
+        self.bot.owner_id = None
+        self.bot.owner_ids = None
+
+        # noinspection PyProtectedMember
+        await self.bot._fill_owners()
+        await ctx.send("Owner IDs refreshed from Discord.")
 
     @admin.command(hidden=True, name="eval")
     @checks.is_owner()
@@ -352,6 +363,18 @@ class AdminUtils(commands.Cog):
             return await ctx.send("ok, not killing")
         resp = await self.pscall("kill_cluster", kwargs={"cluster_id": cluster_id}, expected_replies=1)
         await self._send_replies(ctx, resp)
+
+    @admin.command(hidden=True, name="register_commands")
+    @checks.is_owner()
+    async def register_slash(self, ctx):
+        """Registers all slash commands."""
+        try:
+            self.bot._command_sync_flags.sync_commands = True
+            await self.bot._sync_application_commands()
+            await ctx.send("Registered slash commands succesfully.")
+            self.bot._command_sync_flags.sync_commands = False
+        except Exception as e:
+            await ctx.send(f"Error registering slash commands: {e}")
 
     # ---- workshop ----
     @admin.group(name="workshop", invoke_without_command=True)

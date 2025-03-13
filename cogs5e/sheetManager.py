@@ -6,6 +6,7 @@ Created on Jan 19, 2017
 
 import asyncio
 import logging
+import re
 import time
 import traceback
 from typing import List
@@ -37,7 +38,7 @@ from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.enums import ActivationType
 from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title, chunk_text
-from utils.settings.character import CHARACTER_SETTINGS
+from utils.settings.character import CHARACTER_SETTINGS, CSetting
 
 log = logging.getLogger(__name__)
 DELETE_AFTER_SECONDS = 20
@@ -841,7 +842,7 @@ class SheetManager(commands.Cog):
 
     @commands.command(name="import")
     @commands.max_concurrency(1, BucketType.user)
-    async def import_sheet(self, ctx, url: str, *, args=""):
+    async def import_sheet(self, ctx, url: str, version: str = None, *, args=""):
         """
         Loads a character sheet from one of the accepted sites:
             [D&D Beyond](https://www.dndbeyond.com/)
@@ -853,6 +854,10 @@ class SheetManager(commands.Cog):
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for class resources and features.
         `-noprep` - Import all known spells as prepared.
+
+        __Valid Versions__
+        `2014` - 2014 D&D 5e Ruleset.
+        `2024` - 2024 D&D 5e Ruleset.
 
         __Sheet-specific Notes__
         D&D Beyond:
@@ -870,6 +875,22 @@ class SheetManager(commands.Cog):
 
 
         """  # noqa: E501
+        serv_settings = await ctx.get_server_settings()
+        if version is None:
+            if serv_settings:
+                version = serv_settings.version
+            else:
+                version = "2024"
+        else:
+            # version was passed in, check allow_character_override
+            if version != serv_settings.version and not serv_settings.allow_character_override:
+                version = serv_settings.version
+                await ctx.send(
+                    f"Character-specific version override is disabled. This character was imported as {version}, If you think this is incorrect, please contact a Server Admin."
+                )
+            else:
+                version = version
+
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet
         if beyond_match := DDB_URL_RE.match(url):
@@ -900,6 +921,10 @@ class SheetManager(commands.Cog):
             try:
                 url = extract_gsheet_id_from_url(url)
             except ExternalImportError:
+                if re.match(r"https?://(?:www\.)?bestiarybuilder.com/bestiary-viewer/([0-9a-f]+)", url) or re.match(
+                    r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", url
+                ):
+                    return await ctx.send("Bestiaries must be imported with the `!bestiary import` command instead.")
                 return await ctx.send("Sheet type did not match accepted formats.")
             loading = await ctx.send("Loading character data from Google...")
             prefix = "google"
@@ -910,7 +935,7 @@ class SheetManager(commands.Cog):
             return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         # Load the parsed sheet
-        character = await self._load_sheet(ctx, parser, args, loading)
+        character = await self._load_sheet(ctx, parser, args, loading, version)
         if character and beyond_match:
             await send_ddb_ctas(ctx, character)
 
@@ -923,7 +948,7 @@ class SheetManager(commands.Cog):
         await self.import_sheet(ctx, url, args=args)
 
     @staticmethod
-    async def _load_sheet(ctx, parser, args, loading):
+    async def _load_sheet(ctx, parser, args, loading, version):
         try:
             character = await parser.load_character(ctx, argparse(args))
         except ExternalImportError as eep:
@@ -936,6 +961,9 @@ class SheetManager(commands.Cog):
             return
 
         await loading.edit(content=f"Loaded and saved data for {character.name}!")
+
+        # Update charsetting based on the version argument
+        character.options.version = version
 
         await character.commit(ctx)
         await character.set_active(ctx)

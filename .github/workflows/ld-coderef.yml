@@ -5,12 +5,16 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+  id-token: write
+  
 jobs:
   launchDarklyCodeReferences:
     name: LaunchDarkly Code References
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: LaunchDarkly Code References
         uses: launchdarkly/find-code-references@v2.8.0
         with:

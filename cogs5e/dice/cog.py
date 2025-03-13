@@ -262,7 +262,11 @@ class Dice(commands.Cog):
 
         if not args.last("i", type_=bool):
             try:
-                spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
+                spell = await select_spell_full(
+                    ctx,
+                    spell_name,
+                    list_filter=lambda s: s.name in monster.spellbook,
+                )
             except NoSelectionElements:
                 return await ctx.send(
                     "No matching spells found in the creature's spellbook. Cast again "

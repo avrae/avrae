@@ -22,6 +22,7 @@ class Sourced(abc.ABC):
         entitlement_entity_type: str = None,
         entitlement_entity_id: int = None,
         limited_use_only: bool = False,
+        rulesVersion: str = None,
     ):
         """
         :param homebrew: Whether or not this entity is homebrew.
@@ -45,6 +46,7 @@ class Sourced(abc.ABC):
         self.entitlement_entity_type = entitlement_entity_type or self.entity_type
         self.entitlement_entity_id = entitlement_entity_id or entity_id
         self.limited_use_only = limited_use_only
+        self.rulesVersion = rulesVersion
 
     @classmethod
     def lookup(cls, entity_id: int):
@@ -136,6 +138,7 @@ class CachedSourced(Sourced):
             url=kwargs.get("url"),
             is_free=kwargs.get("is_free"),
             is_legacy=kwargs.get("is_legacy"),
+            rulesVersion=kwargs.get("rulesVersion"),
         )
 
     @classmethod
@@ -150,6 +153,7 @@ class CachedSourced(Sourced):
             entity_id=d["entity_id"],
             is_free=d["is_free"],
             is_legacy=d["is_legacy"],
+            rulesVersion=d["rulesVersion"],
         )
 
     def to_dict(self):
@@ -163,4 +167,5 @@ class CachedSourced(Sourced):
             "entity_id": self.entity_id,
             "is_free": self.is_free,
             "is_legacy": self.is_legacy,
+            "rulesVersion": self.rulesVersion,
         }

@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - master
-      - nightly
   release:
     types: [ published ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+  
 jobs:
   # ===== ecs deploy =====
   deploy:
@@ -22,13 +25,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.STG_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.STG_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AVRAE_GITHUB_OIDC_ROLE_ARN }}
+          role-session-name: "avrae-avrae-deploy-stg"
           aws-region: ${{ env.REGION }}
 
       - name: Login to Amazon ECR
@@ -45,33 +48,14 @@ jobs:
           docker build -t $SERVICE_NAME --build-arg COMMIT=$GITHUB_SHA .
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$DEPLOY_ENV
-          docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:live
+          docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:stg
           docker push -a $ECR_REGISTRY/$ECR_REPOSITORY
 
       - name: Determine whether to run release
         id: do-release
-        run: echo '::set-output name=result::${{secrets.DO_RELEASE}}'
+        run: echo "result=${{ secrets.DO_RELEASE }}" >> $GITHUB_OUTPUT
 
       - name: Deploy Amazon ECS task definition
         if: steps.do-release.outputs.result != '0'
         run: |
           aws ecs update-service --cluster $CLUSTER_NAME-$DEPLOY_ENV --service $SERVICE_NAME --force-new-deployment --region $REGION --task-definition avrae-bot-ecs-task-definition
-
-  # ===== sentry release =====
-  sentry:
-    name: Create Sentry Release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Create Sentry release
-        uses: getsentry/action-release@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: fandom-tabletop
-          SENTRY_PROJECT: avrae-bot
-        with:
-          environment: staging
-          set_commits: skip

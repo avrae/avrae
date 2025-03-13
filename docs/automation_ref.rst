@@ -88,10 +88,6 @@ It designates what creatures to affect.
         - ``hp_asc``: Sorts the targets in order of remaining hit points ascending (lowest HP first, None last).
         - ``hp_desc``: Sorts the targets in order of remaining hit points descending (highest HP first, None last).
 
-    .. attribute:: self_target
-
-        *optional* - If ``true``, the effect will be added to the caster of the automation as opposed to the target.
-
 **Variables**
 
 - ``target`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The current target.
@@ -825,7 +821,7 @@ Run certain effects if a certain condition is met, or other effects otherwise. A
 
     .. attribute:: errorBehaviour
 
-        How to behave if the condition raises an error:
+        *optional* - How to behave if the condition raises an error:
 
         - ``"true"``: Run the ``onTrue`` effects.
         - ``"false"``: Run the ``onFalse`` effects. (*default*)
@@ -1481,6 +1477,7 @@ Custom Attack Structure
         thumb?: string;
         extra_crit_damage?: string;
         activation_type?: number;
+        list_display_override?: AnnotatedString;
     }
 
 In order to use Automation, it needs to be contained within a custom attack or spell. We recommend building these on
@@ -1529,6 +1526,10 @@ Hand-written custom attacks may be written in JSON or YAML and imported using th
         *optional* - How much extra damage to deal when this attack crits, in addition to normal crit rules such as
         doubling damage dice. For example, if this attack normally deals 1d6 damage with ``extra_crit_damage: "1d8"``,
         it will deal 2d6 + 1d8 damage on a crit.
+
+    .. attribute:: list_display_override
+        
+        *optional* - The display text to display in the action list (such as ``!a list`` ).
 
     .. attribute:: activation_type
 

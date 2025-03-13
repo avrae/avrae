@@ -21,7 +21,7 @@ from cogs5e.models.errors import ConsumableException, InvalidArgument, NoSelecti
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.gameutils import resolve_strict_coins
 from cogs5e.utils.help_constants import *
-from gamedata.lookuputils import get_spell_choices, select_spell_full
+from gamedata.lookuputils import filter_spells_by_version, get_spell_choices, select_spell_full
 from utils.constants import COUNTER_BUBBLES
 from utils.argparser import argparse
 from utils.functions import confirm, maybe_mod, search, search_and_select, try_delete
@@ -412,6 +412,8 @@ class GameTrack(commands.Cog):
 
         spells_known = collections.defaultdict(lambda: [])
         choices = await get_spell_choices(ctx)
+        choices = await filter_spells_by_version(ctx, choices)
+
         for sb_spell in character.spellbook.spells:
             if not (sb_spell.prepared or show_unprepared):
                 flag_show_prepared_help = True
@@ -634,7 +636,7 @@ class GameTrack(commands.Cog):
         `-value <value>` - The initial value for the counter.
         `-type <bubble|square|hex|star|default>` - Whether the counter displays bubbles/squares/hexes/stars to show remaining uses or numbers. Default - numbers.
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
-        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
+        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports annotated dice strings.
         """  # noqa: E501
         character: Character = await ctx.get_character()
 
@@ -693,7 +695,7 @@ class GameTrack(commands.Cog):
         `-min <min value>` - The minimum value of the counter.
         `-type <bubble|square|hex|star|default>` - Whether the counter displays bubbles/squares/hexes/stars to show remaining uses or numbers. Default - numbers.
         `-resetto <value>` - The value to reset the counter to. Default - maximum.
-        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
+        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports annotated dice strings.
         """  # noqa: E501
         character: Character = await ctx.get_character()
         counter = await character.select_consumable(ctx, name)

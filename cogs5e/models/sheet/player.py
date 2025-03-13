@@ -191,10 +191,14 @@ class CustomCounter:
                 raise InvalidArgument(f"Reset to value {reset_to_value} is greater than max value {max_value}.")
 
         if reset_by is not None:
+            evaluated_str = character.evaluate_annostr(str(reset_by))
+
             try:
-                d20.parse(str(reset_by))
+                d20.parse(evaluated_str)
             except d20.RollSyntaxError:
-                raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
+                raise InvalidArgument(
+                    f"`{evaluated_str}` (`resetby`) cannot be interpreted as a number or dice string."
+                )
 
         # set initial value if not already set
         if initial_value is None:
@@ -258,6 +262,11 @@ class CustomCounter:
             return None
         return self._character.evaluate_math(self.reset_to)
 
+    def get_reset_by(self):
+        if self.reset_by is None:
+            return None
+        return self._character.evaluate_annostr(self.reset_by)
+
     @property
     def value(self):
         return self._value
@@ -299,7 +308,7 @@ class CustomCounter:
 
         # reset by: modify current value
         elif self.reset_by is not None:
-            roll_result = d20.roll(self.reset_by)
+            roll_result = d20.roll(self.get_reset_by())
             target_value = old_value + roll_result.total
             new_value = self.set(target_value)
             delta = f"+{roll_result.result}"

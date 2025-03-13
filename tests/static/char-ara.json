@@ -229,10 +229,9 @@
   "hp": 143,
   "temp_hp": 0,
   "cvars": {},
-  "options": {
-    "options": {
-      "color": 16711935
-    }
+  "options_v2": {
+    "color": 16711935,
+    "version": "2014"
   },
   "overrides": {
     "desc": null,

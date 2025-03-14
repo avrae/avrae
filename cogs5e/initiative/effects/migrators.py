@@ -61,6 +61,7 @@ def jit_v1_to_v2(d: dict, combat: "Combat", combatant: "Combatant") -> Initiativ
         resistances=[Resistance.from_dict(v) for v in data.get("resist", [])],
         immunities=[Resistance.from_dict(v) for v in data.get("immune", [])],
         vulnerabilities=[Resistance.from_dict(v) for v in data.get("vuln", [])],
+        absorptions=[Resistance.from_dict(v) for v in data.get("absorb", [])],
         ignored_resistances=[Resistance.from_dict(v) for v in data.get("neutral", [])],
         ac_value=ac_value,
         ac_bonus=ac_bonus,

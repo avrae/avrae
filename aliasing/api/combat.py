@@ -53,13 +53,13 @@ class SimpleCombat:
         """
         Gets a combatant by its name or ID.
 
-        :param str name: The name or id of the combatant or group to get.
+        :param str name: The name or id of the combatant to get.
         :param strict: Whether combatant name must be a full case insensitive match.
             If this is ``None`` (default), attempts a strict match with fallback to partial match.
             If this is ``False``, it returns the first partial match.
             If this is ``True``, it will only return a strict match.
-        :return: The combatant or group or None.
-        :rtype: :class:`~aliasing.api.combat.SimpleCombatant` or `~aliasing.api.combat.SimpleGroup`
+        :return: The combatant or None.
+        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
         name = str(name)
         combatant = self._combat.get_combatant(name, strict)

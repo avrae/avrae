@@ -157,10 +157,12 @@ def _get_combatant_status_inner(
             status = f"{status}\n* This creature is a {combatant.monster_name}."
     else:
         combat = combatant.combat
-        status = "\n".join([
-            co.get_status(private=show_hidden_attrs and can_see_combatant_details(author, co, combat), **kwargs)
-            for co in combatant.get_combatants()
-        ])
+        status = "\n".join(
+            [
+                co.get_status(private=show_hidden_attrs and can_see_combatant_details(author, co, combat), **kwargs)
+                for co in combatant.get_combatants()
+            ]
+        )
     return f"```md\n{status}\n```"
 
 

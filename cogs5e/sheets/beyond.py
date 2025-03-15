@@ -284,12 +284,8 @@ class BeyondSheetParser(SheetLoaderABC):
 
             if result:
                 spell_info = SpellbookSpell.from_spell(
-                                result,
-                                sab=spell_ab,
-                                dc=spell_dc,
-                                mod=spell_mod,
-                                prepared=spell_prepared
-                                )
+                    result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                )
                 if result.name not in spells:
                     spells[result.name] = spell_info
 
@@ -302,12 +298,8 @@ class BeyondSheetParser(SheetLoaderABC):
 
             else:
                 spell_info = SpellbookSpell(
-                                spell["name"].strip(),
-                                sab=spell_ab,
-                                dc=spell_dc,
-                                mod=spell_mod,
-                                prepared=spell_prepared
-                                )
+                    spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                )
                 spells[spell_info.name] = spell_info
 
         spells = list(spells.values())

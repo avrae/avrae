@@ -122,22 +122,24 @@ class Spellcasting(Tutorial):
 
                 embed = TutorialEmbed(self, ctx)
                 embed.title = "Objectives"
-                embed.description = checklist([
-                    (
+                embed.description = checklist(
+                    [
                         (
-                            f"Manually lose a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
-                            "-<number of spell slots>`."
+                            (
+                                f"Manually lose a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
+                                "-<number of spell slots>`."
+                            ),
+                            state_map.data.get("has_removed"),
                         ),
-                        state_map.data.get("has_removed"),
-                    ),
-                    (
                         (
-                            f"Manually gain a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
-                            "+<number of spell slots>`."
+                            (
+                                f"Manually gain a spell slot using `{ctx.prefix}game spellslot <level of spell slot> "
+                                "+<number of spell slots>`."
+                            ),
+                            state_map.data.get("has_added"),
                         ),
-                        state_map.data.get("has_added"),
-                    ),
-                ])
+                    ]
+                )
                 await ctx.send(embed=embed)
 
             if state_map.data.get("has_added") and state_map.data.get("has_removed"):

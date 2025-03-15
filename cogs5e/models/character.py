@@ -255,28 +255,30 @@ class Character(StatBlock):
     # ---------- Serialization ----------
     def to_dict(self):
         d = super().to_dict()
-        d.update({
-            "owner": self._owner,
-            "upstream": self._upstream,
-            "active": self._active,
-            "sheet_type": self._sheet_type,
-            "import_version": self._import_version,
-            "description": self._description,
-            "image": self._image,
-            "cvars": self.cvars,
-            "overrides": self.overrides.to_dict(),
-            "consumables": [co.to_dict() for co in self.consumables],
-            "death_saves": self.death_saves.to_dict(),
-            "live": self._live,
-            "race": self.race,
-            "background": self.background,
-            "ddb_campaign_id": self.ddb_campaign_id,
-            "actions": self.actions.to_dict(),
-            "active_guilds": self._active_guilds,
-            "active_channels": self._active_channels,
-            "options_v2": self.options.dict(),
-            "coinpurse": self.coinpurse.to_dict(),
-        })
+        d.update(
+            {
+                "owner": self._owner,
+                "upstream": self._upstream,
+                "active": self._active,
+                "sheet_type": self._sheet_type,
+                "import_version": self._import_version,
+                "description": self._description,
+                "image": self._image,
+                "cvars": self.cvars,
+                "overrides": self.overrides.to_dict(),
+                "consumables": [co.to_dict() for co in self.consumables],
+                "death_saves": self.death_saves.to_dict(),
+                "live": self._live,
+                "race": self.race,
+                "background": self.background,
+                "ddb_campaign_id": self.ddb_campaign_id,
+                "actions": self.actions.to_dict(),
+                "active_guilds": self._active_guilds,
+                "active_channels": self._active_channels,
+                "options_v2": self.options.dict(),
+                "coinpurse": self.coinpurse.to_dict(),
+            }
+        )
         return d
 
     @staticmethod

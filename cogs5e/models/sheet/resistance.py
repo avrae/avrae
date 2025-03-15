@@ -32,12 +32,14 @@ class Resistances:
 
     @classmethod
     def from_args(cls, args, **kwargs):
-        return cls.from_dict({
-            "resist": args.get("resist", [], **kwargs),
-            "immune": args.get("immune", [], **kwargs),
-            "vuln": args.get("vuln", [], **kwargs),
-            "neutral": args.get("neutral", [], **kwargs),
-        })
+        return cls.from_dict(
+            {
+                "resist": args.get("resist", [], **kwargs),
+                "immune": args.get("immune", [], **kwargs),
+                "vuln": args.get("vuln", [], **kwargs),
+                "neutral": args.get("neutral", [], **kwargs),
+            }
+        )
 
     def to_dict(self):
         return {

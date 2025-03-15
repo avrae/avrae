@@ -1,6 +1,5 @@
 import enum
 
-
 # NOTE: if writing new enums for the automation engine, make sure to update automation-common too!
 
 

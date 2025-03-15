@@ -101,17 +101,19 @@ class Combatant(BaseCombatant, StatBlock):
 
     def to_dict(self):
         d = super().to_dict()
-        d.update({
-            "controller_id": self.controller_id,
-            "init": self.init,
-            "private": self.is_private,
-            "index": self.index,
-            "notes": self.notes,
-            "effects": [e.to_dict() for e in self._effects],
-            "group_id": self._group_id,
-            "type": self.type.value,
-            "id": self.id,
-        })
+        d.update(
+            {
+                "controller_id": self.controller_id,
+                "init": self.init,
+                "private": self.is_private,
+                "index": self.index,
+                "notes": self.notes,
+                "effects": [e.to_dict() for e in self._effects],
+                "group_id": self._group_id,
+                "type": self.type.value,
+                "id": self.id,
+            }
+        )
         return d
 
     @property

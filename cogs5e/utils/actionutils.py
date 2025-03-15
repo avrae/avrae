@@ -459,16 +459,18 @@ async def send_action_list(
     display_legendary = "legendary" in args
     display_mythic = "mythic" in args
     display_lair = "lair" in args
-    is_display_filtered = any((
-        display_attacks,
-        display_actions,
-        display_bonus,
-        display_reactions,
-        display_other,
-        display_legendary,
-        display_mythic,
-        display_lair,
-    ))
+    is_display_filtered = any(
+        (
+            display_attacks,
+            display_actions,
+            display_bonus,
+            display_reactions,
+            display_other,
+            display_legendary,
+            display_mythic,
+            display_lair,
+        )
+    )
     filtered_action_type_strs = list(
         itertools.compress(
             (

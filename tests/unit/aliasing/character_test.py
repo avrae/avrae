@@ -4,7 +4,6 @@ from aliasing.api.character import AliasCharacter
 from tests.utils import active_character, end_init, start_init
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds
 
-
 pytestmark = pytest.mark.asyncio
 
 

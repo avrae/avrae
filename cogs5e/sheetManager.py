@@ -875,21 +875,25 @@ class SheetManager(commands.Cog):
 
 
         """  # noqa: E501
-        serv_settings = await ctx.get_server_settings()
-        if version is None:
-            if serv_settings:
-                version = serv_settings.version
+        try:
+            serv_settings = await ctx.get_server_settings()
+            if version is None:
+                if serv_settings:
+                    version = serv_settings.version
+                else:
+                    version = "2024"
             else:
-                version = "2024"
-        else:
-            # version was passed in, check allow_character_override
-            if version != serv_settings.version and not serv_settings.allow_character_override:
-                version = serv_settings.version
-                await ctx.send(
-                    f"Character-specific version override is disabled. This character was imported as {version}, If you think this is incorrect, please contact a Server Admin."
-                )
-            else:
-                version = version
+                # version was passed in, check allow_character_override
+                if serv_settings and version != serv_settings.version and not serv_settings.allow_character_override:
+                    version = serv_settings.version
+                    await ctx.send(
+                        f"Character-specific version override is disabled. This character was imported as {version}, If you think this is incorrect, please contact a Server Admin."
+                    )
+                else:
+                    version = version
+        except:
+            # We will get here when done in DM's
+            version = version if version else "2024"
 
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet

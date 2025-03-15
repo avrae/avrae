@@ -126,13 +126,11 @@ class Quickstart(Tutorial):
                 await state_map.commit(ctx)
                 embed = TutorialEmbed(self, ctx)
                 embed.title = "Objectives"
-                embed.description = checklist(
-                    [
-                        (f"Make a skill check with `{ctx.prefix}check <skill>`.", state_map.data.get("has_check")),
-                        (f"Make an ability save with `{ctx.prefix}save <ability>`.", state_map.data.get("has_save")),
-                        (f"Make an attack with `{ctx.prefix}action <action>`.", state_map.data.get("has_attack")),
-                    ]
-                )
+                embed.description = checklist([
+                    (f"Make a skill check with `{ctx.prefix}check <skill>`.", state_map.data.get("has_check")),
+                    (f"Make an ability save with `{ctx.prefix}save <ability>`.", state_map.data.get("has_save")),
+                    (f"Make an attack with `{ctx.prefix}action <action>`.", state_map.data.get("has_attack")),
+                ])
                 await ctx.send(embed=embed)
 
             if state_map.data.get("has_check") and state_map.data.get("has_save") and state_map.data.get("has_attack"):

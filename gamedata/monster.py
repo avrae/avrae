@@ -277,16 +277,14 @@ class Monster(StatBlock, Sourced):
 
     def get_hidden_stat_array(self):
         stats = ["Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"]
-        for i, stat in enumerate(
-            (
-                self.stats.strength,
-                self.stats.dexterity,
-                self.stats.constitution,
-                self.stats.intelligence,
-                self.stats.wisdom,
-                self.stats.charisma,
-            )
-        ):
+        for i, stat in enumerate((
+            self.stats.strength,
+            self.stats.dexterity,
+            self.stats.constitution,
+            self.stats.intelligence,
+            self.stats.wisdom,
+            self.stats.charisma,
+        )):
             if stat <= 3:
                 stats[i] = "Very Low"
             elif 3 < stat <= 7:

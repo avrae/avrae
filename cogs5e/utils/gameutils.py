@@ -121,15 +121,13 @@ def _parse_coin_args_re(args: str) -> CoinsArgs:
 async def resolve_strict_coins(coinpurse, coins: CoinsArgs, ctx, mode: CoinsAutoConvert = 0):
     if (coinpurse.total + coins.total) < 0:
         raise InvalidArgument("You cannot put a currency into negative numbers.")
-    if not all(
-        (
-            coinpurse.pp + coins.pp >= 0,
-            coinpurse.gp + coins.gp >= 0,
-            coinpurse.ep + coins.ep >= 0,
-            coinpurse.sp + coins.sp >= 0,
-            coinpurse.cp + coins.cp >= 0,
-        )
-    ):
+    if not all((
+        coinpurse.pp + coins.pp >= 0,
+        coinpurse.gp + coins.gp >= 0,
+        coinpurse.ep + coins.ep >= 0,
+        coinpurse.sp + coins.sp >= 0,
+        coinpurse.cp + coins.cp >= 0,
+    )):
         if mode == CoinsAutoConvert.NEVER or (
             mode == CoinsAutoConvert.ASK
             and coins.explicit

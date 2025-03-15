@@ -21,14 +21,12 @@ class Condition(Effect):
         out = super().to_dict()
         on_true = Effect.serialize(self.on_true)
         on_false = Effect.serialize(self.on_false)
-        out.update(
-            {
-                "condition": self.condition,
-                "onTrue": on_true,
-                "onFalse": on_false,
-                "errorBehaviour": self.error_behaviour,
-            }
-        )
+        out.update({
+            "condition": self.condition,
+            "onTrue": on_true,
+            "onFalse": on_false,
+            "errorBehaviour": self.error_behaviour,
+        })
         return out
 
     def run(self, autoctx):

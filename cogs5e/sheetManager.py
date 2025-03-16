@@ -882,6 +882,14 @@ class SheetManager(commands.Cog):
                     version = serv_settings.version
                 else:
                     version = "2024"
+            elif version not in ["2014","2024"]:
+                await ctx.send(
+                        f"Character-specific version override is value of {version} is not valid. Character will be imported using default version."
+                    )
+                if serv_settings:
+                    version = serv_settings.version
+                else:
+                    version = "2024"
             else:
                 # version was passed in, check allow_character_override
                 if serv_settings and version != serv_settings.version and not serv_settings.allow_character_override:
@@ -893,7 +901,7 @@ class SheetManager(commands.Cog):
                     version = version
         except:
             # We will get here when done in DM's
-            version = version if version else "2024"
+            version = version if version and version in ["2014","2024"] else "2024"
 
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet

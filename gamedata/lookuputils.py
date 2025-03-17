@@ -291,7 +291,9 @@ async def add_training_data(mdb, lookup_type, query, result_name, metadata=None,
 
 
 def slash_match_key(entity):
-    return f"{entity.name} ({'🍺 - ' if entity.homebrew else ''}{entity.source})"
+    return (
+        f"{entity.name} ({'🍺 - ' if entity.homebrew else ''}{entity.source}{f'; legacy' if entity.is_legacy else ''})"
+    )
 
 
 def lookup_converter(entity_type: str) -> Callable:
@@ -304,9 +306,7 @@ def lookup_converter(entity_type: str) -> Callable:
 
     async def item_converter(inter: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.item:
         choices = await get_item_entitlement_choice_map(inter)
-        result: gamedata.monster = search(list(itertools.chain.from_iterable(choices.values())), arg, slash_match_key)[
-            0
-        ]
+        result: gamedata.item = search(list(itertools.chain.from_iterable(choices.values())), arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That item doesn't exist")
         return result
@@ -327,7 +327,7 @@ def lookup_converter(entity_type: str) -> Callable:
 
         for actiontype in (a for a in compendium.rule_references if a.get("version") == version or "version" not in a):
             choices.extend(actiontype["items"])
-        result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
+        result = search(choices, arg, lambda e: e["fullName"])[0]
         if result is None:
             raise ValueError("That rule doesn't exist")
         return result

@@ -884,7 +884,7 @@ class SheetManager(commands.Cog):
                     version = "2024"
             elif version not in ["2014","2024"]:
                 await ctx.send(
-                        f"Character-specific version override is value of {version} is not valid. Character will be imported using default version."
+                        f"Character-specific version override {version} is not valid. Character will be imported using default version.  You can amend this via `{ctx.prefix}csettings` "
                     )
                 if serv_settings:
                     version = serv_settings.version

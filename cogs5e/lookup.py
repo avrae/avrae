@@ -91,7 +91,7 @@ class Lookup(commands.Cog):
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
-        version, name = await extract_and_set_version(ctx, name)
+        version, name, strict = await extract_and_set_version(ctx, name)
 
         if name is None:
             return await self._show_reference_options(ctx)
@@ -112,12 +112,12 @@ class Lookup(commands.Cog):
     async def slash_rule(
         self,
         inter: disnake.ApplicationCommandInteraction,
-        version=commands.Param(description="Ruleset of the rule or condition", choices=VALID_VERSIONS),
+        version=commands.Param(description="Ruleset of the rule or condition", choices=VALID_VERSIONS[:2]),
         name=commands.Param(
             description="The rule or condition you want to look up", converter=lookup_converter("rule")
         ),
     ):
-        if version not in VALID_VERSIONS:
+        if version not in VALID_VERSIONS[:2]:
             version = get_lookup_version(inter)
 
         if isinstance(name, list):
@@ -953,10 +953,10 @@ class Lookup(commands.Cog):
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
-        version, name = await extract_and_set_version(ctx, name)
+        version, name, strict = await extract_and_set_version(ctx, name)
 
         choices = await lookuputils.get_spell_choices(ctx)
-        choices = await filter_spells_by_version(ctx, choices, version)
+        choices = await filter_spells_by_version(ctx, choices, version, strict)
         spell = await lookuputils.search_entities(ctx, {"spell": choices}, name)
 
         return await self._spell(ctx, spell)

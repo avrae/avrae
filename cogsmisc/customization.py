@@ -1159,11 +1159,16 @@ class Customization(commands.Cog):
 
     @commands.command(aliases=["servsettings"])
     @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
     async def server_settings(self, ctx):
-        """Opens the server settings menu. You must have *Manage Server* permissions to use this command."""
+        """Opens the server settings menu. You must have *Manage Server* permissions to edit any settings here"""
         guild_settings = await ctx.get_server_settings()
-        settings_ui = ui.ServerSettingsUI.new(ctx.bot, owner=ctx.author, settings=guild_settings, guild=ctx.guild)
+        settings_ui = ui.ServerSettingsUI.new(
+            ctx.bot,
+            owner=ctx.author,
+            settings=guild_settings,
+            guild=ctx.guild,
+            readonly=not ctx.author.guild_permissions.manage_guild,
+        )
         await settings_ui.send_to(ctx)
 
     # temporary commands to aid testers with lack of dashboard

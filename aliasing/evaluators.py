@@ -171,7 +171,6 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         uvars = await helpers.get_uvars(ctx)
         inst = cls(ctx, builtins=DEFAULT_BUILTINS, initial_names=uvars)
         inst._cache["uvars"].update(uvars)
-        # I'm just putting this comment here to see if the tests actually run this time
         if ctx.guild:
             if hasattr(ctx, "get_server_settings"):
                 inst._cache["servsettings"] = await ctx.get_server_settings()

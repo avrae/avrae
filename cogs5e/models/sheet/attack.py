@@ -142,7 +142,12 @@ class Attack:
         )
 
     def build_str(self, caster):
-        return f"**{self.name}**: {caster.evaluate_annostr(self.list_display_override) if self.list_display_override else self.automation.build_str(caster)}"
+        if self.list_display_override:
+            action_description = caster.evaluate_annostr(self.list_display_override)
+        else:
+            action_description = self.automation.build_str(caster)
+
+        return f"**{self.name}**: {action_description}"
 
     def __str__(self):
         return f"**{self.name}**: {str(self.automation)}"
@@ -210,20 +215,22 @@ class AttackList:
     @property
     def other_attacks(self):
         """Returns an AttackList of attacks that do not fall into the other action categories."""
-        return AttackList([
-            a
-            for a in self.attacks
-            if a.activation_type
-            not in (
-                enums.ActivationType.ACTION,
-                enums.ActivationType.BONUS_ACTION,
-                enums.ActivationType.REACTION,
-                enums.ActivationType.LEGENDARY,
-                enums.ActivationType.MYTHIC,
-                enums.ActivationType.LAIR,
-                None,
-            )
-        ])
+        return AttackList(
+            [
+                a
+                for a in self.attacks
+                if a.activation_type
+                not in (
+                    enums.ActivationType.ACTION,
+                    enums.ActivationType.BONUS_ACTION,
+                    enums.ActivationType.REACTION,
+                    enums.ActivationType.LEGENDARY,
+                    enums.ActivationType.MYTHIC,
+                    enums.ActivationType.LAIR,
+                    None,
+                )
+            ]
+        )
 
     # list compat
     def append(self, attack):

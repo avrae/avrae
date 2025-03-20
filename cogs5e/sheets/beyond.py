@@ -291,11 +291,11 @@ class BeyondSheetParser(SheetLoaderABC):
 
                 elif spell_prepared:  # prioritize prepared spells
                     if spells[result.name].prepared:
-                        if result.dc and spell_info.dc:
+                        if spell_info.dc:
                             spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.dc)
-                        elif result.sab and spell_info.sab:
+                        elif spell_info.sab:
                             spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.sab)
-                        elif result.mod and spell_info.mod:
+                        elif spell_info.mod:
                             spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.mod)
 
                     if not spells[result.name].prepared:

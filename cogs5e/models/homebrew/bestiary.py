@@ -354,6 +354,7 @@ def _monster_factory_bestiary_builder(data, bestiary_name):
             vuln=data["vulnerabilities"],
             resist=data["resistances"],
             immune=data["immunities"],
+            absorb=data.get("absorptions", []),
         )
     )
 
@@ -622,6 +623,7 @@ def _monster_factory_critterdb(data, bestiary_name):
             vuln=data["stats"]["damageVulnerabilities"],
             resist=data["stats"]["damageResistances"],
             immune=data["stats"]["damageImmunities"],
+            absorb=data["stats"].get("damageAbsorptions", []),
         )
     )
 
@@ -677,12 +679,14 @@ def parse_critterdb_traits(data, key):
             for override in overrides:
                 if override.group("simple"):
                     attacks.append(
-                        Attack.from_dict({
-                            "name": override.group(2) or name,
-                            "attackBonus": override.group(3) or None,
-                            "damage": override.group(4) or None,
-                            "details": desc,
-                        })
+                        Attack.from_dict(
+                            {
+                                "name": override.group(2) or name,
+                                "attackBonus": override.group(3) or None,
+                                "damage": override.group(4) or None,
+                                "details": desc,
+                            }
+                        )
                     )
                 elif freeform_override := override.group("freeform"):
                     try:

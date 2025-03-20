@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 # ==== useful constants ====
-RESIST_TYPES = ("resist", "immune", "vuln", "neutral")
+RESIST_TYPES = ("resist", "immune", "vuln", "neutral", "absorb")
 DAMAGE_TYPES = (
     "acid",
     "bludgeoning",

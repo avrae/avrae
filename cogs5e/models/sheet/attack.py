@@ -142,7 +142,12 @@ class Attack:
         )
 
     def build_str(self, caster):
-        return f"**{self.name}**: {caster.evaluate_annostr(self.list_display_override) if self.list_display_override else self.automation.build_str(caster)}"
+        if self.list_display_override:
+            action_description = caster.evaluate_annostr(self.list_display_override)
+        else:
+            action_description = self.automation.build_str(caster)
+
+        return f"**{self.name}**: {action_description}"
 
     def __str__(self):
         return f"**{self.name}**: {str(self.automation)}"

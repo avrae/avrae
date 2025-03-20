@@ -293,6 +293,10 @@ class BeyondSheetParser(SheetLoaderABC):
                     if spells[result.name].prepared:
                         if result.dc and spell_info.dc:
                             spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.dc)
+                        if result.sab and spell_info.sab:
+                            spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.sab)
+                        if result.mod and spell_info.mod:
+                            spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.mod)
 
                     if not spells[result.name].prepared:
                         spells[result.name] = spell_info

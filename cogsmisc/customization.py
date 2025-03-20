@@ -1164,7 +1164,7 @@ class Customization(commands.Cog):
         guild_settings = await ctx.get_server_settings()
         try:
             readonly = not await checks.admin_or_permissions(manage_guild=True).predicate(ctx)
-        except:
+        except commands.CheckFailure:
             readonly = True
 
         settings_ui = ui.ServerSettingsUI.new(

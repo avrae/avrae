@@ -112,6 +112,7 @@ class CSetting:  # character settings
                 )
         elif self.type == "number":
             try:
+                new_value = self.display_func(int(new_value)) if self.setting_key == "version" else new_value
                 val = int(new_value)
             except (ValueError, TypeError):
                 return (
@@ -195,6 +196,6 @@ CHARACTER_SETTINGS = {
         "number",
         description="version of the ruleset to use",
         default="2024",
-        display_func=lambda val: "2024" if val == "2024" else "2014",
+        display_func=lambda val: "2014" if val == 2014 else "2024",
     ),
 }

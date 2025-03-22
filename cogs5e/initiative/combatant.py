@@ -3,6 +3,7 @@ from typing import Callable, List, Optional, TYPE_CHECKING, TypeVar
 
 import disnake
 
+import aliasing.evaluators
 import cogs5e.models.character
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
@@ -16,6 +17,7 @@ from .effects import InitiativeEffect
 from .errors import RequiresContext
 from .types import BaseCombatant, CombatantType
 from .utils import create_combatant_id
+from ..models.errors import InvalidArgument
 
 if TYPE_CHECKING:
     from .group import CombatantGroup
@@ -460,6 +462,19 @@ class Combatant(BaseCombatant, StatBlock):
             duration=duration, parenthetical=parenthetical, concentration=concentration, description=description
         )
         return f"{name} {hp_ac} {resists}{note_str}\n{effects}".strip()
+
+    def evaluate_annostr(self, varstr):
+        """
+        Evaluates annotated string using AutomationEvaluator with Combatant/Caster.
+        :param varstr - the string to search and replace.
+        :returns str - the string with annotations evaluated
+        """
+        evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(self)
+
+        try:
+            return evaluator.transformed_str(varstr)
+        except Exception as e:
+            raise InvalidArgument(f"Cannot evaluate `{varstr}`: {e}")
 
     def _get_long_effects(self, **kwargs) -> str:
         return "\n".join(f"* {e.get_str(**kwargs)}" for e in self.get_effects())

@@ -23,10 +23,11 @@ TOO_MANY_ROLES_SENTINEL = "__special:too_many_roles"
 
 
 class ServerSettingsMenuBase(MenuBase, abc.ABC):
-    __menu_copy_attrs__ = ("bot", "settings", "guild")
+    __menu_copy_attrs__ = ("bot", "settings", "guild", "readonly")
     bot: _AvraeT
     settings: ServerSettings
     guild: disnake.Guild
+    readonly: bool
 
     async def commit_settings(self):
         """Commits any changed guild settings to the db."""
@@ -48,14 +49,26 @@ class ServerSettingsMenuBase(MenuBase, abc.ABC):
             )
         return "Inline rolling is currently **enabled**. I'll roll any `[[dice]]` I find in messages!"
 
+    def setup_readonly(self):
+        self.clear_items()
+
+        if hasattr(self, "back"):
+            self.add_item(self.back)
+
+        if hasattr(self, "exit"):
+            self.add_item(self.exit)
+
 
 class ServerSettingsUI(ServerSettingsMenuBase):
     @classmethod
-    def new(cls, bot: _AvraeT, owner: disnake.User, settings: ServerSettings, guild: disnake.Guild):
+    def new(
+        cls, bot: _AvraeT, owner: disnake.User, settings: ServerSettings, guild: disnake.Guild, readonly: bool = True
+    ):
         inst = cls(owner=owner)
         inst.bot = bot
         inst.settings = settings
         inst.guild = guild
+        inst.readonly = readonly
         return inst
 
     @disnake.ui.button(label="Lookup Settings", style=disnake.ButtonStyle.primary)
@@ -264,6 +277,9 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
     async def _before_send(self):
         self._refresh_dm_role_select()
 
+        if self.readonly:
+            self.setup_readonly()
+
     async def get_content(self):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Lookup Settings",
@@ -387,6 +403,9 @@ class _InlineRollingSettingsUI(ServerSettingsMenuBase):
         elif self.settings.inline_enabled is InlineRollingType.ENABLED:
             self.enable.disabled = True
 
+        if self.readonly:
+            self.setup_readonly()
+
     async def get_content(self):
         embed = disnake.Embed(
             title=f"Server Settings ({self.guild.name}) / Inline Rolling Settings",
@@ -440,6 +459,9 @@ class _MiscellaneousSettingsUI(ServerSettingsMenuBase):
         )
         if not flag_enabled:
             self.remove_item(self.toggle_upenn_nlp_opt_in)
+
+        if self.readonly:
+            self.setup_readonly()
 
     async def get_content(self):
         embed = disnake.Embed(
@@ -724,6 +746,9 @@ class _RollStatsSettingsUI(ServerSettingsMenuBase):
 
     async def _before_send(self):
         self._refresh_remove_rule_select()
+
+        if self.readonly:
+            self.setup_readonly()
 
     async def get_content(self):
         embed = disnake.Embed(

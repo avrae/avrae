@@ -266,7 +266,7 @@ class BeyondSheetParser(SheetLoaderABC):
         dcs = []
         sabs = []
         mods = []
-        spells = []
+        spells = {}
 
         for spell in spellbook["spells"]:
             spell_ab = spell["sab"]
@@ -283,18 +283,32 @@ class BeyondSheetParser(SheetLoaderABC):
             result = compendium.lookup_entity(gamedata.Spell.entity_type, spell["id"])
 
             if result:
-                if result.name not in [spell.name for spell in spells]:
-                    spells.append(
-                        SpellbookSpell.from_spell(
-                            result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
-                        )
-                    )
-            else:
-                spells.append(
-                    SpellbookSpell(
-                        spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
-                    )
+                spell_info = SpellbookSpell.from_spell(
+                    result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
                 )
+                if result.name not in spells:
+                    spells[result.name] = spell_info
+
+
+                elif spell_prepared:  # prioritize prepared spells
+                    if spells[result.name].prepared:
+                        if spell_info.dc and spells[result.name].dc:
+                            spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.dc)
+                        elif spell_info.sab and spells[result.name].sab:
+                            spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.sab)
+                        elif spell_info.mod and spells[result.name].mod:
+                            spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.mod)
+
+                    if not spells[result.name].prepared:
+                        spells[result.name] = spell_info
+
+            else:
+                spell_info = SpellbookSpell(
+                    spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
+                )
+                spells[spell_info.name] = spell_info
+
+        spells = list(spells.values())
 
         dc = max(dcs, key=dcs.count, default=None)
         sab = max(sabs, key=sabs.count, default=None)

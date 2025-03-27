@@ -19,7 +19,7 @@ from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
 from utils.constants import HOMEBREW_EMOJI, HOMEBREW_ICON
 from utils.functions import get_selection, search_and_select, search
-from utils.settings.guild import LegacyPreference
+from utils.settings.guild import LegacyPreference, ServerSettings
 from .compendium import compendium
 from .klass import ClassFeature
 from .race import RaceFeature
@@ -31,6 +31,8 @@ if TYPE_CHECKING:
     _SourcedT = TypeVar("_SourcedT", bound=Sourced, covariant=True)
 
 log = logging.getLogger(__name__)
+
+VALID_VERSIONS = ["2024", "2014", "Homebrew"]
 
 
 # ==== entitlement search helpers ====
@@ -111,6 +113,58 @@ async def handle_required_license(ctx, err):
 
         embed.set_footer(text="Already unlocked? It may take up to a minute for Avrae to recognize the purchase.")
     await ctx.send(embed=embed)
+
+
+def get_version_from_string(text: str = None) -> (str, str):
+    try:
+        version = text.split()[-1] if text.split()[-1].title() in VALID_VERSIONS else None
+        search_str = text.replace(version, "").strip() if text.split()[-1].title() in VALID_VERSIONS else text
+        version = version.title()
+    except:
+        version = None
+        search_str = text
+
+    return version, search_str
+
+
+async def extract_and_set_version(ctx, text: str = None) -> tuple[str, str, str]:
+    version, search_str = get_version_from_string(text)
+    strict = True
+
+    if not version:
+        strict = False
+        version = await get_lookup_version(ctx)
+
+    return version, search_str, strict
+
+
+async def get_lookup_version(ctx) -> str:
+    version = "2024"
+
+    try:
+        if hasattr(ctx, "get_server_settings"):
+            serv_settings = await ctx.get_server_settings() if ctx.guild else None
+        else:
+            serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+    except:
+        serv_settings = None
+
+    if serv_settings:
+        version = serv_settings.version
+
+    if serv_settings and serv_settings.allow_character_override or not serv_settings:
+        try:
+            if hasattr(ctx, "get_character"):
+                character: Character = await ctx.get_character()
+            else:
+                character: Character = await Character.from_ctx(ctx)
+
+            if character.options.version:
+                version = character.options.version
+        except NoCharacter:
+            pass
+
+    return version
 
 
 # ---- helpers ----
@@ -240,7 +294,9 @@ async def add_training_data(mdb, lookup_type, query, result_name, metadata=None,
 
 
 def slash_match_key(entity):
-    return f"{entity.name} ({'🍺 - ' if entity.homebrew else ''}{entity.source})"
+    return (
+        f"{entity.name} ({'🍺 - ' if entity.homebrew else ''}{entity.source}{f'; legacy' if entity.is_legacy else ''})"
+    )
 
 
 def lookup_converter(entity_type: str) -> Callable:
@@ -253,9 +309,7 @@ def lookup_converter(entity_type: str) -> Callable:
 
     async def item_converter(inter: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.item:
         choices = await get_item_entitlement_choice_map(inter)
-        result: gamedata.monster = search(list(itertools.chain.from_iterable(choices.values())), arg, slash_match_key)[
-            0
-        ]
+        result: gamedata.item = search(list(itertools.chain.from_iterable(choices.values())), arg, slash_match_key)[0]
         if result is None:
             raise ValueError("That item doesn't exist")
         return result
@@ -267,20 +321,16 @@ def lookup_converter(entity_type: str) -> Callable:
             raise ValueError("That spell doesn't exist")
         return result
 
-    def rule_converter(_: disnake.ApplicationCommandInteraction, arg: str):
+    def rule_converter(inter: disnake.ApplicationCommandInteraction, arg: str):
         choices = []
-        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2024" or "version" not in a):
-            choices.extend(actiontype["items"])
-        result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
-        if result is None:
-            raise ValueError("That rule doesn't exist")
-        return result
+        if "version" not in inter.filled_options:
+            version = "2024"
+        else:
+            version = inter.filled_options["version"]
 
-    def rule2014_converter(_: disnake.ApplicationCommandInteraction, arg: str):
-        choices = []
-        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2014" or "version" not in a):
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == version or "version" not in a):
             choices.extend(actiontype["items"])
-        result: gamedata.monster = search(choices, arg, lambda e: e["fullName"])[0]
+        result = search(choices, arg, lambda e: e["fullName"])[0]
         if result is None:
             raise ValueError("That rule doesn't exist")
         return result
@@ -350,8 +400,6 @@ def lookup_converter(entity_type: str) -> Callable:
             return subclass_converter
         case "classfeat":
             return classfeat_converter
-        case "rule2014":
-            return rule2014_converter
         case _:
             raise ValueError("That converter does not exist")
 
@@ -464,6 +512,8 @@ async def select_spell_full(ctx, name, extra_choices=None, **kwargs):
     :rtype: :class:`gamedata.Spell`
     """
     choices = await get_spell_choices(ctx)
+    choices = await filter_spells_by_version(ctx, choices)
+
     await Stats.increase_stat(ctx, "spells_looked_up_life")
 
     # #881
@@ -471,6 +521,28 @@ async def select_spell_full(ctx, name, extra_choices=None, **kwargs):
         choices.extend(extra_choices)
 
     return await search_entities(ctx, {"spell": choices}, name, **kwargs)
+
+
+async def filter_spells_by_version(ctx, spells: [], version: str = None, strict: bool = False):
+    if not version:
+        version = await get_lookup_version(ctx)
+    out = []
+    spell_names = set()
+
+    # Priority Spells for versions/homebrew
+    for spell in spells:
+        if strict and spell.rulesVersion == version or (not strict and spell.rulesVersion in [version, "Homebrew"]):
+            out.append(spell)
+
+            if spell.rulesVersion == version:
+                spell_names.add(spell.name)
+
+    # Check no version spells
+    for spell in spells:
+        if spell.rulesVersion == "" and spell.name not in spell_names:
+            out.append(spell)
+
+    return out
 
 
 async def get_spell_choices(ctx, homebrew=True):
@@ -481,51 +553,10 @@ async def get_spell_choices(ctx, homebrew=True):
     :param homebrew: Whether to include homebrew entities.
     """
 
-    serv_settings = await ctx.get_server_settings()
-    if serv_settings:
-        version = serv_settings.version
-    else:
-        version = "2024"
-
-    # If allow_character_override is enabled, check for a character and use its version. Else, use the server version.
-    if serv_settings.allow_character_override:
-        try:
-            character: Character = await ctx.get_character()
-            version = character.options.version if character.options.version else version
-        except NoCharacter:
-            pass
-    else:
-        version = version
+    compendium_list = compendium.spells
 
     if not homebrew:
-        if version == "2024":
-            the_spells = [spell for spell in compendium.spells if spell.rulesVersion in ["2024", ""]]
-
-            spell_dict = {}
-            for spell in the_spells:
-                if spell.name not in spell_dict or spell.rulesVersion == "2024":
-                    spell_dict[spell.name] = spell
-
-            return list(spell_dict.values())
-        else:
-            the_spells = [spell for spell in compendium.spells if spell.rulesVersion != "2024"]
-
-            return the_spells
-
-    # compendium_list = compendium.spells
-    if version == "2024":
-        the_spells = [spell for spell in compendium.spells if spell.rulesVersion in ["2024", ""]]
-
-        spell_dict = {}
-        for spell in the_spells:
-            if spell.name not in spell_dict or spell.rulesVersion == "2024":
-                spell_dict[spell.name] = spell
-
-        compendium_list = list(spell_dict.values())
-    else:
-        the_spells = [spell for spell in compendium.spells if spell.rulesVersion != "2024"]
-
-        compendium_list = the_spells
+        return compendium_list
 
     # personal active tome
     try:

@@ -1477,6 +1477,7 @@ Custom Attack Structure
         thumb?: string;
         extra_crit_damage?: string;
         activation_type?: number;
+        list_display_override?: AnnotatedString;
     }
 
 In order to use Automation, it needs to be contained within a custom attack or spell. We recommend building these on
@@ -1525,6 +1526,10 @@ Hand-written custom attacks may be written in JSON or YAML and imported using th
         *optional* - How much extra damage to deal when this attack crits, in addition to normal crit rules such as
         doubling damage dice. For example, if this attack normally deals 1d6 damage with ``extra_crit_damage: "1d8"``,
         it will deal 2d6 + 1d8 damage on a crit.
+
+    .. attribute:: list_display_override
+        
+        *optional* - The display text to display in the action list (such as ``!a list`` ).
 
     .. attribute:: activation_type
 

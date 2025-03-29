@@ -1531,7 +1531,7 @@ Hand-written custom attacks may be written in JSON or YAML and imported using th
         
         *optional* - The display text to display in the action list (such as ``!a list`` ).
 
-        ``caster`` (:class:`~aliasing.api.statblock.AliasStatBlock)`
+        ``caster`` (:class:`~aliasing.api.statblock.AliasStatBlock)` is available in this attribute.
 
     .. attribute:: activation_type
 

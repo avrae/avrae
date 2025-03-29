@@ -16,6 +16,7 @@ INLINE_ROLLING_EMOJI = "\U0001f3b2"  # :game_die:
 INLINE_ROLLING_RE = re.compile(r"\[\[(.+?]?)]]")
 _sentinel = object()
 
+
 class InlineRoller:
     def __init__(self, bot):
         self.bot = bot

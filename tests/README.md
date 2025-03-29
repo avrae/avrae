@@ -55,7 +55,7 @@ Running tests with docker is very simple. Once you have docker set-up as shown i
 docker compose down && docker compose -f docker-compose.ci.yml up -d --build && docker logs -f avrae-tests-1
 ```
 
-This will shut down your current docker (resetting the database), run the tests, and open the test logs.
+This will shut down your current Avrae instance (resetting the database), run the tests, and open the test logs.
 
 ## Writing Tests
 

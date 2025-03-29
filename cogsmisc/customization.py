@@ -894,7 +894,7 @@ class Customization(commands.Cog):
             if cvar is None:
                 return await ctx.send("This cvar is not defined.")
             return await send_long_code_text(
-                ctx, outside_codeblock=f"**{name}**:".replace("_", "\_"), inside_codeblock=cvar
+                ctx, outside_codeblock=f"**{name}**:".replace("_", r"\_"), inside_codeblock=cvar
             )
 
         helpers.set_cvar(character, name, value)
@@ -940,7 +940,7 @@ class Customization(commands.Cog):
         character: Character = await ctx.get_character()
         await ctx.send(
             "{}'s character variables:\n{}".format(character.name, ", ".join(sorted(character.cvars.keys()))).replace(
-                "_", "\_"
+                "_", r"\_"
             )
         )
 

@@ -25,7 +25,7 @@ class Publicity(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        if bot.is_cluster_0:
+        if bot.is_cluster_0 and config.DBL_TOKEN is not None: # dont run without a DBL token
             self.bot.loop.create_task(self.background_update())
 
     async def update_server_count(self):

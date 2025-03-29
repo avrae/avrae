@@ -142,7 +142,7 @@ class RedisIO:
 
     # ==== misc ====
     async def close(self):
-        await self._db.close()
+        await self._db.aclose() # changed to aclose after close deprecated
 
 
 class _PubSubMessageBase(abc.ABC):

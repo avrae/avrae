@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   tests:
     image: avrae-tests

@@ -1,6 +1,6 @@
 from confluent_kafka import Consumer
 
-class kafka_consumer:
+class KafkaConsumer:
     '''
     Kafka consumer class to consume messages from a Kafka topic using Confluent Kafka Python client.
     

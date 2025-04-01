@@ -76,3 +76,11 @@ LAUNCHDARKLY_SDK_KEY = os.getenv("LAUNCHDARKLY_SDK_KEY")
 
 # ---- discord bot list ----
 DBL_TOKEN = os.getenv("DBL_TOKEN")  # optional
+
+# ---- kafka ----
+KAFKA_BOOTSTRAP_SERVER = os.getenv("KAFKA_BOOTSTRAP_SERVER")
+KAFKA_API_KEY = os.getenv("KAFKA_API_KEY")
+KAFKA_API_SECRET = os.getenv("KAFKA_API_SECRET")
+KAFKA_SECURITY_PROTOCOL = os.getenv("KAFKA_SECURITY_PROTOCOL", "SASL_SSL")
+KAFKA_SASL_MECHANISM = os.getenv("KAFKA_SASL_MECHANISM", "PLAIN")
+KAFKA_ACKS = os.getenv("KAFKA_ACKS", "all")

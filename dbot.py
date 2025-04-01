@@ -41,6 +41,9 @@ from utils.feature_flags import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
+# Confluent Kafka client
+from confluent_client.producer import KafkaProducer
+
 # This method will load the variables from .env into the environment for running in local
 # from dotenv import load_dotenv
 # load_dotenv()
@@ -360,6 +363,36 @@ async def on_command(ctx):
         log.debug(
             "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "
             "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx)
+        )
+        print(
+            "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "
+            "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx)
+        )
+        # send command to kafka
+        producer = KafkaProducer(KafkaProducer.config)
+        avrae_command = {
+            "EVENT_TIME": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "PLATFORM": "discord",
+            "MESSAGE_ID": ctx.message.id,
+            "MESSAGE_NAME": "AVRAE_COMMAND",
+            "DISCORD_ID": ctx.message.author.id,
+            "DDB_USER_ID": ctx.message.author.name,
+            "DISCORD_SERVER_ID": ctx.message.guild.id,
+            "COUNTRY_CODE": None,
+            "IP_ADDRESS": None,
+            "ACTION_DESCRIPTORS": [
+                {
+                    "COMMAND_ID": ctx.command.qualified_name,
+                    "COMMAND_CATEGORY": ctx.command.cog_name,
+                    "SUBCOMMAND_ID": None,
+                    "ARGS": ctx.message.content.split(" ")[1:],
+                }
+            ],
+        }
+        producer.produce(
+            topic="dnddev_avraebot",
+            user=str(ctx.message.author.id),
+            command= bytes(str(avrae_command), encoding="utf-8"),
         )
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))

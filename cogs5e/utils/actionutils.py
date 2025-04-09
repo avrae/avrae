@@ -111,6 +111,7 @@ async def run_action(
         embed.title = f"{name} uses {action.name}!"
 
     if action.automation:
+        ctx.footer_queue(f"automation: {action.name}")
         result = await run_automation(ctx, embed, args, caster, action.automation, targets, combat)
     else:
         # else, show action description and note that it can't be automated

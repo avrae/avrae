@@ -51,6 +51,7 @@ async def run_attack(
     verb = attack.verb or "attacks with"
 
     if args.last("title") is not None:
+        ctx.footer_queue(f"attack: {attack.name}")
         embed.title = args.last("title").replace("[name]", name).replace("[aname]", attack_name).replace("[verb]", verb)
     else:
         embed.title = f"{name} {verb} {attack_name}!"
@@ -111,7 +112,6 @@ async def run_action(
         embed.title = f"{name} uses {action.name}!"
 
     if action.automation:
-        ctx.footer_queue(f"automation: {action.name}")
         result = await run_automation(ctx, embed, args, caster, action.automation, targets, combat)
     else:
         # else, show action description and note that it can't be automated

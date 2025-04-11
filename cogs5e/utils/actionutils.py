@@ -64,7 +64,7 @@ async def run_attack(
     }
     args.update_nx(arg_defaults)
 
-    if args.get("f"): ctx.footer_queue(f"attack: {attack.name}")
+    ctx.footer_queue(f"Action: {attack.name}")
     result = await run_automation(
         ctx, embed, args, caster, attack.automation, targets, combat, **attack.__run_automation_kwargs__
     )

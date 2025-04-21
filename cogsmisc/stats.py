@@ -26,7 +26,8 @@ class Stats(commands.Cog):
         self.bot = bot
         self.start_time = time.monotonic()
         self.command_stats = Counter()
-        self.bot.loop.create_task(self.scheduled_update())
+        if config.ENVIRONMENT != "development":  # do not run in tests
+            self.bot.loop.create_task(self.scheduled_update())
 
     # ===== listeners =====
     @commands.Cog.listener()

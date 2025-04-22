@@ -265,7 +265,7 @@ class InitPassiveEffect:
             ac_bonus=ac_bonus,
             max_hp_value=max_hp_value,
             max_hp_bonus=max_hp_bonus,
-            save_bonus=args.join("sb", "+"),
+            save_bonus=resolve_generic_save_bonuses(args.get("sb")),
             save_adv=resolve_save_advs(args.get("sadv")),
             save_dis=resolve_save_advs(args.get("sdis")),
             check_bonus=args.join("cb", "+"),
@@ -273,7 +273,7 @@ class InitPassiveEffect:
             check_dis=resolve_check_advs(args.get("cdis")),
             dc_bonus=sum(args.get("dc", type_=int)),
             # WIP: Specific Save Bonuses. TODO: Better arg name?
-            specific_save_bonus=resolve_specific_save_bonuses(args.get("ssb")),
+            specific_save_bonus=resolve_specific_save_bonuses(args.get("sb")),
         )
 
     # ==== stringification ====
@@ -338,6 +338,26 @@ def resolve_check_advs(values: Iterable[str]) -> Set[str]:
     return out
 
 
+def resolve_generic_save_bonuses(values: Iterable[str]) -> str:
+    out = list()
+    # from automation, parse explicit all effects in the specific field (not supported)
+    if isinstance(values, dict):
+        for k, v in values.items():
+            if k.lower() == "all":
+                out.append(v)
+    else:
+        # from `-sb`
+        for val in values:
+            try:
+                mod, stat = val.split("|")
+            except ValueError:
+                out.append(val)
+            else:
+                if stat.lower() == "all":
+                    out.append(mod)
+    return "+".join(out)
+
+
 def resolve_specific_save_bonuses(values: Iterable[str]) -> dict[str, str]:
     """
     Takes in 3|str, -4|dex, etc.
@@ -351,6 +371,6 @@ def resolve_specific_save_bonuses(values: Iterable[str]) -> dict[str, str]:
         try:
             mod, stat = val.split("|")
         except ValueError:
-            raise InvalidArgument(f"{val} could not be interpreted as a specific save bonus stat.")
+            continue  # ignore non-split sb values
         out[stat] = mod
     return out

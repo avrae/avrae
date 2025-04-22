@@ -983,6 +983,7 @@ class InitTracker(commands.Cog):
         `-neutral <damage type>` - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
         __Checks/Saves__
         `-sb <save bonus>` - Adds a bonus to all saving throws.
+        `-ssb <save bonus>|<mod>` - Adds a bonus to a specific save type. For example, `-ssb 3|dex` would add +3 to dexterity saves.
         `-sadv/sdis <ability>` - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
         `-dc <dc>` - Adds a bonus to all saving throw DCs.
         `-cb <check bonus>` - Adds a bonus to all ability checks.

@@ -418,6 +418,7 @@ PassiveEffects
         check_adv: AnnotatedString[];
         check_dis: AnnotatedString[];
         dc_bonus: IntExpression;
+        specific_save_bonus: Dict[str, AnnotatedString];
     }
 
 Used to specify the passive effects granted by an initiative effect.
@@ -530,6 +531,10 @@ Used to specify the passive effects granted by an initiative effect.
     .. attribute:: dc_bonus
 
         *optional* - A bonus added to the all of the combatant's save DCs while this effect is active.
+
+    .. attribute:: specific_save_bonus
+
+        *optional* - Allows to create bonuses to specific saving throws. Is a dictionary that maps an ability score to a bonus. The bonus value is an `AnnotatedString`_. For example, ``{"str": 3}`` would create an effect that gives +3 to strength saving throws.
 
 .. _attackinteraction:
 
@@ -1109,6 +1114,7 @@ It must be inside a Target effect.
 - ``lastContestAbility`` (:class:`str` or ``None``) The title-case full name of the skill the caster rolled
   (e.g. ``"Animal Handling"``, ``"Arcana"``). ``None`` if no contest was made.
 - ``lastContestDidTie`` (:class:`bool`) Whether a ability contest resulted in a tie.
+
 
 AnnotatedString
 ---------------

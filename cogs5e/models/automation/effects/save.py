@@ -1,3 +1,5 @@
+import logging
+
 import d20
 
 from cogs5e.models.errors import InvalidSaveType
@@ -106,6 +108,14 @@ class Save(Effect):
         sadv = stat in sadv_effects
         sdis = stat in sdis_effects
 
+        # Specific Save Bonus implementation.
+        specific_save_bonus = autoctx.target_active_effects(
+            mapper=lambda effect: effect.effects.specific_save_bonus,
+            # only chose the bonus(es) that applies to the current stat (str, dex, con, int, wis, cha)
+            reducer=lambda effects: [{k: v for k, v in x.items() if k == stat}.get(stat) for x in effects if stat in x],
+            default=list(),
+        )
+
         # ==== adv ====
         adv = reconcile_adv(
             adv=autoctx.args.last("sadv", type_=bool, ephem=True) or sadv or self.adv == enums.AdvantageType.ADV,
@@ -129,7 +139,7 @@ class Save(Effect):
                 is_success = False
                 autoctx.queue(f"**{save_blurb}:** Automatic failure!")
             else:
-                save_dice = autoctx.target.get_save_dice(save_skill, adv=adv, sb=sb)
+                save_dice = autoctx.target.get_save_dice(save_skill, adv=adv, sb=sb + specific_save_bonus)
                 save_roll = d20.roll(save_dice)
                 is_success = save_roll.total >= dc
 

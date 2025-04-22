@@ -5,7 +5,7 @@ from cogs5e.models.sheet.resistance import Resistance
 from utils.argparser import ParsedArguments
 from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.enums import AdvantageType
-from utils.functions import camel_to_title, verbose_stat
+from utils.functions import camel_to_title, verbose_stat, maybe_mod
 
 _OwnerT = TypeVar("_OwnerT")
 _DT = TypeVar("_DT")
@@ -117,6 +117,13 @@ def _str_check_dis(value: Set[str]):
     return f"Check Disadvantage: {saves}"
 
 
+def _str_save_bonus(value: dict[str, str]):
+    bonuses = ", ".join(
+        f"{stat_name.upper()} {('+' if mod[0] not in '+-' else '')+mod}" for stat_name, mod in value.items()
+    )
+    return f"Save Bonus: {bonuses}"
+
+
 # ---- main class ----
 class InitPassiveEffect:
     """
@@ -186,6 +193,11 @@ class InitPassiveEffect:
         stringifier=_str_save_dis,
         deserializer=lambda data: set(data),
         serializer=lambda data: list(data),
+    )
+    specific_save_bonus: dict[str, str] = _PassiveEffect(
+        default=dict(),
+        stringifier=_str_save_bonus,
+        # TODO: deserializer/serializer? I think not needed since it's just a dictionary.
     )
     check_bonus: str = _PassiveEffect(stringifier=_abstract_str_attr("Check Bonus"))
     check_adv: Set[str] = _PassiveEffect(
@@ -260,6 +272,8 @@ class InitPassiveEffect:
             check_adv=resolve_check_advs(args.get("cadv")),
             check_dis=resolve_check_advs(args.get("cdis")),
             dc_bonus=sum(args.get("dc", type_=int)),
+            # WIP: Specific Save Bonuses. TODO: Better arg name?
+            specific_save_bonus=resolve_specific_save_bonuses(args.get("ssb")),
         )
 
     # ==== stringification ====
@@ -321,4 +335,22 @@ def resolve_check_advs(values: Iterable[str]) -> Set[str]:
                 f"`{arg}` could be multiple skills: {', '.join(skill_options)}. Please use a more precise skill key."
             )
         out.add(skill_options[0])
+    return out
+
+
+def resolve_specific_save_bonuses(values: Iterable[str]) -> dict[str, str]:
+    """
+    Takes in 3|str, -4|dex, etc.
+    """
+    # return early if we are parsing from automation
+    if isinstance(values, dict):
+        return values
+    # parse from !i effect
+    out = dict()
+    for val in values:
+        try:
+            mod, stat = val.split("|")
+        except ValueError:
+            raise InvalidArgument(f"{val} could not be interpreted as a specific save bonus stat.")
+        out[stat] = mod
     return out

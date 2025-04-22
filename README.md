@@ -241,7 +241,7 @@ Tests can either be run using Docker Compose, or manually.
 
 ```bash
 docker-compose -f docker-compose.ci.yml -p avrae up -d --build
-docker logs -f avrae_tests_1
+docker logs -f avrae-tests-1
 ```
 
 Once tests complete, it is recommended to clean up the containers with `docker-compose down`.

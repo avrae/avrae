@@ -2,12 +2,12 @@ from utils import config
 
 # datadog - if DD_SERVICE not set, don't do any tracing/patching
 # patches all happen before any imports
-# if config.DD_SERVICE is not None:
-#     from utils import datadog
-
-#     datadog.do_patches()
-#     datadog.start_profiler()
-#     from utils.datadog import datadog_logger
+if config.DD_SERVICE is not None:
+    from utils import datadog
+    import ddtrace.profiling.auto
+    import ddtrace.auto
+    datadog.do_patches()
+    from utils.datadog import datadog_logger
 
 
 import asyncio
@@ -144,10 +144,10 @@ class Avrae(commands.AutoShardedBot):
 
     @staticmethod
     def log_exception(exception=None, ctx: context.AvraeContext = None):
-        if config.DD_SERVICE is not None:
-            datadog_logger.error(exception, exc_info=exception)
-        else:
-            log.error(exception, exc_info=exception if exception.__traceback__ else True)
+        # if config.DD_SERVICE is not None:
+        #     datadog_logger.error(exception, exc_info=exception)
+        # else:
+        log.error(exception, exc_info=exception if exception.__traceback__ else True)
 
     async def launch_shards(self, ignore_session_start_limit: bool = False):
         # set up my shard_ids

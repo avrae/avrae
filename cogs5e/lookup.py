@@ -12,6 +12,7 @@ import disnake
 from disnake.ext import commands
 
 import gamedata
+from gamedata.lookuputils import VALID_VERSIONS, extract_and_set_version, filter_spells_by_version
 import ui
 import utils.settings
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
@@ -20,7 +21,7 @@ from cogsmisc.stats import Stats
 from gamedata import lookuputils
 from gamedata.compendium import compendium
 from gamedata.klass import ClassFeature
-from gamedata.lookuputils import create_selectkey, lookup_converter, can_access, slash_match_key
+from gamedata.lookuputils import create_selectkey, get_lookup_version, lookup_converter, can_access, slash_match_key
 from gamedata.race import RaceFeature
 from gamedata.shared import CachedSourced, Sourced
 from utils import checks, img
@@ -31,7 +32,6 @@ from utils.settings import ServerSettings
 LARGE_THRESHOLD = 200
 ENTITY_TTL = 5 * 60
 ENTITY_CACHE = cachetools.TTLCache(64, ENTITY_TTL)
-
 log = logging.getLogger(__name__)
 
 
@@ -50,8 +50,7 @@ class Lookup(commands.Cog):
     # ==== rules/references ====
     async def _show_reference_options(self, ctx, version=None):
         if version is None:
-            serverSettings = await ctx.get_server_settings()
-            version = serverSettings.version
+            version = await get_lookup_version(ctx)
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = "Rules"
@@ -92,13 +91,7 @@ class Lookup(commands.Cog):
     @commands.command(aliases=["reference"])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
-        valid_versions = ["2024", "2014"]  # TODO: move to a global variable
-
-        if name:
-            version = name.split()[-1] if name.split()[-1] in valid_versions else "2024"
-            name = name.replace(version, "").strip() if name.split()[-1] in valid_versions else name
-        else:
-            version = "2024"
+        version, name, strict = await extract_and_set_version(ctx, name)
 
         if name is None:
             return await self._show_reference_options(ctx)
@@ -119,47 +112,30 @@ class Lookup(commands.Cog):
     async def slash_rule(
         self,
         inter: disnake.ApplicationCommandInteraction,
+        version=commands.Param(description="Ruleset of the rule or condition", choices=VALID_VERSIONS[:2]),
         name=commands.Param(
             description="The rule or condition you want to look up", converter=lookup_converter("rule")
         ),
     ):
+        if version not in VALID_VERSIONS[:2]:
+            version = get_lookup_version(inter)
+
         if isinstance(name, list):
             if not name:
                 await inter.send("Rule not found.", ephemeral=True)
                 return
             name = name[0]
-        return await self._rule(inter, name)
+        return await self._rule(inter, name, version)
 
     @slash_rule.autocomplete("name")
     async def slash_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
         choices = []
-        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2024" or "version" not in a):
-            choices.extend(actiontype["items"])
+        if "version" not in inter.filled_options:
+            version = await get_lookup_version(inter)
+        else:
+            version = inter.filled_options["version"]
 
-        result, strict = search(choices, user_input, lambda e: e["fullName"], 25)
-        if strict:
-            return [result["fullName"]]
-        return [r["fullName"] for r in result][:25]
-
-    @slash_lookup.sub_command(name="rules2014", description="Looks up a 2014 rule.")
-    async def slash_2014_rule(
-        self,
-        inter: disnake.ApplicationCommandInteraction,
-        name=commands.Param(
-            description="The rule or condition you want to look up", converter=lookup_converter("rule2014")
-        ),
-    ):
-        if isinstance(name, list):
-            if not name:
-                await inter.send("Rule not found.", ephemeral=True)
-                return
-            name = name[0]
-        return await self._rule(inter, name, "2014")
-
-    @slash_2014_rule.autocomplete("name")
-    async def slash_2014_rule_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
-        choices = []
-        for actiontype in (a for a in compendium.rule_references if a.get("version") == "2014" or "version" not in a):
+        for actiontype in (a for a in compendium.rule_references if a.get("version") == version or "version" not in a):
             choices.extend(actiontype["items"])
 
         result, strict = search(choices, user_input, lambda e: e["fullName"], 25)
@@ -169,8 +145,7 @@ class Lookup(commands.Cog):
 
     async def _rule(self, ctx, rule, version=None):
         if version is None:
-            serverSettings = await ctx.get_server_settings()
-            version = serverSettings.version
+            version = await get_lookup_version(ctx)
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.title = rule["fullName"]
@@ -978,7 +953,10 @@ class Lookup(commands.Cog):
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
+        version, name, strict = await extract_and_set_version(ctx, name)
+
         choices = await lookuputils.get_spell_choices(ctx)
+        choices = await filter_spells_by_version(ctx, choices, version, strict)
         spell = await lookuputils.search_entities(ctx, {"spell": choices}, name)
 
         return await self._spell(ctx, spell)

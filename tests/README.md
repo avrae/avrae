@@ -47,6 +47,16 @@ of pytest marks are provided to allow filtering the tests:
 Use the `-m` flag to select the marks to run. For example, to select only the non-gamedata tests, you could
 use `pytest -m "not gamedata"`.
 
+### Running Tests (Docker)
+
+Running tests with docker is very simple. Once you have docker set-up as shown in the README, you can run the following:
+
+```shell
+docker compose down && docker compose -f docker-compose.ci.yml up -d --build && docker logs -f avrae-tests-1
+```
+
+This will shut down your current Avrae instance (resetting the database), run the tests, and open the test logs.
+
 ## Writing Tests
 
 Pytest will automatically discover test files in the `tests/` directory, as long as the file is named in the pattern of

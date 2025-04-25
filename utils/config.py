@@ -29,7 +29,6 @@ REDIS_DB_NUM = int(os.getenv("REDIS_DB_NUM", 0))
 DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", "!")
 
 # ---- monitoring ----
-SENTRY_DSN = os.getenv("SENTRY_DSN")
 DD_SERVICE = os.getenv("DD_SERVICE")
 
 # ---- character sheets ---

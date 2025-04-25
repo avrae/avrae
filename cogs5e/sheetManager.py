@@ -18,6 +18,7 @@ import yaml
 from disnake.ext import commands
 from disnake.ext.commands.cooldowns import BucketType
 
+from gamedata.lookuputils import VALID_VERSIONS
 import ui
 from aliasing import helpers
 from cogs5e.models import embeds
@@ -875,21 +876,33 @@ class SheetManager(commands.Cog):
 
 
         """  # noqa: E501
-        serv_settings = await ctx.get_server_settings()
-        if version is None:
-            if serv_settings:
-                version = serv_settings.version
-            else:
-                version = "2024"
-        else:
-            # version was passed in, check allow_character_override
-            if version != serv_settings.version and not serv_settings.allow_character_override:
-                version = serv_settings.version
+        try:
+            serv_settings = await ctx.get_server_settings()
+            if version is None:
+                if serv_settings:
+                    version = serv_settings.version
+                else:
+                    version = "2024"
+            elif version not in VALID_VERSIONS[:2]:
                 await ctx.send(
-                    f"Character-specific version override is disabled. This character was imported as {version}, If you think this is incorrect, please contact a Server Admin."
+                    f"Character-specific version override {version} is not valid. Character will be imported using default version.  You can amend this via `{ctx.prefix}csettings` "
                 )
+                if serv_settings:
+                    version = serv_settings.version
+                else:
+                    version = "2024"
             else:
-                version = version
+                # version was passed in, check allow_character_override
+                if serv_settings and version != serv_settings.version and not serv_settings.allow_character_override:
+                    version = serv_settings.version
+                    await ctx.send(
+                        f"Character-specific version override is disabled. This character was imported as {version}, If you think this is incorrect, please contact a Server Admin."
+                    )
+                else:
+                    version = version
+        except:
+            # We will get here when done in DM's
+            version = version if version and version in VALID_VERSIONS[:2] else "2024"
 
         url = await self._check_url(ctx, url)  # check for < >
         # Sheets in order: DDB, Dicecloud, Gsheet

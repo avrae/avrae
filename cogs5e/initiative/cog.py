@@ -1401,7 +1401,11 @@ class InitTracker(commands.Cog):
 
         if not args.last("i", type_=bool):
             try:
-                spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in combatant.spellbook)
+                spell = await select_spell_full(
+                    ctx,
+                    spell_name,
+                    list_filter=lambda s: s.name in combatant.spellbook,
+                )
             except NoSelectionElements:
                 return await ctx.send(
                     f"No matching spells found in {combatant.name}'s spellbook. Cast again "

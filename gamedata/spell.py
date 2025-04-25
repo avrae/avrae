@@ -89,6 +89,7 @@ class Spell(AutomatibleMixin, DescribableMixin, Sourced):
         data["components"] = parse_homebrew_components(data["components"])
         data["range_"] = data.pop("range")
         data["automation"] = data.get("automation")
+        data["rulesVersion"] = "Homebrew"
         return cls(homebrew=True, source=source, **data).initialize_automation(data)
 
     def get_school(self):

@@ -100,12 +100,13 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def pingall(self, ctx):
         resp = await self.pscall("ping")
-        embed = disnake.Embed(title="Cluster Pings")
+        paginated_embed = embeds.EmbedPaginator(first_embed=disnake.Embed(title="Cluster Pings"))
         for cluster, pings in sorted(resp.items(), key=lambda i: i[0]):
             pingstr = "\n".join(f"Shard {shard}: {floor(ping * 1000)}ms" for shard, ping in pings.items())
             avgping = floor((sum(pings.values()) / len(pings)) * 1000)
-            embed.add_field(name=f"Cluster {cluster}: {avgping}ms", value=pingstr)
-        await ctx.send(embed=embed)
+            paginated_embed.add_field(name=f"Cluster {cluster}: {avgping}ms", value=pingstr)
+
+        await paginated_embed.send_to(ctx.channel)
 
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -119,6 +120,16 @@ class AdminUtils(commands.Cog):
     async def admin(self, ctx):
         """Owner-only admin commands."""
         await ctx.send("hello yes please give me a subcommand")
+
+    @admin.command(hidden=True, name="refreshteam")
+    @checks.is_owner()
+    async def admin_refreshteam(self, ctx):
+        self.bot.owner_id = None
+        self.bot.owner_ids = None
+
+        # noinspection PyProtectedMember
+        await self.bot._fill_owners()
+        await ctx.send("Owner IDs refreshed from Discord.")
 
     @admin.command(hidden=True, name="eval")
     @checks.is_owner()

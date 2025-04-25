@@ -227,8 +227,12 @@ class CollectableManagementGroup(commands.Group):
             return await self.list(ctx)
 
         name = content_array[1]
+        if "\n" in name:
+            name, content = name.split("\n", maxsplit=1)  # prevents alias names like "test\nmultiline"...
+            content_array = [content_array[0], name, "\n" + content] + content_array[2:]
+
         if not self.quotations_check(name):
-            raise Exception(f"Unexpected quote mark on {name}")
+            raise InvalidArgument(f"Invalid alias name: Unexpected quote mark on {name}")
 
         code = " ".join(content_array[2:])
 

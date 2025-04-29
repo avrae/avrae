@@ -7,7 +7,7 @@ d20==1.1.2
 aiobotocore==2.12.4
 redis==5.0.4
 cachetools==5.3.3
-markdownify==0.9.4
+markdownify==0.14.1
 psutil==5.9.8
 pydantic==1.10.19
 pyjwt==2.4.0

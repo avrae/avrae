@@ -33,7 +33,7 @@ class KafkaProducer:
             print("Produced event to topic {topic}: key = {key:12} value = {value:12}".format(
                 topic=msg.topic(), key=msg.key().decode('utf-8'), value=msg.value().decode('utf-8')))
             
-    def produce(self, topic, user, command):
+    def produce(self, topic, command, message_id):
         '''
         Produce a message to a Kafka topic.
         
@@ -42,6 +42,6 @@ class KafkaProducer:
             user (str): User ID.
             command (dict): Dictionary the command data to stream:
         '''
-        self.producer.produce(topic, user, command, callback=self.delivery_callback)
+        self.producer.produce(topic, command, message_id, callback=self.delivery_callback)
         self.producer.poll(10000)
         self.producer.flush()

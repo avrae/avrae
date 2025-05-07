@@ -15,6 +15,7 @@ import faulthandler
 import logging
 import random
 import time
+import json
 
 
 from redis import asyncio as redis
@@ -364,10 +365,6 @@ async def on_command(ctx):
             "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "
             "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx)
         )
-        print(
-            "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "
-            "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx)
-        )
         # send command to kafka
         producer = KafkaProducer(KafkaProducer.config)
         avrae_command = {
@@ -391,8 +388,8 @@ async def on_command(ctx):
         }
         producer.produce(
             topic="dnddev_avraebot",
-            user=str(ctx.message.author.id),
-            command= bytes(str(avrae_command), encoding="utf-8"),
+            command= json.dumps(avrae_command),
+            message_id=str(ctx.message.id),
         )
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))

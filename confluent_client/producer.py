@@ -58,7 +58,6 @@ class KafkaProducer:
         """
         if not self.is_ready:
             log.warning("Kafka not initialized. Missing configuration.")
-            print("Kafka not initialized. Missing configuration.")
             return None
         if self.topic is None:
             log.warning("Kafka topic not specified.")

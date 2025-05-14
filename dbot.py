@@ -15,7 +15,6 @@ import faulthandler
 import logging
 import random
 import time
-import json
 
 
 from redis import asyncio as redis

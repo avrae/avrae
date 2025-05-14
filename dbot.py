@@ -44,6 +44,8 @@ from utils.redisIO import RedisIO
 # Confluent Kafka client
 from confluent_client.producer import KafkaProducer
 
+producer = KafkaProducer(KafkaProducer.config)
+
 # This method will load the variables from .env into the environment for running in local
 # from dotenv import load_dotenv
 # load_dotenv()
@@ -355,6 +357,7 @@ async def on_message(message):
         await bot.invoke(ctx)
     elif ctx.invoked_with:  # then aliases if there is some word (and not just the prefix)
         await handle_aliases(ctx)
+    await producer.produce(ctx)
 
 
 @bot.event
@@ -365,7 +368,6 @@ async def on_command(ctx):
             "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx)
         )
         # send command to kafka
-        producer = KafkaProducer(KafkaProducer.config)
         await producer.produce(ctx)
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))

@@ -71,7 +71,7 @@ class KafkaProducer:
             "MESSAGE_NAME": "AVRAE_COMMAND",
             "DISCORD_ID": ctx.message.author.id,
             "DDB_USER_ID": ctx.message.author.name,
-            "DISCORD_SERVER_ID": ctx.message.guild.id if ctx.message.guild else None, # Guild ID is empty on a DM
+            "DISCORD_SERVER_ID": ctx.message.guild.id if ctx.message.guild else None,  # Guild ID is empty on a DM
             "COUNTRY_CODE": None,
             "IP_ADDRESS": None,
             "COMMAND_ID": ctx.command.qualified_name,
@@ -79,25 +79,20 @@ class KafkaProducer:
             "SUBCOMMAND_ID": None,
             "ARGS": ctx.message.content.split(" ")[1:],
         }
-        
+
         # Wrap the synchronous Kafka producer logic in a run_in_executor
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,  # Use the default executor
             self._produce_sync,  # Call the synchronous method
             avrae_command,  # Pass the command data
-            ctx.message.id  # Pass the message ID as the key
+            ctx.message.id,  # Pass the message ID as the key
         )
 
     def _produce_sync(self, avrae_command, message_id):
         """
         Synchronous method to produce a message to Kafka.
         """
-        self.producer.produce(
-            self.topic,
-            json.dumps(avrae_command),
-            str(message_id),
-            callback=self.delivery_callback
-        )
+        self.producer.produce(self.topic, json.dumps(avrae_command), str(message_id), callback=self.delivery_callback)
         self.producer.poll(10000)
         self.producer.flush()

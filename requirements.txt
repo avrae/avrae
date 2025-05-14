@@ -29,3 +29,6 @@ pymongo==4.7.2
 
 # Handling for Datadog
 ddtrace~=2.21.3
+
+# BI Data Collection
+confluent-kafka==2.8.0

@@ -73,12 +73,10 @@ class KafkaProducer:
             "DISCORD_SERVER_ID": ctx.message.guild.id,
             "COUNTRY_CODE": None,
             "IP_ADDRESS": None,
-            "ACTION_DESCRIPTORS": [{
-                "COMMAND_ID": ctx.command.qualified_name,
-                "COMMAND_CATEGORY": ctx.command.cog_name,
-                "SUBCOMMAND_ID": None,
-                "ARGS": ctx.message.content.split(" ")[1:],
-            }],
+            "COMMAND_ID": ctx.command.qualified_name,
+            "COMMAND_CATEGORY": ctx.command.cog_name,
+            "SUBCOMMAND_ID": None,
+            "ARGS": ctx.message.content.split(" ")[1:],
         }
 
         self.producer.produce(

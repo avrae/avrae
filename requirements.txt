@@ -17,7 +17,7 @@ pyyaml==6.0.1
 # Already Updated Packages
 # Top Level Deps
 launchdarkly-server-sdk==9.0
-Pillow~=10.2.0
+Pillow~=10.3.0
 disnake~=2.10.1
 gspread~=6.1.1
 rapidfuzz~=3.6.1

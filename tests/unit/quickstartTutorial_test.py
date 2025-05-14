@@ -154,7 +154,7 @@ async def test_quickstarttutorial_actions(
         mock_transition.assert_called_once_with(ctx_mock, state_map_mock)
 
 
-def test_roll():
+async def test_roll():
     roll_result = d20.roll("1d20")
     assert isinstance(roll_result, d20.RollResult)
     assert 0 < roll_result.total < 21

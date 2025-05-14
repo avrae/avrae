@@ -43,6 +43,7 @@ from aliasing.workshop import WorkshopCollectableObject
 from cogs5e.models.errors import InvalidArgument
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
+from utils.settings import ServerSettings
 
 DEFAULT_BUILTINS = {
     # builtins
@@ -138,7 +139,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             load_yaml=self.load_yaml,
             dump_yaml=self.dump_yaml,
             argparse=argparse,
-            ctx=AliasContext(ctx),
+            ctx=AliasContext(ctx, self.servsettings),
             signature=self.signature,
             verify_signature=self.verify_signature,
             using=self.using,
@@ -170,6 +171,11 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         uvars = await helpers.get_uvars(ctx)
         inst = cls(ctx, builtins=DEFAULT_BUILTINS, initial_names=uvars)
         inst._cache["uvars"].update(uvars)
+        if ctx.guild:
+            if hasattr(ctx, "get_server_settings"):
+                inst._cache["servsettings"] = await ctx.get_server_settings()
+            else:
+                inst._cache["servsettings"] = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
         return inst
 
     def with_statblock(self, statblock):
@@ -273,6 +279,16 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 return default
             self._cache["svars"][name] = result["value"]
         return self._cache["svars"][name]
+
+    def servsettings(self):
+        """
+        Retrieves and returns the dict of server settings.
+
+        :return: A dict of server settings.
+        :rtype: dict or None
+        """
+        if "servsettings" in self._cache:
+            return self._cache["servsettings"].to_dict()
 
     def get_uvars(self):
         """

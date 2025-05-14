@@ -154,7 +154,7 @@ class ParsedArguments:
     # Have to escape the _ in the type_ parameter for docs
     # noinspection PyIncorrectDocstring
     def get(self, arg, default=None, type_=str, ephem=False):
-        """
+        r"""
         Gets a list of all values of an argument.
 
         :param str arg: The name of the arg to get.
@@ -177,7 +177,7 @@ class ParsedArguments:
     # Have to escape the _ in the type_ parameter for docs
     # noinspection PyIncorrectDocstring
     def last(self, arg, default=None, type_=str, ephem=False):
-        """
+        r"""
         Gets the last value of an arg.
 
         :param str arg: The name of the arg to get.

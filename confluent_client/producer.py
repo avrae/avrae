@@ -71,7 +71,7 @@ class KafkaProducer:
             "MESSAGE_NAME": "AVRAE_COMMAND",
             "DISCORD_ID": ctx.message.author.id,
             "DDB_USER_ID": ctx.message.author.name,
-            "DISCORD_SERVER_ID": ctx.message.guild.id if ctx.message.guild else None,
+            "DISCORD_SERVER_ID": ctx.message.guild.id if ctx.message.guild else None, # Guild ID is empty on a DM
             "COUNTRY_CODE": None,
             "IP_ADDRESS": None,
             "COMMAND_ID": ctx.command.qualified_name,

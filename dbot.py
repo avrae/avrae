@@ -367,30 +367,7 @@ async def on_command(ctx):
         )
         # send command to kafka
         producer = KafkaProducer(KafkaProducer.config)
-        avrae_command = {
-            "EVENT_TIME": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "PLATFORM": "discord",
-            "MESSAGE_ID": ctx.message.id,
-            "MESSAGE_NAME": "AVRAE_COMMAND",
-            "DISCORD_ID": ctx.message.author.id,
-            "DDB_USER_ID": ctx.message.author.name,
-            "DISCORD_SERVER_ID": ctx.message.guild.id,
-            "COUNTRY_CODE": None,
-            "IP_ADDRESS": None,
-            "ACTION_DESCRIPTORS": [
-                {
-                    "COMMAND_ID": ctx.command.qualified_name,
-                    "COMMAND_CATEGORY": ctx.command.cog_name,
-                    "SUBCOMMAND_ID": None,
-                    "ARGS": ctx.message.content.split(" ")[1:],
-                }
-            ],
-        }
-        producer.produce(
-            topic="dnddev_avraebot",
-            command= json.dumps(avrae_command),
-            message_id=str(ctx.message.id),
-        )
+        producer.produce(ctx)
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 

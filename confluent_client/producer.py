@@ -1,5 +1,10 @@
 from confluent_kafka import Producer
-from utils import config
+from utils import config as bot_config
+import logging
+import time
+import json
+
+log = logging.getLogger(__name__)
 
 class KafkaProducer:
     '''
@@ -15,33 +20,67 @@ class KafkaProducer:
     '''
     
     config = {
-        'bootstrap.servers': config.KAFKA_BOOTSTRAP_SERVER,
-        'sasl.username': config.KAFKA_API_KEY,
-        'sasl.password': config.KAFKA_API_SECRET,
-        'security.protocol': config.KAFKA_SECURITY_PROTOCOL,
-        'sasl.mechanisms': config.KAFKA_SASL_MECHANISM,
-        'acks': config.KAFKA_ACKS
+        'bootstrap.servers': bot_config.KAFKA_BOOTSTRAP_SERVER,
+        'sasl.username': bot_config.KAFKA_API_KEY,
+        'sasl.password': bot_config.KAFKA_API_SECRET,
+        'security.protocol': bot_config.KAFKA_SECURITY_PROTOCOL,
+        'sasl.mechanisms': bot_config.KAFKA_SASL_MECHANISM,
+        'acks': bot_config.KAFKA_ACKS
     }
     
     def __init__(self, config):
+        if not config['bootstrap.servers'] \
+        or not config['sasl.username'] \
+        or not config['sasl.password']:
+            self.is_ready = False
+            log.warning("Kafka not initialized. Missing configuration.")
+            return
+        log.info("Kafka Initialized")
+        self.is_ready = True
         self.producer = Producer(config)
+        self.topic = "dnddev_avraebot" if bot_config.TESTING else "dndprod_avraebot"
         
     def delivery_callback(self, err, msg):
         if err:
-            print('ERROR: Message failed delivery: {}'.format(err))
+            log.error('ERROR: Message failed delivery: {}'.format(err))
         else:
-            print("Produced event to topic {topic}: key = {key:12} value = {value:12}".format(
+            log.info("Produced event to topic {topic}: key = {key:12} value = {value:12}".format(
                 topic=msg.topic(), key=msg.key().decode('utf-8'), value=msg.value().decode('utf-8')))
             
-    def produce(self, topic, command, message_id):
+    def produce(self, ctx):
         '''
         Produce a message to a Kafka topic.
         
         Args:
-            topic (str): Kafka topic to produce the message.
-            user (str): User ID.
-            command (dict): Dictionary the command data to stream:
+            ctx (Context): Context object containing message information.
         '''
-        self.producer.produce(topic, command, message_id, callback=self.delivery_callback)
+        if not self.is_ready:
+            log.warning("Kafka not initialized. Missing configuration.")
+            return
+        if self.topic is None:
+            log.warning("Kafka topic not specified.")
+            return
+        
+        avrae_command = {
+            "EVENT_TIME": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "PLATFORM": "discord",
+            "MESSAGE_ID": ctx.message.id,
+            "MESSAGE_NAME": "AVRAE_COMMAND",
+            "DISCORD_ID": ctx.message.author.id,
+            "DDB_USER_ID": ctx.message.author.name,
+            "DISCORD_SERVER_ID": ctx.message.guild.id,
+            "COUNTRY_CODE": None,
+            "IP_ADDRESS": None,
+            "ACTION_DESCRIPTORS": [
+                {
+                    "COMMAND_ID": ctx.command.qualified_name,
+                    "COMMAND_CATEGORY": ctx.command.cog_name,
+                    "SUBCOMMAND_ID": None,
+                    "ARGS": ctx.message.content.split(" ")[1:],
+                }
+            ],
+        }
+        
+        self.producer.produce(self.topic, json.dumps(avrae_command), str(ctx.message.id), callback=self.delivery_callback)
         self.producer.poll(10000)
         self.producer.flush()

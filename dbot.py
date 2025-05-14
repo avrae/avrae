@@ -366,7 +366,7 @@ async def on_command(ctx):
         )
         # send command to kafka
         producer = KafkaProducer(KafkaProducer.config)
-        producer.produce(ctx)
+        await producer.produce(ctx)
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 

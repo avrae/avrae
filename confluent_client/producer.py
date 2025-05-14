@@ -33,7 +33,7 @@ class KafkaProducer:
         if not config["bootstrap.servers"] or not config["sasl.username"] or not config["sasl.password"]:
             self.is_ready = False
             log.warning("Kafka not initialized. Missing configuration.")
-            return
+            return None
         log.info("Kafka Initialized")
         self.is_ready = True
         self.producer = Producer(config)
@@ -58,10 +58,11 @@ class KafkaProducer:
         """
         if not self.is_ready:
             log.warning("Kafka not initialized. Missing configuration.")
-            return
+            print("Kafka not initialized. Missing configuration.")
+            return None
         if self.topic is None:
             log.warning("Kafka topic not specified.")
-            return
+            return None
 
         avrae_command = {
             "EVENT_TIME": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

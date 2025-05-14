@@ -31,4 +31,4 @@ pymongo==4.7.2
 ddtrace~=2.21.3
 
 # BI Data Collection
-confluent-kafka
+confluent-kafka==2.8.0

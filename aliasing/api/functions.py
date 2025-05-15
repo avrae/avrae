@@ -253,7 +253,7 @@ def verify_signature(ctx: disnake.ext.commands.Context, data: str):
         "user_data": user_data,
         "workshop_collection_id": collection_id,
         "guild_id": guild and guild.id,  # may be None
-        "guild": guild and AliasGuild(guild),  # may be None
+        "guild": guild and AliasGuild(guild, None),  # may be None
         "channel": channel and AliasChannel(channel),  # may be None
         "author": author and AliasAuthor(author),  # may be None
     }

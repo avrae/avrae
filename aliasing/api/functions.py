@@ -241,7 +241,7 @@ def verify_signature(ctx: disnake.ext.commands.Context, data: str):
     channel = ctx.bot.get_channel(channel_id)
     author = ctx.bot.get_user(author_id)
     guild = None
-    if channel is not None and isinstance(channel, disnake.abc.GuildChannel):
+    if channel is not None and (isinstance(channel, disnake.abc.GuildChannel) or isinstance(channel, disnake.Thread)):
         guild = channel.guild
 
     return {

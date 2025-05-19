@@ -134,6 +134,12 @@ async def test_alias_vs_servalias(avrae, dhttp):
     await dhttp.receive_message(r".+: this is foobar")
 
 
+async def test_alias_verify_signature(avrae, dhttp):
+    avrae.message("!test {{x = signature()}}{{verify_signature(x)}}")
+    # ensure it is json
+    await dhttp.receive_message(r".+: {.+}")
+
+
 @pytest.mark.usefixtures("character")
 class TestCharacterAliases:
     async def test_echo_attributes(self, avrae, dhttp):

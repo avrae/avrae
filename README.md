@@ -153,12 +153,24 @@ Any changes to the library will immediately be picked up in avrae without requir
 
 To create a Discord bot user, go to the [Discord Developer Portal](https://discord.com/developers/).
 
-- `New Application`, give it a cool name, `Create`.
-- `Bot` > `Add Bot`.
-- (Optional but recommended): Switch off `Public Bot` so only you can add this bot to servers.
-- Scroll down to `Privileged Gateway Intents`, and enable the switches to the right of `Server Members Intent`
-  and `Message Content Intent`.
-- `Click to Reveal Token`, this is your `DISCORD_BOT_TOKEN`.
+1. **Create the application**
+   - Click `New Application`, give it a name, then click `Create`.
+   - Copy the `Application ID` from `General Information` (you'll need this for the invite link).
+
+2. **Configure the bot**
+   - Navigate to the `Bot` tab.
+   - Under `Privileged Gateway Intents`, enable both `Server Members Intent` and `Message Content Intent`.
+   - Click `Save Changes`.
+
+3. **Generate the bot token**
+   - Still on the `Bot` tab, scroll down to `Token`.
+   - Reset the `Bot Token` by clicking `Reset Token` (verify authentication if prompted).
+   - Copy the token - this will be your `DISCORD_BOT_TOKEN` for the configuration.
+
+4. **Add bot to your server**
+   - Use this URL to invite your bot: `https://discordapp.com/oauth2/authorize?permissions=274878295104&scope=bot&client_id=YOUR_APPLICATION_ID`
+   - Replace `YOUR_APPLICATION_ID` with the Application ID you copied earlier.
+   - Select your server from the dropdown and authorize the bot.
 
 **Testing Env Var**
 

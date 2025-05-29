@@ -94,7 +94,7 @@ class AliasGuild:
     Represents the Discord guild (server) an alias was invoked in.
     """
 
-    def __init__(self, guild, servsettings=None):
+    def __init__(self, guild, servsettings):
         """
         :type guild: disnake.Guild
         """
@@ -122,12 +122,12 @@ class AliasGuild:
 
     def servsettings(self):
         """
-        Retrieves and returns the dict of server settings. Not present when retrieving from verify_signature.
+        Retrieves and returns the dict of server settings.
 
         :return: A dict of server settings.
         :rtype: dict or None
         """
-        return self._servsettings() if self._servsettings else None
+        return self._servsettings()
 
     def __str__(self):
         return self.name

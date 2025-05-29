@@ -74,8 +74,8 @@ class KafkaProducer:
             "DISCORD_SERVER_ID": ctx.message.guild.id if ctx.message.guild else None,  # Guild ID is empty on a DM
             "COUNTRY_CODE": None,
             "IP_ADDRESS": None,
-            "COMMAND_ID": ctx.command.qualified_name if ctx.command else ctx.message.content,
-            "COMMAND_CATEGORY": ctx.command.cog_name if ctx.command else None,
+            "COMMAND_ID": ctx.command.qualified_name,
+            "COMMAND_CATEGORY": ctx.command.cog_name,
             "SUBCOMMAND_ID": None,
             "ARGS": ctx.message.content.split(" ")[1:],
         }

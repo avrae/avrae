@@ -367,9 +367,8 @@ async def on_command(ctx):
             "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "
             "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx)
         )
-        # send command to kafka only if env vars are present
-        if config.KAFKA_BOOTSTRAP_SERVER:
-            await producer.produce(ctx)
+        # send command to kafka
+        await producer.produce(ctx)
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 

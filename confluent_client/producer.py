@@ -94,5 +94,4 @@ class KafkaProducer:
         Synchronous method to produce a message to Kafka.
         """
         self.producer.produce(self.topic, json.dumps(avrae_command), str(message_id), callback=self.delivery_callback)
-        self.producer.poll(10000)
-        self.producer.flush()
+        self.producer.poll(0.1)

@@ -357,7 +357,6 @@ async def on_message(message):
         await bot.invoke(ctx)
     elif ctx.invoked_with:  # then aliases if there is some word (and not just the prefix)
         await handle_aliases(ctx)
-    await producer.produce(ctx)
 
 
 @bot.event

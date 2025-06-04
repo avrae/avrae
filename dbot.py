@@ -44,7 +44,7 @@ from utils.redisIO import RedisIO
 # Confluent Kafka client
 # from confluent_client.producer import KafkaProducer
 
-#producer = KafkaProducer(KafkaProducer.config)
+# producer = KafkaProducer(KafkaProducer.config)
 
 # This method will load the variables from .env into the environment for running in local
 # from dotenv import load_dotenv

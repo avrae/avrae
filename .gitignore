@@ -29,6 +29,7 @@ tempvenv/
 credentials.py
 
 docker/env
+docker-compose.override.yml
 
 docs/_build/
 

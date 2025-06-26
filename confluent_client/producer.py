@@ -119,7 +119,7 @@ class KafkaProducer:
             "DISCORD_ID": ctx.message.author.id,
             "DDB_USER_ID": ddb_user.user_id if ddb_user else None,
             "DISCORD_SERVER_ID": ctx.message.guild.id if ctx.message.guild else None,  # Guild ID is empty on a DM
-            "COMMAND_ID": ctx.command.qualified_name if ctx.command else ctx.message.content,
+            "COMMAND_ID": ctx.command.qualified_name if ctx.command else None,
             "COMMAND_CATEGORY": ctx.command.cog_name if ctx.command else None,
             "SUBCOMMAND_ID": ctx.invoked_subcommand.qualified_name if ctx.invoked_subcommand else None,
         }

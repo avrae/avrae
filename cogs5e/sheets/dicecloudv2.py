@@ -650,7 +650,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                         result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
                     )
                 )
-            else:
+            elif "avrae:no_spell" not in spell["tags"] + spell.get("libraryTags", []):
                 spells.append(
                     SpellbookSpell(
                         spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared

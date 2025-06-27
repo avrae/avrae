@@ -584,7 +584,8 @@ class DicecloudV2Parser(SheetLoaderABC):
             if spell.get("deactivatedByAncestor") or spell.get("deactivatedByToggle"):
                 continue
 
-            if "avrae:no_action" not in spell["tags"] + spell.get("libraryTags", []):
+            import_action = "avrae:no_action" not in spell["tags"] + spell.get("libraryTags", [])
+            if import_action:
                 spell_actions = self.persist_actions_for_name(spell["name"])
                 actions += spell_actions
             log.debug(f"Got spell with ancestors: {[spell['parent']['id']] + [k['id'] for k in spell['ancestors']]}")
@@ -619,8 +620,8 @@ class DicecloudV2Parser(SheetLoaderABC):
             spell_consumables += self._consumables_from_resources(spell["resources"])
             consumables += spell_consumables
 
-            # continue parsing even if an action is found in case the action is not actually related
-            if spell_consumables:
+            # only skip parsing the attack if a compendium action is found
+            if not spell_actions and spell_consumables and import_action:
                 atk = self.parse_attack(spell)
 
                 # unique naming

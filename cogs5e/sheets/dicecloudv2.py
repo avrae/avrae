@@ -584,8 +584,9 @@ class DicecloudV2Parser(SheetLoaderABC):
             if spell.get("deactivatedByAncestor") or spell.get("deactivatedByToggle"):
                 continue
 
-            spell_actions = self.persist_actions_for_name(spell["name"])
-            actions += spell_actions
+            if "avrae:no_action" not in spell["tags"] + spell.get("libraryTags", []):
+                spell_actions = self.persist_actions_for_name(spell["name"])
+                actions += spell_actions
             log.debug(f"Got spell with ancestors: {[spell['parent']['id']] + [k['id'] for k in spell['ancestors']]}")
 
             # find the matching spell list, trying the direct parent first, then ancestors

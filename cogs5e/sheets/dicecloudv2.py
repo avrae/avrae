@@ -646,9 +646,7 @@ class DicecloudV2Parser(SheetLoaderABC):
             result, strict = search(compendium.spells, spell["name"].strip(), lambda sp: sp.name, strict=True)
             if result and strict:
                 spells.append(
-                    SpellbookSpell.from_spell(
-                        result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
-                    )
+                    SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared)
                 )
             elif "avrae:no_spell" not in spell["tags"] + spell.get("libraryTags", []):
                 spells.append(

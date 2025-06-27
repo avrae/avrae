@@ -619,44 +619,43 @@ class DicecloudV2Parser(SheetLoaderABC):
             spell_consumables += self._consumables_from_resources(spell["resources"])
             consumables += spell_consumables
 
-            # shouldn't parse or add to spells if a compendium action was found
-            if not spell_actions:
-                if spell_consumables:
-                    atk = self.parse_attack(spell)
+            # continue parsing even if an action is found in case the action is not actually related
+            if spell_consumables:
+                atk = self.parse_attack(spell)
 
-                    # unique naming
-                    atk_num = 2
-                    if atk.name in self.atk_names:
-                        while f"{atk.name} {atk_num}" in self.atk_names:
-                            atk_num += 1
-                        atk.name = f"{atk.name} {atk_num}"
-                    self.atk_names.add(atk.name)
+                # unique naming
+                atk_num = 2
+                if atk.name in self.atk_names:
+                    while f"{atk.name} {atk_num}" in self.atk_names:
+                        atk_num += 1
+                    atk.name = f"{atk.name} {atk_num}"
+                self.atk_names.add(atk.name)
 
-                    attacks.append(atk)
+                attacks.append(atk)
 
-                # we only want to track the spell's stats if it's actually prepared
-                spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
-                if spell_prepared:
-                    if spell_ab is not None:
-                        sabs.append(spell_ab)
-                    if spell_dc is not None:
-                        dcs.append(spell_dc)
-                    if spell_mod is not None:
-                        mods.append(spell_mod)
+            # we only want to track the spell's stats if it's actually prepared
+            spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
+            if spell_prepared:
+                if spell_ab is not None:
+                    sabs.append(spell_ab)
+                if spell_dc is not None:
+                    dcs.append(spell_dc)
+                if spell_mod is not None:
+                    mods.append(spell_mod)
 
-                result, strict = search(compendium.spells, spell["name"].strip(), lambda sp: sp.name, strict=True)
-                if result and strict:
-                    spells.append(
-                        SpellbookSpell.from_spell(
-                            result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
-                        )
+            result, strict = search(compendium.spells, spell["name"].strip(), lambda sp: sp.name, strict=True)
+            if result and strict:
+                spells.append(
+                    SpellbookSpell.from_spell(
+                        result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
                     )
-                else:
-                    spells.append(
-                        SpellbookSpell(
-                            spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
-                        )
+                )
+            else:
+                spells.append(
+                    SpellbookSpell(
+                        spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
                     )
+                )
 
         # most common stats are used for the spellbook
         dc = max(dcs, key=dcs.count, default=None)

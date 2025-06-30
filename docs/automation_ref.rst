@@ -1150,6 +1150,12 @@ These are *not* valid IntExpressions:
 Examples
 --------
 
+SRD Monster Actions
+^^^^^^^^^^^^^^^^^^^
+
+The automations for many SRD monster actions are available `here <https://github.com/avrae/avrae-service/blob/master/static/template-attacks.json>`_.
+These are provided as-is, and may be outdated.
+
 Attack
 ^^^^^^
 

@@ -42,9 +42,9 @@ from utils.help import help_command
 from utils.redisIO import RedisIO
 
 # Confluent Kafka client
-from confluent_client.producer import KafkaProducer
+# from confluent_client.producer import KafkaProducer
 
-producer = KafkaProducer()
+# producer = KafkaProducer(KafkaProducer.config)
 
 # This method will load the variables from .env into the environment for running in local
 # from dotenv import load_dotenv
@@ -368,28 +368,6 @@ async def on_command(ctx):
         )
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
-
-
-@bot.event
-async def on_command_completion(ctx: context.AvraeContext):
-    logging_enabled = await ctx.bot.ldclient.variation_for_discord_user(
-        "analytics.on_command_completion.enabled",
-        ctx.author,
-        False,
-    )
-    if logging_enabled:
-        await producer.produce_command(ctx)
-
-
-@bot.event
-async def on_slash_command_completion(interaction: disnake.ApplicationCommandInteraction):
-    logging_enabled = await interaction.bot.ldclient.variation_for_discord_user(
-        "analytics.on_slash_command_completion.enabled",
-        interaction.author,
-        False,
-    )
-    if logging_enabled:
-        await producer.produce_slash_command(interaction)
 
 
 for cog in COGS:

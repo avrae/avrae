@@ -83,3 +83,19 @@
     
     # set this to the contents of the JSON file downloaded in the Google Drive Service Account step
     GOOGLE_SERVICE_ACCOUNT=g
+
+### Development with Kafka
+
+If you're developing a feature that requires Kafka, you can either copy the `docker-compose.kafka-dev.yml` file to `docker-compose.override.yml` or pass it as an argument to `docker-compose`:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.kafka-dev.yml up --build
+```
+
+This will add the Kafka `broker` service and set up the necessary environment variables for Avrae to connect to Kafka.
+
+To watch the messages being sent to Kafka, you can use the `kafka-console-consumer` command:
+
+```bash
+docker exec -it avrae-broker-1 /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic dnddev_avraebot --from-beginning
+```

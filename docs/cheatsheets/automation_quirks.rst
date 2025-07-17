@@ -152,10 +152,12 @@ You can have the automation automatically heal you for the damage you absorb by 
 
 Spirit Guardians
 -------------------
-You can specify the type of damage you want to apply with the ``-choice`` argument.
+You can specify the type of damage you want to apply with the ``-choice`` argument or by setting the ``SpiritGuardiansDType`` cvar.
 
-* ``-choice goodneutralangelicfeyfae`` for the Radiant damage option
-* ``-choice evilfiendish`` for the Necrotic damage option
+* ``-choice good``, ``-choice neutral``, ``-choice angelic``, ``-choice fey``, or ``-choice fae`` for the Radiant damage option
+* ``-choice evil``, ``-choice fiendish``, or ``-choice necrotic`` for the Necrotic damage option
+
+You can also set a default damage type using the ``SpiritGuardiansDType`` cvar (e.g., ``!cvar SpiritGuardiansDType good``). The cvar will be used if no ``-choice`` is provided at cast time.
 
 
 Spirit Shroud

@@ -682,9 +682,9 @@ class Lookup(commands.Cog):
 
         if visible:
             embed_queue[-1].description = monster.get_upper_meta()
-            embed_queue[-1].add_field(value=monster.get_physical_stat_table(), inline=True)
-            embed_queue[-1].add_field(value=monster.get_mental_stat_table(), inline=True)
-            safe_append(None, monster.get_lower_meta())
+            embed_queue[-1].add_field(name="", value=monster.get_physical_stat_table(), inline=True)
+            embed_queue[-1].add_field(name="", value=monster.get_mental_stat_table(), inline=True)
+            safe_append("", monster.get_lower_meta())
             if monster.traits:
                 trait = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.traits)
                 if trait:

@@ -304,6 +304,39 @@ class Monster(StatBlock, Sourced):
             f"**INT**: {stats[3]} **WIS**: {stats[4]} **CHA**: {stats[5]}"
         )
 
+    def _get_stat_table_row(self, stat):
+        save = self.saves.get(stat)
+        row = f"{stat[:3].upper()} {self.stats.get(stat)} {self.stats.get_mod(stat):+3} {save.value:+3}"
+        if save.adv is True:
+            row += " (adv)"
+        elif save.adv is False:
+            row += " (dis)"
+        return row + "\n"
+
+    def get_physical_stat_table(self):
+        return "\n".join(
+            [
+                "```swift",
+                "        MOD SAV",
+                self._get_stat_table_row("strength"),
+                self._get_stat_table_row("dexterity"),
+                self._get_stat_table_row("constitution"),
+                "```",
+            ]
+        )
+
+    def get_mental_stat_table(self):
+        return "\n".join(
+            [
+                "```swift",
+                "        MOD SAV",
+                self._get_stat_table_row("intelligence"),
+                self._get_stat_table_row("wisdom"),
+                self._get_stat_table_row("charisma"),
+                "```",
+            ]
+        )
+
     def get_senses_str(self):
         if self.senses:
             return f"{self.senses}, passive Perception {self.passive}"

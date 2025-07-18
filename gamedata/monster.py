@@ -306,7 +306,7 @@ class Monster(StatBlock, Sourced):
 
     def _get_stat_table_row(self, stat):
         save = self.saves.get(stat)
-        row = f"{stat[:3].upper()} {self.stats[stat]} {self.stats.get_mod(stat):+3} {save.value:+3}"
+        row = f"{stat[:3].upper()} {self.stats[stat]:>3} {self.stats.get_mod(stat):+3} {save.value:+3}"
         if save.adv is True:
             row += " (adv)"
         elif save.adv is False:

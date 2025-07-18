@@ -316,8 +316,7 @@ class Monster(StatBlock, Sourced):
     def get_physical_stat_table(self):
         return "\n".join(
             [
-                "```swift",
-                "        MOD SAV",
+                "```swift\n        MOD SAV",
                 self._get_stat_table_row("strength"),
                 self._get_stat_table_row("dexterity"),
                 self._get_stat_table_row("constitution"),
@@ -328,8 +327,7 @@ class Monster(StatBlock, Sourced):
     def get_mental_stat_table(self):
         return "\n".join(
             [
-                "```swift",
-                "        MOD SAV",
+                "```swift\n        MOD SAV",
                 self._get_stat_table_row("intelligence"),
                 self._get_stat_table_row("wisdom"),
                 self._get_stat_table_row("charisma"),

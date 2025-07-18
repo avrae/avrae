@@ -277,14 +277,16 @@ class Monster(StatBlock, Sourced):
 
     def get_hidden_stat_array(self):
         stats = ["Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"]
-        for i, stat in enumerate((
-            self.stats.strength,
-            self.stats.dexterity,
-            self.stats.constitution,
-            self.stats.intelligence,
-            self.stats.wisdom,
-            self.stats.charisma,
-        )):
+        for i, stat in enumerate(
+            (
+                self.stats.strength,
+                self.stats.dexterity,
+                self.stats.constitution,
+                self.stats.intelligence,
+                self.stats.wisdom,
+                self.stats.charisma,
+            )
+        ):
             if stat <= 3:
                 stats[i] = "Very Low"
             elif 3 < stat <= 7:
@@ -308,7 +310,7 @@ class Monster(StatBlock, Sourced):
         else:
             return f"passive Perception {self.passive}"
 
-    def get_meta(self):
+    def get_upper_meta(self):
         """
         Returns a string describing the meta statistics of a monster.
         Should be the portion between the embed title and special abilities.
@@ -320,29 +322,31 @@ class Monster(StatBlock, Sourced):
         hp = f"{self.hp} ({self.hitdice})"
         speed = self.speed
 
-        desc = f"*{size} {type_}{alignment}*\n**AC** {ac}\n**HP** {hp}\n**Speed** {speed}\n"
-        desc += f"{self.get_stat_array()}\n"
+        return f"*{size} {type_}{alignment}*\n**AC** {ac}\n**HP** {hp}\n**Speed** {speed}\n"
 
-        if str(self.saves):
-            desc += f"**Saving Throws** {self.saves}\n"
+    def get_lower_meta(self):
+        desc = ""
         if str(self.skills):
             desc += f"**Skills** {self.skills}\n"
-        desc += f"**Senses** {self.get_senses_str()}\n"
         if self._displayed_resistances.vuln:
             desc += f"**Vulnerabilities** {', '.join(str(r) for r in self._displayed_resistances.vuln)}\n"
         if self._displayed_resistances.resist:
             desc += f"**Resistances** {', '.join(str(r) for r in self._displayed_resistances.resist)}\n"
+        immunities = []
         if self._displayed_resistances.immune:
-            desc += f"**Damage Immunities** {', '.join(str(r) for r in self._displayed_resistances.immune)}\n"
+            immunities.append(", ".join(str(r) for r in self._displayed_resistances.immune))
         if self.condition_immune:
-            desc += f"**Condition Immunities** {', '.join(map(str, self.condition_immune))}\n"
+            immunities.append(", ".join(map(str, self.condition_immune)))
+        if immunities:
+            desc += f"**Immunities** {'; '.join(immunities)}\n"
+        desc += f"**Senses** {self.get_senses_str()}\n"
         if self.languages:
             desc += f"**Languages** {', '.join(self.languages)}\n"
         else:
             desc += "**Languages** --\n"
 
         if not self.hide_cr:
-            desc += f"**Challenge** {self.cr} ({self.xp:,} XP)"
+            desc += f"**CR** {self.cr} (XP {self.xp:,}; PB {self.stats.prof_bonus:+})"
         return desc
 
     def get_title_name(self):

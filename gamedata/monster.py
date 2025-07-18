@@ -311,7 +311,7 @@ class Monster(StatBlock, Sourced):
             row += " (adv)"
         elif save.adv is False:
             row += " (dis)"
-        return row + "\n"
+        return row
 
     def get_physical_stat_table(self):
         return "\n".join(

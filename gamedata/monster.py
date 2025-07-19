@@ -342,7 +342,7 @@ class Monster(StatBlock, Sourced):
             return f"passive Perception {self.passive}"
 
     def get_init_str(self):
-        skill = self.skills.get("Initiative")
+        skill = self.skills.initiative
         init_str = f"**Initiative** {skill.value:+} ("
         if skill.adv is True:
             init_str += f"{15 + skill.value}, adv)"

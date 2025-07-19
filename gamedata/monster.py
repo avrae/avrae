@@ -341,10 +341,21 @@ class Monster(StatBlock, Sourced):
         else:
             return f"passive Perception {self.passive}"
 
+    def get_init_str(self):
+        skill = self.skills.get("Initiative")
+        init_str = f"**Initiative** {skill.value:+} ("
+        if skill.adv is True:
+            init_str += f"{15 + skill.value}, adv)"
+        elif skill.adv is False:
+            init_str += f"{5 + skill.value}, dis)"
+        else:
+            init_str += f"{10 + skill.value})"
+        return init_str
+
     def get_upper_meta(self):
         """
         Returns a string describing the meta statistics of a monster.
-        Should be the portion between the embed title and special abilities.
+        Should be the portion between the embed title and ability score tables.
         """
         size = self.size
         type_ = self.creature_type
@@ -353,9 +364,13 @@ class Monster(StatBlock, Sourced):
         hp = f"{self.hp} ({self.hitdice})"
         speed = self.speed
 
-        return f"*{size} {type_}{alignment}*\n**AC** {ac}\n**HP** {hp}\n**Speed** {speed}\n"
+        return f"*{size} {type_}{alignment}*\n**AC** {ac}   {self.get_init_str()}\n**HP** {hp}\n**Speed** {speed}\n"
 
     def get_lower_meta(self):
+        """
+        Returns a string describing the meta statistics of a monster.
+        Should be the portion between the ability score tables and the traits.
+        """
         desc = ""
         if str(self.skills):
             desc += f"**Skills** {self.skills}\n"

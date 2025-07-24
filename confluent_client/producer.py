@@ -33,7 +33,7 @@ class KafkaProducer:
         log.info("Kafka Initialized")
         self.is_ready = True
         self.producer = Producer(producer_config)
-        self.topic = "dnddev_avraebot" if bot_config.TESTING else "dndprod_avraebot"
+        self.topic = "dndprod_avraebot" if bot_config.ENVIRONMENT == "production" else "dnddev_avraebot"
 
     def _build_producer_config(self, override_config=None):
         """

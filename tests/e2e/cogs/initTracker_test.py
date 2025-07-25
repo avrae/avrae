@@ -20,11 +20,9 @@ class TestInitiativeSimple:
             "```md\nCurrent initiative: 0 (round 0)\n===============================\n```", regex=False
         )
         await dhttp.receive_message(
-            (
-                "Everyone roll for initiative!\nIf you have a character set up with SheetManager: "
-                "`!init join`\nIf it's a 5e monster: `!init madd <monster name>`\nOtherwise: "
-                "`!init add <modifier> <name>`"
-            ),
+            "Everyone roll for initiative!\nIf you have a character set up with SheetManager: "
+            "`!init join`\nIf it's a 5e monster: `!init madd <monster name>`\nOtherwise: "
+            "`!init add <modifier> <name>`",
             regex=False,
         )
 
@@ -157,6 +155,7 @@ class TestYourStandardInitiative:
             assert "foobar" in [r.dtype for r in resistances.resist]
             assert "foobar" not in [r.dtype for r in resistances.immune]
             assert "foobar" not in [r.dtype for r in resistances.vuln]
+            assert "foobar" not in [r.dtype for r in resistances.absorb]
 
             avrae.message(f'!i effect "{combatant}" test2 -vuln foobar -dur 1')  # effects can stack
             await dhttp.drain()

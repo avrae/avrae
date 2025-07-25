@@ -10,6 +10,7 @@ from pydantic import BaseModel, conint, constr, validator
 import cogs5e.initiative as init
 from cogs5e.models.errors import InvalidArgument
 from utils import enums
+from utils.constants import STAT_ABBREVIATIONS
 
 str255 = constr(max_length=255)
 
@@ -36,6 +37,8 @@ class PassiveEffects(BaseModel):
     check_adv: Optional[Set[str]]
     check_dis: Optional[Set[str]]
     dc_bonus: Optional[int]
+    # TODO: Specific save bonuses?. Unsure of correct data type?
+    specific_save_bonus: Optional[dict[str, str]]
 
     @validator("save_adv", "save_dis")
     def check_valid_save_keys(cls, value):
@@ -50,6 +53,15 @@ class PassiveEffects(BaseModel):
             return init.effects.passive.resolve_check_advs(value)
         except InvalidArgument as e:
             raise ValueError(str(e)) from e
+
+    @validator("specific_save_bonus")
+    def check_valid_save_bonus_keys(cls, value):
+        if not isinstance(value, dict):
+            raise ValueError("Specific Save Bonus must be a dictionary.")
+        for val in value.keys():
+            if val not in STAT_ABBREVIATIONS:
+                raise ValueError(f"{val} is not an accepted stat abbreviation for a save bonus.")
+        return value
 
 
 class AttackInteraction(BaseModel):

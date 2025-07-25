@@ -273,6 +273,15 @@ class SimpleCombatant(AliasStatBlock):
             raise InvalidSaveType
 
         sb = self._combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
+        # specific save bonus
+        stat = ability[:3].lower()
+        specific_save_bonus = self._combatant.active_effects(
+            mapper=lambda effect: effect.effects.specific_save_bonus,
+            # only chose the bonus(es) that applies to the current stat (str, dex, con, int, wis, cha)
+            reducer=lambda effects: [{k: v for k, v in x.items() if k == stat}.get(stat) for x in effects if stat in x],
+            default=list(),
+        )
+        sb += specific_save_bonus
         saveroll = save.d20(base_adv=adv)
         if sb:
             saveroll = f'{saveroll}+{"+".join(sb)}'

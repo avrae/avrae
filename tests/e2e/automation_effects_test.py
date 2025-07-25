@@ -148,15 +148,17 @@ class TestIEffect:
         "type": "ieffect2",
         "name": "Burning",
         "effects": {"save_dis": ["all"], "damage_bonus": "1 [fire]"},
-        "attacks": [{
-            "attack": {
-                "name": "Burning Hand (not the spell)",
-                "_v": 2,
-                "automation": [
-                    {"type": "target", "target": "each", "effects": [{"type": "damage", "damage": "1d8[fire]"}]}
-                ],
+        "attacks": [
+            {
+                "attack": {
+                    "name": "Burning Hand (not the spell)",
+                    "_v": 2,
+                    "automation": [
+                        {"type": "target", "target": "each", "effects": [{"type": "damage", "damage": "1d8[fire]"}]}
+                    ],
+                }
             }
-        }],
+        ],
         "buttons": [
             {
                 "label": "Take Fire Damage",
@@ -250,6 +252,23 @@ class TestIEffect:
         """
     ).strip()
 
+    specific_save_attack = textwrap.dedent(
+        """
+        name: "specific test"
+        automation: 
+        - type: "target"
+          target: "self"
+          effects: 
+          - type: "ieffect2"
+            name: "test"
+            effects: 
+              specific_save_bonus: 
+                str: 3
+        _v: 2
+        proper: "false"
+        """
+    ).strip()
+
     async def test_ieffect_setup(self, avrae, dhttp):
         await start_init(avrae, dhttp)
         avrae.message("!init join")
@@ -319,6 +338,22 @@ class TestIEffect:
         parent = combatant.get_effect("Parent Test", strict=True)
         assert child.get_parent_effect() is parent
         assert next(parent.get_children_effects()) is child
+
+    async def test_specific_save_bonuses(self, character, avrae, dhttp):
+        avrae.message(f"!a import {self.specific_save_attack}")
+        await dhttp.receive_message(r"Imported 1 attacks.*\n.*", regex=True)
+
+        avrae.message(f'!a "specific test" -t "{character.name}"')
+        await dhttp.drain()
+
+        char = await active_character(avrae)
+        combat = await active_combat(avrae)
+        combatant = combat.get_combatant(char.name, strict=True)
+
+        effect = combatant.get_effect("test", strict=True)
+        assert effect
+        assert effect.effects.specific_save_bonus
+        assert effect.effects.specific_save_bonus.get("str", None) == "3"
 
     async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
         await end_init(avrae, dhttp)

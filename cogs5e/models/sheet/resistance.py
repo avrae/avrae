@@ -225,7 +225,7 @@ class Resistance:
         out = []
         out.extend(f"non{u}" for u in self.unless)
         out.extend(self.only)
-        out.append(self.dtype)
+        out.append(self.dtype.title())
         return " ".join(out)
 
     def __repr__(self):

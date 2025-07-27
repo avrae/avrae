@@ -229,6 +229,8 @@ async def search_and_select(
     return_metadata=False,
     strip_query_quotes=True,
     selector=get_selection,
+    use_buttons=False,
+    is_monster=False,
 ) -> _HaystackT:
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
@@ -270,9 +272,16 @@ async def search_and_select(
         if len(results) == 1 and confidence > 75:
             result = first_result
         else:
-            result = await selector(
-                ctx, results, key=selectkey or key, pm=pm, message=message, force_select=True, query=query
-            )
+            if use_buttons:
+                from utils.selection import get_selection_with_buttons
+                result = await get_selection_with_buttons(
+                    ctx, results, key=selectkey or key, pm=pm, message=message,
+                    force_select=True, query=query, is_monster=is_monster
+                )
+            else:
+                result = await selector(
+                    ctx, results, key=selectkey or key, pm=pm, message=message, force_select=True, query=query
+                )
     if not return_metadata:
         return result
     metadata = {"num_options": 1 if strict else len(results), "chosen_index": 0 if strict else results.index(result)}

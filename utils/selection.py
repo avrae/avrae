@@ -158,21 +158,31 @@ async def get_selection_with_buttons(
         pages = paginate(choices, 10)
         current_choices = pages[page] if page < len(pages) else []
 
-        embed = disnake.Embed(title="Multiple Matches Found", colour=0x7289DA)
-        select_str = f"Your input was: `{query}`\n" if query else ""
-        select_str += "Which one were you looking for? (Type the number or c to cancel)\n"
-
+        description = ""
+        if query:
+            description += f"Your input was: `{query}`\n"
+        description += "Which one were you looking for? (Type the number or `c` to cancel)\n"
         if len(pages) > 1:
-            select_str += "n to go to the next page, or p for previous\n"
+            description += "`n` to go to the next page, or `p` for previous\n"
+        description += "\n"
 
         for i, choice in enumerate(current_choices):
             global_index = i + 1 + page * 10
-            select_str += f"[{global_index}] - {key(choice)}\n"
+            description += f"[{global_index}] - {key(choice)}\n"
 
-        embed.description = select_str
+        description += "\n**Instructions**\n"
+        if not pm:
+            description += "Use buttons below OR Type your choice in this channel."
+        else:
+            description += f"Use buttons below OR Type your choice in {ctx.channel.mention}. This message was PMed to you to hide the monster name."
 
         if message:
-            embed.add_field(name="Note", value=message, inline=False)
+            description += f"\n\n**Note**\n{message}"
+
+        embed = disnake.Embed(title="Multiple Matches Found", description=description, colour=0x36393F)
+
+        if len(pages) > 1:
+            embed.set_footer(text=f"Page {page + 1}/{len(pages)}")
 
         return embed
 
@@ -391,32 +401,24 @@ async def select_monster_with_dm_feedback(
         pages = paginate(choices, 10)
         current_choices = pages[page] if page < len(pages) else []
 
-        # Main description with query and prompt
-        description = f"Your input was: `{query}`\n" if query else ""
-        description += (
-            "Which one were you looking for? (Click a button below OR type the number in the combat channel)\n\n"
-        )
+        description = ""
+        if query:
+            description += f"Your input was: `{query}`\n"
+        description += "Which one were you looking for? (Type the number or `c` to cancel)\n"
+        if len(pages) > 1:
+            description += "`n` to go to the next page, or `p` for previous\n"
+        description += "\n"
 
-        # Add monster list to description
         for i, choice in enumerate(current_choices):
             global_index = i + 1 + page * 10
-            description += f"**[{global_index}]** - {key(choice)}\n"
+            description += f"[{global_index}] - {key(choice)}\n"
 
-        embed = disnake.Embed(title="Multiple Matches Found", colour=0x36393F, description=description)
+        description += f"\n**Instructions**\nUse buttons below OR Type your choice in {ctx.channel.mention}. This message was PMed to you to hide the monster name."
 
-        # Navigation section
+        embed = disnake.Embed(title="Multiple Matches Found", description=description, colour=0x36393F)
+
         if len(pages) > 1:
-            nav_text = f"Page {page + 1}/{len(pages)} - Use ◀ ▶ to navigate pages"
-            embed.add_field(name="Navigation", value=nav_text, inline=False)
-
-        # Instructions section
-        instructions = f"Click a button below to select, or type in {ctx.channel.mention}:\n"
-        instructions += f"- Numbers (**1**-**{len(choices)}**) to select\n"
-        if len(pages) > 1:
-            instructions += "- `n` to go to the next page, or `p` for previous\n"
-        instructions += "- `c` to cancel"
-
-        embed.add_field(name="Instructions", value=instructions, inline=False)
+            embed.set_footer(text=f"Page {page + 1}/{len(pages)}")
 
         return embed
 

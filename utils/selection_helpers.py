@@ -1,0 +1,130 @@
+"""
+Helper utilities for the selection system.
+"""
+
+import logging
+from typing import List, Optional, Any
+
+import disnake
+
+log = logging.getLogger(__name__)
+
+
+def parse_custom_id(custom_id: str) -> str:
+    """
+    Extract the action from a prefixed custom_id.
+
+    Args:
+        custom_id: The full custom_id (e.g., "1234567890_select_1")
+
+    Returns:
+        The action part (e.g., "select_1")
+    """
+    if not isinstance(custom_id, str):
+        log.warning(f"Invalid custom_id type: {type(custom_id)}")
+        return ""
+
+    parts = custom_id.split("_", 1)
+    return parts[1] if len(parts) > 1 else custom_id
+
+
+def parse_selection_number(action: str) -> Optional[int]:
+    """
+    Safely extract selection number from action string.
+
+    Args:
+        action: Action string (e.g., "select_1", "select_10")
+
+    Returns:
+        Selection number (1-based) or None if invalid
+    """
+    if not isinstance(action, str) or not action.startswith("select_"):
+        return None
+
+    parts = action.split("_")
+    if len(parts) != 2:
+        return None
+
+    try:
+        selection_num = int(parts[1])
+        return selection_num if selection_num > 0 else None
+    except ValueError:
+        return None
+
+
+def _check_navigation_boundary(action: str, page: int, total_pages: int) -> tuple[bool, str]:
+    """Check if navigation would hit boundary and return appropriate emoji message."""
+    if action in ("next", "n") and page >= total_pages - 1:
+        return True, "⏭ You're already on the **last** page."
+    if action in ("prev", "p") and page == 0:
+        return True, "⏮ You're already on the **first** page."
+    return False, ""
+
+
+def text_input_check(msg, ctx, choices: List[Any]) -> bool:
+    """
+    Standardized message check function for text input handling.
+
+    Args:
+        msg: The message to check
+        ctx: Discord context for author and channel validation
+        choices: Full list of choices to validate selection against
+
+    Returns:
+        True if message is a valid input, False otherwise
+    """
+    # Fast early rejection for different authors/channels
+    if msg.author != ctx.author or msg.channel != ctx.channel:
+        return False
+
+    content = msg.content.lower().strip()
+
+    # Navigation and cancel commands
+    if content in ("c", "n", "p"):
+        return True
+
+    # Numeric selection validation
+    try:
+        choice_num = int(content)
+        return 1 <= choice_num <= len(choices)
+    except ValueError:
+        return False
+
+
+async def _handle_navigation_txt_input(ctx, content: str, page: int, total_pages: int) -> int:
+    """Handle navigation text input (n/p) with boundary checks and error messages."""
+    boundary, msg = _check_navigation_boundary(content, page, total_pages)
+    if boundary:
+        await ctx.send(msg, delete_after=5)
+        return page  # No change
+
+    if content == "n":
+        return page + 1
+    elif content == "p":
+        return page - 1
+    return page  # Unknown command, no change
+
+
+async def _set_expired_view(select_msg, choices: List[Any], page: int, query: str, user_id: int) -> None:
+    """Helper to set expired view on selection message, with rate limit retry."""
+    # Import here to avoid circular imports
+    from utils.selection_views import StatelessSelectionView
+
+    try:
+        expired_view = StatelessSelectionView(choices, page, query, user_id, expired=True)
+        await select_msg.edit(view=expired_view)
+    except disnake.HTTPException as e:
+        # Expected - message might already be deleted or edited
+        log.debug(f"HTTPException when setting expired view: {e}")
+
+
+async def _update_selection_view(
+    select_msg, choices: List[Any], page: int, query: str, create_embed_func, user_id: int
+) -> None:
+    """Helper to update selection message with new page and view, with rate limit retry."""
+    # Import here to avoid circular imports
+    from utils.selection_views import StatelessSelectionView
+
+    embed = create_embed_func(page)
+    view = StatelessSelectionView(choices, page, query, user_id)
+    await select_msg.edit(embed=embed, view=view)

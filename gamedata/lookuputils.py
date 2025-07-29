@@ -403,6 +403,7 @@ def lookup_converter(entity_type: str) -> Callable:
         case _:
             raise ValueError("That converter does not exist")
 
+
 async def search_entities(
     ctx: "AvraeContext", entities: Dict[str, List["_SourcedT"]], query: str, query_type: str = None, **kwargs
 ) -> "_SourcedT":

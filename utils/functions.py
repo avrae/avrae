@@ -16,6 +16,7 @@ from rapidfuzz import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils import constants, enums
+from utils.selection import get_selection_with_buttons
 
 if TYPE_CHECKING:
     from utils.context import AvraeContext
@@ -24,9 +25,9 @@ log = logging.getLogger(__name__)
 sentinel = object()
 
 
-def list_get(index, default, l):
+def list_get(index, default, lst):
     try:
-        return l[index]
+        return lst[index]
     except IndexError:
         return default
 
@@ -273,10 +274,15 @@ async def search_and_select(
             result = first_result
         else:
             if use_buttons:
-                from utils.selection import get_selection_with_buttons
                 result = await get_selection_with_buttons(
-                    ctx, results, key=selectkey or key, pm=pm, message=message,
-                    force_select=True, query=query, is_monster=is_monster
+                    ctx,
+                    results,
+                    key=selectkey or key,
+                    pm=pm,
+                    message=message,
+                    force_select=True,
+                    query=query,
+                    is_monster=is_monster,
                 )
             else:
                 result = await selector(
@@ -310,7 +316,7 @@ async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity
         try:
             await msg.delete()
             await reply.delete()
-        except:
+        except Exception:
             pass
     return reply_bool
 

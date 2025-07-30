@@ -298,7 +298,6 @@ def _create_monster_selector(available_ids: dict[str, set[int]]):
                     message=message,
                     force_select=force_select,
                     query=query,
-                    is_monster=True,
                 )
 
         # if it's not actually a choice between a legacy and non-legacy entity, defer to monster selection
@@ -315,7 +314,6 @@ def _create_monster_selector(available_ids: dict[str, set[int]]):
                     message=message,
                     force_select=force_select,
                     query=query,
-                    is_monster=True,
                 )
 
         legacy: "Sourced" = a if a.is_legacy else b
@@ -335,7 +333,6 @@ def _create_monster_selector(available_ids: dict[str, set[int]]):
                     message=message,
                     force_select=force_select,
                     query=query,
-                    is_monster=True,
                 )
         # if the user has access to the preferred entity, return it
         if guild_settings.legacy_preference == LegacyPreference.LATEST and can_access(
@@ -351,7 +348,7 @@ def _create_monster_selector(available_ids: dict[str, set[int]]):
             return await select_monster_with_dm_feedback(ctx=ctx, choices=choices, key=key, query=query)
         else:
             return await get_selection_with_buttons(
-                ctx, choices, key=key, pm=pm, message=message, force_select=force_select, query=query, is_monster=True
+                ctx, choices, key=key, pm=pm, message=message, force_select=force_select, query=query
             )
 
     return legacy_monster_selector

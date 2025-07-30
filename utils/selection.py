@@ -22,7 +22,6 @@ from utils.selection_helpers import (
     _update_selection_view,
 )
 from utils.selection_views import StatelessSelectionView, create_selection_embed
-from utils.selection_monster import select_monster_with_dm_feedback
 
 log = logging.getLogger(__name__)
 
@@ -38,17 +37,10 @@ async def get_selection_with_buttons(
     force_select: bool = False,
     query: Optional[str] = None,
     timeout: float = 120.0,
-    is_monster: bool = False,
 ) -> Any:
     """
     Stateless button selection: pure function replacement for get_selection.
     Supports both button interactions and text input simultaneously.
-
-    Provides monster-specific optimizations when is_monster=True:
-    - Ephemeral DM feedback with combat channel link
-    - Uses standard StatelessSelectionView button layout
-    - Hidden nav for ≤10 results
-    - Expired menu handling
 
     Args:
         ctx: Discord context
@@ -60,7 +52,6 @@ async def get_selection_with_buttons(
         force_select: Force selection even with single choice
         query: Query that led to this selection
         timeout: Timeout in seconds
-        is_monster: Whether this is monster selection (enables special UX)
 
     Returns:
         Selected choice
@@ -74,10 +65,6 @@ async def get_selection_with_buttons(
         raise NoSelectionElements()
     elif len(choices) == 1 and not force_select:
         return choices[0]
-
-    # Use specialized monster selection if requested
-    if is_monster and pm:
-        return await select_monster_with_dm_feedback(ctx=ctx, choices=choices, key=key, query=query, timeout=timeout)
 
     # Store original channel mention before potential PM sending
     original_channel_mention = ctx.channel.mention if ctx.channel else None
@@ -101,8 +88,6 @@ async def get_selection_with_buttons(
     view = StatelessSelectionView(choices, page, query or "", ctx.author.id)
 
     if pm:
-        channel_ref = original_channel_mention or "the original channel"
-        embed.add_field(name="Instructions", value=f"Click buttons or type in {channel_ref}", inline=False)
         select_msg = await ctx.author.send(embed=embed, view=view)
     else:
         select_msg = await ctx.send(embed=embed, view=view)

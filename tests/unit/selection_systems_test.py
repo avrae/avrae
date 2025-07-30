@@ -193,7 +193,6 @@ class TestCreateMonsterSelector:
 
             mock_buttons.assert_called_once()
             call_args = mock_buttons.call_args
-            assert call_args[1]["is_monster"] is True
             assert call_args[1]["pm"] is False
             assert result == modern_monster
 
@@ -219,8 +218,6 @@ class TestCreateMonsterSelector:
             result = await selector(mock_ctx, [legacy_monster, modern_monster], pm=False)
 
             mock_buttons.assert_called_once()
-            call_args = mock_buttons.call_args
-            assert call_args[1]["is_monster"] is True
             assert result == modern_monster
 
     @pytest.mark.asyncio

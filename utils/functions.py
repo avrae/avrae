@@ -16,7 +16,6 @@ from rapidfuzz import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils import constants, enums
-from utils.selection import get_selection_with_buttons
 
 if TYPE_CHECKING:
     from utils.context import AvraeContext
@@ -230,8 +229,6 @@ async def search_and_select(
     return_metadata=False,
     strip_query_quotes=True,
     selector=get_selection,
-    use_buttons=False,
-    is_monster=False,
 ) -> _HaystackT:
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
@@ -273,21 +270,9 @@ async def search_and_select(
         if len(results) == 1 and confidence > 75:
             result = first_result
         else:
-            if use_buttons:
-                result = await get_selection_with_buttons(
-                    ctx,
-                    results,
-                    key=selectkey or key,
-                    pm=pm,
-                    message=message,
-                    force_select=True,
-                    query=query,
-                    is_monster=is_monster,
-                )
-            else:
-                result = await selector(
-                    ctx, results, key=selectkey or key, pm=pm, message=message, force_select=True, query=query
-                )
+            result = await selector(
+                ctx, results, key=selectkey or key, pm=pm, message=message, force_select=True, query=query
+            )
     if not return_metadata:
         return result
     metadata = {"num_options": 1 if strict else len(results), "chosen_index": 0 if strict else results.index(result)}

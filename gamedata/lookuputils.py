@@ -19,6 +19,8 @@ from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
 from utils.constants import HOMEBREW_EMOJI, HOMEBREW_ICON
 from utils.functions import get_selection, search_and_select, search
+from utils.selection import get_selection_with_buttons
+from utils.selection_monster import select_monster_with_dm_feedback
 from utils.settings.guild import LegacyPreference, ServerSettings
 from .compendium import compendium
 from .klass import ClassFeature
@@ -120,7 +122,7 @@ def get_version_from_string(text: str = None) -> (str, str):
         version = text.split()[-1] if text.split()[-1].title() in VALID_VERSIONS else None
         search_str = text.replace(version, "").strip() if text.split()[-1].title() in VALID_VERSIONS else text
         version = version.title()
-    except:
+    except (AttributeError, IndexError):
         version = None
         search_str = text
 
@@ -146,7 +148,7 @@ async def get_lookup_version(ctx) -> str:
             serv_settings = await ctx.get_server_settings() if ctx.guild else None
         else:
             serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
-    except:
+    except Exception:
         serv_settings = None
 
     if serv_settings:
@@ -237,11 +239,11 @@ def source_slug(source):
 def _create_selector(available_ids: dict[str, set[int]]):
     async def legacy_entity_selector(ctx: "AvraeContext", choices: List["Sourced"], *args, **kwargs) -> "Sourced":
         """Given a choice between only a legacy and non-legacy entity, respect the server's legacy preferences."""
-        # if the choices aren't between 2 entities or it's in PMs, defer
+        # if the choices aren't between 2 entities or it's in PMs, defer to text selection
         if len(choices) != 2 or ctx.guild is None:
             return await get_selection(ctx, choices, *args, **kwargs)
 
-        # if it's not actually a choice between a legacy and non-legacy entity, defer
+        # if it's not actually a choice between a legacy and non-legacy entity, defer to text selection
         a, b = choices
         if a.is_legacy == b.is_legacy:
             return await get_selection(ctx, choices, *args, **kwargs)
@@ -250,7 +252,7 @@ def _create_selector(available_ids: dict[str, set[int]]):
         latest: "Sourced" = a if not a.is_legacy else b
 
         guild_settings = await ctx.get_server_settings()
-        # if the guild setting is to ask, defer
+        # if the guild setting is to ask, defer to text selection
         if guild_settings.legacy_preference == LegacyPreference.ASK:
             return await get_selection(ctx, choices, *args, **kwargs)
         # if the user has access to the preferred entity, return it
@@ -262,10 +264,97 @@ def _create_selector(available_ids: dict[str, set[int]]):
             legacy, available_ids[legacy.entitlement_entity_type]
         ):
             return legacy
-        # otherwise defer to asking
+        # otherwise defer to asking via text selection
         return await get_selection(ctx, choices, *args, **kwargs)
 
     return legacy_entity_selector
+
+
+def _create_monster_selector(available_ids: dict[str, set[int]]):
+    async def legacy_monster_selector(
+        ctx: "AvraeContext",
+        choices: List["Sourced"],
+        key=None,
+        pm=False,
+        message=None,
+        force_select=False,
+        query=None,
+        **kwargs,
+    ) -> "Sourced":
+        """
+        Given a choice between only a legacy and non-legacy monster, respect the server's legacy preferences,
+        using monster buttons.
+        """
+        # if the choices aren't between 2 entities or it's in PMs, defer to monster selection
+        if len(choices) != 2 or ctx.guild is None:
+            if pm:
+                return await select_monster_with_dm_feedback(ctx=ctx, choices=choices, key=key, query=query)
+            else:
+                return await get_selection_with_buttons(
+                    ctx,
+                    choices,
+                    key=key,
+                    pm=pm,
+                    message=message,
+                    force_select=force_select,
+                    query=query,
+                    is_monster=True,
+                )
+
+        # if it's not actually a choice between a legacy and non-legacy entity, defer to monster selection
+        a, b = choices
+        if a.is_legacy == b.is_legacy:
+            if pm:
+                return await select_monster_with_dm_feedback(ctx=ctx, choices=choices, key=key, query=query)
+            else:
+                return await get_selection_with_buttons(
+                    ctx,
+                    choices,
+                    key=key,
+                    pm=pm,
+                    message=message,
+                    force_select=force_select,
+                    query=query,
+                    is_monster=True,
+                )
+
+        legacy: "Sourced" = a if a.is_legacy else b
+        latest: "Sourced" = a if not a.is_legacy else b
+
+        guild_settings = await ctx.get_server_settings()
+        # if the guild setting is to ask, defer to monster selection
+        if guild_settings.legacy_preference == LegacyPreference.ASK:
+            if pm:
+                return await select_monster_with_dm_feedback(ctx=ctx, choices=choices, key=key, query=query)
+            else:
+                return await get_selection_with_buttons(
+                    ctx,
+                    choices,
+                    key=key,
+                    pm=pm,
+                    message=message,
+                    force_select=force_select,
+                    query=query,
+                    is_monster=True,
+                )
+        # if the user has access to the preferred entity, return it
+        if guild_settings.legacy_preference == LegacyPreference.LATEST and can_access(
+            latest, available_ids[latest.entitlement_entity_type]
+        ):
+            return latest
+        elif guild_settings.legacy_preference == LegacyPreference.LEGACY and can_access(
+            legacy, available_ids[legacy.entitlement_entity_type]
+        ):
+            return legacy
+        # otherwise defer to monster selection
+        if pm:
+            return await select_monster_with_dm_feedback(ctx=ctx, choices=choices, key=key, query=query)
+        else:
+            return await get_selection_with_buttons(
+                ctx, choices, key=key, pm=pm, message=message, force_select=force_select, query=query, is_monster=True
+            )
+
+    return legacy_monster_selector
 
 
 def create_selectkey(available_ids: dict[str, set[int]]):
@@ -435,8 +524,7 @@ async def search_entities(
         lambda e: e.name,
         selectkey=create_selectkey(available_ids),
         return_metadata=True,
-        use_buttons=True,
-        is_monster=(query_type == "monster"),
+        selector=_create_monster_selector(available_ids) if "monster" in entities else _create_selector(available_ids),
         **kwargs,
     )
 

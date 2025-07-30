@@ -80,7 +80,6 @@ async def select_monster_with_dm_feedback(
             query=query,
             pm=True,
             ctx=ctx,
-            is_monster=True,
             original_channel_mention=original_channel_mention,
         )
 

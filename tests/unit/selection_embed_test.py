@@ -6,6 +6,7 @@ from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils.selection import get_selection_with_buttons, text_input_check
 from utils.selection_helpers import parse_custom_id, parse_selection_number
 from utils.selection_monster import select_monster_with_dm_feedback
+from utils.selection_views import create_selection_embed
 
 
 def test_embed_description_formatting():
@@ -342,43 +343,38 @@ async def test_single_choice_behavior(mock_ctx):
 
 def test_monster_specific_instruction_text():
     """Test that monster selection shows monster-specific instruction text"""
-    pm = True
-    is_monster = True
-    mock_channel = Mock()
-    mock_channel.mention = "#combat-channel"
+    choices = ["Choice 1", "Choice 2"]
+    query = "test query"
 
-    # Monster-specific PM instructions
-    description = "\n**Instructions**\n"
-    if not pm:
-        description += "Use buttons below OR Type your choice in this channel."
-    else:
-        if is_monster:
-            description += (
-                f"Use buttons below OR Type your choice in {mock_channel.mention}. "
-                "This message was PMed to you to hide the monster name."
-            )
-        else:
-            description += f"Use buttons below OR Type your choice in {mock_channel.mention}."
+    # Mock context for PM scenario
+    mock_ctx = Mock()
+    mock_ctx.channel.mention = "#original-channel"
 
-    assert "PMed to you to hide the monster name" in description
+    # Test PM with monster-specific message
+    embed = create_selection_embed(
+        choices=choices,
+        page=0,
+        key=lambda x: x,
+        query=query,
+        pm=True,
+        ctx=mock_ctx,
+        original_channel_mention="#combat-channel",
+    )
+
+    description = embed.description
+
+    # Should contain monster-specific instruction text in PM
+    assert "This message was PMed to you to hide the monster name." in description
     assert "#combat-channel" in description
 
-    # Non-monster PM instructions (for comparison)
-    is_monster = False
-    description = "\n**Instructions**\n"
-    if not pm:
-        description += "Use buttons below OR Type your choice in this channel."
-    else:
-        if is_monster:
-            description += (
-                f"Use buttons below OR Type your choice in {mock_channel.mention}. "
-                "This message was PMed to you to hide the monster name."
-            )
-        else:
-            description += f"Use buttons below OR Type your choice in {mock_channel.mention}."
+    # Test non-PM (channel) message - should not contain monster-specific text
+    embed_channel = create_selection_embed(choices=choices, page=0, key=lambda x: x, query=query, pm=False)
 
-    assert "PMed to you to hide the monster name" not in description
-    assert "#combat-channel" in description
+    description_channel = embed_channel.description
+
+    # Should not contain monster-specific instruction text in channel
+    assert "This message was PMed to you to hide the monster name." not in description_channel
+    assert "Use buttons below OR Type your choice in this channel." in description_channel
 
 
 def test_legacy_entity_marking():

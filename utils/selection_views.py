@@ -109,7 +109,6 @@ def create_selection_embed(
     message: Optional[str] = None,
     pm: bool = False,
     ctx=None,
-    is_monster: bool = False,
     original_channel_mention: Optional[str] = None,
 ) -> disnake.Embed:
     """
@@ -123,7 +122,6 @@ def create_selection_embed(
         message: Optional additional message to display
         pm: Whether this is being sent as a private message
         ctx: Discord context (required if pm=True)
-        is_monster: Whether this is monster selection (changes instruction text)
         original_channel_mention: Channel mention for DM instruction text
 
     Returns:

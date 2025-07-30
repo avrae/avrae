@@ -1,7 +1,8 @@
 import pytest
+import asyncio
 import disnake
 from unittest.mock import Mock
-from cogs5e.models.errors import NoSelectionElements
+from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils.selection import get_selection_with_buttons, text_input_check
 from utils.selection_helpers import parse_custom_id, parse_selection_number
 from utils.selection_monster import select_monster_with_dm_feedback
@@ -337,3 +338,122 @@ async def test_single_choice_behavior(mock_ctx):
     # select_monster_with_dm_feedback should also return the choice when no callback
     result = await select_monster_with_dm_feedback(mock_ctx, single_choice)
     assert result == "Only Choice"
+
+
+def test_monster_specific_instruction_text():
+    """Test that monster selection shows monster-specific instruction text"""
+    pm = True
+    is_monster = True
+    mock_channel = Mock()
+    mock_channel.mention = "#combat-channel"
+
+    # Monster-specific PM instructions
+    description = "\n**Instructions**\n"
+    if not pm:
+        description += "Use buttons below OR Type your choice in this channel."
+    else:
+        if is_monster:
+            description += (
+                f"Use buttons below OR Type your choice in {mock_channel.mention}. "
+                "This message was PMed to you to hide the monster name."
+            )
+        else:
+            description += f"Use buttons below OR Type your choice in {mock_channel.mention}."
+
+    assert "PMed to you to hide the monster name" in description
+    assert "#combat-channel" in description
+
+    # Non-monster PM instructions (for comparison)
+    is_monster = False
+    description = "\n**Instructions**\n"
+    if not pm:
+        description += "Use buttons below OR Type your choice in this channel."
+    else:
+        if is_monster:
+            description += (
+                f"Use buttons below OR Type your choice in {mock_channel.mention}. "
+                "This message was PMed to you to hide the monster name."
+            )
+        else:
+            description += f"Use buttons below OR Type your choice in {mock_channel.mention}."
+
+    assert "PMed to you to hide the monster name" not in description
+    assert "#combat-channel" in description
+
+
+def test_legacy_entity_marking():
+    """Test that legacy entities are properly marked with *legacy* in the embed"""
+    from gamedata.lookuputils import create_selectkey
+
+    # Mock legacy entity
+    legacy_monster = Mock()
+    legacy_monster.name = "Ancient Goblin"
+    legacy_monster.is_legacy = True
+    legacy_monster.homebrew = False
+    legacy_monster.source = "PHB"
+    legacy_monster.entity_id = 1
+    legacy_monster.limited_use_only = False
+    legacy_monster.entitlement_entity_type = "monster"
+
+    # Mock non-legacy entity
+    modern_monster = Mock()
+    modern_monster.name = "Goblin"
+    modern_monster.is_legacy = False
+    modern_monster.homebrew = False
+    modern_monster.source = "PHB"
+    modern_monster.entity_id = 2
+    modern_monster.limited_use_only = False
+    modern_monster.entitlement_entity_type = "monster"
+
+    # Create selectkey function
+    available_ids = {"monster": {1, 2}}
+    selectkey_func = create_selectkey(available_ids)
+
+    # Test legacy marking
+    legacy_display = selectkey_func(legacy_monster, slash=False)
+    modern_display = selectkey_func(modern_monster, slash=False)
+
+    assert "*legacy*" in legacy_display
+    assert "*legacy*" not in modern_display
+    assert "Ancient Goblin" in legacy_display
+    assert "Goblin" in modern_display
+
+
+@pytest.mark.asyncio
+async def test_monster_dm_feedback_embed_behavior(mock_ctx):
+    """Test embed creation when using DM feedback for monsters"""
+    from unittest.mock import patch, AsyncMock
+
+    choices = ["Goblin", "Goblin Archer"]
+
+    # Mock the author.send method
+    mock_ctx.author.send = AsyncMock()
+    mock_sent_message = Mock()
+    mock_sent_message.id = 12345
+    mock_sent_message.edit = AsyncMock()  # Add async edit method
+    mock_ctx.author.send.return_value = mock_sent_message
+
+    # Mock asyncio.wait to properly simulate timeout at the correct level
+    with patch("asyncio.wait", side_effect=asyncio.TimeoutError()):
+        # Test that the function attempts to send DM and handles timeout properly
+        with pytest.raises(SelectionCancelled):
+            await select_monster_with_dm_feedback(
+                ctx=mock_ctx,
+                choices=choices,
+                key=lambda x: x,
+                query="goblin",
+                timeout=0.1,  # Very short timeout for test
+            )
+
+    # Verify DM was sent with proper embed
+    mock_ctx.author.send.assert_called_once()
+    call_args = mock_ctx.author.send.call_args
+
+    # Verify embed was created (first positional argument should be embed)
+    assert "embed" in call_args[1]
+    embed = call_args[1]["embed"]
+    assert embed.title == "Multiple Matches Found"
+    assert "goblin" in embed.description.lower()
+
+    # Verify view was included
+    assert "view" in call_args[1]

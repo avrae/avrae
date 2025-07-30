@@ -3,11 +3,12 @@ import enum
 import os
 import time
 import uuid
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Any
 
 import disnake.ui
 
 from utils import constants
+from utils.constants import SKILL_MAP
 from utils.functions import smart_trim
 from .types import CombatantType
 
@@ -219,3 +220,34 @@ async def send_turn_message(ctx: "AvraeContext", combat: "Combat", before: list[
     result = before_str + content + after_str
 
     return await ctx.send(result, allowed_mentions=allowed_mentions, components=components)
+
+
+def ieffect_handler(caster, args, skill_key):
+    """
+    Handles initiative effects (ieffects) for skill checks by adding bonuses and advantage/disadvantage.
+
+    :param caster: The combatant making the check
+    :param args: ParsedArguments to modify with combat context
+    :param skill_key: The skill being checked
+    :return: Modified args with combat context applied
+    """
+    combat_context: dict[str, Any] = {}
+    base_ability_key = SKILL_MAP[skill_key]
+    # -cb
+    combat_context["b"] = caster.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
+
+    # -cadv/cdis
+    cadv_effects = caster.active_effects(
+        mapper=lambda effect: effect.effects.check_adv, reducer=lambda checks: set().union(*checks), default=set()
+    )
+    cdis_effects = caster.active_effects(
+        mapper=lambda effect: effect.effects.check_dis, reducer=lambda checks: set().union(*checks), default=set()
+    )
+    if skill_key in cadv_effects or base_ability_key in cadv_effects:
+        combat_context["adv"] = ["True"]
+    if skill_key in cdis_effects or base_ability_key in cdis_effects:
+        combat_context["dis"] = ["True"]
+
+    args.add_context("combat", combat_context)
+    args.set_context("combat")
+    return args

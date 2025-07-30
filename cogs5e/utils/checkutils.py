@@ -61,29 +61,32 @@ def run_check(skill_key, caster, args, embed):
 
     # ieffect handling
     if isinstance(caster, init.Combatant):
-        combat_context: dict[str, Any] = {}
-
-        # -cb
-        combat_context["b"] = caster.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
-
-        # -cadv/cdis
-        cadv_effects = caster.active_effects(
-            mapper=lambda effect: effect.effects.check_adv, reducer=lambda checks: set().union(*checks), default=set()
-        )
-        cdis_effects = caster.active_effects(
-            mapper=lambda effect: effect.effects.check_dis, reducer=lambda checks: set().union(*checks), default=set()
-        )
-        if skill_key in cadv_effects or base_ability_key in cadv_effects:
-            combat_context["adv"] = ["True"]
-        if skill_key in cdis_effects or base_ability_key in cdis_effects:
-            combat_context["dis"] = ["True"]
-
-        args.add_context("combat", combat_context)
-        args.set_context("combat")
+        args = ieffect_handler(caster, args, skill_key)
 
     result = _run_common(skill, args, embed, mod_override=mod)
     return CheckResult(rolls=result.rolls, skill=skill, skill_name=skill_name, skill_roll_result=result)
 
+def ieffect_handler(caster, args, skill_key):
+    combat_context: dict[str, Any] = {}
+    base_ability_key = SKILL_MAP[skill_key]
+    # -cb
+    combat_context["b"] = caster.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
+
+    # -cadv/cdis
+    cadv_effects = caster.active_effects(
+        mapper=lambda effect: effect.effects.check_adv, reducer=lambda checks: set().union(*checks), default=set()
+    )
+    cdis_effects = caster.active_effects(
+        mapper=lambda effect: effect.effects.check_dis, reducer=lambda checks: set().union(*checks), default=set()
+    )
+    if skill_key in cadv_effects or base_ability_key in cadv_effects:
+        combat_context["adv"] = ["True"]
+    if skill_key in cdis_effects or base_ability_key in cdis_effects:
+        combat_context["dis"] = ["True"]
+
+    args.add_context("combat", combat_context)
+    args.set_context("combat")
+    return args
 
 def run_save(save_key, caster, args, embed):
     """

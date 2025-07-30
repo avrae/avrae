@@ -105,7 +105,7 @@ async def get_selection_with_buttons(
                     asyncio.create_task(
                         ctx.bot.wait_for(
                             "interaction",
-                            check=lambda i: i.message and i.message.id == select_msg.id,
+                            check=lambda i: i.message and i.message.id == select_msg.id and i.user.id == ctx.author.id,
                         )
                     ),
                     asyncio.create_task(

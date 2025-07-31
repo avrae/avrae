@@ -76,3 +76,13 @@ LAUNCHDARKLY_SDK_KEY = os.getenv("LAUNCHDARKLY_SDK_KEY")
 
 # ---- discord bot list ----
 DBL_TOKEN = os.getenv("DBL_TOKEN")  # optional
+
+# ---- kafka ----
+KAFKA_BOOTSTRAP_SERVER = os.getenv("KAFKA_BOOTSTRAP_SERVER", False)
+KAFKA_API_KEY = os.getenv("KAFKA_API_KEY", False)
+KAFKA_API_SECRET = os.getenv("KAFKA_API_SECRET", False)
+KAFKA_SECURITY_PROTOCOL = os.getenv("KAFKA_SECURITY_PROTOCOL", "SASL_SSL")
+KAFKA_SASL_MECHANISM = os.getenv("KAFKA_SASL_MECHANISM", "PLAIN")
+KAFKA_ACKS = os.getenv("KAFKA_ACKS", 1)  # 1 = leader ack, 0 = no ack, -1 = all replicas ack
+KAFKA_LINGER_MS = int(os.getenv("KAFKA_LINGER_MS", 1000))  # batch messages for 1000ms before sending
+KAFKA_COMPRESSION_TYPE = os.getenv("KAFKA_COMPRESSION_TYPE", "gzip")  # gzip, snappy, lz4, zstd, or none

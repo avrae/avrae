@@ -13,6 +13,14 @@ async def test_echo_alias(avrae, dhttp):
     await dhttp.receive_message(".+: foobar")
 
 
+async def test_alias_newlines(avrae, dhttp):
+    # ensure newlines directly after the alias name won't break anything.
+    avrae.message("!alias foobar\necho hello!")
+    await dhttp.receive_message("Alias `foobar` added.```py\n!alias foobar \necho hello!\n```")
+    avrae.message("!foobar")
+    await dhttp.drain()  # no expected output due to the newline before the alias command.
+
+
 async def test_variables(avrae, dhttp):
     avrae.message("!uvar foobar Hello world")
     await dhttp.receive_message()
@@ -124,6 +132,12 @@ async def test_alias_vs_servalias(avrae, dhttp):
     avrae.message("!foobar")
     await dhttp.receive_delete()
     await dhttp.receive_message(r".+: this is foobar")
+
+
+async def test_alias_verify_signature(avrae, dhttp):
+    avrae.message("!test {{x = signature()}}{{verify_signature(x)}}")
+    # ensure it is json
+    await dhttp.receive_message(r".+: {.+}")
 
 
 @pytest.mark.usefixtures("character")

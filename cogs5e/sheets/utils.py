@@ -1,4 +1,5 @@
 import collections
+import re
 
 from cogs5e.models.sheet.action import Action
 from gamedata import compendium
@@ -43,6 +44,7 @@ class ActionDiscoverer:
 
 
 discoverer = ActionDiscoverer()
+FEATURE_MANUAL_ID_REGEX = re.compile(r".+\s*\[(\d+),\s*(\d+)]")
 
 
 def get_actions_for_name(name):
@@ -51,6 +53,15 @@ def get_actions_for_name(name):
     Returns a set of actions that match the name.
     Generally pretty quick except the first run after a compendium reload.
     """
+    # ignore empty names
+    if not name:
+        return []
+    # first step, try to find the action via user-given ID! allows for precise action
+    match = re.match(FEATURE_MANUAL_ID_REGEX, name)
+    if match:
+        tid, eid = match.groups()
+        return compendium.lookup_actions_for_entity(int(tid), int(eid))
+    # second step: name-based resolver
     return discoverer.discover(name)
 
 

@@ -32,22 +32,40 @@
 
 ### Discord bot creation
 
-- Go to the [Discord Developer Portal](https://discordapp.com/developers/).
-- `New Application`, give it a cool name, `Create`.
-- Copy the `Application ID` from `General Information`, you'll need this shortly.
-- `Bot` > `Add Bot`.
-- (Optional but recommended): Switch off `Public Bot` so only you can add this bot to servers.
-- Scroll down to `Privileged Gateway Intents`, and enable the switches to the right of `Server Members Intent`
-  and `Message Content Intent`.
-- `Click to reveal token`, this is your `DISCORD_BOT_TOKEN` below.
-- Invite your bot to your
-  server: `https://discordapp.com/oauth2/authorize?permissions=274878295104&scope=bot&client_id=1234`, replacing `1234`
-  with your bot's `Application ID`. Make sure you select the correct server!
+1. **Create the application**
+   - Go to the [Discord Developer Portal](https://discordapp.com/developers/).
+   - Click `New Application`, give it a name, then click `Create`.
+   - Copy the `Application ID` from `General Information` (you'll need this for the invite link).
+
+2. **Configure the bot**
+   - Navigate to the `Bot` tab.
+   - Under `Privileged Gateway Intents`, enable both `Server Members Intent` and `Message Content Intent`.
+   - Click `Save Changes`.
+
+3. **Generate the bot token**
+   - Still on the `Bot` tab, scroll down to `Token`.
+   - Reset the `Bot Token` by clicking `Reset Token` (verify authentication if prompted).
+   - Copy the token - this will be your `DISCORD_BOT_TOKEN` for the configuration.
+
+4. **Set privacy options (recommended so only you can add the bot to a server)**
+   - Navigate to the `Installation` tab.
+   - Select `None` from the `Install Link` dropdown.
+   - Click `Save Changes`.
+   - Navigate to the `Bot` tab, scroll down to `Authorization Flow` and toggle off the `Public Bot` option.
+   - Click `Save Changes`.
+
+5. **Add bot to your server**
+   - Use this URL to invite your bot: `https://discordapp.com/oauth2/authorize?permissions=274878295104&scope=bot&client_id=YOUR_APPLICATION_ID`
+   - Replace `YOUR_APPLICATION_ID` with the Application ID you copied earlier.
+   - Select your server from the dropdown and authorize the bot.
 
 ## Docker Compose magic
 
-1. Create a `docker\env` file with real credentials.
+1. Create a `docker\env` file with real credentials (Reference the example below).
 2. Run `docker-compose up --build`.
+3. Wait for the bot to start up and join your server.
+4. Stop the bot by pressing `Ctrl+C` in the terminal.
+5. Run `docker-compose down -v` to remove the containers and volumes.
 
 ### docker\env file (dev)
 
@@ -65,3 +83,19 @@
     
     # set this to the contents of the JSON file downloaded in the Google Drive Service Account step
     GOOGLE_SERVICE_ACCOUNT=g
+
+### Development with Kafka
+
+If you're developing a feature that requires Kafka, you can either copy the `docker-compose.kafka-dev.yml` file to `docker-compose.override.yml` or pass it as an argument to `docker-compose`:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.kafka-dev.yml up --build
+```
+
+This will add the Kafka `broker` service and set up the necessary environment variables for Avrae to connect to Kafka.
+
+To watch the messages being sent to Kafka, you can use the `kafka-console-consumer` command:
+
+```bash
+docker exec -it avrae-broker-1 /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic dnddev_avraebot --from-beginning
+```

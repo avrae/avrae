@@ -584,8 +584,10 @@ class DicecloudV2Parser(SheetLoaderABC):
             if spell.get("deactivatedByAncestor") or spell.get("deactivatedByToggle"):
                 continue
 
-            spell_actions = self.persist_actions_for_name(spell["name"])
-            actions += spell_actions
+            import_action = "avrae:no_action" not in spell["tags"] + spell.get("libraryTags", [])
+            if import_action:
+                spell_actions = self.persist_actions_for_name(spell["name"])
+                actions += spell_actions
             log.debug(f"Got spell with ancestors: {[spell['parent']['id']] + [k['id'] for k in spell['ancestors']]}")
 
             # find the matching spell list, trying the direct parent first, then ancestors
@@ -618,44 +620,41 @@ class DicecloudV2Parser(SheetLoaderABC):
             spell_consumables += self._consumables_from_resources(spell["resources"])
             consumables += spell_consumables
 
-            # shouldn't parse or add to spells if a compendium action was found
-            if not spell_actions:
-                if spell_consumables:
-                    atk = self.parse_attack(spell)
+            # only skip parsing the attack if a compendium action is found
+            if not spell_actions and spell_consumables and import_action:
+                atk = self.parse_attack(spell)
 
-                    # unique naming
-                    atk_num = 2
-                    if atk.name in self.atk_names:
-                        while f"{atk.name} {atk_num}" in self.atk_names:
-                            atk_num += 1
-                        atk.name = f"{atk.name} {atk_num}"
-                    self.atk_names.add(atk.name)
+                # unique naming
+                atk_num = 2
+                if atk.name in self.atk_names:
+                    while f"{atk.name} {atk_num}" in self.atk_names:
+                        atk_num += 1
+                    atk.name = f"{atk.name} {atk_num}"
+                self.atk_names.add(atk.name)
 
-                    attacks.append(atk)
+                attacks.append(atk)
 
-                # we only want to track the spell's stats if it's actually prepared
-                spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
-                if spell_prepared:
-                    if spell_ab is not None:
-                        sabs.append(spell_ab)
-                    if spell_dc is not None:
-                        dcs.append(spell_dc)
-                    if spell_mod is not None:
-                        mods.append(spell_mod)
+            # we only want to track the spell's stats if it's actually prepared
+            spell_prepared = spell.get("prepared") or spell.get("alwaysPrepared") or "noprep" in self.args
+            if spell_prepared:
+                if spell_ab is not None:
+                    sabs.append(spell_ab)
+                if spell_dc is not None:
+                    dcs.append(spell_dc)
+                if spell_mod is not None:
+                    mods.append(spell_mod)
 
-                result, strict = search(compendium.spells, spell["name"].strip(), lambda sp: sp.name, strict=True)
-                if result and strict:
-                    spells.append(
-                        SpellbookSpell.from_spell(
-                            result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
-                        )
+            result, strict = search(compendium.spells, spell["name"].strip(), lambda sp: sp.name, strict=True)
+            if result and strict:
+                spells.append(
+                    SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared)
+                )
+            elif "avrae:no_spell" not in spell["tags"] + spell.get("libraryTags", []):
+                spells.append(
+                    SpellbookSpell(
+                        spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
                     )
-                else:
-                    spells.append(
-                        SpellbookSpell(
-                            spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
-                        )
-                    )
+                )
 
         # most common stats are used for the spellbook
         dc = max(dcs, key=dcs.count, default=None)

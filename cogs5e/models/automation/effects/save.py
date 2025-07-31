@@ -1,5 +1,3 @@
-import logging
-
 import d20
 
 from cogs5e.models.errors import InvalidSaveType

@@ -37,7 +37,6 @@ class PassiveEffects(BaseModel):
     check_adv: Optional[Set[str]]
     check_dis: Optional[Set[str]]
     dc_bonus: Optional[int]
-    # TODO: Specific save bonuses?. Unsure of correct data type?
     specific_save_bonus: Optional[dict[str, str]]
 
     @validator("save_adv", "save_dis")

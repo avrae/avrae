@@ -197,7 +197,6 @@ class InitPassiveEffect:
     specific_save_bonus: dict[str, str] = _PassiveEffect(
         default=dict(),
         stringifier=_str_save_bonus,
-        # TODO: deserializer/serializer? I think not needed since it's just a dictionary.
     )
     check_bonus: str = _PassiveEffect(stringifier=_abstract_str_attr("Check Bonus"))
     check_adv: Set[str] = _PassiveEffect(
@@ -272,7 +271,6 @@ class InitPassiveEffect:
             check_adv=resolve_check_advs(args.get("cadv")),
             check_dis=resolve_check_advs(args.get("cdis")),
             dc_bonus=sum(args.get("dc", type_=int)),
-            # WIP: Specific Save Bonuses. TODO: Better arg name?
             specific_save_bonus=resolve_specific_save_bonuses(args.get("sb")),
         )
 

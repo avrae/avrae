@@ -3,10 +3,15 @@ import asyncio
 import disnake
 from unittest.mock import Mock
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
-from utils.selection import get_selection_with_buttons, text_input_check
-from utils.selection_helpers import parse_custom_id, parse_selection_number
-from utils.selection_monster import select_monster_with_dm_feedback
-from utils.selection_views import create_selection_embed
+from utils.selection import (
+    get_selection_with_buttons,
+    text_input_check,
+    parse_custom_id,
+    parse_selection_number,
+    select_monster_with_dm_feedback,
+    create_selection_embed,
+    StatelessSelectionView,
+)
 
 
 def test_embed_description_formatting():
@@ -429,6 +434,9 @@ async def test_monster_dm_feedback_embed_behavior(mock_ctx):
     mock_sent_message.edit = AsyncMock()  # Add async edit method
     mock_ctx.author.send.return_value = mock_sent_message
 
+    # Mock ctx.send as AsyncMock
+    mock_ctx.send = AsyncMock()
+
     # Mock asyncio.wait to properly simulate timeout at the correct level
     with patch("asyncio.wait", side_effect=asyncio.TimeoutError()):
         # Test that the function attempts to send DM and handles timeout properly
@@ -453,3 +461,196 @@ async def test_monster_dm_feedback_embed_behavior(mock_ctx):
 
     # Verify view was included
     assert "view" in call_args[1]
+
+
+# === Button Layout Tests ===
+
+
+@pytest.mark.asyncio
+async def test_button_layout_4_choices():
+    """Test button layout with 4 choices - should only use row 0 and row 2"""
+    choices = ["Choice 1", "Choice 2", "Choice 3", "Choice 4"]
+    view = StatelessSelectionView(choices, current_page=0, query="test", user_id=123456789)
+
+    # Get all buttons and group by row
+    row_0_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 0]
+    row_1_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 1]
+    row_2_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 2]
+
+    # Should have 4 selection buttons in row 0
+    assert len(row_0_buttons) == 4
+    assert all(btn.custom_id.endswith(f"select_{i+1}") for i, btn in enumerate(row_0_buttons))
+
+    # Should have no buttons in row 1
+    assert len(row_1_buttons) == 0
+
+    # Should have only cancel button in row 2 (no navigation needed)
+    assert len(row_2_buttons) == 1
+    assert row_2_buttons[0].custom_id.endswith("cancel")
+    assert row_2_buttons[0].label == "Cancel"
+
+
+@pytest.mark.asyncio
+async def test_button_layout_7_choices():
+    """Test button layout with 7 choices - should use row 0, row 1, and row 2"""
+    choices = ["Choice 1", "Choice 2", "Choice 3", "Choice 4", "Choice 5", "Choice 6", "Choice 7"]
+    view = StatelessSelectionView(choices, current_page=0, query="test", user_id=123456789)
+
+    # Get all buttons and group by row
+    row_0_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 0]
+    row_1_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 1]
+    row_2_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 2]
+
+    # Should have 5 selection buttons in row 0 (1-5)
+    assert len(row_0_buttons) == 5
+    assert all(btn.custom_id.endswith(f"select_{i+1}") for i, btn in enumerate(row_0_buttons))
+
+    # Should have 2 selection buttons in row 1 (6-7)
+    assert len(row_1_buttons) == 2
+    assert row_1_buttons[0].custom_id.endswith("select_6")
+    assert row_1_buttons[1].custom_id.endswith("select_7")
+
+    # Should have only cancel button in row 2 (no navigation needed)
+    assert len(row_2_buttons) == 1
+    assert row_2_buttons[0].custom_id.endswith("cancel")
+
+
+@pytest.mark.asyncio
+async def test_button_layout_10_choices():
+    """Test button layout with exactly 10 choices - should fill rows 0 and 1"""
+    choices = [f"Choice {i+1}" for i in range(10)]
+    view = StatelessSelectionView(choices, current_page=0, query="test", user_id=123456789)
+
+    # Get all buttons and group by row
+    row_0_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 0]
+    row_1_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 1]
+    row_2_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 2]
+
+    # Should have 5 selection buttons in row 0 (1-5)
+    assert len(row_0_buttons) == 5
+    assert all(btn.custom_id.endswith(f"select_{i+1}") for i, btn in enumerate(row_0_buttons))
+
+    # Should have 5 selection buttons in row 1 (6-10)
+    assert len(row_1_buttons) == 5
+    assert all(btn.custom_id.endswith(f"select_{i+6}") for i, btn in enumerate(row_1_buttons))
+
+    # Should have only cancel button in row 2 (no navigation needed)
+    assert len(row_2_buttons) == 1
+    assert row_2_buttons[0].custom_id.endswith("cancel")
+
+
+@pytest.mark.asyncio
+async def test_button_layout_14_choices_page_0():
+    """Test button layout with 14 choices on page 0 - should have navigation"""
+    choices = [f"Choice {i+1}" for i in range(14)]
+    view = StatelessSelectionView(choices, current_page=0, query="test", user_id=123456789)
+
+    # Get all buttons and group by row
+    row_0_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 0]
+    row_1_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 1]
+    row_2_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 2]
+
+    # Should have 5 selection buttons in row 0 (1-5)
+    assert len(row_0_buttons) == 5
+    assert all(btn.custom_id.endswith(f"select_{i+1}") for i, btn in enumerate(row_0_buttons))
+
+    # Should have 5 selection buttons in row 1 (6-10)
+    assert len(row_1_buttons) == 5
+    assert all(btn.custom_id.endswith(f"select_{i+6}") for i, btn in enumerate(row_1_buttons))
+
+    # Should have navigation + cancel buttons in row 2
+    assert len(row_2_buttons) == 3  # prev, next, cancel
+    nav_buttons = {btn.custom_id.split("_")[-1]: btn for btn in row_2_buttons}
+    assert "prev" in nav_buttons
+    assert "next" in nav_buttons
+    assert "cancel" in nav_buttons
+
+
+@pytest.mark.asyncio
+async def test_button_layout_14_choices_page_1():
+    """Test button layout with 14 choices on page 1 - should show remaining 4 choices"""
+    choices = [f"Choice {i+1}" for i in range(14)]
+    view = StatelessSelectionView(choices, current_page=1, query="test", user_id=123456789)
+
+    # Get all buttons and group by row
+    row_0_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 0]
+    row_1_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 1]
+    row_2_buttons = [item for item in view.children if hasattr(item, "row") and item.row == 2]
+
+    # Should have 4 selection buttons in row 0 (11-14)
+    assert len(row_0_buttons) == 4
+    assert all(btn.custom_id.endswith(f"select_{i+11}") for i, btn in enumerate(row_0_buttons))
+
+    # Should have no buttons in row 1 (page 1 only has 4 items)
+    assert len(row_1_buttons) == 0
+
+    # Should have navigation + cancel buttons in row 2
+    assert len(row_2_buttons) == 3  # prev, next, cancel
+    nav_buttons = {btn.custom_id.split("_")[-1]: btn for btn in row_2_buttons}
+    assert "prev" in nav_buttons
+    assert "next" in nav_buttons
+    assert "cancel" in nav_buttons
+
+
+@pytest.mark.asyncio
+async def test_no_placeholder_buttons():
+    """Test that no disabled placeholder buttons are created"""
+    choices = ["Choice 1", "Choice 2", "Choice 3"]
+    view = StatelessSelectionView(choices, current_page=0, query="test", user_id=123456789)
+
+    # Get all buttons
+    all_buttons = [item for item in view.children if hasattr(item, "custom_id")]
+
+    # Should have exactly 4 buttons: 3 selections + 1 cancel (no placeholders)
+    assert len(all_buttons) == 4
+
+    # No button should be disabled except for expired state
+    enabled_buttons = [btn for btn in all_buttons if not btn.disabled]
+    assert len(enabled_buttons) == 4  # All should be enabled when not expired
+
+    # No button should have placeholder in custom_id
+    placeholder_buttons = [btn for btn in all_buttons if "placeholder" in btn.custom_id]
+    assert len(placeholder_buttons) == 0
+
+
+@pytest.mark.asyncio
+async def test_expired_view_disables_buttons():
+    """Test that expired view properly disables all buttons"""
+    choices = ["Choice 1", "Choice 2", "Choice 3"]
+    view = StatelessSelectionView(choices, current_page=0, query="test", user_id=123456789, expired=True)
+
+    # Get all buttons
+    all_buttons = [item for item in view.children if hasattr(item, "disabled")]
+
+    # All buttons should be disabled when expired
+    assert all(btn.disabled for btn in all_buttons)
+
+
+@pytest.mark.asyncio
+async def test_button_custom_id_format():
+    """Test that button custom_ids follow the expected format"""
+    choices = ["Choice 1", "Choice 2"]
+    user_id = 987654321
+    view = StatelessSelectionView(choices, current_page=0, query="test", user_id=user_id)
+
+    # Get all buttons
+    all_buttons = [item for item in view.children if hasattr(item, "custom_id")]
+
+    # All custom_ids should start with user_id prefix
+    for button in all_buttons:
+        assert button.custom_id.startswith(f"{user_id}_")
+
+    # Find selection buttons and verify format
+    selection_buttons = [btn for btn in all_buttons if "select_" in btn.custom_id]
+    assert len(selection_buttons) == 2
+    assert selection_buttons[0].custom_id == f"{user_id}_select_1"
+    assert selection_buttons[1].custom_id == f"{user_id}_select_2"
+
+    # Find cancel button
+    cancel_buttons = [btn for btn in all_buttons if btn.custom_id.endswith("_cancel")]
+    assert len(cancel_buttons) == 1
+    assert cancel_buttons[0].custom_id == f"{user_id}_cancel"
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

@@ -5,7 +5,6 @@ Helper utilities for the selection system.
 import logging
 from typing import List, Optional, Any
 
-import disnake
 
 log = logging.getLogger(__name__)
 
@@ -103,28 +102,3 @@ async def _handle_navigation_txt_input(ctx, content: str, page: int, total_pages
     elif content == "p":
         return page - 1
     return page  # Unknown command, no change
-
-
-async def _set_expired_view(select_msg, choices: List[Any], page: int, query: str, user_id: int) -> None:
-    """Helper to set expired view on selection message, with rate limit retry."""
-    # Import here to avoid circular imports
-    from utils.selection_views import StatelessSelectionView
-
-    try:
-        expired_view = StatelessSelectionView(choices, page, query, user_id, expired=True)
-        await select_msg.edit(view=expired_view)
-    except disnake.HTTPException as e:
-        # Expected - message might already be deleted or edited
-        log.debug(f"HTTPException when setting expired view: {e}")
-
-
-async def _update_selection_view(
-    select_msg, choices: List[Any], page: int, query: str, create_embed_func, user_id: int
-) -> None:
-    """Helper to update selection message with new page and view, with rate limit retry."""
-    # Import here to avoid circular imports
-    from utils.selection_views import StatelessSelectionView
-
-    embed = create_embed_func(page)
-    view = StatelessSelectionView(choices, page, query, user_id)
-    await select_msg.edit(embed=embed, view=view)

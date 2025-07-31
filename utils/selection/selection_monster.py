@@ -1,60 +1,79 @@
 """
-Main selection functions for stateless button-based selection system.
+Monster-specific selection logic with DM feedback.
 
-This module provides the core selection logic that supports both
-button interactions and text input, with complete statelessness for production use.
+This module contains the specialized monster selection function that provides
+enhanced UX for combat encounters, including DM feedback and ephemeral messages.
 """
 
 import asyncio
 import logging
+import time
 from typing import List, Callable, Optional, Any
 
 import disnake
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils.pagination import get_total_pages
-from utils.selection_helpers import (
+from .selection_helpers import (
     parse_custom_id,
     parse_selection_number,
     _check_navigation_boundary,
     text_input_check,
     _handle_navigation_txt_input,
-    _set_expired_view,
-    _update_selection_view,
 )
-from utils.selection_views import StatelessSelectionView, create_selection_embed
+from .selection_views import (
+    StatelessSelectionView,
+    create_selection_embed,
+    update_selection_view,
+    set_expired_view,
+)
 
 log = logging.getLogger(__name__)
 
+# Constants
+SELECTION_TIMEOUT = 60.0
+DM_NOTIFICATION_TIMEOUT = 15
+MAX_EVENTS = 100
 
-# ==== main selection functions ====
-async def get_selection_with_buttons(
+
+async def _send_dm_notification(ctx, select_msg) -> None:
+    """Send notification to original channel about DM selection menu."""
+    delete_time = int(time.time()) + DM_NOTIFICATION_TIMEOUT
+    await ctx.send(
+        f"> Monster selection menu sent to your DMs: {select_msg.jump_url}\n"
+        f"> This message will disappear <t:{delete_time}:R>",
+        delete_after=DM_NOTIFICATION_TIMEOUT,
+    )
+
+
+async def select_monster_with_dm_feedback(
     ctx,
     choices: List[Any],
     key: Callable[[Any], str] = lambda x: str(x),
-    delete: bool = True,
-    pm: bool = False,
-    message: Optional[str] = None,
-    force_select: bool = False,
     query: Optional[str] = None,
-    timeout: float = 120.0,
+    madd_callback: Optional[Callable] = None,
+    args: str = "",
+    timeout: float = SELECTION_TIMEOUT,
 ) -> Any:
     """
-    Stateless button selection: pure function replacement for get_selection.
-    Supports both button interactions and text input simultaneously.
+    Optimized monster selection with ephemeral DM feedback.
+
+    This function is specifically designed for btn madd to provide:
+    1. Efficient button-based selection using existing stateless framework
+    2. Ephemeral DM message with combat channel link upon selection
+    3. Uses standard StatelessSelectionView with 2 rows of 5 buttons each
+    4. Hidden nav for ≤10 results
 
     Args:
         ctx: Discord context
-        choices: List of choices to select from
+        choices: List of monster choices
         key: Function to get display string from choice
-        delete: Whether to delete selection message after completion
-        pm: Whether to send selection as private message
-        message: Optional message to display in embed
-        force_select: Force selection even with single choice
         query: Query that led to this selection
+        madd_callback: Async function to call with selected monster
+        args: Arguments to pass to madd_callback
         timeout: Timeout in seconds
 
     Returns:
-        Selected choice
+        Selected choice (or None if handled via callback)
 
     Raises:
         NoSelectionElements: If no choices provided
@@ -63,49 +82,49 @@ async def get_selection_with_buttons(
 
     if len(choices) == 0:
         raise NoSelectionElements()
-    elif len(choices) == 1 and not force_select:
+    elif len(choices) == 1:
+        if madd_callback:
+            await madd_callback(ctx, choices[0], args)
+            return None
         return choices[0]
 
-    # Store original channel mention before potential PM sending
     original_channel_mention = ctx.channel.mention if ctx.channel else None
 
-    # Use optimized helper functions for consistent behavior
+    # Use optimized helper functions for consistent monster selection behavior
     def create_embed(page: int) -> disnake.Embed:
         return create_selection_embed(
             choices=choices,
             page=page,
             key=key,
             query=query,
-            message=message,
-            pm=pm,
+            pm=True,
             ctx=ctx,
             original_channel_mention=original_channel_mention,
         )
 
+    # Send selection message to DM
     page = 0
     total_pages = get_total_pages(choices, 10)
     embed = create_embed(page)
+
+    # Create view with user ID for uniqueness - eliminates race condition window
     view = StatelessSelectionView(choices, page, query or "", ctx.author.id)
+    select_msg = await ctx.author.send(embed=embed, view=view)
+    await _send_dm_notification(ctx, select_msg)
 
-    if pm:
-        select_msg = await ctx.author.send(embed=embed, view=view)
-    else:
-        select_msg = await ctx.send(embed=embed, view=view)
-
-    # Dual input handling loop
-    current_timeout = timeout
-    updating_page = False
-    max_events = 100
+    # Dual input handling - buttons OR text
+    updating_page = False  # Atomic flag to prevent rapid click race conditions
 
     event_count = 0
-    while event_count < max_events:
+    while event_count < MAX_EVENTS:  # Prevent runaway loops, typical use should be <5 events
         try:
+            # Wait for either interaction or text message
             done, pending = await asyncio.wait(
                 [
                     asyncio.create_task(
                         ctx.bot.wait_for(
                             "interaction",
-                            check=lambda i: i.message and i.message.id == select_msg.id and i.user.id == ctx.author.id,
+                            check=lambda i: i.message and i.message.id == select_msg.id,
                         )
                     ),
                     asyncio.create_task(
@@ -113,17 +132,18 @@ async def get_selection_with_buttons(
                     ),
                 ],
                 return_when=asyncio.FIRST_COMPLETED,
-                timeout=current_timeout,
+                timeout=timeout,
             )
 
+            # Cancel pending tasks and wait for completion
             for task in pending:
                 task.cancel()
                 try:
-                    await task
+                    await task  # Ensure cancellation completes
                 except asyncio.CancelledError:
-                    pass
+                    pass  # Expected when task is cancelled
 
-            if not done:
+            if not done:  # Timeout
                 break
 
             event_count += 1
@@ -131,17 +151,16 @@ async def get_selection_with_buttons(
 
             if isinstance(result, disnake.Interaction):
                 if not hasattr(result, "data") or not result.data or not hasattr(result.data, "custom_id"):
-                    log.warning("Interaction missing required data fields")
+                    log.warning("Monster interaction missing required data fields")
                     continue
 
                 action = parse_custom_id(result.data.custom_id)
 
                 if action == "cancel":
-                    await result.response.defer()
+                    await result.response.send_message("Monster selection cancelled.", ephemeral=True)
                     break
                 elif action in ("next", "prev"):
                     if updating_page:
-                        await result.response.send_message("⏳ Page is updating, please wait...", ephemeral=True)
                         continue
 
                     updating_page = True
@@ -166,45 +185,42 @@ async def get_selection_with_buttons(
                     target_page = page + 1 if action == "next" else page - 1
                     try:
                         page = target_page
-                        await _update_selection_view(
-                            select_msg, choices, page, query or "", create_embed, ctx.author.id
-                        )
-                        current_timeout = timeout
+                        await update_selection_view(select_msg, choices, page, query or "", create_embed, ctx.author.id)
                     finally:
                         updating_page = False
                     continue
                 elif action.startswith("select_"):
                     selection_num = parse_selection_number(action)
                     if selection_num is None:
-                        log.warning(f"Invalid selection action format: {action}")
+                        log.warning(f"Invalid monster selection action format: {action}")
+                        await result.response.send_message("Invalid selection format.", ephemeral=True)
                         continue
 
                     choice_idx = selection_num - 1
                     if 0 <= choice_idx < len(choices):
-                        selected_choice = choices[choice_idx]
+                        selected_monster = choices[choice_idx]
 
-                        if not delete or pm:
-                            await _set_expired_view(select_msg, choices, page, query or "", ctx.author.id)
+                        combat_channel = ctx.channel.mention
+                        await result.response.send_message(
+                            f"✅ Adding **{key(selected_monster)}** to combat in {combat_channel}!", ephemeral=True
+                        )
 
-                        if delete and not pm:
-                            try:
-                                await select_msg.delete()
-                            except disnake.HTTPException as e:
-                                log.debug(f"Expected HTTPException during selection message deletion: {e}")
-                        return selected_choice
+                        await set_expired_view(select_msg, choices, page, query or "", ctx.author.id)
+
+                        if madd_callback:
+                            await madd_callback(ctx, selected_monster, args)
+                            return None
+
+                        return selected_monster
                     else:
-                        log.warning(f"Selection number {selection_num} out of range (1-{len(choices)})")
+                        log.warning(f"Monster selection number {selection_num} out of range (1-{len(choices)})")
+                        await result.response.send_message("Selection out of range.", ephemeral=True)
                         continue
 
             else:
                 content = result.content.lower().strip()
 
                 if content == "c":
-                    if delete and not pm:
-                        try:
-                            await result.delete()
-                        except disnake.HTTPException as e:
-                            log.debug(f"Expected HTTPException during text message deletion: {e}")
                     break
                 elif content in ("n", "p"):
                     new_page = await _handle_navigation_txt_input(ctx, content, page, total_pages)
@@ -215,30 +231,21 @@ async def get_selection_with_buttons(
                     try:
                         choice_idx = int(content) - 1
                         if 0 <= choice_idx < len(choices):
-                            selected_choice = choices[choice_idx]
+                            selected_monster = choices[choice_idx]
 
-                            if delete and not pm:
-                                try:
-                                    await select_msg.delete()
-                                    await result.delete()
-                                except disnake.HTTPException as e:
-                                    log.debug(f"Expected HTTPException during cleanup deletion: {e}")
-                            return selected_choice
+                            await set_expired_view(select_msg, choices, page, query or "", ctx.author.id)
+
+                            if madd_callback:
+                                await madd_callback(ctx, selected_monster, args)
+                                return None
+                            return selected_monster
                     except ValueError:
                         continue
 
                 if content in ("n", "p"):
                     updating_page = True
                     try:
-                        await _update_selection_view(
-                            select_msg, choices, page, query or "", create_embed, ctx.author.id
-                        )
-                        current_timeout = timeout
-                        if delete and not pm:
-                            try:
-                                await result.delete()
-                            except disnake.HTTPException as e:
-                                log.debug(f"Expected HTTPException during navigation cleanup: {e}")
+                        await update_selection_view(select_msg, choices, page, query or "", create_embed, ctx.author.id)
                     finally:
                         updating_page = False
                     continue
@@ -246,19 +253,12 @@ async def get_selection_with_buttons(
         except asyncio.TimeoutError:
             break
         except disnake.HTTPException as e:
-            log.exception(f"Discord API error in selection loop: {e}")
+            log.exception(f"Discord API error in monster selection loop: {e}")
             break
         except Exception as e:
-            log.exception(f"Unexpected error in selection loop: {e}")
+            log.exception(f"Unexpected error in monster selection loop: {e}")
             break
 
-    if not delete or pm:
-        await _set_expired_view(select_msg, choices, page, query or "", ctx.author.id)
-
-    if delete and not pm:
-        try:
-            await select_msg.delete()
-        except disnake.HTTPException as e:
-            log.debug(f"HTTPException when deleting selection message: {e}")
+    await set_expired_view(select_msg, choices, page, query or "", ctx.author.id)
 
     raise SelectionCancelled()

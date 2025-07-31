@@ -148,17 +148,15 @@ class TestIEffect:
         "type": "ieffect2",
         "name": "Burning",
         "effects": {"save_dis": ["all"], "damage_bonus": "1 [fire]"},
-        "attacks": [
-            {
-                "attack": {
-                    "name": "Burning Hand (not the spell)",
-                    "_v": 2,
-                    "automation": [
-                        {"type": "target", "target": "each", "effects": [{"type": "damage", "damage": "1d8[fire]"}]}
-                    ],
-                }
+        "attacks": [{
+            "attack": {
+                "name": "Burning Hand (not the spell)",
+                "_v": 2,
+                "automation": [
+                    {"type": "target", "target": "each", "effects": [{"type": "damage", "damage": "1d8[fire]"}]}
+                ],
             }
-        ],
+        }],
         "buttons": [
             {
                 "label": "Take Fire Damage",

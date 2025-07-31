@@ -19,8 +19,7 @@ from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
 from utils.constants import HOMEBREW_EMOJI, HOMEBREW_ICON
 from utils.functions import get_selection, search_and_select, search
-from utils.selection import get_selection_with_buttons
-from utils.selection_monster import select_monster_with_dm_feedback
+from utils.selection import get_selection_with_buttons, select_monster_with_dm_feedback
 from utils.settings.guild import LegacyPreference, ServerSettings
 from .compendium import compendium
 from .klass import ClassFeature

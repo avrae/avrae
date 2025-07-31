@@ -8,6 +8,9 @@ from typing import List, Callable, Optional, Any
 import disnake
 from utils.pagination import get_page_choices, get_total_pages
 
+# Constants
+SELECTION_VIEW_TIMEOUT = 60.0
+
 
 class StatelessSelectionView(disnake.ui.View):
     """
@@ -22,37 +25,30 @@ class StatelessSelectionView(disnake.ui.View):
         user_id: ID of the user who can interact with this view
 
     Button Layout:
-        - Rows 1-2: Selection buttons 1-10 (5 per row)
-        - Row 3: Previous/Next navigation (if >10 choices)
-        - Row 3: Cancel button
+        - Row 0: Selection buttons 1-5 (up to 5 buttons, only for actual choices)
+        - Row 1: Selection buttons 6-10 (up to 5 buttons, only for actual choices)
+        - Row 2: Previous/Next navigation (if >10 choices) + Cancel button
     """
 
     def __init__(self, choices: List[Any], current_page: int, query: str, user_id: int, expired: bool = False):
-        super().__init__(timeout=60.0)
+        super().__init__(timeout=SELECTION_VIEW_TIMEOUT)
         self.expired = expired
         self.user_id = user_id
         self.setup_buttons(choices, current_page, query)
 
     def _create_selection_buttons(
-        self, start_idx: int, end_idx: int, current_choices: List[Any], current_page: int, prefix: str
+        self, start_idx: int, end_idx: int, current_choices: List[Any], current_page: int, prefix: str, row: int
     ) -> None:
-        """Create selection buttons for a given range."""
-        for i in range(start_idx, end_idx):
-            if i < len(current_choices):
-                global_index = i + 1 + current_page * 10
-                button = disnake.ui.Button(
-                    label=str(global_index),
-                    style=disnake.ButtonStyle.secondary,
-                    disabled=self.expired,
-                    custom_id=f"{prefix}select_{global_index}",
-                )
-            else:
-                button = disnake.ui.Button(
-                    label=str(i + 1 + current_page * 10),
-                    style=disnake.ButtonStyle.secondary,
-                    disabled=True,
-                    custom_id=f"{prefix}placeholder_{i}",
-                )
+        """Create selection buttons for a given range, only for actual choices."""
+        for i in range(start_idx, min(end_idx, len(current_choices))):
+            global_index = i + 1 + current_page * 10
+            button = disnake.ui.Button(
+                label=str(global_index),
+                style=disnake.ButtonStyle.secondary,
+                disabled=self.expired,
+                custom_id=f"{prefix}select_{global_index}",
+                row=row,
+            )
             self.add_item(button)
 
     async def interaction_check(self, interaction: disnake.Interaction) -> bool:
@@ -70,11 +66,12 @@ class StatelessSelectionView(disnake.ui.View):
         current_choices = get_page_choices(choices, current_page, 10) if current_page < total_pages else []
         prefix = f"{self.user_id}_"
 
-        # Rows 1-2: Selection buttons 1-10
-        self._create_selection_buttons(0, 5, current_choices, current_page, prefix)
-        self._create_selection_buttons(5, 10, current_choices, current_page, prefix)
+        # Row 0: Selection buttons 1-5
+        self._create_selection_buttons(0, 5, current_choices, current_page, prefix, 0)
+        # Row 1: Selection buttons 6-10
+        self._create_selection_buttons(5, 10, current_choices, current_page, prefix, 1)
 
-        # Row 3: Navigation buttons (only show if more than 10 total results)
+        # Row 2: Navigation and Cancel buttons
         if len(choices) > 10:
             # Previous button
             prev_button = disnake.ui.Button(
@@ -82,6 +79,7 @@ class StatelessSelectionView(disnake.ui.View):
                 style=disnake.ButtonStyle.secondary,
                 disabled=self.expired,
                 custom_id=f"{prefix}prev",
+                row=2,
             )
             self.add_item(prev_button)
 
@@ -91,12 +89,17 @@ class StatelessSelectionView(disnake.ui.View):
                 style=disnake.ButtonStyle.secondary,
                 disabled=self.expired,
                 custom_id=f"{prefix}next",
+                row=2,
             )
             self.add_item(next_button)
 
-        # Cancel button - clean styling
+        # Cancel button - always in row 2
         cancel_button = disnake.ui.Button(
-            label="Cancel", style=disnake.ButtonStyle.danger, disabled=self.expired, custom_id=f"{prefix}cancel"
+            label="Cancel",
+            style=disnake.ButtonStyle.danger,
+            disabled=self.expired,
+            custom_id=f"{prefix}cancel",
+            row=2,
         )
         self.add_item(cancel_button)
 
@@ -162,6 +165,13 @@ def create_selection_embed(
     else:
         description_parts.append("Use buttons below OR Type your choice in this channel.")
 
+    # Add selection menu ownership indicator (only for non-PM embeds)
+    if ctx and not pm:
+        command_name = getattr(ctx, "invoked_with", None) or "command"
+        prefix = getattr(ctx, "prefix", "!")
+        full_command = f"{prefix}{command_name}"
+        description_parts.append(f"This `{full_command}` selection menu works only for <@{ctx.author.id}>")
+
     # Additional message if provided
     if message:
         description_parts.append(f"\n**Note**\n{message}")
@@ -175,3 +185,26 @@ def create_selection_embed(
         embed.set_footer(text=f"Page {page + 1}/{total_pages}")
 
     return embed
+
+
+async def update_selection_view(
+    select_msg, choices: list, page: int, query: str, create_embed_func, user_id: int
+) -> None:
+    """Helper to update selection message with new page and view."""
+    embed = create_embed_func(page)
+    view = StatelessSelectionView(choices, page, query, user_id)
+    await select_msg.edit(embed=embed, view=view)
+
+
+async def set_expired_view(select_msg, choices: list, page: int, query: str, user_id: int) -> None:
+    """Helper to set expired view on selection message."""
+    import logging
+
+    log = logging.getLogger(__name__)
+
+    try:
+        expired_view = StatelessSelectionView(choices, page, query, user_id, expired=True)
+        await select_msg.edit(view=expired_view)
+    except Exception as e:  # Using Exception to avoid importing disnake.HTTPException
+        # Expected - message might already be deleted or edited
+        log.debug(f"Exception when setting expired view: {e}")

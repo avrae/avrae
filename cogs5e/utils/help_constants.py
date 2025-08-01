@@ -2,6 +2,9 @@
 Constants to help write help docs.
 """
 
+# ignore flake errors on this file about lines too long
+# flake8: noqa
+
 __all__ = ("VALID_CHECK_ARGS", "VALID_SAVE_ARGS", "VALID_AUTOMATION_ARGS", "VALID_SPELLCASTING_ARGS")
 
 # ==== check args ====
@@ -30,6 +33,7 @@ __Valid Arguments__
 *adv/dis* - Give advantage/disadvantage to the save roll(s).
 *-b <bonus>* - Adds a bonus to the roll.
 -dc <dc> - Sets a DC and counts successes/failures.
+*-sb <bonus>* - Adds a bonus to saving throws. Per-stat bonuses can be specified using the stat's 3 letter abbreviation. (e.g. `-sb 1d4|dex`)
 *-mc <minimum roll>* - Sets the minimum roll on the dice (e.g. Starry Form: Dragon, Trance of Order)
 -rr <iterations> - How many saves to roll (does not apply to Death Saves).
 
@@ -70,7 +74,7 @@ An italicized argument below means the argument supports ephemeral arguments - e
 sadv/sdis - Gives the target advantage/disadvantage on the saving throw.
 -dc <dc> - Overrides the DC of the save.
 -dc <+X/-X> - Modifies the DC by a certain amount.
-*-sb <bonus>* - Adds a bonus to saving throws.
+*-sb <bonus>* - Adds a bonus to saving throws. Per-stat bonuses can be specified using the stat's 3 letter abbreviation. (e.g. `-sb 1d4|dex`)
 -save <save type> - Overrides the spell save type (e.g. `-save str`).
 
 **Damage**

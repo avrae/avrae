@@ -982,7 +982,7 @@ class InitTracker(commands.Cog):
         `-vuln <damage type>` - Gives the combatant vulnerability to the given damage type.
         `-neutral <damage type>` - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
         __Checks/Saves__
-        `-sb <save bonus>` - Adds a bonus to all saving throws.
+        `-sb <save bonus>` - Adds a bonus to all saving throws. Per-stat bonuses can be specified using the stat's 3 letter abbreviation. (e.g. `-sb 1d4|dex`)
         `-sadv/sdis <ability>` - Gives advantage/disadvantage on saving throws for the provided ability, or "all" for all saves.
         `-dc <dc>` - Adds a bonus to all saving throw DCs.
         `-cb <check bonus>` - Adds a bonus to all ability checks.
@@ -1310,7 +1310,7 @@ class InitTracker(commands.Cog):
         aliases=["os"],
         help=f"""
         Rolls an ability save as another combatant.
-        {VALID_CHECK_ARGS}
+        {VALID_SAVE_ARGS}
         """,
     )
     async def offturnsave(self, ctx, combatant_name, save, *, args=""):

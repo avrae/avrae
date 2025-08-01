@@ -9,6 +9,7 @@ import pytest
 from aliasing.evaluators import AutomationEvaluator
 from cogs5e.initiative.utils import InteractionMessageType, combatant_interaction_components
 from cogs5e.models import automation
+from cogs5e.models.automation.utils import parse_save_bonuses
 from cogs5e.models.sheet.statblock import StatBlock
 from gamedata.compendium import compendium
 from tests.utils import active_character, active_combat, end_init, requires_data, start_init
@@ -250,6 +251,22 @@ class TestIEffect:
         """
     ).strip()
 
+    specific_save_attack = textwrap.dedent(
+        """
+        name: "specific test"
+        automation:
+        - type: "target"
+          target: "self"
+          effects:
+          - type: "ieffect2"
+            name: "test"
+            effects:
+              save_bonus: "3|str"
+        _v: 2
+        proper: "false"
+        """
+    ).strip()
+
     async def test_ieffect_setup(self, avrae, dhttp):
         await start_init(avrae, dhttp)
         avrae.message("!init join")
@@ -319,6 +336,24 @@ class TestIEffect:
         parent = combatant.get_effect("Parent Test", strict=True)
         assert child.get_parent_effect() is parent
         assert next(parent.get_children_effects()) is child
+
+    async def test_specific_save_bonuses(self, character, avrae, dhttp):
+        avrae.message(f"!a import {self.specific_save_attack}")
+        await dhttp.receive_message(r"Imported 1 attacks.*\n.*", regex=True)
+
+        avrae.message(f'!a "specific test" -t "{character.name}"')
+        await dhttp.drain()
+
+        char = await active_character(avrae)
+        combat = await active_combat(avrae)
+        combatant = combat.get_combatant(char.name, strict=True)
+
+        effect = combatant.get_effect("test", strict=True)
+        assert effect
+        assert effect.effects.save_bonus
+        assert effect.effects.save_bonus == "3|str"
+
+        assert parse_save_bonuses("str", [effect.effects.save_bonus]) == ["3"]
 
     async def test_ieffect_teardown(self, avrae, dhttp):  # end init to set up for more character params
         await end_init(avrae, dhttp)

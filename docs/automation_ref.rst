@@ -498,7 +498,8 @@ Used to specify the passive effects granted by an initiative effect.
 
     .. attribute:: save_bonus
 
-        *optional* - A bonus that this effect grants to all of the combatant's saving throws.
+        *optional* - A bonus that this effect grants to all of the combatant's saving throws. Per-stat bonuses can be
+        added like ``1d4|dex``, and multiple specific bonuses can be added like ``1d4|str+1d4|dex``
 
     .. attribute:: save_adv
 

@@ -6,7 +6,7 @@ from utils.functions import maybe_mod, reconcile_adv, verbose_stat
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
 from ..results import SaveResult
-from ..utils import stringify_intexpr
+from ..utils import stringify_intexpr, parse_save_bonuses
 
 
 class Save(Effect):
@@ -46,7 +46,8 @@ class Save(Effect):
 
         # ==== args ====
         save = autoctx.args.last("save") or self.stat
-        sb = autoctx.args.get("sb", ephem=True)
+        # list of non-empty parsed save bonuses
+        sb = parse_save_bonuses(save, autoctx.args.get("sb", ephem=True))
         auto_pass = autoctx.args.last("pass", type_=bool, ephem=True)
         auto_fail = autoctx.args.last("fail", type_=bool, ephem=True)
         hide = autoctx.args.last("h", type_=bool)

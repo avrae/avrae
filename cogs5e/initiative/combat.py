@@ -374,22 +374,19 @@ class Combat:
 
                 # set up dice. Note that we still use the first combatant in the group for consistency with the ieffects
                 roll_str = gc.init_skill.d20(base_adv=args.adv(boolwise=True, ephem=True))
-                if b is not None:
-                    roll_str = f"{roll_str}+{b}"
-
-                # roll
-                init_roll = roll(roll_str)
+                
             else:
                 args = ieffect_handler(c, argparse(""), "initiative")
                 b = args.join("b", "+", ephem=True)
 
                 # set up dice
                 roll_str = c.init_skill.d20(base_adv=args.adv(boolwise=True, ephem=True))
-                if b is not None:
-                    roll_str = f"{roll_str}+{b}"
+                
+            if b is not None:
+                roll_str = f"{roll_str}+{b}"
 
-                # roll
-                init_roll = roll(roll_str)
+            # roll
+            init_roll = roll(roll_str)
             c.init = init_roll.total
             rolls[c] = init_roll
         self.sort_combatants()
@@ -417,7 +414,8 @@ class Combat:
     @overload
     async def select_combatant(
         self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[True] = False
-    ) -> Optional[Combatant | CombatantGroup]: ...
+    ) -> Optional[Combatant | CombatantGroup]:
+        ...
 
     async def select_combatant(
         self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[False] = False

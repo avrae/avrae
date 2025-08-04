@@ -360,9 +360,37 @@ class GoogleSheet(SheetLoaderABC):
             )
         except Exception:
             raise
-        return await asyncio.get_event_loop().run_in_executor(None, self._load_character, owner_id, args)
+        
+        # Get version context for action filtering
+        version = "2024"  # default
+        try:
+            if hasattr(ctx, 'get_server_settings'):
+                serv_settings = await ctx.get_server_settings() if ctx.guild else None
+            else:
+                from utils.settings.guild import ServerSettings
+                serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+            
+            if serv_settings:
+                version = serv_settings.version
+            
+            if serv_settings and serv_settings.allow_character_override or not serv_settings:
+                try:
+                    if hasattr(ctx, 'get_character'):
+                        character = await ctx.get_character()
+                    else:
+                        from cogs5e.models.character import Character
+                        character = await Character.from_ctx(ctx)
+                    
+                    if character.options.version:
+                        version = character.options.version
+                except:
+                    pass
+        except:
+            pass
+        
+        return await asyncio.get_event_loop().run_in_executor(None, self._load_character, owner_id, args, version)
 
-    def _load_character(self, owner_id: str, args):
+    def _load_character(self, owner_id: str, args, version: str):
         upstream = f"google-{self.url}"
         active = False
         sheet_type = "google"
@@ -394,7 +422,7 @@ class GoogleSheet(SheetLoaderABC):
         live = None
         race = self.get_race()
         background = self.get_background()
-        actions = self.get_actions()
+        actions = self.get_actions(version)
 
         character = Character(
             owner_id,
@@ -736,14 +764,14 @@ class GoogleSheet(SheetLoaderABC):
         spellbook = Spellbook(slots, slots, spells, dc, sab, self.total_level, spell_mod)
         return spellbook
 
-    def get_actions(self):
+    def get_actions(self, version: str = "2024"):
         # v1: Z45:AH56
         # v2: C59:AC84
         if self.version >= (2, 0):
             feature_names = self.character_data.value_range("C59:AC84")
         else:
             feature_names = self.character_data.value_range("Z45:AH56")
-        actions = get_actions_for_names(feature_names)
+        actions = get_actions_for_names(feature_names, version)
         return Actions(actions)
 
     # helper methods

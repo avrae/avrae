@@ -34,23 +34,33 @@ class ActionDiscoverer:
         self.latest_compendium_epoch = compendium.epoch
         self._is_reloading = False
 
-    def discover(self, name: str):
+    def discover(self, name: str, version: str = "2024"):
         """
         :rtype: set[gamedata.action.Action]
         """
         if self.latest_compendium_epoch < compendium.epoch:
             self._reload()
-        return self.actions_granted_by_name[name]
+        
+        # Filter actions by version to ensure consistency
+        all_actions = self.actions_granted_by_name[name]
+        filtered_actions = set()
+        
+        for action in all_actions:
+            # Include actions that match the version, are homebrew, or have no version specified
+            if not hasattr(action, 'rulesVersion') or action.rulesVersion in [version, "Homebrew", ""]:
+                filtered_actions.add(action)
+        
+        return filtered_actions
 
 
 discoverer = ActionDiscoverer()
 FEATURE_MANUAL_ID_REGEX = re.compile(r".+\s*\[(\d+),\s*(\d+)]")
 
 
-def get_actions_for_name(name):
+def get_actions_for_name(name, version: str = "2024"):
     """
     For Dicecloud/GSheet sheets: search for any gamedata actions by name.
-    Returns a set of actions that match the name.
+    Returns a set of actions that match the name and version.
     Generally pretty quick except the first run after a compendium reload.
     """
     # ignore empty names
@@ -62,16 +72,16 @@ def get_actions_for_name(name):
         tid, eid = match.groups()
         return compendium.lookup_actions_for_entity(int(tid), int(eid))
     # second step: name-based resolver
-    return discoverer.discover(name)
+    return discoverer.discover(name, version)
 
 
-def get_actions_for_names(names):
+def get_actions_for_names(names, version: str = "2024"):
     """Returns a list of actions granted by the list of feature names. Will filter out any duplicates."""
     actions = []
     seen_action_names = set()
 
     for name in names:
-        g_actions = get_actions_for_name(name)
+        g_actions = get_actions_for_name(name, version)
         # in some cases, a very generic feature name (e.g. "Channel Divinity") will grant far more actions than we want
         # code snippet to determine this threshold:
         # bleps = [(name, len(actions), actions) for name, actions in discoverer.actions_granted_by_name.items()]

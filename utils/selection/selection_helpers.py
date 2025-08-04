@@ -5,6 +5,7 @@ Helper utilities for the selection system.
 import logging
 from typing import List, Optional, Any
 
+from . import constants
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ def parse_custom_id(custom_id: str) -> str:
         The action part (e.g., "select_1")
     """
     if not isinstance(custom_id, str):
-        log.warning(f"Invalid custom_id type: {type(custom_id)}")
+        log.debug(f"Invalid custom_id type received: expected str, got {type(custom_id).__name__}")
         return ""
 
     parts = custom_id.split("_", 1)
@@ -37,7 +38,7 @@ def parse_selection_number(action: str) -> Optional[int]:
     Returns:
         Selection number (1-based) or None if invalid
     """
-    if not isinstance(action, str) or not action.startswith("select_"):
+    if not isinstance(action, str) or not action.startswith(constants.ACTION_SELECT_PREFIX):
         return None
 
     parts = action.split("_")
@@ -53,10 +54,10 @@ def parse_selection_number(action: str) -> Optional[int]:
 
 def _check_navigation_boundary(action: str, page: int, total_pages: int) -> tuple[bool, str]:
     """Check if navigation would hit boundary and return appropriate emoji message."""
-    if action in ("next", "n") and page >= total_pages - 1:
-        return True, "⏭ You're already on the **last** page."
-    if action in ("prev", "p") and page == 0:
-        return True, "⏮ You're already on the **first** page."
+    if action in (constants.ACTION_NEXT, constants.TEXT_CMD_NEXT) and page >= total_pages - 1:
+        return True, constants.MSG_ALREADY_LAST_PAGE
+    if action in (constants.ACTION_PREV, constants.TEXT_CMD_PREV) and page == 0:
+        return True, constants.MSG_ALREADY_FIRST_PAGE
     return False, ""
 
 
@@ -79,7 +80,7 @@ def text_input_check(msg, ctx, choices: List[Any]) -> bool:
     content = msg.content.lower().strip()
 
     # Navigation and cancel commands
-    if content in ("c", "n", "p"):
+    if content in (constants.TEXT_CMD_CANCEL, constants.TEXT_CMD_NEXT, constants.TEXT_CMD_PREV):
         return True
 
     # Numeric selection validation
@@ -97,8 +98,8 @@ async def _handle_navigation_txt_input(ctx, content: str, page: int, total_pages
         await ctx.send(msg, delete_after=5)
         return page  # No change
 
-    if content == "n":
+    if content == constants.TEXT_CMD_NEXT:
         return page + 1
-    elif content == "p":
+    elif content == constants.TEXT_CMD_PREV:
         return page - 1
     return page  # Unknown command, no change

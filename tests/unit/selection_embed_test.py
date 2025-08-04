@@ -1,6 +1,5 @@
 import pytest
 import asyncio
-import disnake
 from unittest.mock import Mock
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils.selection import (
@@ -15,159 +14,100 @@ from utils.selection import (
 
 
 def test_embed_description_formatting():
-    query = "goblin"
     choices = ["Goblin", "Goblin Archer", "Goblin King"]
-    page = 0
-    pm = False
-    message = "Test note message"
+    embed = create_selection_embed(
+        choices=choices, page=0, key=lambda x: x, query="goblin", message="Test note message", pm=False
+    )
 
-    description = ""
-    if query:
-        description += f"Your input was: `{query}`\n"
-    description += "Which one were you looking for? (Type the number or `c` to cancel)\n"
-
-    total_pages = 2
-    if total_pages > 1:
-        description += "`n` to go to the next page, or `p` for previous\n"
-    description += "\n"
-
-    for i, choice in enumerate(choices):
-        global_index = i + 1 + page * 10
-        description += f"[{global_index}] - {choice}\n"
-
-    description += "\n**Instructions**\n"
-    if not pm:
-        description += "Use buttons below OR Type your choice in this channel."
-    else:
-        mock_channel = Mock()
-        mock_channel.mention = "#test-channel"
-        description += (
-            f"Use buttons below OR Type your choice in {mock_channel.mention}. "
-            "This message was PMed to you to hide the monster name."
-        )
-
-    if message:
-        description += f"\n\n**Note**\n{message}"
-
-    assert "Your input was: `goblin`" in description
-    assert "[1] - Goblin" in description
-    assert "**Instructions**" in description
-    assert "Use buttons below OR Type your choice in this channel." in description
+    assert embed.title == "Multiple Matches Found"
+    assert "Your input was: `goblin`" in embed.description
+    assert "[1] - Goblin" in embed.description
+    assert "[2] - Goblin Archer" in embed.description
+    assert "[3] - Goblin King" in embed.description
+    assert "**Instructions**" in embed.description
+    assert "Use buttons below OR Type your choice in this channel." in embed.description
+    assert "**Note**\nTest note message" in embed.description
 
 
 def test_embed_description_without_query():
-    query = None
-    description = ""
-    if query:
-        description += f"Your input was: `{query}`\n"
-    description += "Which one were you looking for? (Type the number or `c` to cancel)\n"
+    choices = ["Choice 1", "Choice 2"]
+    embed = create_selection_embed(choices=choices, page=0, key=lambda x: x, query=None, pm=False)
 
-    assert "Your input was:" not in description
-    assert "Which one were you looking for?" in description
+    assert "Your input was:" not in embed.description
+    assert "Which one were you looking for?" in embed.description
 
 
 def test_embed_description_single_page():
-    total_pages = 1
-    description = "Which one were you looking for? (Type the number or `c` to cancel)\n"
-    if total_pages > 1:
-        description += "`n` to go to the next page, or `p` for previous\n"
-    description += "\n"
+    choices = ["Single Choice"]  # Only 1 choice = 1 page
+    embed = create_selection_embed(choices=choices, page=0, key=lambda x: x, pm=False)
 
-    assert "next page" not in description
-    assert "previous" not in description
+    assert "next page" not in embed.description
+    assert "previous" not in embed.description
+    assert embed.footer.text is None  # No footer for single page
 
 
 def test_embed_pm_vs_channel():
+    choices = ["Choice 1", "Choice 2"]
     mock_ctx = Mock()
-    mock_ctx.channel.mention = "#combat-channel"
+    mock_ctx.author = Mock()
+    mock_ctx.author.id = 123456
 
     # Channel message
-    pm = False
-    description = "\n**Instructions**\n"
-    if not pm:
-        description += "Use buttons below OR Type your choice in this channel."
-    else:
-        description += (
-            f"Use buttons below OR Type your choice in {mock_ctx.channel.mention}. "
-            "This message was PMed to you to hide the monster name."
-        )
+    embed_channel = create_selection_embed(choices=choices, page=0, key=lambda x: x, pm=False, ctx=mock_ctx)
 
-    assert "this channel" in description
-    assert "PMed to you" not in description
+    assert "this channel" in embed_channel.description
+    assert "PMed to you" not in embed_channel.description
+    assert "selection menu works only for <@123456>" in embed_channel.description
 
     # PM message
-    pm = True
-    description = "\n**Instructions**\n"
-    if not pm:
-        description += "Use buttons below OR Type your choice in this channel."
-    else:
-        description += (
-            f"Use buttons below OR Type your choice in {mock_ctx.channel.mention}. "
-            "This message was PMed to you to hide the monster name."
-        )
+    embed_pm = create_selection_embed(
+        choices=choices, page=0, key=lambda x: x, pm=True, ctx=mock_ctx, original_channel_mention="#combat-channel"
+    )
 
-    assert "#combat-channel" in description
-    assert "PMed to you" in description
+    assert "#combat-channel" in embed_pm.description
+    assert "PMed to you" in embed_pm.description
+    assert "selection menu works only for" not in embed_pm.description  # No ownership text in PM
 
 
 def test_embed_footer_pagination():
-    current_page = 2
-    total_pages = 5
-    footer_text = f"Page {current_page + 1}/{total_pages}"
-    assert footer_text == "Page 3/5"
+    # Multi-page scenario (15 choices = 2 pages at 10 per page)
+    choices = [f"Choice {i+1}" for i in range(15)]
+    embed_multi = create_selection_embed(choices=choices, page=1, key=lambda x: x, pm=False)  # Second page (0-indexed)
+
+    assert embed_multi.footer.text == "Page 2/2"
 
     # Single page has no footer
-    total_pages = 1
-    has_footer = total_pages > 1
-    assert not has_footer
+    single_choices = ["Single Choice"]
+    embed_single = create_selection_embed(choices=single_choices, page=0, key=lambda x: x, pm=False)
+
+    assert embed_single.footer.text is None
 
 
 def test_choice_formatting():
-    choices = ["Item A", "Item B", "Item C"]
-    page = 1
-    per_page = 10
+    # Create 13 total choices so page 1 will have choices 11-13
+    all_choices = [f"Item {chr(65+i)}" for i in range(13)]  # Item A through Item M
+    embed = create_selection_embed(choices=all_choices, page=1, key=lambda x: x, pm=False)  # Second page (0-indexed)
 
-    formatted_choices = []
-    for i, choice in enumerate(choices):
-        global_index = i + 1 + page * per_page
-        formatted_choices.append(f"[{global_index}] - {choice}")
-
-    expected = ["[11] - Item A", "[12] - Item B", "[13] - Item C"]
-    assert formatted_choices == expected
+    # On page 1, we should see choices 11-13 (global indices)
+    assert "[11] - Item K" in embed.description
+    assert "[12] - Item L" in embed.description
+    assert "[13] - Item M" in embed.description
+    # Should not see first page items
+    assert "[1] - Item A" not in embed.description
 
 
 def test_complete_embed_creation():
-    query = "ancient dragon"
     choices = ["Ancient Red Dragon", "Ancient Blue Dragon"]
-    page = 0
-    total_pages = 1
-    pm = False
-
-    description = ""
-    if query:
-        description += f"Your input was: `{query}`\n"
-    description += "Which one were you looking for? (Type the number or `c` to cancel)\n"
-    if total_pages > 1:
-        description += "`n` to go to the next page, or `p` for previous\n"
-    description += "\n"
-
-    for i, choice in enumerate(choices):
-        global_index = i + 1 + page * 10
-        description += f"[{global_index}] - {choice}\n"
-
-    description += "\n**Instructions**\n"
-    if not pm:
-        description += "Use buttons below OR Type your choice in this channel."
-
-    embed = disnake.Embed(title="Multiple Matches Found", description=description, colour=0x36393F)
-
-    if total_pages > 1:
-        embed.set_footer(text=f"Page {page + 1}/{total_pages}")
+    embed = create_selection_embed(choices=choices, page=0, key=lambda x: x, query="ancient dragon", pm=False)
 
     assert embed.title == "Multiple Matches Found"
     assert "Your input was: `ancient dragon`" in embed.description
     assert "[1] - Ancient Red Dragon" in embed.description
-    assert embed.footer.text is None
+    assert "[2] - Ancient Blue Dragon" in embed.description
+    assert "Which one were you looking for?" in embed.description
+    assert "Use buttons below OR Type your choice in this channel." in embed.description
+    assert embed.footer.text is None  # Single page, no footer
+    assert embed.colour is not None  # Should have a random color
 
 
 def test_parse_custom_id():

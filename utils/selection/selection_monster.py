@@ -13,6 +13,7 @@ from typing import List, Callable, Optional, Any
 import disnake
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils.pagination import get_total_pages
+from . import constants
 from .selection_helpers import (
     parse_custom_id,
     parse_selection_number,
@@ -29,19 +30,14 @@ from .selection_views import (
 
 log = logging.getLogger(__name__)
 
-# Constants
-SELECTION_TIMEOUT = 60.0
-DM_NOTIFICATION_TIMEOUT = 15
-MAX_EVENTS = 100
-
 
 async def _send_dm_notification(ctx, select_msg) -> None:
     """Send notification to original channel about DM selection menu."""
-    delete_time = int(time.time()) + DM_NOTIFICATION_TIMEOUT
+    delete_time = int(time.time()) + constants.DM_NOTIFICATION_TIMEOUT
     await ctx.send(
         f"> Monster selection menu sent to your DMs: {select_msg.jump_url}\n"
         f"> This message will disappear <t:{delete_time}:R>",
-        delete_after=DM_NOTIFICATION_TIMEOUT,
+        delete_after=constants.DM_NOTIFICATION_TIMEOUT,
     )
 
 
@@ -52,7 +48,7 @@ async def select_monster_with_dm_feedback(
     query: Optional[str] = None,
     madd_callback: Optional[Callable] = None,
     args: str = "",
-    timeout: float = SELECTION_TIMEOUT,
+    timeout: float = constants.SELECTION_TIMEOUT,
 ) -> Any:
     """
     Optimized monster selection with ephemeral DM feedback.
@@ -104,7 +100,7 @@ async def select_monster_with_dm_feedback(
 
     # Send selection message to DM
     page = 0
-    total_pages = get_total_pages(choices, 10)
+    total_pages = get_total_pages(choices, constants.CHOICES_PER_PAGE)
     embed = create_embed(page)
 
     # Create view with user ID for uniqueness - eliminates race condition window
@@ -116,7 +112,7 @@ async def select_monster_with_dm_feedback(
     updating_page = False  # Atomic flag to prevent rapid click race conditions
 
     event_count = 0
-    while event_count < MAX_EVENTS:  # Prevent runaway loops, typical use should be <5 events
+    while event_count < constants.MAX_EVENTS:  # Prevent runaway loops, typical use should be <5 events
         try:
             # Wait for either interaction or text message
             done, pending = await asyncio.wait(
@@ -156,10 +152,10 @@ async def select_monster_with_dm_feedback(
 
                 action = parse_custom_id(result.data.custom_id)
 
-                if action == "cancel":
-                    await result.response.send_message("Monster selection cancelled.", ephemeral=True)
+                if action == constants.ACTION_CANCEL:
+                    await result.response.send_message(constants.MSG_MONSTER_CANCELLED, ephemeral=True)
                     break
-                elif action in ("next", "prev"):
+                elif action in (constants.ACTION_NEXT, constants.ACTION_PREV):
                     if updating_page:
                         continue
 
@@ -182,17 +178,17 @@ async def select_monster_with_dm_feedback(
                         log.exception(f"Unexpected error during navigation: {e}")
                         raise
 
-                    target_page = page + 1 if action == "next" else page - 1
+                    target_page = page + 1 if action == constants.ACTION_NEXT else page - 1
                     try:
                         page = target_page
                         await update_selection_view(select_msg, choices, page, query or "", create_embed, ctx.author.id)
                     finally:
                         updating_page = False
                     continue
-                elif action.startswith("select_"):
+                elif action.startswith(constants.ACTION_SELECT_PREFIX):
                     selection_num = parse_selection_number(action)
                     if selection_num is None:
-                        log.warning(f"Invalid monster selection action format: {action}")
+                        log.debug(f"Invalid monster selection action format: '{action}'")
                         await result.response.send_message("Invalid selection format.", ephemeral=True)
                         continue
 
@@ -213,16 +209,14 @@ async def select_monster_with_dm_feedback(
 
                         return selected_monster
                     else:
-                        log.warning(f"Monster selection number {selection_num} out of range (1-{len(choices)})")
-                        await result.response.send_message("Selection out of range.", ephemeral=True)
                         continue
 
             else:
                 content = result.content.lower().strip()
 
-                if content == "c":
+                if content == constants.TEXT_CMD_CANCEL:
                     break
-                elif content in ("n", "p"):
+                elif content in (constants.TEXT_CMD_NEXT, constants.TEXT_CMD_PREV):
                     new_page = await _handle_navigation_txt_input(ctx, content, page, total_pages)
                     if new_page == page:
                         continue
@@ -242,7 +236,7 @@ async def select_monster_with_dm_feedback(
                     except ValueError:
                         continue
 
-                if content in ("n", "p"):
+                if content in (constants.TEXT_CMD_NEXT, constants.TEXT_CMD_PREV):
                     updating_page = True
                     try:
                         await update_selection_view(select_msg, choices, page, query or "", create_embed, ctx.author.id)

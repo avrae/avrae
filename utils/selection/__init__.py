@@ -16,7 +16,6 @@ from .selection_views import (
 )
 from .selection_helpers import parse_custom_id, parse_selection_number, text_input_check
 
-
 __all__ = (
     # Main selection functions
     "get_selection_with_buttons",

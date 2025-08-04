@@ -121,7 +121,7 @@ def get_version_from_string(text: str = None) -> (str, str):
         version = text.split()[-1] if text.split()[-1].title() in VALID_VERSIONS else None
         search_str = text.replace(version, "").strip() if text.split()[-1].title() in VALID_VERSIONS else text
         version = version.title()
-    except (AttributeError, IndexError):
+    except:
         version = None
         search_str = text
 
@@ -147,7 +147,7 @@ async def get_lookup_version(ctx) -> str:
             serv_settings = await ctx.get_server_settings() if ctx.guild else None
         else:
             serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
-    except Exception:
+    except:
         serv_settings = None
 
     if serv_settings:
@@ -519,8 +519,8 @@ async def search_entities(
         query,
         lambda e: e.name,
         selectkey=create_selectkey(available_ids),
-        return_metadata=True,
         selector=_create_monster_selector(available_ids) if "monster" in entities else _create_selector(available_ids),
+        return_metadata=True,
         **kwargs,
     )
 

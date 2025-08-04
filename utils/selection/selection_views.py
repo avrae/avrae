@@ -7,9 +7,7 @@ from typing import List, Callable, Optional, Any
 
 import disnake
 from utils.pagination import get_page_choices, get_total_pages
-
-# Constants
-SELECTION_VIEW_TIMEOUT = 60.0
+from . import constants
 
 
 class StatelessSelectionView(disnake.ui.View):
@@ -25,13 +23,13 @@ class StatelessSelectionView(disnake.ui.View):
         user_id: ID of the user who can interact with this view
 
     Button Layout:
-        - Row 0: Selection buttons 1-5 (up to 5 buttons, only for actual choices)
-        - Row 1: Selection buttons 6-10 (up to 5 buttons, only for actual choices)
-        - Row 2: Previous/Next navigation (if >10 choices) + Cancel button
+        - Row 0: Selection buttons 1-MAX_BUTTONS_PER_ROW
+        - Row 1: Selection buttons (MAX_BUTTONS_PER_ROW+1)-(MAX_BUTTONS_PER_ROW*2)
+        - Row 2: Previous/Next navigation (if >CHOICES_PER_PAGE choices) + Cancel button
     """
 
     def __init__(self, choices: List[Any], current_page: int, query: str, user_id: int, expired: bool = False):
-        super().__init__(timeout=SELECTION_VIEW_TIMEOUT)
+        super().__init__(timeout=constants.SELECTION_TIMEOUT)
         self.expired = expired
         self.user_id = user_id
         self.setup_buttons(choices, current_page, query)
@@ -41,12 +39,12 @@ class StatelessSelectionView(disnake.ui.View):
     ) -> None:
         """Create selection buttons for a given range, only for actual choices."""
         for i in range(start_idx, min(end_idx, len(current_choices))):
-            global_index = i + 1 + current_page * 10
+            global_index = i + 1 + current_page * constants.CHOICES_PER_PAGE
             button = disnake.ui.Button(
                 label=str(global_index),
                 style=disnake.ButtonStyle.secondary,
                 disabled=self.expired,
-                custom_id=f"{prefix}select_{global_index}",
+                custom_id=f"{prefix}{constants.ACTION_SELECT_PREFIX}{global_index}",
                 row=row,
             )
             self.add_item(button)
@@ -55,51 +53,60 @@ class StatelessSelectionView(disnake.ui.View):
         """Ensure only the authorized user can interact with this view."""
         if interaction.user.id == self.user_id:
             return True
-        await interaction.response.send_message(
-            "This menu belongs to someone else. Please start your own command to make a selection.", ephemeral=True
-        )
+        await interaction.response.send_message(constants.ERROR_UNAUTHORIZED_USER, ephemeral=True)
         return False
 
     def setup_buttons(self, choices: List[Any], current_page: int, query: str) -> None:
         """Setup buttons based on current state parameters with optimized layout and unique custom_ids."""
-        total_pages = get_total_pages(choices, 10)
-        current_choices = get_page_choices(choices, current_page, 10) if current_page < total_pages else []
+        total_pages = get_total_pages(choices, constants.CHOICES_PER_PAGE)
+        current_choices = (
+            get_page_choices(choices, current_page, constants.CHOICES_PER_PAGE) if current_page < total_pages else []
+        )
         prefix = f"{self.user_id}_"
 
-        # Row 0: Selection buttons 1-5
-        self._create_selection_buttons(0, 5, current_choices, current_page, prefix, 0)
-        # Row 1: Selection buttons 6-10
-        self._create_selection_buttons(5, 10, current_choices, current_page, prefix, 1)
+        # Row 0: Selection buttons 1-MAX_BUTTONS_PER_ROW
+        self._create_selection_buttons(
+            0, constants.MAX_BUTTONS_PER_ROW, current_choices, current_page, prefix, constants.SELECTION_ROW_1
+        )
+        # Row 1: Selection buttons (MAX_BUTTONS_PER_ROW+1)-(MAX_BUTTONS_PER_ROW*2)
+        self._create_selection_buttons(
+            constants.MAX_BUTTONS_PER_ROW,
+            constants.MAX_BUTTONS_PER_ROW * 2,
+            current_choices,
+            current_page,
+            prefix,
+            constants.SELECTION_ROW_2,
+        )
 
         # Row 2: Navigation and Cancel buttons
-        if len(choices) > 10:
+        if len(choices) > constants.CHOICES_PER_PAGE:
             # Previous button
             prev_button = disnake.ui.Button(
-                label="◀ Previous",
+                label=constants.BUTTON_LABEL_PREVIOUS,
                 style=disnake.ButtonStyle.secondary,
                 disabled=self.expired,
-                custom_id=f"{prefix}prev",
-                row=2,
+                custom_id=f"{prefix}{constants.ACTION_PREV}",
+                row=constants.NAVIGATION_ROW,
             )
             self.add_item(prev_button)
 
             # Next button
             next_button = disnake.ui.Button(
-                label="Next ▶",
+                label=constants.BUTTON_LABEL_NEXT,
                 style=disnake.ButtonStyle.secondary,
                 disabled=self.expired,
-                custom_id=f"{prefix}next",
-                row=2,
+                custom_id=f"{prefix}{constants.ACTION_NEXT}",
+                row=constants.NAVIGATION_ROW,
             )
             self.add_item(next_button)
 
         # Cancel button - always in row 2
         cancel_button = disnake.ui.Button(
-            label="Cancel",
+            label=constants.BUTTON_LABEL_CANCEL,
             style=disnake.ButtonStyle.danger,
             disabled=self.expired,
-            custom_id=f"{prefix}cancel",
-            row=2,
+            custom_id=f"{prefix}{constants.ACTION_CANCEL}",
+            row=constants.NAVIGATION_ROW,
         )
         self.add_item(cancel_button)
 
@@ -130,8 +137,8 @@ def create_selection_embed(
     Returns:
         Formatted embed ready for display
     """
-    total_pages = get_total_pages(choices, 10)
-    current_choices = get_page_choices(choices, page, 10) if page < total_pages else []
+    total_pages = get_total_pages(choices, constants.CHOICES_PER_PAGE)
+    current_choices = get_page_choices(choices, page, constants.CHOICES_PER_PAGE) if page < total_pages else []
 
     description_parts = []
 
@@ -140,17 +147,17 @@ def create_selection_embed(
         description_parts.append(f"Your input was: `{query}`")
 
     # Base instructions
-    description_parts.append("Which one were you looking for? (Type the number or `c` to cancel)")
+    description_parts.append(constants.EMBED_INSTRUCTION_BASE)
 
     # Navigation hint for multi-page
     if total_pages > 1:
-        description_parts.append("`n` to go to the next page, or `p` for previous")
+        description_parts.append(constants.EMBED_INSTRUCTION_NAVIGATION)
 
     description_parts.append("")  # Empty line before choices
 
     # Choice list with consistent formatting
     for i, choice in enumerate(current_choices):
-        global_index = i + 1 + page * 10
+        global_index = i + 1 + page * constants.CHOICES_PER_PAGE
         description_parts.append(f"[{global_index}] - {key(choice)}")
 
     # Interaction instructions
@@ -159,8 +166,7 @@ def create_selection_embed(
         # Handle DM channel mention issue - ctx.channel.mention can be None in DMs
         channel_ref = original_channel_mention or "the original channel"
         description_parts.append(
-            f"Use buttons below OR Type your choice in {channel_ref}. "
-            "This message was PMed to you to hide the monster name."
+            f"Use buttons below OR Type your choice in {channel_ref}. " + constants.MSG_PM_EXPLANATION
         )
     else:
         description_parts.append("Use buttons below OR Type your choice in this channel.")
@@ -177,7 +183,9 @@ def create_selection_embed(
         description_parts.append(f"\n**Note**\n{message}")
 
     embed = disnake.Embed(
-        title="Multiple Matches Found", description="\n".join(description_parts), colour=random.randint(0, 0xFFFFFF)
+        title=constants.EMBED_TITLE_MULTIPLE_MATCHES,
+        description="\n".join(description_parts),
+        colour=random.randint(0, 0xFFFFFF),
     )
 
     # Page footer for multi-page results

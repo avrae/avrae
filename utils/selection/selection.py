@@ -12,6 +12,7 @@ from typing import List, Callable, Optional, Any
 import disnake
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils.pagination import get_total_pages
+from . import constants
 from .selection_helpers import (
     parse_custom_id,
     parse_selection_number,
@@ -28,10 +29,6 @@ from .selection_views import (
 
 log = logging.getLogger(__name__)
 
-# Constants
-SELECTION_TIMEOUT = 60.0
-MAX_EVENTS = 100
-
 
 # ==== main selection functions ====
 async def get_selection_with_buttons(
@@ -43,7 +40,7 @@ async def get_selection_with_buttons(
     message: Optional[str] = None,
     force_select: bool = False,
     query: Optional[str] = None,
-    timeout: float = SELECTION_TIMEOUT,
+    timeout: float = constants.SELECTION_TIMEOUT,
 ) -> Any:
     """
     Stateless button selection: pure function replacement for get_selection.
@@ -90,7 +87,7 @@ async def get_selection_with_buttons(
         )
 
     page = 0
-    total_pages = get_total_pages(choices, 10)
+    total_pages = get_total_pages(choices, constants.CHOICES_PER_PAGE)
     embed = create_embed(page)
     view = StatelessSelectionView(choices, page, query or "", ctx.author.id)
 
@@ -103,7 +100,7 @@ async def get_selection_with_buttons(
     updating_page = False
 
     event_count = 0
-    while event_count < MAX_EVENTS:
+    while event_count < constants.MAX_EVENTS:
         try:
             done, pending = await asyncio.wait(
                 [
@@ -135,16 +132,22 @@ async def get_selection_with_buttons(
             result = done.pop().result()
 
             if isinstance(result, disnake.Interaction):
-                if not hasattr(result, "data") or not result.data or not hasattr(result.data, "custom_id"):
-                    log.warning("Interaction missing required data fields")
+                if not hasattr(result, "data"):
+                    log.warning("Interaction missing 'data' attribute")
+                    continue
+                elif not result.data:
+                    log.warning("Interaction has null/empty data")
+                    continue
+                elif not hasattr(result.data, "custom_id"):
+                    log.warning("Interaction data missing 'custom_id' attribute")
                     continue
 
                 action = parse_custom_id(result.data.custom_id)
 
-                if action == "cancel":
+                if action == constants.ACTION_CANCEL:
                     await result.response.defer()
                     break
-                elif action in ("next", "prev"):
+                elif action in (constants.ACTION_NEXT, constants.ACTION_PREV):
                     if updating_page:
                         continue
 
@@ -167,17 +170,17 @@ async def get_selection_with_buttons(
                         log.exception(f"Unexpected error during navigation: {e}")
                         raise
 
-                    target_page = page + 1 if action == "next" else page - 1
+                    target_page = page + 1 if action == constants.ACTION_NEXT else page - 1
                     try:
                         page = target_page
                         await update_selection_view(select_msg, choices, page, query or "", create_embed, ctx.author.id)
                     finally:
                         updating_page = False
                     continue
-                elif action.startswith("select_"):
+                elif action.startswith(constants.ACTION_SELECT_PREFIX):
                     selection_num = parse_selection_number(action)
                     if selection_num is None:
-                        log.warning(f"Invalid selection action format: {action}")
+                        log.debug(f"Invalid selection action format: '{action}'")
                         continue
 
                     choice_idx = selection_num - 1
@@ -194,20 +197,19 @@ async def get_selection_with_buttons(
                                 log.debug(f"Expected HTTPException during selection message deletion: {e}")
                         return selected_choice
                     else:
-                        log.warning(f"Selection number {selection_num} out of range (1-{len(choices)})")
                         continue
 
             else:
                 content = result.content.lower().strip()
 
-                if content == "c":
+                if content == constants.TEXT_CMD_CANCEL:
                     if delete and not pm:
                         try:
                             await result.delete()
                         except disnake.HTTPException as e:
                             log.debug(f"Expected HTTPException during text message deletion: {e}")
                     break
-                elif content in ("n", "p"):
+                elif content in (constants.TEXT_CMD_NEXT, constants.TEXT_CMD_PREV):
                     new_page = await _handle_navigation_txt_input(ctx, content, page, total_pages)
                     if new_page == page:
                         continue
@@ -228,7 +230,7 @@ async def get_selection_with_buttons(
                     except ValueError:
                         continue
 
-                if content in ("n", "p"):
+                if content in (constants.TEXT_CMD_NEXT, constants.TEXT_CMD_PREV):
                     updating_page = True
                     try:
                         await update_selection_view(select_msg, choices, page, query or "", create_embed, ctx.author.id)

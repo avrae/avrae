@@ -24,9 +24,9 @@ log = logging.getLogger(__name__)
 sentinel = object()
 
 
-def list_get(index, default, lst):
+def list_get(index, default, l):
     try:
-        return lst[index]
+        return l[index]
     except IndexError:
         return default
 
@@ -301,7 +301,7 @@ async def confirm(ctx, message, delete_msgs=False, response_check=get_positivity
         try:
             await msg.delete()
             await reply.delete()
-        except Exception:
+        except:
             pass
     return reply_bool
 

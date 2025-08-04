@@ -106,7 +106,7 @@ class DicecloudParser(SheetLoaderABC):
         live = self.is_live()
         race = self.character_data["characters"][0]["race"].strip()
         background = self.character_data["characters"][0]["backstory"].strip()
-        actions = self.get_actions()
+        actions = await self.get_actions()
 
         character = Character(
             owner_id,
@@ -424,11 +424,39 @@ class DicecloudParser(SheetLoaderABC):
 
         return counters
 
-    def get_actions(self):
+    async def get_actions(self):
+        # Get the version context for filtering actions
+        version = "2024"  # default
+        if hasattr(self, 'ctx') and self.ctx:
+            try:
+                if hasattr(self.ctx, 'get_server_settings'):
+                    serv_settings = await self.ctx.get_server_settings() if self.ctx.guild else None
+                else:
+                    from utils.settings.guild import ServerSettings
+                    serv_settings = await ServerSettings.for_guild(mdb=self.ctx.bot.mdb, guild_id=self.ctx.guild.id)
+                
+                if serv_settings:
+                    version = serv_settings.version
+                
+                if serv_settings and serv_settings.allow_character_override or not serv_settings:
+                    try:
+                        if hasattr(self.ctx, 'get_character'):
+                            character = await self.ctx.get_character()
+                        else:
+                            from cogs5e.models.character import Character
+                            character = await Character.from_ctx(self.ctx)
+                        
+                        if character.options.version:
+                            version = character.options.version
+                    except:
+                        pass
+            except:
+                pass
+
         feature_names = [
             f.get("name") for f in self.character_data.get("features", []) if f.get("enabled") and not f.get("removed")
         ]
-        actions = get_actions_for_names(feature_names)
+        actions = get_actions_for_names(feature_names, version)
         return Actions(actions)
 
     # helper funcs

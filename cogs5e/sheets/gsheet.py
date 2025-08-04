@@ -30,7 +30,7 @@ from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute, AttackSyntaxError, InvalidImageURL, InvalidCoin
-from cogs5e.sheets.utils import get_actions_for_names
+from cogs5e.sheets.utils import get_actions_for_names, resolve_version_context
 from gamedata.compendium import compendium
 from utils import config
 from utils.constants import DAMAGE_TYPES, COIN_TYPES
@@ -362,31 +362,7 @@ class GoogleSheet(SheetLoaderABC):
             raise
         
         # Get version context for action filtering
-        version = "2024"  # default
-        try:
-            if hasattr(ctx, 'get_server_settings'):
-                serv_settings = await ctx.get_server_settings() if ctx.guild else None
-            else:
-                from utils.settings.guild import ServerSettings
-                serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
-            
-            if serv_settings:
-                version = serv_settings.version
-            
-            if serv_settings and serv_settings.allow_character_override or not serv_settings:
-                try:
-                    if hasattr(ctx, 'get_character'):
-                        character = await ctx.get_character()
-                    else:
-                        from cogs5e.models.character import Character
-                        character = await Character.from_ctx(ctx)
-                    
-                    if character.options.version:
-                        version = character.options.version
-                except:
-                    pass
-        except:
-            pass
+        version = await resolve_version_context(ctx)
         
         return await asyncio.get_event_loop().run_in_executor(None, self._load_character, owner_id, args, version)
 

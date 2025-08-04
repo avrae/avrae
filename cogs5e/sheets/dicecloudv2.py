@@ -25,7 +25,7 @@ from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from utils.enums import ActivationType
 from .abc import SHEET_VERSION, SheetLoaderABC
-from .utils import get_actions_for_name
+from .utils import get_actions_for_name, resolve_version_context
 
 log = logging.getLogger(__name__)
 
@@ -534,32 +534,7 @@ class DicecloudV2Parser(SheetLoaderABC):
 
     async def get_actions(self):
         # Get the version context for filtering actions
-        version = "2024"  # default
-        if hasattr(self, 'ctx') and self.ctx:
-            try:
-                if hasattr(self.ctx, 'get_server_settings'):
-                    serv_settings = await self.ctx.get_server_settings() if self.ctx.guild else None
-                else:
-                    from utils.settings.guild import ServerSettings
-                    serv_settings = await ServerSettings.for_guild(mdb=self.ctx.bot.mdb, guild_id=self.ctx.guild.id)
-                
-                if serv_settings:
-                    version = serv_settings.version
-                
-                if serv_settings and serv_settings.allow_character_override or not serv_settings:
-                    try:
-                        if hasattr(self.ctx, 'get_character'):
-                            character = await self.ctx.get_character()
-                        else:
-                            from cogs5e.models.character import Character
-                            character = await Character.from_ctx(self.ctx)
-                        
-                        if character.options.version:
-                            version = character.options.version
-                    except:
-                        pass
-            except:
-                pass
+        version = await resolve_version_context(self.ctx)
 
         actions = []
         for f in self._by_type["feature"]:

@@ -23,6 +23,7 @@ from cogs5e.models.sheet.player import CustomCounter
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
+from cogs5e.sheets.utils import resolve_version_context
 from gamedata.compendium import compendium
 from utils import config, constants, enums
 from utils.enums import ActivationType
@@ -441,32 +442,7 @@ class BeyondSheetParser(SheetLoaderABC):
         action_ids_with_valid_actions = set()  # set of tuples (id, typeid)
 
         # Get the version context for filtering actions
-        version = "2024"  # default
-        if hasattr(self, 'ctx') and self.ctx:
-            try:
-                if hasattr(self.ctx, 'get_server_settings'):
-                    serv_settings = await self.ctx.get_server_settings() if self.ctx.guild else None
-                else:
-                    from utils.settings.guild import ServerSettings
-                    serv_settings = await ServerSettings.for_guild(mdb=self.ctx.bot.mdb, guild_id=self.ctx.guild.id)
-                
-                if serv_settings:
-                    version = serv_settings.version
-                
-                if serv_settings and serv_settings.allow_character_override or not serv_settings:
-                    try:
-                        if hasattr(self.ctx, 'get_character'):
-                            character = await self.ctx.get_character()
-                        else:
-                            from cogs5e.models.character import Character
-                            character = await Character.from_ctx(self.ctx)
-                        
-                        if character.options.version:
-                            version = character.options.version
-                    except:
-                        pass
-            except:
-                pass
+        version = await resolve_version_context(self.ctx)
 
         def add_action_from_gamedata(d_action, g_action):
             name = g_action.name

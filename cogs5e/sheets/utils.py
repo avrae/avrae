@@ -3,6 +3,8 @@ import re
 
 from cogs5e.models.sheet.action import Action
 from gamedata import compendium
+from utils.settings.guild import ServerSettings
+from cogs5e.models.character import Character
 
 
 # ==== Name => Action Discovery ====
@@ -104,3 +106,43 @@ def get_actions_for_names(names, version: str = "2024"):
             )
 
     return actions
+
+
+async def resolve_version_context(ctx) -> str:
+    """
+    Resolve the D&D rules version from server and character settings.
+    
+    Args:
+        ctx: The Discord context object
+        
+    Returns:
+        str: The resolved version ("2014", "2024", etc.)
+    """
+    version = "2024"  # default
+    
+    try:
+        # Get server settings
+        if hasattr(ctx, 'get_server_settings'):
+            serv_settings = await ctx.get_server_settings() if ctx.guild else None
+        else:
+            serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+        
+        if serv_settings:
+            version = serv_settings.version
+        
+        # Check if character override is allowed
+        if serv_settings and serv_settings.allow_character_override or not serv_settings:
+            try:
+                if hasattr(ctx, 'get_character'):
+                    character = await ctx.get_character()
+                else:
+                    character = await Character.from_ctx(ctx)
+                
+                if character.options.version:
+                    version = character.options.version
+            except:
+                pass
+    except:
+        pass
+    
+    return version

@@ -3,8 +3,6 @@ import re
 
 from cogs5e.models.sheet.action import Action
 from gamedata import compendium
-from utils.settings.guild import ServerSettings
-from cogs5e.models.character import Character
 
 
 # ==== Name => Action Discovery ====
@@ -122,10 +120,7 @@ async def resolve_version_context(ctx) -> str:
     
     try:
         # Get server settings
-        if hasattr(ctx, 'get_server_settings'):
-            serv_settings = await ctx.get_server_settings() if ctx.guild else None
-        else:
-            serv_settings = await ServerSettings.for_guild(mdb=ctx.bot.mdb, guild_id=ctx.guild.id)
+        serv_settings = await ctx.get_server_settings() if ctx.guild else None
         
         if serv_settings:
             version = serv_settings.version
@@ -133,10 +128,7 @@ async def resolve_version_context(ctx) -> str:
         # Check if character override is allowed
         if serv_settings and serv_settings.allow_character_override or not serv_settings:
             try:
-                if hasattr(ctx, 'get_character'):
-                    character = await ctx.get_character()
-                else:
-                    character = await Character.from_ctx(ctx)
+                character = await ctx.get_character()
                 
                 if character.options.version:
                     version = character.options.version

@@ -93,7 +93,7 @@ class BeyondSheetParser(SheetLoaderABC):
         skills = self._get_skills()
         saves = self._get_saves()
         # we do this to handle the attack/action overlap (e.g. actions with displayAsAttack)
-        attacks, actions = self._get_attacks_and_actions()
+        attacks, actions = await self._get_attacks_and_actions()
 
         resistances = self._get_resistances()
         ac = self._get_ac()
@@ -396,12 +396,12 @@ class BeyondSheetParser(SheetLoaderABC):
         )
         return coins
 
-    def _get_attacks_and_actions(self):
+    async def _get_attacks_and_actions(self):
         """
         :rtype: tuple[AttackList, Actions]
         """
         attacks = self._process_attacks()  # this returns all attacks regardless of their status
-        actions, action_grantor_ids = self._process_actions()  # this skips customized actions with displayAsAttack
+        actions, action_grantor_ids = await self._process_actions()  # this skips customized actions with displayAsAttack
 
         filtered_attacks = [attack for ((id, type_id), attack) in attacks if (id, type_id) not in action_grantor_ids]
 
@@ -429,7 +429,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
         return attacks
 
-    def _process_actions(self):
+    async def _process_actions(self):
         """
         :return: a pair (actions, action ids that granted valid actions (id, typeid))
         :rtype: tuple[Actions, set[tuple[str, str]]]
@@ -439,6 +439,34 @@ class BeyondSheetParser(SheetLoaderABC):
         actions = []
         seen_feature_ids = set()  # set of tuples (typeid, id)
         action_ids_with_valid_actions = set()  # set of tuples (id, typeid)
+
+        # Get the version context for filtering actions
+        version = "2024"  # default
+        if hasattr(self, 'ctx') and self.ctx:
+            try:
+                if hasattr(self.ctx, 'get_server_settings'):
+                    serv_settings = await self.ctx.get_server_settings() if self.ctx.guild else None
+                else:
+                    from utils.settings.guild import ServerSettings
+                    serv_settings = await ServerSettings.for_guild(mdb=self.ctx.bot.mdb, guild_id=self.ctx.guild.id)
+                
+                if serv_settings:
+                    version = serv_settings.version
+                
+                if serv_settings and serv_settings.allow_character_override or not serv_settings:
+                    try:
+                        if hasattr(self.ctx, 'get_character'):
+                            character = await self.ctx.get_character()
+                        else:
+                            from cogs5e.models.character import Character
+                            character = await Character.from_ctx(self.ctx)
+                        
+                        if character.options.version:
+                            version = character.options.version
+                    except:
+                        pass
+            except:
+                pass
 
         def add_action_from_gamedata(d_action, g_action):
             name = g_action.name
@@ -476,17 +504,21 @@ class BeyondSheetParser(SheetLoaderABC):
             ):
                 continue
 
-            # gamedata for limiteduse
+            # gamedata for limiteduse - filter by version
             try:
                 g_actions = compendium.lookup_actions_for_entity(int(d_action["typeId"]), int(d_action["id"]))
+                # Filter actions by version to ensure consistency
+                g_actions = [action for action in g_actions if not hasattr(action, 'rulesVersion') or action.rulesVersion in [version, "Homebrew", ""]]
             except (TypeError, ValueError):  # weird null typeid/uuid id action, maybe artificer infused item?
                 continue
 
-            # gamedata for component (parent feature)
+            # gamedata for component (parent feature) - filter by version
             # data might have been entered for the parent feature instead
             try:
                 parent_type_id, parent_id = int(d_action["componentTypeId"]), int(d_action["componentId"])
                 parent_g_actions = compendium.lookup_actions_for_entity(parent_type_id, parent_id)
+                # Filter parent actions by version to ensure consistency
+                parent_g_actions = [action for action in parent_g_actions if not hasattr(action, 'rulesVersion') or action.rulesVersion in [version, "Homebrew", ""]]
                 seen_feature_ids.add((parent_type_id, parent_id))
             except (TypeError, ValueError):
                 parent_g_actions = []
@@ -515,12 +547,14 @@ class BeyondSheetParser(SheetLoaderABC):
                 # for attack filtering
                 action_ids_with_valid_actions.add((str(d_action["id"]), str(d_action["typeId"])))
 
-        # features: save only if gamedata references them
+        # features: save only if gamedata references them - filter by version
         for d_feature in character_features:
             d_type_id, d_id = int(d_feature["typeId"]), int(d_feature["id"])
             if (d_type_id, d_id) in seen_feature_ids:
                 continue
             g_actions = compendium.lookup_actions_for_entity(d_type_id, d_id)
+            # Filter feature actions by version to ensure consistency
+            g_actions = [action for action in g_actions if not hasattr(action, 'rulesVersion') or action.rulesVersion in [version, "Homebrew", ""]]
             for g_action in g_actions:
                 add_action_from_gamedata(d_feature, g_action)
 

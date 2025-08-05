@@ -265,7 +265,8 @@ def old_to_automation(bonus: str | None = None, damage: str | None = None, detai
 
     if bonus:
         hit = [damage] if damage else []
-        attack_eff = [automation.Attack(hit=hit, miss=[], attackBonus=str(bonus).strip("{}<>"))]
+        sanitized_attack_bonus = str(bonus).replace("{", "").replace("}", "").replace("<", "").replace(">", "")
+        attack_eff = [automation.Attack(hit=hit, miss=[], attackBonus=sanitized_attack_bonus)]
     else:
         attack_eff = [damage] if damage else []
 

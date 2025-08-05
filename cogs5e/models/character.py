@@ -330,7 +330,7 @@ class Character(StatBlock):
         """Evaluates a cvar expression in a MathEvaluator.
         :param varstr - the expression to evaluate.
         :returns int - the value of the expression."""
-        varstr = str(varstr).strip("<>{}")
+        varstr = str(varstr).replace("<", "").replace(">", "").replace("{", "").replace("}", "")
         evaluator = aliasing.evaluators.MathEvaluator.with_character(self)
 
         try:

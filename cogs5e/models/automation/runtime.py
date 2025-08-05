@@ -232,7 +232,7 @@ class AutomationContext:
 
         original_names = self.evaluator.builtins.copy()
         self.evaluator.builtins.update(self.metavars)
-        expr = annostr.strip("{}")
+        expr = annostr.replace("{", "").replace("}", "")
         try:
             out = self.evaluator.eval(expr)
         except Exception as ex:

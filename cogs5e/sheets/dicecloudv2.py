@@ -21,7 +21,7 @@ from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from gamedata.compendium import compendium
-from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_NAMES, STAT_NAMES
+from utils.constants import SAVE_NAMES, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from utils.enums import ActivationType
 from .abc import SHEET_VERSION, SheetLoaderABC

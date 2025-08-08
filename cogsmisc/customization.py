@@ -1263,7 +1263,10 @@ async def read_file_from_message(ctx, size_limit):
     if attached_file.size > size_limit:
         raise InvalidArgument(f"This file upload must be smaller than {size_limit} bytes.")
     file_bytes = await attached_file.read()
-    return file_bytes.decode("utf-8")
+    try:
+        return file_bytes.decode("utf-8")
+    except UnicodeError as e:
+        raise InvalidArgument("Uploaded file must be text in utf-8 format") from e
 
 
 def setup(bot):

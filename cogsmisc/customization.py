@@ -21,6 +21,7 @@ import ui
 from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
 from aliasing.workshop import WORKSHOP_ADDRESS_RE
+from aliasing.constants import CVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
@@ -893,18 +894,24 @@ class Customization(commands.Cog):
 
         character: Character = await ctx.get_character()
 
-        if value is None:  # display value
-            cvar = character.get_scope_locals().get(name)
-            if cvar is None:
-                return await ctx.send("This cvar is not defined.")
-            return await send_long_code_text(
-                ctx, outside_codeblock=f"**{name}**:".replace("_", r"\_"), inside_codeblock=cvar
-            )
+        if value is None:  # try to read from attachment otherwise display value
+            try:
+                # 4 bytes max per unicode character, sets a reasonable max on file size
+                value = await read_file_from_message(ctx, 4 * CVAR_SIZE_LIMIT)
+            except InvalidArgument as e:
+                raise e
+            except Exception:
+                cvar = character.get_scope_locals().get(name)
+                if cvar is None:
+                    return await ctx.send("This cvar is not defined.")
+                return await send_long_code_text(
+                    ctx, outside_codeblock=f"**{name}**:".replace("_", r"\_"), inside_codeblock=cvar
+                )
 
         helpers.set_cvar(character, name, value)
 
         await character.commit(ctx)
-        await ctx.send("Character variable `{}` set to: `{}`".format(name, value))
+        await send_long_code_text(ctx, outside_codeblock=f"Character variable `{name}` set to:", inside_codeblock=value)
 
     @cvar.command(name="remove", aliases=["delete"])
     async def remove_cvar(self, ctx, name):
@@ -958,19 +965,25 @@ class Customization(commands.Cog):
         if name is None:
             return await self.uvar_list(ctx)
 
+        if name in STAT_VAR_NAMES or not name.isidentifier():
+            return await ctx.send("Could not access uvar: already builtin, or contains invalid character!")
+
         user_vars = await helpers.get_uvars(ctx)
 
-        if value is None:  # display value
-            uvar = user_vars.get(name)
-            if uvar is None:
-                return await ctx.send("This uvar is not defined.")
-            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=uvar)
-
-        if name in STAT_VAR_NAMES or not name.isidentifier():
-            return await ctx.send("Could not create uvar: already builtin, or contains invalid character!")
+        if value is None:  # try to read from attachment otherwise display value
+            try:
+                # 4 bytes max per unicode character, sets a reasonable max on file size
+                value = await read_file_from_message(ctx, 4 * UVAR_SIZE_LIMIT)
+            except InvalidArgument as e:
+                raise e
+            except Exception:
+                uvar = user_vars.get(name)
+                if uvar is None:
+                    return await ctx.send("This uvar is not defined.")
+                return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=uvar)
 
         await helpers.set_uvar(ctx, name, value)
-        await ctx.send("User variable `{}` set to: `{}`".format(name, value))
+        await send_long_code_text(ctx, outside_codeblock=f"User variable `{name}` set to:", inside_codeblock=value)
 
     @uservar.command(name="remove", aliases=["delete"])
     async def uvar_remove(self, ctx, name):
@@ -1019,11 +1032,17 @@ class Customization(commands.Cog):
         if name is None:
             return await self.svar_list(ctx)
 
-        if value is None:  # display value
-            svar = await helpers.get_svar(ctx, name)
-            if svar is None:
-                return await ctx.send("This svar is not defined.")
-            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=svar)
+        if value is None:  # try to read from attachment otherwise display value
+            try:
+                # 4 bytes max per unicode character, sets a reasonable max on file size
+                value = await read_file_from_message(ctx, 4 * SVAR_SIZE_LIMIT)
+            except InvalidArgument as e:
+                raise e
+            except Exception:
+                svar = await helpers.get_svar(ctx, name)
+                if svar is None:
+                    return await ctx.send("This svar is not defined.")
+                return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=svar)
 
         if not await _can_edit_servaliases(ctx):
             return await ctx.send(
@@ -1036,7 +1055,7 @@ class Customization(commands.Cog):
             return await ctx.send("Could not create svar: already builtin, or contains invalid character!")
 
         await helpers.set_svar(ctx, name, value)
-        await ctx.send(f"Server variable `{name}` set to: `{value}`")
+        await send_long_code_text(ctx, outside_codeblock=f"Server variable `{name}` set to:", inside_codeblock=value)
 
     @servervar.command(name="remove", aliases=["delete"])
     @commands.guild_only()
@@ -1232,6 +1251,15 @@ async def send_long_code_text(
         await destination.send(f"{outside_codeblock}\n{too_long_message}", file=disnake.File(out, "output.txt"))
     else:
         await destination.send("This output is too large.")
+
+
+async def read_file_from_message(ctx, size_limit):
+    """Takes a given message, pulls the first attachment, and returns the read string in utf-8 format"""
+    attached_file = ctx.message.attachments[0]
+    if attached_file.size > size_limit:
+        raise InvalidArgument(f"This file upload must be smaller than {size_limit} bytes.")
+    file_bytes = await attached_file.read()
+    return file_bytes.decode("utf-8")
 
 
 def setup(bot):

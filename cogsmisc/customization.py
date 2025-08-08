@@ -888,6 +888,7 @@ class Customization(commands.Cog):
     @commands.group(invoke_without_command=True)
     async def cvar(self, ctx, name: str = None, *, value=None):
         """Commands to manage character variables for use in snippets and aliases.
+        Attach a UTF-8 file instead of a value to set the character variable to the file's contents.
         See the [aliasing guide](https://avrae.io/cheatsheets/aliasing) for more help."""
         if name is None:
             return await self.list_cvar(ctx)
@@ -961,6 +962,7 @@ class Customization(commands.Cog):
         Commands to manage user variables for use in snippets and aliases.
         User variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
+        Attach a UTF-8 file instead of a value to set the user variable to the file's contents.
         See https://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
             return await self.uvar_list(ctx)
@@ -1026,6 +1028,8 @@ class Customization(commands.Cog):
         must be explicitly retrieved in an alias, and are read-only.
 
         These are usually used to set server-wide defaults for aliases without editing the code.
+
+        Attach a UTF-8 file instead of a value to set the server variable to the file's contents.
 
         See https://avrae.io/cheatsheets/aliasing for more help.
         """

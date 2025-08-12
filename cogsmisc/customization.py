@@ -1266,7 +1266,7 @@ async def read_file_from_message(ctx, size_limit):
     """Takes a given message, pulls the first attachment, and returns the read string in utf-8 format"""
     attached_file = ctx.message.attachments[0]
     if attached_file.size > size_limit:
-        raise InvalidArgument(f"This file upload must be smaller than {size_limit} bytes.")
+        raise InvalidArgument(f"This file upload must not exceed {size_limit} bytes.")
     file_bytes = await attached_file.read()
     try:
         return file_bytes.decode("utf-8")

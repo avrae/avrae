@@ -21,7 +21,7 @@ import ui
 from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
 from aliasing.workshop import WORKSHOP_ADDRESS_RE
-from aliasing.constants import CVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
+from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
@@ -1091,6 +1091,7 @@ class Customization(commands.Cog):
         If run without a subcommand, shows the value of a global variable.
         Global variables are readable by all users, but only editable by the creator.
         Global variables must be accessed through scripting, with `get_gvar(gvar_id)`.
+        Global variables also support reading file attachments when creating or editing.
         See https://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
             return await self.gvar_list(ctx)
@@ -1110,15 +1111,19 @@ class Customization(commands.Cog):
         )
 
     @globalvar.command(name="create")
-    async def gvar_create(self, ctx, *, value):
+    async def gvar_create(self, ctx, *, value=None):
         """Creates a global variable.
-        A name will be randomly assigned upon creation."""
+        A name will be randomly assigned upon creation.
+        Attach a UTF-8 file instead of a value to set the global variable to the file's contents."""
+        value = await _get_value_or_file(ctx, value, 4 * GVAR_SIZE_LIMIT)
         name = await helpers.create_gvar(ctx, value)
         await ctx.send(f"Created global variable `{name}`.")
 
     @globalvar.command(name="edit")
-    async def gvar_edit(self, ctx, name, *, value):
-        """Edits a global variable."""
+    async def gvar_edit(self, ctx, name, *, value=None):
+        """Edits a global variable.
+        Attach a UTF-8 file instead of a value to set the global variable to the file's contents."""
+        value = await _get_value_or_file(ctx, value, 4 * GVAR_SIZE_LIMIT)
         await helpers.update_gvar(ctx, name, value)
         await ctx.send(f"Global variable `{name}` edited.")
 
@@ -1267,6 +1272,16 @@ async def read_file_from_message(ctx, size_limit):
         return file_bytes.decode("utf-8")
     except UnicodeError as e:
         raise InvalidArgument("Uploaded file must be text in utf-8 format") from e
+
+
+async def _get_value_or_file(ctx, value, size_limit):
+    """Gets value from parameter or file attachment, with user-friendly error handling"""
+    if value is None:
+        try:
+            value = await read_file_from_message(ctx, size_limit)
+        except IndexError:
+            raise InvalidArgument("No input or file attachment found.")
+    return value
 
 
 def setup(bot):

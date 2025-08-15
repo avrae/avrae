@@ -260,7 +260,7 @@ def set_cvar(character, name, value):
     elif name in character.get_scope_locals(True):
         raise InvalidArgument(f"The variable `{name}` is already built in.")
     elif len(value) > CVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Cvars must be shorter than {CVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(f"Cvars must be shorter than {CVAR_SIZE_LIMIT:,} characters.")
 
     character.set_cvar(name, value)
 
@@ -282,7 +282,7 @@ async def set_uvar(ctx, name, value):
     elif len(name) > VAR_NAME_LIMIT:
         raise InvalidArgument(f"Uvar name must be shorter than {VAR_NAME_LIMIT} characters.")
     elif len(value) > UVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Uvars must be shorter than {UVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(f"Uvars must be shorter than {UVAR_SIZE_LIMIT:,} characters.")
     await ctx.bot.mdb.uvars.update_one({"owner": str(ctx.author.id), "name": name}, {"$set": {"value": value}}, True)
 
 
@@ -328,7 +328,7 @@ async def set_svar(ctx, name, value):
     elif len(name) > VAR_NAME_LIMIT:
         raise InvalidArgument(f"Svar name must be shorter than {VAR_NAME_LIMIT} characters.")
     elif len(value) > SVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Svars must be shorter than {SVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(f"Svars must be shorter than {SVAR_SIZE_LIMIT:,} characters.")
     await ctx.bot.mdb.svars.update_one({"owner": ctx.guild.id, "name": name}, {"$set": {"value": value}}, True)
 
 
@@ -336,7 +336,7 @@ async def set_svar(ctx, name, value):
 async def create_gvar(ctx, value):
     value = str(value)
     if len(value) > GVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT:,} characters.")
     name = str(uuid.uuid4())
     data = {"key": name, "owner": str(ctx.author.id), "owner_name": str(ctx.author), "value": value, "editors": []}
     await ctx.bot.mdb.gvars.insert_one(data)
@@ -351,7 +351,7 @@ async def update_gvar(ctx, gid, value):
     elif gvar["owner"] != str(ctx.author.id) and not str(ctx.author.id) in gvar.get("editors", []):
         raise NotAllowed("You are not allowed to edit this variable.")
     elif len(value) > GVAR_SIZE_LIMIT:
-        raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT} characters.")
+        raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT:,} characters.")
     await ctx.bot.mdb.gvars.update_one({"key": gid}, {"$set": {"value": value}})
 
 

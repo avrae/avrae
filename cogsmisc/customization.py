@@ -32,6 +32,15 @@ from utils.functions import a_or_an, confirm, get_selection, search_and_select, 
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
+# 4 bytes max per unicode character, sets a reasonable max on file size
+UTF8_MAX_BYTES_PER_CHAR = 4
+
+# File size limits for uploads (in bytes)
+CVAR_FILE_SIZE_LIMIT = UTF8_MAX_BYTES_PER_CHAR * CVAR_SIZE_LIMIT
+UVAR_FILE_SIZE_LIMIT = UTF8_MAX_BYTES_PER_CHAR * UVAR_SIZE_LIMIT
+SVAR_FILE_SIZE_LIMIT = UTF8_MAX_BYTES_PER_CHAR * SVAR_SIZE_LIMIT
+GVAR_FILE_SIZE_LIMIT = UTF8_MAX_BYTES_PER_CHAR * GVAR_SIZE_LIMIT
+
 STAT_MOD_NAMES = ("strengthMod", "dexterityMod", "constitutionMod", "intelligenceMod", "wisdomMod", "charismaMod")
 
 STAT_VAR_NAMES = (
@@ -896,12 +905,8 @@ class Customization(commands.Cog):
         character: Character = await ctx.get_character()
 
         if value is None:  # try to read from attachment otherwise display value
-            try:
-                # 4 bytes max per unicode character, sets a reasonable max on file size
-                value = await read_file_from_message(ctx, 4 * CVAR_SIZE_LIMIT)
-            except InvalidArgument as e:
-                raise e
-            except Exception:
+            value = await _get_value_or_file(ctx, None, CVAR_FILE_SIZE_LIMIT, allow_empty=True)
+            if value is None:
                 cvar = character.get_scope_locals().get(name)
                 if cvar is None:
                     return await ctx.send("This cvar is not defined.")
@@ -973,12 +978,8 @@ class Customization(commands.Cog):
         user_vars = await helpers.get_uvars(ctx)
 
         if value is None:  # try to read from attachment otherwise display value
-            try:
-                # 4 bytes max per unicode character, sets a reasonable max on file size
-                value = await read_file_from_message(ctx, 4 * UVAR_SIZE_LIMIT)
-            except InvalidArgument as e:
-                raise e
-            except Exception:
+            value = await _get_value_or_file(ctx, None, UVAR_FILE_SIZE_LIMIT, allow_empty=True)
+            if value is None:
                 uvar = user_vars.get(name)
                 if uvar is None:
                     return await ctx.send("This uvar is not defined.")
@@ -1037,12 +1038,8 @@ class Customization(commands.Cog):
             return await self.svar_list(ctx)
 
         if value is None:  # try to read from attachment otherwise display value
-            try:
-                # 4 bytes max per unicode character, sets a reasonable max on file size
-                value = await read_file_from_message(ctx, 4 * SVAR_SIZE_LIMIT)
-            except InvalidArgument as e:
-                raise e
-            except Exception:
+            value = await _get_value_or_file(ctx, None, SVAR_FILE_SIZE_LIMIT, allow_empty=True)
+            if value is None:
                 svar = await helpers.get_svar(ctx, name)
                 if svar is None:
                     return await ctx.send("This svar is not defined.")
@@ -1115,7 +1112,7 @@ class Customization(commands.Cog):
         """Creates a global variable.
         A name will be randomly assigned upon creation.
         Attach a UTF-8 file instead of a value to set the global variable to the file's contents."""
-        value = await _get_value_or_file(ctx, value, 4 * GVAR_SIZE_LIMIT)
+        value = await _get_value_or_file(ctx, value, GVAR_FILE_SIZE_LIMIT, allow_empty=False)
         name = await helpers.create_gvar(ctx, value)
         await ctx.send(f"Created global variable `{name}`.")
 
@@ -1123,7 +1120,7 @@ class Customization(commands.Cog):
     async def gvar_edit(self, ctx, name, *, value=None):
         """Edits a global variable.
         Attach a UTF-8 file instead of a value to set the global variable to the file's contents."""
-        value = await _get_value_or_file(ctx, value, 4 * GVAR_SIZE_LIMIT)
+        value = await _get_value_or_file(ctx, value, GVAR_FILE_SIZE_LIMIT, allow_empty=False)
         await helpers.update_gvar(ctx, name, value)
         await ctx.send(f"Global variable `{name}` edited.")
 
@@ -1266,7 +1263,10 @@ async def read_file_from_message(ctx, size_limit):
     """Takes a given message, pulls the first attachment, and returns the read string in utf-8 format"""
     attached_file = ctx.message.attachments[0]
     if attached_file.size > size_limit:
-        raise InvalidArgument(f"This file upload must not exceed {size_limit} bytes.")
+        raise InvalidArgument(
+            f"This file upload must not exceed {size_limit // UTF8_MAX_BYTES_PER_CHAR:,} characters "
+            f"or {size_limit:,} bytes."
+        )
     file_bytes = await attached_file.read()
     try:
         return file_bytes.decode("utf-8")
@@ -1274,12 +1274,14 @@ async def read_file_from_message(ctx, size_limit):
         raise InvalidArgument("Uploaded file must be text in utf-8 format") from e
 
 
-async def _get_value_or_file(ctx, value, size_limit):
+async def _get_value_or_file(ctx, value, size_limit, allow_empty=False):
     """Gets value from parameter or file attachment, with user-friendly error handling"""
     if value is None:
         try:
             value = await read_file_from_message(ctx, size_limit)
         except IndexError:
+            if allow_empty:
+                return None
             raise InvalidArgument("No input or file attachment found.")
     return value
 

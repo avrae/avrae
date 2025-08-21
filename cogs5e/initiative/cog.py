@@ -198,6 +198,7 @@ class InitTracker(commands.Cog):
         `-resist` <damage type> - Gives the combatant resistance to the given damage type.
         `-immune` <damage type> - Gives the combatant immunity to the given damage type.
         `-vuln` <damage type> - Gives the combatant vulnerability to the given damage type.
+        `-absorb` <damage type> - Gives the combatant absorption to the given damage type.
         `-cr <cr>` Sets the combatant's CR.
         `-type <creature type>` Sets the combatant's creature type.
         `-note <note>` - Sets the combatant's note.
@@ -662,6 +663,7 @@ class InitTracker(commands.Cog):
         `-resist <damage type>` - Gives the combatant resistance to the given damage type.
         `-immune <damage type>` - Gives the combatant immunity to the given damage type.
         `-vuln <damage type>` - Gives the combatant vulnerability to the given damage type.
+        `-absorb <damage type>` - Gives the combatant absorption to the given damage type.
         `-neutral <damage type>` - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
         `-group <group>` - Adds the combatant to a group. To remove them from group, use -group None.
         `-max <maxhp>` - Modifies the combatants' Max HP. Adds if starts with +/- or sets otherwise.
@@ -786,6 +788,7 @@ class InitTracker(commands.Cog):
         @option("resist", resist_type="resist")
         @option("immune", resist_type="immune")
         @option("vuln", resist_type="vuln")
+        @option("absorb", resist_type="absorb")
         @option("neutral", resist_type="neutral")
         async def resist(combatant, resist_type):
             result = []
@@ -980,6 +983,7 @@ class InitTracker(commands.Cog):
         `-resist <damage type>` - Gives the combatant resistance to the given damage type.
         `-immune <damage type>` - Gives the combatant immunity to the given damage type.
         `-vuln <damage type>` - Gives the combatant vulnerability to the given damage type.
+        `-absorb <damage type>` - Gives the combatant absorption to the given damage type.
         `-neutral <damage type>` - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
         __Checks/Saves__
         `-sb <save bonus>` - Adds a bonus to all saving throws. Per-stat bonuses can be specified using the stat's 3 letter abbreviation. (e.g. `-sb 1d4|dex`)
@@ -1073,10 +1077,8 @@ class InitTracker(commands.Cog):
             if effect is None:
                 confirmation = await confirm(
                     ctx,
-                    (
-                        f"Are you sure you want to remove all effects ({len(effects)}) from {combatant.name}? (Reply"
-                        " with yes/no)"
-                    ),
+                    f"Are you sure you want to remove all effects ({len(effects)}) from {combatant.name}? (Reply"
+                    " with yes/no)",
                     delete_msgs=True,
                 )
                 if confirmation:

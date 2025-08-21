@@ -95,7 +95,8 @@ class Monster(StatBlock, Sourced):
             vuln = kwargs.get("vuln", [])
             resist = kwargs.get("resist", [])
             immune = kwargs.get("immune", [])
-            resistances = Resistances.from_dict(dict(vuln=vuln, resist=resist, immune=immune))
+            absorb = kwargs.get("absorb", [])
+            resistances = Resistances.from_dict(dict(vuln=vuln, resist=resist, immune=immune, absorb=absorb))
 
         try:
             levels = Levels({"Monster": floatify_cr(cr)})
@@ -277,14 +278,16 @@ class Monster(StatBlock, Sourced):
 
     def get_hidden_stat_array(self):
         stats = ["Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"]
-        for i, stat in enumerate((
-            self.stats.strength,
-            self.stats.dexterity,
-            self.stats.constitution,
-            self.stats.intelligence,
-            self.stats.wisdom,
-            self.stats.charisma,
-        )):
+        for i, stat in enumerate(
+            (
+                self.stats.strength,
+                self.stats.dexterity,
+                self.stats.constitution,
+                self.stats.intelligence,
+                self.stats.wisdom,
+                self.stats.charisma,
+            )
+        ):
             if stat <= 3:
                 stats[i] = "Very Low"
             elif 3 < stat <= 7:
@@ -334,6 +337,8 @@ class Monster(StatBlock, Sourced):
             desc += f"**Resistances** {', '.join(str(r) for r in self._displayed_resistances.resist)}\n"
         if self._displayed_resistances.immune:
             desc += f"**Damage Immunities** {', '.join(str(r) for r in self._displayed_resistances.immune)}\n"
+        if self._displayed_resistances.absorb:
+            desc += f"**Absorbing** {', '.join(str(r) for r in self._displayed_resistances.absorb)}\n"
         if self.condition_immune:
             desc += f"**Condition Immunities** {', '.join(map(str, self.condition_immune))}\n"
         if self.languages:

@@ -21,7 +21,7 @@ from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from gamedata.compendium import compendium
-from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_NAMES, STAT_NAMES
+from utils.constants import SAVE_NAMES, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from utils.enums import ActivationType
 from .abc import SHEET_VERSION, SheetLoaderABC
@@ -504,31 +504,30 @@ class DicecloudV2Parser(SheetLoaderABC):
         if self.character_data is None:
             raise Exception("You must call get_character() first.")
 
-        # only unqiue resistances pls
+        # only unique resistances pls
         out = {"resist": set(), "immune": set(), "vuln": set()}
 
         for dmg_mult in self._by_type["damageMultiplier"]:
             if not dmg_mult.get("inactive"):
                 # each resistance property can give multiple resistances
                 for dmg_type in dmg_mult["damageTypes"]:
-                    if dmg_type in DAMAGE_TYPES:
-                        for exclude in dmg_mult.get("excludeTags", []):
-                            dmg_type = f"non{exclude} {dmg_type}"
-                        for include in dmg_mult.get("includeTags", []):
-                            dmg_type = f"{include} {dmg_type}"
-                        # if we're immune, nothing else matters
-                        if dmg_type in out["immune"]:
-                            continue
-                        mult = dmg_mult["value"]
-                        if mult <= 0:
-                            # if it turns out we're immune, discard the others
-                            out["immune"].add(dmg_type)
-                            out["resist"].discard(dmg_type)
-                            out["vuln"].discard(dmg_type)
-                        elif mult < 1:
-                            out["resist"].add(dmg_type)
-                        elif mult > 1:
-                            out["vuln"].add(dmg_type)
+                    for exclude in dmg_mult.get("excludeTags", []):
+                        dmg_type = f"non{exclude} {dmg_type}"
+                    for include in dmg_mult.get("includeTags", []):
+                        dmg_type = f"{include} {dmg_type}"
+                    # if we're immune, nothing else matters
+                    if dmg_type in out["immune"]:
+                        continue
+                    mult = dmg_mult["value"]
+                    if mult <= 0:
+                        # if it turns out we're immune, discard the others
+                        out["immune"].add(dmg_type)
+                        out["resist"].discard(dmg_type)
+                        out["vuln"].discard(dmg_type)
+                    elif mult < 1:
+                        out["resist"].add(dmg_type)
+                    elif mult > 1:
+                        out["vuln"].add(dmg_type)
 
         return Resistances.from_dict(out)
 

@@ -54,6 +54,19 @@ You can specify the type of hindrance you want to apply with the ``-choice`` arg
 * ``-choice blindness`` for the Blindness option
 * ``-choice deafness`` for the Deafness option
 
+Chromatic Orb
+-----------------
+You can specify the type of damage you want to apply with the ``-choice`` argument or by setting the ``ChromaticOrbDType`` cvar.
+
+* ``-choice acid`` for Acid damage
+* ``-choice cold`` for Cold damage
+* ``-choice fire`` for Fire damage
+* ``-choice lightning`` for Lightning damage
+* ``-choice poison`` for Poison damage
+* ``-choice thunder`` for Thunder damage
+
+You can also set a default damage type using the ``ChromaticOrbDType`` cvar (e.g., ``!cvar ChromaticOrbDType fire``). The cvar will be used if no ``-choice`` is provided at cast time. If neither is provided, it will do [chromatic] damage by default.
+
 Dragon's Breath
 -----------------
 You can specify the type of damage you want to apply with the ``-choice`` argument. If a choice is *not* provided at cast time, it will do [chromatic] damage by default, and you will need to use ``-choice [element]`` to specify the damage type each time the breath attack is used, and adjustments may be required to the targets health, depending on resistances.
@@ -149,6 +162,20 @@ You can specify the affected ability score with ``-choice``. This also applies t
 Shield
 -----------------
 You can have the automation automatically heal you for the damage you absorb by adding ``-amt [amount]`` to the end of the command. (``-amt 5`` for instance). It will heal you for the amount you specify.
+
+Sorcerous Burst
+-----------------
+You can specify the type of damage you want to apply with the ``-choice`` argument or by setting the ``SorcerousBurstDType`` cvar.
+
+* ``-choice acid`` for Acid damage
+* ``-choice cold`` for Cold damage
+* ``-choice fire`` for Fire damage
+* ``-choice lightning`` for Lightning damage
+* ``-choice poison`` for Poison damage
+* ``-choice psychic`` for Psychic damage
+* ``-choice thunder`` for Thunder damage
+
+You can also set a default damage type using the ``SorcerousBurstDType`` cvar (e.g., ``!cvar SorcerousBurstDType lightning``). The cvar will be used if no ``-choice`` is provided at cast time. If neither is provided, it will do [elemental] damage by default.
 
 Spirit Guardians
 -------------------

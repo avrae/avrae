@@ -121,13 +121,13 @@ class Resistances:
     def __str__(self):
         out = []
         if self.resist:
-            out.append(f"**Resistances**: {', '.join([str(r) for r in self.resist])}")
+            out.append(f"**Resistances**: {', '.join(sorted([str(r) for r in self.resist]))}")
         if self.immune:
-            out.append(f"**Immunities**: {', '.join([str(r) for r in self.immune])}")
+            out.append(f"**Immunities**: {', '.join(sorted([str(r) for r in self.immune]))}")
         if self.vuln:
-            out.append(f"**Vulnerabilities**: {', '.join([str(r) for r in self.vuln])}")
+            out.append(f"**Vulnerabilities**: {', '.join(sorted([str(r) for r in self.vuln]))}")
         if self.neutral:
-            out.append(f"**Ignored**: {', '.join([str(r) for r in self.neutral])}")
+            out.append(f"**Ignored**: {', '.join(sorted([str(r) for r in self.neutral]))}")
         return "\n".join(out)
 
 
@@ -154,7 +154,8 @@ class Resistance:
             only = set()
         else:
             only = set(t.lower() for t in only)
-        self.dtype = dtype.lower()
+        # Don't lowercase multiword displayed resistances.
+        self.dtype = dtype if " " in dtype else dtype.lower()
         self.unless = unless
         self.only = only
 
@@ -225,7 +226,8 @@ class Resistance:
         out = []
         out.extend(f"non{u}" for u in self.unless)
         out.extend(self.only)
-        out.append(self.dtype)
+        # Don't titlecase multiword displayed resistances and don't use .title() because of apostrophes.
+        out.append(self.dtype if " " in self.dtype else self.dtype.capitalize())
         return " ".join(out)
 
     def __repr__(self):

@@ -101,6 +101,8 @@ class CastSpell(Effect):
                 autoctx.metavars["spell_level"] = autoctx.spell_level_override
             autoctx.spell = spell
 
+            autoctx.meta_queue(f"**Range**: {spell.range}")
+
             results = self.run_children(spell.automation.effects, autoctx)
 
             # and restore them

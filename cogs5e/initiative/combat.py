@@ -393,7 +393,8 @@ class Combat:
     @overload
     async def select_combatant(
         self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[True] = False
-    ) -> Optional[Combatant | CombatantGroup]: ...
+    ) -> Optional[Combatant | CombatantGroup]:
+        ...
 
     async def select_combatant(
         self, ctx, name: str, choice_message: Optional[str] = None, select_group: Literal[False] = False
@@ -413,7 +414,7 @@ class Combat:
             name,
             lambda c: c.name,
             message=choice_message,
-            selectkey=lambda c: f"{c.name} {c.hp_str()}",
+            selectkey=lambda c: f"{c.name} {c.hp_str()}{'<Group>' if c.type == CombatantType.GROUP else ''}",
         )
 
     def advance_turn(self) -> Tuple[bool, List[str]]:

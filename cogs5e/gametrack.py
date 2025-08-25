@@ -212,7 +212,7 @@ class GameTrack(commands.Cog):
         await character.commit(ctx)
         return await gameutils.send_current_coin(ctx, character, deltas=deltas)
 
-    @game.group(name="hp", invoke_without_command=True)
+    @game.group(name="hp", aliases=["HP"], invoke_without_command=True)
     async def game_hp(self, ctx, *, hp: str = None):
         """Modifies the HP of the current active character."""
         character: Character = await ctx.get_character()

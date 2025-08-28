@@ -9,6 +9,7 @@ from cogs5e.models.errors import InvalidSaveType
 from cogs5e.models.automation.utils import parse_save_bonuses
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
+from utils.constants import SKILL_MAP
 from . import validators
 
 if TYPE_CHECKING:
@@ -261,7 +262,7 @@ class SimpleCombatant(AliasStatBlock):
 
     def save(self, ability: str, adv: bool = None):
         """
-        Rolls a combatant's saving throw.
+        Rolls a combatant's saving throw with ALL init effects and csettings.
 
         :param str ability: The type of save ("str", "dexterity", etc).
         :param bool adv: Whether to roll the save with advantage. Rolls with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
@@ -273,15 +274,108 @@ class SimpleCombatant(AliasStatBlock):
         except ValueError:
             raise InvalidSaveType
 
-        sb = parse_save_bonuses(
-            ability, self._combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
+        # Get stat abbreviation for effects lookup
+        stat = str(ability)[:3].lower()
+
+        # === Save bonuses ===
+        save_bonuses = self._combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
+        sb = parse_save_bonuses(ability, save_bonuses)
+
+        # === Save advantage/disadvantage ===
+        sadv_effects = self._combatant.active_effects(
+            mapper=lambda effect: effect.effects.save_adv, reducer=lambda saves: set().union(*saves), default=set()
         )
-        saveroll = save.d20(base_adv=adv)
+        sdis_effects = self._combatant.active_effects(
+            mapper=lambda effect: effect.effects.save_dis, reducer=lambda saves: set().union(*saves), default=set()
+        )
+
+        # === Target-side DC bonuses (converted to save bonuses) ===
+        target_dc_bonuses = self._combatant.active_effects(
+            mapper=lambda effect: effect.effects.dc_bonus, reducer=sum, default=0
+        )
+        if target_dc_bonuses:
+            sb.append(str(-target_dc_bonuses))
+
+        # Determine advantage (user override takes priority)
+        final_adv = adv
+        if final_adv is None:
+            if stat in sadv_effects:
+                final_adv = True
+            elif stat in sdis_effects:
+                final_adv = False
+
+        # === Character settings ===
+        reroll = None
+        if hasattr(self._combatant, "character") and self._combatant.character:
+            # Halfling luck
+            reroll = self._combatant.character.options.reroll
+
+        # === BUILD ROLL ===
+        saveroll = save.d20(base_adv=final_adv, reroll=reroll)
+
         if sb:
             saveroll = f'{saveroll}+{"+".join(sb)}'
 
         save_roll = roll(saveroll)
         return SimpleRollResult(save_roll)
+
+    def check(self, skill_name: str, adv: bool = None):
+        """
+        Rolls a combatant's skill check with ALL init effects and csettings.
+
+        :param str skill_name: The name of the skill to check.
+        :param bool adv: Whether to roll with advantage. Rolls with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
+        :returns: A SimpleRollResult describing the rolled check.
+        :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
+        """  # noqa: E501
+        try:
+            skill, skill_key = self._combatant.skills.get(str(skill_name), return_name=True)
+        except ValueError:
+            raise ValueError(f"Invalid skill: {skill_name}")
+
+        base_ability_key = SKILL_MAP[skill_key]
+
+        # === Check bonuses ===
+        combat_bonuses = self._combatant.active_effects(mapper=lambda effect: effect.effects.check_bonus, default=[])
+
+        # === Check advantage/disadvantage ===
+        cadv_effects = self._combatant.active_effects(
+            mapper=lambda effect: effect.effects.check_adv, reducer=lambda checks: set().union(*checks), default=set()
+        )
+        cdis_effects = self._combatant.active_effects(
+            mapper=lambda effect: effect.effects.check_dis, reducer=lambda checks: set().union(*checks), default=set()
+        )
+
+        # Determine final advantage (user override takes priority)
+        final_adv = adv
+        if final_adv is None:
+            if skill_key in cadv_effects or base_ability_key in cadv_effects:
+                final_adv = True
+            elif skill_key in cdis_effects or base_ability_key in cdis_effects:
+                final_adv = False
+
+        # === CHARACTER SETTINGS ===
+        reroll = None
+        min_val = None
+
+        if hasattr(self._combatant, "character") and self._combatant.character:
+            char = self._combatant.character
+
+            # Halfling luck
+            reroll = char.options.reroll
+
+            # Reliable talent (min 10 for proficient skills)
+            if char.options.talent and skill.prof >= 1:
+                min_val = 10
+
+        # === BUILD ROLL ===
+        roll_str = skill.d20(base_adv=final_adv, reroll=reroll, min_val=min_val)
+
+        if combat_bonuses:
+            roll_str = f"{roll_str}+{'+'.join(combat_bonuses)}"
+
+        result = roll(roll_str)
+        return SimpleRollResult(result)
 
     def damage(self, dice_str, crit=False, d=None, c=None, critdice=0, overheal=False):
         """

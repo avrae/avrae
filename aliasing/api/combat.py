@@ -272,7 +272,7 @@ class SimpleCombatant(AliasStatBlock):
 
         :param str ability: The type of save ("str", "dexterity", etc).
         :param bool adv: Whether to roll the save with advantage. Rolls with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
-        :param bool include_ieffects: Whether to include initiative effects that modify save advantage, disadvantage, or DC.
+        :param bool include_ieffects: Whether to include initiative effects that modify save advantage or disadvantage.
         :param bool include_csettings: Whether to include character settings such as Halfling Luck.
         :returns: A SimpleRollResult describing the rolled save.
         :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
@@ -282,17 +282,14 @@ class SimpleCombatant(AliasStatBlock):
         except ValueError:
             raise InvalidSaveType
 
-        # Save bonuses were already included by this method before the optional
-        # modifiers were added, so keep them unconditional for compatibility.
+        # === Save bonuses ===
         save_bonuses = self._combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
         sb = parse_save_bonuses(ability, save_bonuses)
 
         final_adv = adv
         reroll = None
-
         if include_ieffects:
             stat = str(ability)[:3].lower()
-
             sadv_effects = self._combatant.active_effects(
                 mapper=lambda effect: effect.effects.save_adv,
                 reducer=lambda saves: set().union(*saves),
@@ -304,13 +301,6 @@ class SimpleCombatant(AliasStatBlock):
                 default=set(),
             )
 
-            target_dc_bonuses = self._combatant.active_effects(
-                mapper=lambda effect: effect.effects.dc_bonus, reducer=sum, default=0
-            )
-            if target_dc_bonuses:
-                sb.append(str(-target_dc_bonuses))
-
-            # An explicit argument takes priority over initiative effects.
             if final_adv is None:
                 if stat in sadv_effects:
                     final_adv = True
@@ -354,11 +344,9 @@ class SimpleCombatant(AliasStatBlock):
         final_adv = adv
         reroll = None
         min_val = None
-
         combat_bonuses = []
         if include_ieffects:
             base_ability_key = SKILL_MAP[skill_key]
-
             combat_bonuses = self._combatant.active_effects(
                 mapper=lambda effect: effect.effects.check_bonus, default=[]
             )
@@ -373,7 +361,6 @@ class SimpleCombatant(AliasStatBlock):
                 default=set(),
             )
 
-            # An explicit argument takes priority over initiative effects.
             if final_adv is None:
                 if skill_key in cadv_effects or base_ability_key in cadv_effects:
                     final_adv = True

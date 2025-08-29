@@ -309,6 +309,7 @@ async def cast_spell(
         phrase = args.join("phrase", "\n")
         if phrase:
             embed.description = f"*{phrase}*"
+        embed.add_field(name="Meta", value=f"**Range**: {spell.range}")
         embed.add_field(name="Description", value=smart_trim(spell.description), inline=False)
         embed.set_footer(text="No spell automation found.")
 

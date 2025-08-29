@@ -112,6 +112,9 @@ class Automation:
         for effect in self.effects:
             automation_results.append(effect.run(autoctx))
 
+        if spell:
+            autoctx.meta_queue(f"**Range**: {spell.range}")
+
         autoctx.build_embed()
         for user, msgs in autoctx.pm_queue.items():
             try:

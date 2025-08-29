@@ -30,7 +30,7 @@ from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute, AttackSyntaxError, InvalidImageURL, InvalidCoin
-from cogs5e.sheets.utils import get_actions_for_names
+from cogs5e.sheets.utils import get_actions_for_names, resolve_version_context
 from gamedata.compendium import compendium
 from utils import config
 from utils.constants import DAMAGE_TYPES, COIN_TYPES
@@ -360,9 +360,13 @@ class GoogleSheet(SheetLoaderABC):
             )
         except Exception:
             raise
-        return await asyncio.get_event_loop().run_in_executor(None, self._load_character, owner_id, args)
+        
+        # Get version context for action filtering
+        version = await resolve_version_context(ctx)
+        
+        return await asyncio.get_event_loop().run_in_executor(None, self._load_character, owner_id, args, version)
 
-    def _load_character(self, owner_id: str, args):
+    def _load_character(self, owner_id: str, args, version: str):
         upstream = f"google-{self.url}"
         active = False
         sheet_type = "google"
@@ -394,7 +398,7 @@ class GoogleSheet(SheetLoaderABC):
         live = None
         race = self.get_race()
         background = self.get_background()
-        actions = self.get_actions()
+        actions = self.get_actions(version)
 
         character = Character(
             owner_id,
@@ -736,14 +740,14 @@ class GoogleSheet(SheetLoaderABC):
         spellbook = Spellbook(slots, slots, spells, dc, sab, self.total_level, spell_mod)
         return spellbook
 
-    def get_actions(self):
+    def get_actions(self, version: str = "2024"):
         # v1: Z45:AH56
         # v2: C59:AC84
         if self.version >= (2, 0):
             feature_names = self.character_data.value_range("C59:AC84")
         else:
             feature_names = self.character_data.value_range("Z45:AH56")
-        actions = get_actions_for_names(feature_names)
+        actions = get_actions_for_names(feature_names, version)
         return Actions(actions)
 
     # helper methods

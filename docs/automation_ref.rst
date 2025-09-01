@@ -295,6 +295,7 @@ IEffect
         parent?: string;
         target_self?: boolean;
         tick_on_caster?: boolean;
+        hidden?: boolean;
     }
 
 Adds an InitTracker Effect to a targeted creature, if the automation target is in combat.
@@ -385,6 +386,11 @@ It must be inside a Target effect.
         *caster's* next turn, rather than the *target's*.
 
         If the caster is not in combat, this has no effect.
+
+    .. attribute:: hidden
+
+        *optional, default false* - If true, the effect's stat bonuses and description will be hidden in combat 
+        displays while still showing the effect name and duration.
 
 **Variables**
 

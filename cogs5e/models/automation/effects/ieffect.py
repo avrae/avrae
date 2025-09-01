@@ -28,6 +28,7 @@ class LegacyIEffect(Effect):
         stacking: bool = False,
         save_as: str = None,
         parent: str = None,
+        hidden: bool = False,
         **kwargs,
     ):
         super().__init__("ieffect", **kwargs)
@@ -40,6 +41,7 @@ class LegacyIEffect(Effect):
         self.stacking = stacking
         self.save_as = save_as
         self.parent = parent
+        self.hidden = hidden
 
     def to_dict(self):
         out = super().to_dict()
@@ -53,6 +55,7 @@ class LegacyIEffect(Effect):
             "stacking": self.stacking,
             "save_as": self.save_as,
             "parent": self.parent,
+            "hidden": self.hidden,
         })
         return out
 
@@ -91,6 +94,7 @@ class LegacyIEffect(Effect):
                 end_on_turn_end=self.tick_on_end,
                 concentration=self.concentration,
                 desc=desc,
+                hidden=self.hidden,
             )
             conc_parent = None
             stack_parent = None
@@ -113,6 +117,7 @@ class LegacyIEffect(Effect):
                     combatant=autoctx.target.target,
                     name=new_name,
                     effect_args=effect_args,
+                    hidden=self.hidden,
                 )
 
             # parenting
@@ -131,7 +136,8 @@ class LegacyIEffect(Effect):
 
             # add
             effect_result = autoctx.target.target.add_effect(effect)
-            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
+            is_hidden = autoctx.args.last("h", type_=bool) or effect.hidden
+            autoctx.queue(f"**Effect**: {effect.get_str(description=not is_hidden, parenthetical=not is_hidden)}")
             if conc_conflict := effect_result["conc_conflict"]:
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
 
@@ -148,8 +154,10 @@ class LegacyIEffect(Effect):
                 end_on_turn_end=self.tick_on_end,
                 concentration=self.concentration,
                 desc=desc,
+                hidden=self.hidden,
             )
-            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
+            is_hidden = autoctx.args.last("h", type_=bool) or effect.hidden
+            autoctx.queue(f"**Effect**: {effect.get_str(description=not is_hidden, parenthetical=not is_hidden)}")
 
         return IEffectResult(effect=effect, conc_conflict=conc_conflict)
 
@@ -174,6 +182,7 @@ class IEffect(Effect):
         parent: str = None,
         target_self: bool = False,
         tick_on_caster: bool = False,
+        hidden: bool = False,
         **kwargs,
     ):
         if attacks is None:
@@ -194,6 +203,7 @@ class IEffect(Effect):
         self.parent = parent
         self.target_self = target_self
         self.tick_on_caster = tick_on_caster
+        self.hidden = hidden
 
     @classmethod
     def from_data(cls, data):
@@ -222,6 +232,7 @@ class IEffect(Effect):
             "parent": self.parent,
             "target_self": self.target_self,
             "tick_on_caster": self.tick_on_caster,
+            "hidden": self.hidden,
         })
         return out
 
@@ -287,6 +298,7 @@ class IEffect(Effect):
                 concentration=self.concentration,
                 desc=desc,
                 tick_on_combatant_id=tick_on_combatant_id,
+                hidden=self.hidden,
             )
             conc_parent = None
             stack_parent = None
@@ -310,6 +322,7 @@ class IEffect(Effect):
                     combatant=combatant,
                     name=new_name,
                     passive_effects=effects,
+                    hidden=self.hidden,
                 )
 
             # parenting
@@ -340,7 +353,10 @@ class IEffect(Effect):
 
             # add
             effect_result = combatant.add_effect(effect)
-            autoctx.queue(f"**Effect{effect_target}**: {effect.get_str(description=False)}")
+            is_hidden = autoctx.args.last("h", type_=bool) or effect.hidden
+            autoctx.queue(
+                f"**Effect{effect_target}**: {effect.get_str(description=not is_hidden, parenthetical=not is_hidden)}"
+            )
             if conc_conflict := effect_result["conc_conflict"]:
                 autoctx.queue(f"**Concentration{effect_target}**: dropped {', '.join([e.name for e in conc_conflict])}")
 
@@ -360,7 +376,10 @@ class IEffect(Effect):
                 concentration=self.concentration,
                 desc=desc,
             )
-            autoctx.queue(f"**Effect{effect_target}**: {effect.get_str(description=False)}")
+            is_hidden = autoctx.args.last("h", type_=bool) or effect.hidden
+            autoctx.queue(
+                f"**Effect{effect_target}**: {effect.get_str(description=not is_hidden, parenthetical=not is_hidden)}"
+            )
 
         return IEffectResult(effect=effect, conc_conflict=conc_conflict)
 

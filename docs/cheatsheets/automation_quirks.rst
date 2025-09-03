@@ -67,6 +67,13 @@ You can specify the type of damage you want to apply with the ``-choice`` argume
 
 You can also set a default damage type using the ``ChromaticOrbDType`` cvar (e.g., ``!cvar ChromaticOrbDType fire``). The cvar will be used if no ``-choice`` is provided at cast time. If neither is provided, it will do [chromatic] damage by default.
 
+Destructive Wave
+-----------------
+You can specify the type of additional damage you want to apply with the ``-choice`` argument.
+
+* ``-choice necrotic`` for Necrotic damage
+* No choice or any other value defaults to Radiant damage
+
 Dragon's Breath
 -----------------
 You can specify the type of damage you want to apply with the ``-choice`` argument. If a choice is *not* provided at cast time, it will do [chromatic] damage by default, and you will need to use ``-choice [element]`` to specify the damage type each time the breath attack is used, and adjustments may be required to the targets health, depending on resistances.

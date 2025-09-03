@@ -73,6 +73,16 @@ You can specify the type of damage you want to apply with the ``-choice`` argume
 
 In this case, it does not check against a value, but instead just inputs whatever is given. This means you can technically give someone Pizza Breath with ``-choice pizza``.
 
+Elemental Weapon
+-----------------
+You can specify the type of elemental damage you want to apply with the ``-choice`` argument.
+
+* ``-choice acid`` for Acid damage
+* ``-choice cold`` for Cold damage
+* ``-choice fire`` for Fire damage
+* ``-choice lightning`` for Lightning damage
+* ``-choice thunder`` for Thunder damage
+
 Eldritch Blast
 -----------------
 Eldritch Blast has a number of Eldritch Invocations that can affect it. You can add these to your ``invocations`` cvar to have them automatically applied when you cast Eldritch Blast.

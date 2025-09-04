@@ -215,7 +215,7 @@ class Skills:
 
     def __str__(self):
         out = []
-        for skill_name in set(SKILL_NAMES) - {"initiative"}:
+        for skill_name in SKILL_NAMES:
             skill = self.skills[skill_name]
             to_add = False
             modifiers = []

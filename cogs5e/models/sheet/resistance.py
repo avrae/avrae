@@ -3,6 +3,7 @@ import re
 import d20
 
 from utils.constants import RESIST_TYPES
+from utils.functions import rulescase, titlecase
 
 
 class Resistances:
@@ -226,9 +227,8 @@ class Resistance:
         out = []
         out.extend(f"non{u}" for u in self.unless)
         out.extend(self.only)
-        # Don't titlecase multiword displayed resistances and don't use .title() because of apostrophes.
-        out.append(self.dtype if " " in self.dtype else self.dtype.capitalize())
-        return " ".join(out)
+        out.append(self.dtype if " " in self.dtype else titlecase(self.dtype))
+        return rulescase(" ".join(out))
 
     def __repr__(self):
         return f"<Resistance {repr(self.dtype)} unless={repr(self.unless)} only={repr(self.only)}>"

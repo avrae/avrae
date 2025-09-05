@@ -155,8 +155,7 @@ class Resistance:
             only = set()
         else:
             only = set(t.lower() for t in only)
-        # Don't lowercase multiword displayed resistances.
-        self.dtype = dtype if " " in dtype else dtype.lower()
+        self.dtype = dtype.lower()
         self.unless = unless
         self.only = only
 

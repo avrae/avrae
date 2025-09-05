@@ -854,7 +854,7 @@ class InitTracker(commands.Cog):
             )
             await ctx.send(result, components=utils.combatant_interaction_components(combatant, message_type))
 
-    @init.group(invoke_without_command=True)
+    @init.group(aliases=["HP"], invoke_without_command=True)
     async def hp(self, ctx, name: str, *, hp: str = None):
         """Modifies the HP of a combatant."""
         combat = await ctx.get_combat()

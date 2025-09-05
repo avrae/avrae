@@ -65,6 +65,8 @@ class CastSpell(Effect):
             autoctx.meta_queue(f"**Error**: Unable to cast another spell inside a spell.")
             return CastSpellResult(success=False, spell_id=self.id)
 
+        autoctx.meta_queue(f"**Range**: {spell.range}")
+
         dc_override = ab_override = spell_override = None
         if spell.automation and spell.automation.effects:
             # save old autoctx values

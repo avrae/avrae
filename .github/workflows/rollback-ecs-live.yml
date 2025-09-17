@@ -6,10 +6,13 @@ on:
             revision:
                 description: 'Task definition revision number (leave blank to use previous one)'
                 required: false
+            environment:
+                description: 'ECS environment (live or nightly)'
+                required: true
 
 env:
     CLUSTER_NAME: avrae-live
-    SERVICE_NAME: avrae-bot
+    SERVICE_NAME: ${{ github.event.inputs.environment == 'live' && 'avrae-bot' || 'avrae-bot-nightly' }}
     REGION: us-east-1
 
 jobs:

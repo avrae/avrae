@@ -87,7 +87,7 @@ class AliasStatBlock:
     @property
     def resistances(self):
         """
-        The resistances, immunities, and vulnerabilities of the creature.
+        The resistances, immunities, vulnerabilities, and absorptions of the creature.
 
         :rtype: :class:`~aliasing.api.statblock.AliasResistances`
         """
@@ -615,7 +615,7 @@ class AliasSaves:
 
 class AliasResistances:
     """
-    A statblock's resistances, immunities, vulnerabilities, and explicit neural damage types.
+    A statblock's resistances, immunities, vulnerabilities, absorptions, and explicit neural damage types.
     """
 
     def __init__(self, resistances):
@@ -661,6 +661,15 @@ class AliasResistances:
         """
         return self._resistances.neutral
 
+    @property
+    def absorb(self):
+        """
+        A list of damage types that the stat block absorbs (heals instead of damages, or vice versa).
+
+        :rtype: list[Resistance]
+        """
+        return self._resistances.absorb
+
     def is_resistant(self, damage_type: str) -> bool:
         """
         Whether or not this AliasResistances contains any resistances that apply to the given damage type string.
@@ -689,11 +698,21 @@ class AliasResistances:
         """Whether or not this AliasResistances contains any neutrals that apply to the given damage type string."""
         return self._resistances.is_neutral(str(damage_type))
 
+    def is_absorbing(self, damage_type: str) -> bool:
+        """
+        Whether or not this AliasResistances contains any absorptions that apply to the given damage type string.
+
+        If the AliasResistances contains both a neutral and am absorptions that applies, returns False.
+        """
+        return self._resistances.is_absorbing(str(damage_type))
+
     def __str__(self):
         return str(self._resistances)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} resist={self.resist!r} vuln={self.vuln!r} immune={self.immune!r}>"
+        return (
+            f"<{self.__class__.__name__} resist={self.resist!r} vuln={self.vuln!r} immune={self.immune!r} absorb={self.absorb!r}>"
+        )
 
 
 class AliasSpellbook:

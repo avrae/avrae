@@ -24,6 +24,7 @@ class PassiveEffects(BaseModel):
     resistances: Optional[List[str255]]
     immunities: Optional[List[str255]]
     vulnerabilities: Optional[List[str255]]
+    absorptions: Optional[List[str255]]
     ignored_resistances: Optional[List[str255]]
     ac_value: Optional[int]
     ac_bonus: Optional[int]

@@ -6,12 +6,13 @@ from utils.constants import RESIST_TYPES
 
 
 class Resistances:
-    def __init__(self, resist=None, immune=None, vuln=None, neutral=None):
+    def __init__(self, resist=None, immune=None, vuln=None, neutral=None, absorb=None):
         """
         :type resist: list[Resistance]
         :type immune: list[Resistance]
         :type vuln: list[Resistance]
         :type neutral: list[Resistance]
+        :type absorb: list[Resistance]
         """
         if neutral is None:
             neutral = []
@@ -21,10 +22,13 @@ class Resistances:
             immune = []
         if resist is None:
             resist = []
+        if absorb is None:
+            absorb = []
         self.resist = resist
         self.immune = immune
         self.vuln = vuln
         self.neutral = neutral
+        self.absorb = absorb
 
     @classmethod
     def from_dict(cls, d, smart=True):
@@ -32,12 +36,15 @@ class Resistances:
 
     @classmethod
     def from_args(cls, args, **kwargs):
-        return cls.from_dict({
-            "resist": args.get("resist", [], **kwargs),
-            "immune": args.get("immune", [], **kwargs),
-            "vuln": args.get("vuln", [], **kwargs),
-            "neutral": args.get("neutral", [], **kwargs),
-        })
+        return cls.from_dict(
+            {
+                "resist": args.get("resist", [], **kwargs),
+                "immune": args.get("immune", [], **kwargs),
+                "vuln": args.get("vuln", [], **kwargs),
+                "neutral": args.get("neutral", [], **kwargs),
+                "absorb": args.get("absorb", [], **kwargs),
+            }
+        )
 
     def to_dict(self):
         return {
@@ -45,10 +52,13 @@ class Resistances:
             "immune": [t.to_dict() for t in self.immune],
             "vuln": [t.to_dict() for t in self.vuln],
             "neutral": [t.to_dict() for t in self.neutral],
+            "absorb": [t.to_dict() for t in self.absorb],
         }
 
     def copy(self):
-        return Resistances(self.resist.copy(), self.immune.copy(), self.vuln.copy(), self.neutral.copy())
+        return Resistances(
+            self.resist.copy(), self.immune.copy(), self.vuln.copy(), self.neutral.copy(), self.absorb.copy()
+        )
 
     # ---------- main funcs ----------
     def is_resistant(self, damage_type: str | set[str]) -> bool:
@@ -87,6 +97,16 @@ class Resistances:
             damage_type = set(t.lower() for t in _resist_tokenize(damage_type))
         return any(r.applies_to(damage_type) for r in self.neutral)
 
+    def is_absorbing(self, damage_type: str | set[str]) -> bool:
+        """
+        Whether or not this Resistances contains any absorptions that apply to the given damage type string.
+
+        If the Resistances contains both a neutral and an absorption that applies, returns False.
+        """
+        if isinstance(damage_type, str):
+            damage_type = set(t.lower() for t in _resist_tokenize(damage_type))
+        return any(r.applies_to(damage_type) for r in self.absorb) and not self.is_neutral(damage_type)
+
     def update(self, other, overwrite=True):
         """
         Updates this Resistances with the resistances of another.
@@ -115,6 +135,8 @@ class Resistances:
             return self.immune
         elif item == "neutral":
             return self.neutral
+        elif item == "absorb":
+            return self.absorb
         else:
             raise ValueError(f"{item} is not a resistance type.")
 
@@ -128,6 +150,8 @@ class Resistances:
             out.append(f"**Vulnerabilities**: {', '.join([str(r) for r in self.vuln])}")
         if self.neutral:
             out.append(f"**Ignored**: {', '.join([str(r) for r in self.neutral])}")
+        if self.neutral:
+            out.append(f"**Absorbs**: {', '.join([str(r) for r in self.absorb])}")
         return "\n".join(out)
 
 
@@ -299,6 +323,9 @@ def do_resistances(damage_expr, resistances, always=None, transforms=None):
             if any(im.applies_to(ann) for im in resistances.immune):
                 node = d20.BinOp(d20.Parenthetical(node), "*", d20.Literal(0))
 
+            if any(r.applies_to(ann) for r in resistances.absorb):
+                node = d20.BinOp(d20.Parenthetical(node), "*", d20.Literal(-1))
+
             return node
 
         for i, child in enumerate(node.children):
@@ -318,6 +345,7 @@ if __name__ == "__main__":
         immune=[Resistance("immune"), Resistance("this", only=["magical"])],
         vuln=[Resistance("vuln"), Resistance("both")],
         neutral=[Resistance("neutral")],
+        absorb=[Resistance("absorb")],
     )
 
     while True:

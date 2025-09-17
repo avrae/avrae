@@ -43,17 +43,19 @@ class LegacyIEffect(Effect):
 
     def to_dict(self):
         out = super().to_dict()
-        out.update({
-            "name": self.name,
-            "duration": self.duration,
-            "effects": self.effects,
-            "end": self.tick_on_end,
-            "conc": self.concentration,
-            "desc": self.desc,
-            "stacking": self.stacking,
-            "save_as": self.save_as,
-            "parent": self.parent,
-        })
+        out.update(
+            {
+                "name": self.name,
+                "duration": self.duration,
+                "effects": self.effects,
+                "end": self.tick_on_end,
+                "conc": self.concentration,
+                "desc": self.desc,
+                "stacking": self.stacking,
+                "save_as": self.save_as,
+                "parent": self.parent,
+            }
+        )
         return out
 
     def run(self, autoctx):
@@ -208,21 +210,23 @@ class IEffect(Effect):
     def to_dict(self):
         out = super().to_dict()
         effects = self.effects.data if self.effects is not None else None
-        out.update({
-            "name": self.name,
-            "duration": self.duration,
-            "effects": effects,
-            "attacks": [a.to_dict() for a in self.attacks],
-            "buttons": [b.to_dict() for b in self.buttons],
-            "end": self.end_on_turn_end,
-            "conc": self.concentration,
-            "desc": self.desc,
-            "stacking": self.stacking,
-            "save_as": self.save_as,
-            "parent": self.parent,
-            "target_self": self.target_self,
-            "tick_on_caster": self.tick_on_caster,
-        })
+        out.update(
+            {
+                "name": self.name,
+                "duration": self.duration,
+                "effects": effects,
+                "attacks": [a.to_dict() for a in self.attacks],
+                "buttons": [b.to_dict() for b in self.buttons],
+                "end": self.end_on_turn_end,
+                "conc": self.concentration,
+                "desc": self.desc,
+                "stacking": self.stacking,
+                "save_as": self.save_as,
+                "parent": self.parent,
+                "target_self": self.target_self,
+                "tick_on_caster": self.tick_on_caster,
+            }
+        )
         return out
 
     def run(self, autoctx):
@@ -404,6 +408,7 @@ class _PassiveEffectsWrapper:
             resistances=self.resolve_resistances(autoctx, "resistances"),
             immunities=self.resolve_resistances(autoctx, "immunities"),
             vulnerabilities=self.resolve_resistances(autoctx, "vulnerabilities"),
+            absorptions=self.resolve_resistances(autoctx, "absorb"),
             ignored_resistances=self.resolve_resistances(autoctx, "ignored_resistances"),
             ac_value=self.resolve_intexpression(autoctx, "ac_value"),
             ac_bonus=self.resolve_intexpression(autoctx, "ac_bonus"),

@@ -31,7 +31,7 @@ jobs:
               name: Get current task definition
               run: |
                 TASK_DEF=$(aws ecs describe-services \
-                --cluster "$ECS_CLUSTER" \
+                --cluster "$CLUSTER_NAME" \
                 --services "$SERVICE_NAME" \
                 --query "services[0].taskDefinition" \
                 --output text)
@@ -53,6 +53,6 @@ jobs:
             - name: Update ECS Service to rollback revision
               run: |
                 aws ecs update-service \
-                --cluster "$ECS_CLUSTER" \
+                --cluster "$CLUSTER_NAME" \
                 --service "$SERVICE_NAME" \
                 --task-definition "${{ steps.rollback-taskdef.outputs.rollback }}"

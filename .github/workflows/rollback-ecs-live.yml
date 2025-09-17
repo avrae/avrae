@@ -1,4 +1,4 @@
-name: Rollback Avrae to prior version
+name: Rollback Live Avrae to prior version
 
 on:
     workflow_dispatch:

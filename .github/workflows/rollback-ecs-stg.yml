@@ -24,7 +24,7 @@ jobs:
               uses: aws-actions/configure-aws-credentials@v4
               with:
                   role-to-assume: ${{ secrets.AVRAE_GITHUB_OIDC_ROLE_ARN }}
-                  role-session-name: "avrae-avrae-deploy-live"
+                  role-session-name: "avrae-avrae-deploy-stg"
                   aws-region: ${{ env.REGION }}
 
             - id: get-taskdef

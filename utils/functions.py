@@ -567,3 +567,23 @@ def get_initials(name: str) -> str:
 
     # Multiple words, find initials
     return "".join(word[0] for word in split_name if word)
+
+
+def titlecase(text: str) -> str:
+    """
+    An alternative to str.title() that Shouldn'T Make As Many Mistakes.
+    """
+    return re.sub(
+        r"[A-Za-z][a-z]*(['’][A-Za-z][a-z]*)?",
+        lambda mo: mo.group(0) if mo.group(0) in constants.SMALL_WORDS else mo.group(0).capitalize(),
+        text,
+    )
+
+
+def rulescase(text: str) -> str:
+    """
+    Applies 2024 capitalization conventions to rules terms.
+    """
+    for term in constants.CAPITALIZED_GAME_TERMS:
+        text = text.replace(term.lower(), term)
+    return text

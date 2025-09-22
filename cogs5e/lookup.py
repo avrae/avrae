@@ -681,11 +681,14 @@ class Lookup(commands.Cog):
                     embed_queue.append(disnake.Embed(colour=color, description=t))
 
         if visible:
-            embed_queue[-1].description = monster.get_meta()
+            embed_queue[-1].description = monster.get_upper_meta()
+            embed_queue[-1].add_field(name="", value=monster.get_physical_stat_table(), inline=True)
+            embed_queue[-1].add_field(name="", value=monster.get_mental_stat_table(), inline=True)
+            safe_append("", monster.get_lower_meta())
             if monster.traits:
                 trait = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.traits)
                 if trait:
-                    safe_append("Special Abilities", trait)
+                    safe_append("Traits", trait)
             if monster.actions:
                 action = "\n\n".join(f"***{a.name}.*** {a.desc}" for a in monster.actions)
                 if action:
@@ -699,12 +702,11 @@ class Lookup(commands.Cog):
                 if reaction:
                     safe_append("Reactions", reaction)
             if monster.legactions:
-                proper_name = f"The {monster.name}" if not monster.proper else monster.name
+                proper = "The " if not monster.proper else ""
                 legendary = [
-                    f"{proper_name} can take {monster.la_per_round} legendary actions, choosing from "
-                    "the options below. Only one legendary action can be used at a time and only at the "
-                    f"end of another creature's turn. {proper_name} regains spent legendary actions at "
-                    "the start of its turn."
+                    f"*Legendary Action Uses: {monster.la_per_round}. Immediately after another creature's turn, "
+                    f"{proper.lower()}{monster.name} can expend a use to take one of the following actions. "
+                    f"{proper}{monster.name} regains all expended uses at the start of each of its turns.*"
                 ]
                 for a in monster.legactions:
                     if a.name:

@@ -215,7 +215,7 @@ class Skills:
 
     def __str__(self):
         out = []
-        for skill_name in SKILL_NAMES:
+        for skill_name in set(SKILL_NAMES) - {"initiative"}:
             skill = self.skills[skill_name]
             to_add = False
             modifiers = []
@@ -223,14 +223,14 @@ class Skills:
             if skill.prof > 0.5:
                 to_add = True
             if skill.prof == 2:
-                modifiers.append("expertise")
+                modifiers.append("Expertise")
 
             if skill.adv is False:
                 to_add = True
-                modifiers.append("dis")
+                modifiers.append("Dis")
             if skill.adv is True:
                 to_add = True
-                modifiers.append("adv")
+                modifiers.append("Adv")
 
             modifiers = f" ({', '.join(modifiers)})" if modifiers else ""
             if to_add:
@@ -296,14 +296,14 @@ class Saves:
             if save.prof > 0.5 or save.bonus:
                 to_add = True
             if save.prof == 2:
-                modifiers.append("expertise")
+                modifiers.append("Expertise")
 
             if save.adv is False:
                 to_add = True
-                modifiers.append("dis")
+                modifiers.append("Dis")
             if save.adv is True:
                 to_add = True
-                modifiers.append("adv")
+                modifiers.append("Adv")
 
             modifiers = f" ({', '.join(modifiers)})" if modifiers else ""
             if to_add:

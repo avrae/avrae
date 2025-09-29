@@ -9,7 +9,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import StatBlock
 from utils import config
 from utils.constants import SKILL_MAP
-from utils.functions import a_or_an, bubble_format
+from utils.functions import a_or_an, bubble_format, titlecase, rulescase
 from .shared import Sourced
 
 log = logging.getLogger(__name__)
@@ -302,47 +302,91 @@ class Monster(StatBlock, Sourced):
             f"**INT**: {stats[3]} **WIS**: {stats[4]} **CHA**: {stats[5]}"
         )
 
+    def _get_stat_table_row(self, stat):
+        save = self.saves.get(stat)
+        row = f"{stat[:3].upper()} {self.stats[stat]:>3} {self.stats.get_mod(stat):+3} {save.value:+3}"
+        if save.adv is True:
+            row += " (adv)"
+        elif save.adv is False:
+            row += " (dis)"
+        return row
+
+    def get_physical_stat_table(self):
+        return "\n".join([
+            "```swift\n        MOD SAV",
+            self._get_stat_table_row("strength"),
+            self._get_stat_table_row("dexterity"),
+            self._get_stat_table_row("constitution"),
+            "```",
+        ])
+
+    def get_mental_stat_table(self):
+        return "\n".join([
+            "```swift\n        MOD SAV",
+            self._get_stat_table_row("intelligence"),
+            self._get_stat_table_row("wisdom"),
+            self._get_stat_table_row("charisma"),
+            "```",
+        ])
+
     def get_senses_str(self):
         if self.senses:
-            return f"{self.senses}, passive Perception {self.passive}"
+            return f"{rulescase(self.senses)}; Passive Perception {self.passive}"
         else:
-            return f"passive Perception {self.passive}"
+            return f"Passive Perception {self.passive}"
 
-    def get_meta(self):
+    def get_init_str(self):
+        skill = self.skills.initiative
+        init_str = f"**Initiative** {skill.value:+} ("
+        if skill.adv is True:
+            init_str += f"{15 + skill.value}, Adv)"
+        elif skill.adv is False:
+            init_str += f"{5 + skill.value}, Dis)"
+        else:
+            init_str += f"{10 + skill.value})"
+        return init_str
+
+    def get_upper_meta(self):
         """
         Returns a string describing the meta statistics of a monster.
-        Should be the portion between the embed title and special abilities.
+        Should be the portion between the embed title and ability score tables.
         """
         size = self.size
-        type_ = self.creature_type
-        alignment = ", " + self.alignment if self.alignment else ""
-        ac = str(self.ac) + (f" ({self.armortype})" if self.armortype else "")
+        type_ = titlecase(self.creature_type)
+        alignment = ", " + titlecase(self.alignment) if self.alignment else ""
+        ac = str(self.ac) + (f" ({titlecase(self.armortype)})" if self.armortype else "")
         hp = f"{self.hp} ({self.hitdice})"
-        speed = self.speed
+        speed = rulescase(self.speed)
 
-        desc = f"*{size} {type_}{alignment}*\n**AC** {ac}\n**HP** {hp}\n**Speed** {speed}\n"
-        desc += f"{self.get_stat_array()}\n"
+        return f"*{size} {type_}{alignment}*\n**AC** {ac}   {self.get_init_str()}\n**HP** {hp}\n**Speed** {speed}\n"
 
-        if str(self.saves):
-            desc += f"**Saving Throws** {self.saves}\n"
+    def get_lower_meta(self):
+        """
+        Returns a string describing the meta statistics of a monster.
+        Should be the portion between the ability score tables and the traits.
+        """
+        desc = ""
         if str(self.skills):
             desc += f"**Skills** {self.skills}\n"
-        desc += f"**Senses** {self.get_senses_str()}\n"
         if self._displayed_resistances.vuln:
-            desc += f"**Vulnerabilities** {', '.join(str(r) for r in self._displayed_resistances.vuln)}\n"
+            desc += f"**Vulnerabilities** {', '.join(sorted(map(str, self._displayed_resistances.vuln)))}\n"
         if self._displayed_resistances.resist:
-            desc += f"**Resistances** {', '.join(str(r) for r in self._displayed_resistances.resist)}\n"
+            desc += f"**Resistances** {', '.join(sorted(map(str, self._displayed_resistances.resist)))}\n"
+        immunities = []
         if self._displayed_resistances.immune:
-            desc += f"**Damage Immunities** {', '.join(str(r) for r in self._displayed_resistances.immune)}\n"
+            immunities.append(", ".join(sorted(map(str, self._displayed_resistances.immune))))
         if self.condition_immune:
-            desc += f"**Condition Immunities** {', '.join(map(str, self.condition_immune))}\n"
+            immunities.append(titlecase(", ".join(map(str, self.condition_immune))))
+        if immunities:
+            desc += f"**Immunities** {'; '.join(immunities)}\n"
+        desc += f"**Senses** {self.get_senses_str()}\n"
         if self.languages:
             desc += f"**Languages** {', '.join(self.languages)}\n"
         else:
             desc += "**Languages** --\n"
 
         if not self.hide_cr:
-            desc += f"**Challenge** {self.cr} ({self.xp:,} XP)"
+            desc += f"**CR** {self.cr} (XP {self.xp:,}; PB {self.stats.prof_bonus:+})"
         return desc
 
     def get_title_name(self):

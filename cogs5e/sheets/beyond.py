@@ -286,26 +286,24 @@ class BeyondSheetParser(SheetLoaderABC):
                 spell_info = SpellbookSpell.from_spell(
                     result, sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
                 )
-                if result.name not in spells:
-                    spells[result.name] = spell_info
-
-                elif spell_prepared:  # prioritize prepared spells
-                    if spells[result.name].prepared:
-                        if spell_info.dc and spells[result.name].dc:
-                            spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.dc)
-                        elif spell_info.sab and spells[result.name].sab:
-                            spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.sab)
-                        elif spell_info.mod and spells[result.name].mod:
-                            spells[result.name] = max(spell_info, spells[result.name], key=lambda x: x.mod)
-
-                    if not spells[result.name].prepared:
-                        spells[result.name] = spell_info
-
             else:
                 spell_info = SpellbookSpell(
                     spell["name"].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod, prepared=spell_prepared
                 )
+
+            if spell_info.name not in spells:
                 spells[spell_info.name] = spell_info
+            elif spell_prepared:  # prioritize prepared spells
+                if spells[spell_info.name].prepared:
+                    if spell_info.dc and spells[spell_info.name].dc:
+                        spells[spell_info.name] = max(spell_info, spells[spell_info.name], key=lambda x: x.dc)
+                    elif spell_info.sab and spells[spell_info.name].sab:
+                        spells[spell_info.name] = max(spell_info, spells[spell_info.name], key=lambda x: x.sab)
+                    elif spell_info.mod and spells[spell_info.name].mod:
+                        spells[spell_info.name] = max(spell_info, spells[spell_info.name], key=lambda x: x.mod)
+
+                if not spells[spell_info.name].prepared:
+                    spells[spell_info.name] = spell_info
 
         spells = list(spells.values())
 

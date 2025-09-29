@@ -7,6 +7,7 @@ import cogs5e.initiative as init
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.base import Skill
+from cogs5e.models.automation.utils import parse_save_bonuses
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.functions import a_or_an, camel_to_title, maybe_http_url, verbose_stat
 
@@ -123,7 +124,9 @@ def run_save(save_key, caster, args, embed):
     if isinstance(caster, init.Combatant):
         combat_context: dict[str, Any] = {}
         # -sb
-        combat_context["b"] = caster.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
+        combat_context["b"] = parse_save_bonuses(
+            save_key, caster.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
+        )
         # -sadv/sdis
         sadv_effects = caster.active_effects(
             mapper=lambda effect: effect.effects.save_adv, reducer=lambda saves: set().union(*saves), default=set()

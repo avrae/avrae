@@ -103,6 +103,20 @@ def _str_save_dis(value: Set[str]):
     return f"Save Disadvantage: {saves}"
 
 
+def _str_save_bonus(value: str) -> str:
+    bonus_map: dict[str, list[str]] = {}
+    for split_value in value.split("+"):
+        if "|" in split_value:
+            dice, stat = split_value.split("|", 1)
+            bonus_map[stat] = bonus_map.get(stat, []) + [dice]
+        else:
+            bonus_map["all"] = bonus_map.get("all", []) + [split_value]
+    return "; ".join(
+        f"{stat_name.upper()+' ' if stat_name != 'all' else ''}Save Bonus: {'+'.join(dice_strs)}"
+        for stat_name, dice_strs in bonus_map.items()
+    )
+
+
 def _str_check_adv(value: Set[str]):
     if value.issuperset(STAT_NAMES):
         return "Check Advantage: All"
@@ -174,7 +188,7 @@ class InitPassiveEffect:
     ac_bonus: int = _PassiveEffect(stringifier=_abstract_str_attr("AC Bonus"))
     max_hp_value: int = _PassiveEffect(stringifier=_abstract_str_attr("Max HP"))
     max_hp_bonus: int = _PassiveEffect(stringifier=_abstract_str_attr("Max HP Bonus"))
-    save_bonus: str = _PassiveEffect(stringifier=_abstract_str_attr("Save Bonus"))
+    save_bonus: str = _PassiveEffect(stringifier=_str_save_bonus)
     save_adv: Set[str] = _PassiveEffect(
         default=set(),
         stringifier=_str_save_adv,

@@ -8,7 +8,7 @@ import cogs5e.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
 from utils.enums import AdvantageType, CritDamageType
 from .errors import AutomationEvaluationException, AutomationException, InvalidIntExpression
-from .utils import maybe_alias_statblock
+from .utils import maybe_alias_statblock, parse_save_bonuses
 
 __all__ = ("AutomationContext", "AutomationTarget")
 
@@ -298,10 +298,13 @@ class AutomationTarget:
         # combatant
         combatant = self.combatant
         if combatant and self.autoctx.allow_target_ieffects:
+            parsed_sb = parse_save_bonuses(
+                save_skill[:3], combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
+            )
             if sb:
-                sb.extend(combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[]))
+                sb.extend(parsed_sb)
             else:
-                sb = combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
+                sb = parsed_sb
 
         # character-specific arguments (#1443)
         reroll = None

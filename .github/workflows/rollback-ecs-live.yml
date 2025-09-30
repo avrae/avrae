@@ -43,7 +43,7 @@ jobs:
             - id: rollback-taskdef
               name: Derive rollback revision
               run: |
-                BASE=$(echo "${{ steps.get-taskdef.outputs.taskdef }}" | cut -d: -f1-2)
+                BASE="${{ steps.get-taskdef.outputs.taskdef%:* }}"
                 if [ -n "${{ github.event.inputs.revision }}" ]; then
                   ROLLBACK="$BASE:${{ github.event.inputs.revision }}"
                 else

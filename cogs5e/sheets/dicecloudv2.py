@@ -25,7 +25,7 @@ from utils.constants import SAVE_NAMES, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from utils.enums import ActivationType
 from .abc import SHEET_VERSION, SheetLoaderABC
-from .utils import get_actions_for_name
+from .utils import get_actions_for_name, resolve_version_context
 
 log = logging.getLogger(__name__)
 
@@ -154,7 +154,7 @@ class DicecloudV2Parser(SheetLoaderABC):
         elif subrace:
             race = subrace + " " + race
 
-        actions += self.get_actions()
+        actions += await self.get_actions()
 
         actions = Actions(actions)
 
@@ -444,7 +444,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                 consumables += self._consumables_from_resources(attack["resources"])
 
                 # don't bother parsing if a compendium action is found
-                if "avrae:parse_only" not in tags and (atk_actions := self.persist_actions_for_name(aname)):
+                if "avrae:parse_only" not in tags and (atk_actions := self.persist_actions_for_name(aname, "2024")):
                     actions += atk_actions
                     continue
                 atk = self.parse_attack(attack)
@@ -531,11 +531,14 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         return Resistances.from_dict(out)
 
-    def get_actions(self):
+    async def get_actions(self):
+        # Get the version context for filtering actions
+        version = await resolve_version_context(self.ctx)
+
         actions = []
         for f in self._by_type["feature"]:
             if not f.get("inactive") and "avrae:no_import" not in f["tags"] + f.get("libraryTags", []):
-                actions += self.persist_actions_for_name(f.get("name"))
+                actions += self.persist_actions_for_name(f.get("name"), version)
 
         return actions
 
@@ -717,12 +720,12 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         return attack
 
-    def persist_actions_for_name(self, name):
+    def persist_actions_for_name(self, name, version: str = "2024"):
         """
         Since compendium actions can be found in spells, actions, and features, we need to keep track of what we've seen
         """
         actions = []
-        if (g_actions := get_actions_for_name(name)) and len(g_actions) <= 20:
+        if (g_actions := get_actions_for_name(name, version)) and len(g_actions) <= 20:
             for g_action in g_actions:
                 if g_action.name in self._seen_action_names:
                     continue

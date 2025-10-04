@@ -191,6 +191,26 @@ class Skills:
             skills[skill] = Skill(base_stats.get_mod(SKILL_MAP[skill]))
         return cls(skills)
 
+    def get(self, skill_name: str, return_name: bool = False):
+        """Get skill with progressive unique matching, stop at first unique match."""
+        # Exact match
+        if skill_name in self.skills:
+            skill = self.skills[skill_name]
+            return (skill, skill_name) if return_name else skill
+
+        # Progressive partial match
+        for i in range(1, len(skill_name) + 1):
+            partial = skill_name.lower()[:i]
+            matches = [name for name in SKILL_NAMES if name.lower().startswith(partial)]
+
+            if len(matches) == 1:
+                skill = self.skills[matches[0]]
+                return (skill, matches[0]) if return_name else skill
+            elif len(matches) == 0:
+                break
+
+        raise ValueError(f"Invalid or incomplete skill: {skill_name}")
+
     def update(self, explicit_skills: dict):
         """
         Updates skills with an explicit dictionary of modifiers or Skills.

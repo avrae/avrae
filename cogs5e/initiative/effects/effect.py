@@ -49,6 +49,7 @@ class InitiativeEffect:
         parent: Optional[InitEffectReference] = None,
         desc: str = None,
         tick_on_combatant_id: Optional[str] = None,
+        hidden: bool = False,
     ):
         if effects is None:
             effects = InitPassiveEffect()
@@ -80,6 +81,7 @@ class InitiativeEffect:
         self.parent = parent
         self.desc = desc
         self.tick_on_combatant_id = tick_on_combatant_id
+        self.hidden = bool(hidden)
 
     @classmethod
     def new(
@@ -97,6 +99,7 @@ class InitiativeEffect:
         attacks: list[AttackInteraction] = None,
         buttons: list[ButtonInteraction] = None,
         tick_on_combatant_id: Optional[str] = None,
+        hidden: bool = False,
     ):
         # either parse effect_args or passive_effects/attacks
         if effect_args is not None and (passive_effects is not None or attacks is not None):
@@ -160,6 +163,7 @@ class InitiativeEffect:
             concentration=concentration,
             desc=desc,
             tick_on_combatant_id=tick_on_combatant_id,
+            hidden=hidden,
         )
 
     @classmethod
@@ -193,6 +197,7 @@ class InitiativeEffect:
             parent=parent,
             desc=d["desc"],
             tick_on_combatant_id=d.get("tick_on_combatant_id"),
+            hidden=d.get("hidden", False),
         )
 
     def to_dict(self):
@@ -215,6 +220,7 @@ class InitiativeEffect:
             "parent": parent,
             "desc": self.desc,
             "tick_on_combatant_id": self.tick_on_combatant_id,
+            "hidden": self.hidden,
             "_v": 2,
         }
 
@@ -250,23 +256,28 @@ class InitiativeEffect:
 
     # --- stringification ---
     def __str__(self):
-        return self.get_str(duration=True, parenthetical=True, concentration=True, description=True)
+        return self.get_str(duration=True, parenthetical=True, concentration=True, description=True, hidden=True)
 
     def get_short_str(self) -> str:
         """Gets a short string describing the effect (for display in init summary)"""
-        return self.get_str(duration=True, parenthetical=False, concentration=False, description=False)
+        return self.get_str(duration=True, parenthetical=False, concentration=False, description=False, hidden=False)
 
-    def get_str(self, duration=True, parenthetical=True, concentration=True, description=True) -> str:
+    def get_str(self, duration=True, parenthetical=True, concentration=True, description=True, hidden=True) -> str:
         """More customizable as to what actually shows."""
+
         out = [self.name]
         if duration:
             the_duration = self._duration_str()
             if the_duration:
                 out.append(the_duration)
         if parenthetical:
-            out.append(self._parenthetical_str())
+            parenthetical_str = self._parenthetical_str()
+            if parenthetical_str:
+                out.append(parenthetical_str)
         if concentration and self.concentration:
             out.append("<C>")
+        if hidden and self.hidden:
+            out.append("<Hidden>")
         if description and self.desc:
             out.append(f"\n - {self.desc}")
         return " ".join(out).strip()

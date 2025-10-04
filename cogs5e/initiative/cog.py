@@ -991,6 +991,7 @@ class InitTracker(commands.Cog):
         `-ac <ac>` - modifies ac temporarily; adds if starts with +/- or sets otherwise.
         `-maxhp <hp>` - modifies maximum hp temporarily; adds if starts with +/- or sets otherwise.
         `-desc <description>` - Adds a description of the effect.
+        `-h` - Hides the effect description and modifiers in combat displays. Shows effect name, duration, and concentration if applicable.
         """  # noqa: E501
         combat = await ctx.get_combat()
         args = argparse(args)
@@ -1014,6 +1015,7 @@ class InitTracker(commands.Cog):
         end = args.last("end", False, bool)
         parent = args.last("parent")
         desc = args.last("desc")
+        hidden = args.last("h", False, bool)
 
         if parent is not None:
             parent = parent.split("|", 1)
@@ -1038,6 +1040,7 @@ class InitTracker(commands.Cog):
                     end_on_turn_end=end,
                     concentration=conc,
                     desc=desc,
+                    hidden=hidden,
                 )
                 result = combatant.add_effect(effect_obj)
                 if parent:

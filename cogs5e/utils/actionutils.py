@@ -38,7 +38,9 @@ async def run_attack(
     """
     Runs an attack: adds title, handles -f and -thumb args, commits combat, runs automation, edits embed.
     """
-    if not args.last("h", type_=bool):
+    ieffect = getattr(attack, "__run_automation_kwargs__", {}).get("ieffect")
+    is_hidden = args.last("h", type_=bool) or (ieffect and ieffect.hidden)
+    if not is_hidden:
         name = caster.get_title_name()
     else:
         name = "An unknown creature"

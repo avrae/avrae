@@ -460,7 +460,11 @@ class Combatant(BaseCombatant, StatBlock):
         resists = self._get_resist_string(private) if resistances else ""
         note_str = "\n# " + self.notes if self.notes and notes else ""
         effects = self._get_long_effects(
-            duration=duration, parenthetical=parenthetical, concentration=concentration, description=description
+            private=private,
+            duration=duration,
+            parenthetical=parenthetical,
+            concentration=concentration,
+            description=description,
         )
         return f"{name} {hp_ac} {resists}{note_str}\n{effects}".strip()
 
@@ -478,8 +482,15 @@ class Combatant(BaseCombatant, StatBlock):
         except Exception as e:
             raise InvalidArgument(f"Cannot evaluate `{varstr}`: {e}")
 
-    def _get_long_effects(self, **kwargs) -> str:
-        return "\n".join(f"* {e.get_str(**kwargs)}" for e in self.get_effects())
+    def _get_long_effects(self, private=False, **kwargs) -> str:
+        # Remove parenthetical and description from kwargs to avoid conflicts
+        kwargs.pop("parenthetical", None)
+        kwargs.pop("description", None)
+
+        return "\n".join(
+            f"* {e.get_str(description=private or not e.hidden, parenthetical=private or not e.hidden, **kwargs)}"
+            for e in self.get_effects()
+        )
 
     def _get_effects_and_notes(self) -> str:
         out = []

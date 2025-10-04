@@ -4,7 +4,7 @@ git+https://github.com/avrae/automation-common@v4.2.0
 d20==1.1.2
 
 # top-level deps
-aiohttp==3.11
+aiohttp==3.12.14
 aiobotocore==2.12.4
 redis==5.0.4
 cachetools==5.3.3

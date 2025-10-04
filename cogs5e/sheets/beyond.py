@@ -38,6 +38,10 @@ else:
 
 DDB_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})(?:/profile/.+)?/characters/(\d+)(?:/)?")
 DDB_PDF_URL_RE = re.compile(rf"(?:https?://)?(?:{urls})/sheet-pdfs/.+_(\d+).pdf")
+DDB_WEAPON_DESC_RE = re.compile(
+    r"Proficiency with a .+ allows you to add your proficiency bonus to the attack roll for"
+    r" any attack you make with it."
+)
 SKILL_MAP = {
     "3": "acrobatics",
     "11": "animalHandling",
@@ -556,7 +560,7 @@ class BeyondSheetParser(SheetLoaderABC):
             damage_roll = automation.Roll(attack["damage"] or "0", "damage")
             effects = [damage_roll, target]
             # description text
-            if desc:
+            if desc and not DDB_WEAPON_DESC_RE.match(desc):
                 effects.append(automation.Text(desc))
             return Attack(attack["name"], automation.Automation(effects), activation_type=activation)
         else:

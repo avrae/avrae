@@ -10,9 +10,14 @@ import draconic
 from disnake.ext.commands import ArgumentParsingError
 
 from aliasing import evaluators
-from aliasing.api.functions import AliasException
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT, VAR_NAME_LIMIT
-from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
+from aliasing.errors import (
+    AliasException,
+    AliasNameConflict,
+    CollectableNotFound,
+    CollectableRequiresLicenses,
+    EvaluationError,
+)
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
 from aliasing.utils import ExecutionScope
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet

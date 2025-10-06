@@ -49,3 +49,11 @@ class CollectableRequiresLicenses(AvraeException):
         self.entities = entities
         self.collectable = collectable
         self.has_connected_ddb = has_connected_ddb
+
+
+class AliasException(AvraeException):
+    """Raised when an alias calls err()."""
+
+    def __init__(self, msg, pm_user):
+        super().__init__(msg)
+        self.pm_user = pm_user

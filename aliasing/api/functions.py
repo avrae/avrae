@@ -10,11 +10,11 @@ import disnake.ext.commands
 import disnake.utils
 import draconic
 
-from cogs5e.models.errors import AvraeException
 from cogs5e.utils.gameutils import parse_coin_args
 from utils import config
 from utils.dice import RerollableStringifier
 from .context import AliasAuthor, AliasChannel, AliasGuild
+from ..errors import AliasException
 from ..utils import ExecutionScope
 from draconic.types import approx_len_of
 
@@ -135,12 +135,6 @@ def safe_range(start, stop=None, step=None):
 
 
 # err()
-class AliasException(AvraeException):
-    def __init__(self, msg, pm_user):
-        super().__init__(msg)
-        self.pm_user = pm_user
-
-
 def err(reason, pm_user=False):
     """
     Stops evaluation of an alias and shows the user an error.

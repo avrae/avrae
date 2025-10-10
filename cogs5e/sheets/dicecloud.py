@@ -22,7 +22,7 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
-from cogs5e.sheets.utils import get_actions_for_names
+from cogs5e.sheets.utils import get_actions_for_names, resolve_version_context
 from gamedata.compendium import compendium
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
@@ -106,7 +106,7 @@ class DicecloudParser(SheetLoaderABC):
         live = self.is_live()
         race = self.character_data["characters"][0]["race"].strip()
         background = self.character_data["characters"][0]["backstory"].strip()
-        actions = self.get_actions()
+        actions = await self.get_actions()
 
         character = Character(
             owner_id,
@@ -424,11 +424,14 @@ class DicecloudParser(SheetLoaderABC):
 
         return counters
 
-    def get_actions(self):
+    async def get_actions(self):
+        # Get the version context for filtering actions
+        version = await resolve_version_context(self.ctx)
+
         feature_names = [
             f.get("name") for f in self.character_data.get("features", []) if f.get("enabled") and not f.get("removed")
         ]
-        actions = get_actions_for_names(feature_names)
+        actions = get_actions_for_names(feature_names, version)
         return Actions(actions)
 
     # helper funcs

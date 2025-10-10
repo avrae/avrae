@@ -9,10 +9,12 @@ from pydantic import BaseModel
 
 from cogs5e.models.errors import NoCharacter
 from utils.functions import search_and_select
+from utils.argparser import argparse
 from .combatant import Combatant, MonsterCombatant, PlayerCombatant
 from .errors import *
 from .group import CombatantGroup
 from .types import CombatantType
+from cogs5e.utils.checkutils import ieffect_handler
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
@@ -365,7 +367,26 @@ class Combat:
         """
         rolls = {}
         for c in self._combatants:
-            init_roll = roll(c.init_skill.d20())
+            if isinstance(c, CombatantGroup):
+                gc = c.get_combatants()[0]
+                args = ieffect_handler(gc, argparse(""), "initiative")
+                b = args.join("b", "+", ephem=True)
+
+                # set up dice. Note that we still use the first combatant in the group for consistency with the ieffects
+                roll_str = gc.init_skill.d20(base_adv=args.adv(boolwise=True, ephem=True))
+                
+            else:
+                args = ieffect_handler(c, argparse(""), "initiative")
+                b = args.join("b", "+", ephem=True)
+
+                # set up dice
+                roll_str = c.init_skill.d20(base_adv=args.adv(boolwise=True, ephem=True))
+                
+            if b is not None:
+                roll_str = f"{roll_str}+{b}"
+
+            # roll
+            init_roll = roll(roll_str)
             c.init = init_roll.total
             rolls[c] = init_roll
         self.sort_combatants()

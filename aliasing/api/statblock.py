@@ -1,3 +1,15 @@
+from enum import Enum
+
+
+class CreatureSize(Enum):
+    TINY = 0
+    SMALL = 1
+    MEDIUM = 2
+    LARGE = 3
+    HUGE = 4
+    GARGANTUAN = 5
+
+
 class AliasStatBlock:
     """
     A base class representing any creature (player or otherwise) that has stats.
@@ -9,6 +21,7 @@ class AliasStatBlock:
     def __init__(self, statblock):
         """
         :type statblock: cogs5e.models.sheet.statblock.StatBlock
+        :param creature_size: Optional creature size, uses CreatureSize Enum.
         """
         self._statblock = statblock
         # memoize some attrs
@@ -19,6 +32,7 @@ class AliasStatBlock:
         self._saves = None
         self._resistances = None
         self._spellbook = None
+        self._creature_size = None
 
     @property
     def name(self):
@@ -150,6 +164,26 @@ class AliasStatBlock:
         :rtype: str or None
         """
         return self._statblock.creature_type
+
+    @property
+    def creature_size(self):
+        """
+        Returns the creature size using CreatureSize Enum.
+
+        :rtype: CreatureSize
+        """
+        return self._statblock.creature_size
+
+    def set_creature_size(self, size):
+        """
+        Sets the creature size.
+
+        :param size: CreatureSize Enum value.
+        """
+        if isinstance(size, CreatureSize):
+            self._creature_size = size
+        else:
+            raise ValueError("Invalid creature size")
 
     # ---- hp ----
     def set_hp(self, new_hp):

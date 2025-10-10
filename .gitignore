@@ -6,7 +6,7 @@
 *.DS_Store
 
 *.avrae
-
+/avrae-env*/
 .vscode/
 venv/
 /venv*/

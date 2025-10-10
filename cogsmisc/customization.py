@@ -21,6 +21,7 @@ import ui
 from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
 from aliasing.workshop import WORKSHOP_ADDRESS_RE
+from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
@@ -30,6 +31,15 @@ from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_NAMES, STAT_ABBREVIA
 from utils.functions import a_or_an, confirm, get_selection, search_and_select, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
+
+# 4 bytes max per unicode character, sets a reasonable max on file size
+UTF8_MAX_BYTES_PER_CHAR = 4
+
+# File size limits for uploads (in bytes)
+CVAR_FILE_SIZE_LIMIT = UTF8_MAX_BYTES_PER_CHAR * CVAR_SIZE_LIMIT
+UVAR_FILE_SIZE_LIMIT = UTF8_MAX_BYTES_PER_CHAR * UVAR_SIZE_LIMIT
+SVAR_FILE_SIZE_LIMIT = UTF8_MAX_BYTES_PER_CHAR * SVAR_SIZE_LIMIT
+GVAR_FILE_SIZE_LIMIT = UTF8_MAX_BYTES_PER_CHAR * GVAR_SIZE_LIMIT
 
 STAT_MOD_NAMES = ("strengthMod", "dexterityMod", "constitutionMod", "intelligenceMod", "wisdomMod", "charismaMod")
 
@@ -887,24 +897,27 @@ class Customization(commands.Cog):
     @commands.group(invoke_without_command=True)
     async def cvar(self, ctx, name: str = None, *, value=None):
         """Commands to manage character variables for use in snippets and aliases.
+        Attach a UTF-8 file instead of a value to set the character variable to the file's contents.
         See the [aliasing guide](https://avrae.io/cheatsheets/aliasing) for more help."""
         if name is None:
             return await self.list_cvar(ctx)
 
         character: Character = await ctx.get_character()
 
-        if value is None:  # display value
-            cvar = character.get_scope_locals().get(name)
-            if cvar is None:
-                return await ctx.send("This cvar is not defined.")
-            return await send_long_code_text(
-                ctx, outside_codeblock=f"**{name}**:".replace("_", r"\_"), inside_codeblock=cvar
-            )
+        if value is None:  # try to read from attachment otherwise display value
+            value = await _get_value_or_file(ctx, None, CVAR_FILE_SIZE_LIMIT, allow_empty=True)
+            if value is None:
+                cvar = character.get_scope_locals().get(name)
+                if cvar is None:
+                    return await ctx.send("This cvar is not defined.")
+                return await send_long_code_text(
+                    ctx, outside_codeblock=f"**{name}**:".replace("_", r"\_"), inside_codeblock=cvar
+                )
 
         helpers.set_cvar(character, name, value)
 
         await character.commit(ctx)
-        await ctx.send("Character variable `{}` set to: `{}`".format(name, value))
+        await send_long_code_text(ctx, outside_codeblock=f"Character variable `{name}` set to:", inside_codeblock=value)
 
     @cvar.command(name="remove", aliases=["delete"])
     async def remove_cvar(self, ctx, name):
@@ -954,23 +967,26 @@ class Customization(commands.Cog):
         Commands to manage user variables for use in snippets and aliases.
         User variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
+        Attach a UTF-8 file instead of a value to set the user variable to the file's contents.
         See https://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
             return await self.uvar_list(ctx)
 
+        if name in STAT_VAR_NAMES or not name.isidentifier():
+            return await ctx.send("Could not access uvar: already builtin, or contains invalid character!")
+
         user_vars = await helpers.get_uvars(ctx)
 
-        if value is None:  # display value
-            uvar = user_vars.get(name)
-            if uvar is None:
-                return await ctx.send("This uvar is not defined.")
-            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=uvar)
-
-        if name in STAT_VAR_NAMES or not name.isidentifier():
-            return await ctx.send("Could not create uvar: already builtin, or contains invalid character!")
+        if value is None:  # try to read from attachment otherwise display value
+            value = await _get_value_or_file(ctx, None, UVAR_FILE_SIZE_LIMIT, allow_empty=True)
+            if value is None:
+                uvar = user_vars.get(name)
+                if uvar is None:
+                    return await ctx.send("This uvar is not defined.")
+                return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=uvar)
 
         await helpers.set_uvar(ctx, name, value)
-        await ctx.send("User variable `{}` set to: `{}`".format(name, value))
+        await send_long_code_text(ctx, outside_codeblock=f"User variable `{name}` set to:", inside_codeblock=value)
 
     @uservar.command(name="remove", aliases=["delete"])
     async def uvar_remove(self, ctx, name):
@@ -1014,16 +1030,20 @@ class Customization(commands.Cog):
 
         These are usually used to set server-wide defaults for aliases without editing the code.
 
+        Attach a UTF-8 file instead of a value to set the server variable to the file's contents.
+
         See https://avrae.io/cheatsheets/aliasing for more help.
         """
         if name is None:
             return await self.svar_list(ctx)
 
-        if value is None:  # display value
-            svar = await helpers.get_svar(ctx, name)
-            if svar is None:
-                return await ctx.send("This svar is not defined.")
-            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=svar)
+        if value is None:  # try to read from attachment otherwise display value
+            value = await _get_value_or_file(ctx, None, SVAR_FILE_SIZE_LIMIT, allow_empty=True)
+            if value is None:
+                svar = await helpers.get_svar(ctx, name)
+                if svar is None:
+                    return await ctx.send("This svar is not defined.")
+                return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=svar)
 
         if not await _can_edit_servaliases(ctx):
             return await ctx.send(
@@ -1036,7 +1056,7 @@ class Customization(commands.Cog):
             return await ctx.send("Could not create svar: already builtin, or contains invalid character!")
 
         await helpers.set_svar(ctx, name, value)
-        await ctx.send(f"Server variable `{name}` set to: `{value}`")
+        await send_long_code_text(ctx, outside_codeblock=f"Server variable `{name}` set to:", inside_codeblock=value)
 
     @servervar.command(name="remove", aliases=["delete"])
     @commands.guild_only()
@@ -1068,6 +1088,7 @@ class Customization(commands.Cog):
         If run without a subcommand, shows the value of a global variable.
         Global variables are readable by all users, but only editable by the creator.
         Global variables must be accessed through scripting, with `get_gvar(gvar_id)`.
+        Global variables also support reading file attachments when creating or editing.
         See https://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
             return await self.gvar_list(ctx)
@@ -1087,15 +1108,19 @@ class Customization(commands.Cog):
         )
 
     @globalvar.command(name="create")
-    async def gvar_create(self, ctx, *, value):
+    async def gvar_create(self, ctx, *, value=None):
         """Creates a global variable.
-        A name will be randomly assigned upon creation."""
+        A name will be randomly assigned upon creation.
+        Attach a UTF-8 file instead of a value to set the global variable to the file's contents."""
+        value = await _get_value_or_file(ctx, value, GVAR_FILE_SIZE_LIMIT, allow_empty=False)
         name = await helpers.create_gvar(ctx, value)
         await ctx.send(f"Created global variable `{name}`.")
 
     @globalvar.command(name="edit")
-    async def gvar_edit(self, ctx, name, *, value):
-        """Edits a global variable."""
+    async def gvar_edit(self, ctx, name, *, value=None):
+        """Edits a global variable.
+        Attach a UTF-8 file instead of a value to set the global variable to the file's contents."""
+        value = await _get_value_or_file(ctx, value, GVAR_FILE_SIZE_LIMIT, allow_empty=False)
         await helpers.update_gvar(ctx, name, value)
         await ctx.send(f"Global variable `{name}` edited.")
 
@@ -1232,6 +1257,33 @@ async def send_long_code_text(
         await destination.send(f"{outside_codeblock}\n{too_long_message}", file=disnake.File(out, "output.txt"))
     else:
         await destination.send("This output is too large.")
+
+
+async def read_file_from_message(ctx, size_limit):
+    """Takes a given message, pulls the first attachment, and returns the read string in utf-8 format"""
+    attached_file = ctx.message.attachments[0]
+    if attached_file.size > size_limit:
+        raise InvalidArgument(
+            f"This file upload must not exceed {size_limit // UTF8_MAX_BYTES_PER_CHAR:,} characters "
+            f"or {size_limit:,} bytes."
+        )
+    file_bytes = await attached_file.read()
+    try:
+        return file_bytes.decode("utf-8")
+    except UnicodeError as e:
+        raise InvalidArgument("Uploaded file must be text in utf-8 format") from e
+
+
+async def _get_value_or_file(ctx, value, size_limit, allow_empty=False):
+    """Gets value from parameter or file attachment, with user-friendly error handling"""
+    if value is None:
+        try:
+            value = await read_file_from_message(ctx, size_limit)
+        except IndexError:
+            if allow_empty:
+                return None
+            raise InvalidArgument("No input or file attachment found.")
+    return value
 
 
 def setup(bot):

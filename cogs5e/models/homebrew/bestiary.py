@@ -427,7 +427,7 @@ def parse_bestiary_builder_traits(data, key):
     attacks = []
     for trait in data[key]:
         name = trait["name"]
-        desc = markdownify(trait["description"]).strip()
+        desc = trait["description"].strip()
         automation = trait["automation"]
 
         if automation is not None:

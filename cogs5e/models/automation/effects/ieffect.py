@@ -295,7 +295,9 @@ class IEffect(Effect):
             if autoctx.conc_effect:
                 if autoctx.conc_effect.combatant is combatant and self.concentration:
                     raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
-                conc_parent = autoctx.conc_effect
+
+                if self.parent is None or self.parent.lower() != "none":
+                    conc_parent = autoctx.conc_effect
 
             # stacking
             # find the next correct name for the effect and create a new one, without conflicting pieces

@@ -425,6 +425,7 @@ class SimpleCombatant(AliasStatBlock):
         attacks: list[dict] = None,
         buttons: list[dict] = None,
         tick_on_combatant_id: str = None,
+        hidden: bool = False,
     ):
         """
         Adds an effect to the combatant. Returns the added effect.
@@ -450,6 +451,7 @@ class SimpleCombatant(AliasStatBlock):
         :param attacks: The attacks granted by this effect. See :ref:`ieffectargs`.
         :param buttons: The buttons granted by this effect. See :ref:`ieffectargs`.
         :param tick_on_combatant_id: The ID of the combatant whose turn the effect duration ticks on (defaults to the combatant who the effect is on).
+        :param bool hidden: Whether the effect should be hidden in combat displays.
         :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """  # noqa: E501
         # validate types
@@ -469,6 +471,8 @@ class SimpleCombatant(AliasStatBlock):
             desc = str(desc)
         if tick_on_combatant_id is not None:
             tick_on_combatant_id = str(tick_on_combatant_id)
+        if hidden is not None:
+            hidden = bool(hidden)
 
         # parse v4.1 models (passive, attacks, buttons)
         parsed_passive = parsed_attacks = parsed_buttons = None
@@ -511,6 +515,7 @@ class SimpleCombatant(AliasStatBlock):
             attacks=parsed_attacks,
             buttons=parsed_buttons,
             tick_on_combatant_id=tick_on_combatant_id,
+            hidden=hidden,
         )
         if parent:
             effect_obj.set_parent(parent._effect)

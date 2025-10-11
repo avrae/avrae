@@ -16,6 +16,8 @@ from rapidfuzz import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils import constants, enums
+from utils.selection import get_selection_with_buttons
+from utils.selection.constants import ENABLE_BUTTON_SELECTION_DEFAULT
 
 if TYPE_CHECKING:
     from utils.context import AvraeContext
@@ -131,6 +133,48 @@ async def get_selection(
     query=None,
 ):
     """Returns the selected choice, or raises an error.
+
+    This is a router function that checks the enable_button_selection setting and routes to either
+    button-based or text-based selection accordingly.
+
+    If delete is True, will delete the selection message and the response.
+    If length of choices is 1, will return the only choice unless force_select is True.
+
+    :raises NoSelectionElements: if len(choices) is 0.
+    :raises SelectionCancelled: if selection is cancelled."""
+
+    # Determine if we should use button selection
+    if ctx.guild:
+        # Guild context: use guild setting
+        guild_settings = await ctx.get_server_settings()
+        use_buttons = getattr(guild_settings, "enable_button_selection", ENABLE_BUTTON_SELECTION_DEFAULT) is True
+    else:
+        # PM context: use system default
+        use_buttons = ENABLE_BUTTON_SELECTION_DEFAULT
+
+    if use_buttons:
+        return await get_selection_with_buttons(
+            ctx, choices, key=key, delete=delete, pm=pm, message=message, force_select=force_select, query=query
+        )
+    else:
+        return await _get_selection_text_based(
+            ctx, choices, key=key, delete=delete, pm=pm, message=message, force_select=force_select, query=query
+        )
+
+
+async def _get_selection_text_based(
+    ctx,
+    choices: list[_HaystackT],
+    key: Callable[[_HaystackT], str],
+    delete=True,
+    pm=False,
+    message=None,
+    force_select=False,
+    query=None,
+):
+    """Text-based selection implementation.
+
+    Returns the selected choice, or raises an error.
     If delete is True, will delete the selection message and the response.
     If length of choices is 1, will return the only choice unless force_select is True.
 

@@ -237,11 +237,11 @@ def source_slug(source):
 def _create_selector(available_ids: dict[str, set[int]]):
     async def legacy_entity_selector(ctx: "AvraeContext", choices: List["Sourced"], *args, **kwargs) -> "Sourced":
         """Given a choice between only a legacy and non-legacy entity, respect the server's legacy preferences."""
-        # if the choices aren't between 2 entities or it's in PMs, defer
+        # if the choices aren't between 2 entities or it's in PMs, defer to selection
         if len(choices) != 2 or ctx.guild is None:
             return await get_selection(ctx, choices, *args, **kwargs)
 
-        # if it's not actually a choice between a legacy and non-legacy entity, defer
+        # if it's not actually a choice between a legacy and non-legacy entity, defer to selection
         a, b = choices
         if a.is_legacy == b.is_legacy:
             return await get_selection(ctx, choices, *args, **kwargs)
@@ -250,9 +250,10 @@ def _create_selector(available_ids: dict[str, set[int]]):
         latest: "Sourced" = a if not a.is_legacy else b
 
         guild_settings = await ctx.get_server_settings()
-        # if the guild setting is to ask, defer
+        # if the guild setting is to ask, defer to selection
         if guild_settings.legacy_preference == LegacyPreference.ASK:
             return await get_selection(ctx, choices, *args, **kwargs)
+
         # if the user has access to the preferred entity, return it
         if guild_settings.legacy_preference == LegacyPreference.LATEST and can_access(
             latest, available_ids[latest.entitlement_entity_type]
@@ -262,7 +263,8 @@ def _create_selector(available_ids: dict[str, set[int]]):
             legacy, available_ids[legacy.entitlement_entity_type]
         ):
             return legacy
-        # otherwise defer to asking
+
+        # otherwise defer to selection
         return await get_selection(ctx, choices, *args, **kwargs)
 
     return legacy_entity_selector

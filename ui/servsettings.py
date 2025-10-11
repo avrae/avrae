@@ -106,7 +106,8 @@ class ServerSettingsUI(ServerSettingsMenuBase):
                 f"**Direct Message Results**: {self.settings.lookup_pm_result}\n"
                 f"**Prefer Legacy Content**: {legacy_preference_desc(self.settings.legacy_preference)}\n"
                 f"**5e Rules Version**: {self.settings.version}\n"
-                f"**Allow Character Override**: {self.settings.allow_character_override}"
+                f"**Allow Character Override**: {self.settings.allow_character_override}\n"
+                f"**Enable Button Selection**: {self.settings.enable_button_selection}"
             ),
             inline=False,
         )
@@ -185,14 +186,8 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         await self.commit_settings()
         await self.refresh_content(interaction)
 
-    @disnake.ui.select(placeholder="Select Legacy Preference", options=_LEGACY_PREFERENCE_SELECT_OPTIONS, row=2)
-    async def legacy_preference_select(self, select: disnake.ui.Select, interaction: disnake.Interaction):
-        self.settings.legacy_preference = int(select.values[0])
-        await self.commit_settings()
-        await self.refresh_content(interaction)
-
     # Switch between 2014 and 2024 version from guild.py Server Settings
-    @disnake.ui.button(label="Switch Version", style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="Switch Version", style=disnake.ButtonStyle.primary, row=2)
     async def switch_version(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         if self.settings.version == "2024":
             self.settings.version = "2014"
@@ -202,9 +197,22 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
         await self.refresh_content(interaction)
 
     # Allow character override
-    @disnake.ui.button(label="Toggle Allow Character Override", style=disnake.ButtonStyle.primary)
+    @disnake.ui.button(label="Toggle Allow Character Override", style=disnake.ButtonStyle.primary, row=2)
     async def toggle_character_override(self, _: disnake.ui.Button, interaction: disnake.Interaction):
         self.settings.allow_character_override = not self.settings.allow_character_override
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    # Enable button selection
+    @disnake.ui.button(label="Toggle Button Selection", style=disnake.ButtonStyle.primary, row=2)
+    async def toggle_button_selection(self, _: disnake.ui.Button, interaction: disnake.Interaction):
+        self.settings.enable_button_selection = not self.settings.enable_button_selection
+        await self.commit_settings()
+        await self.refresh_content(interaction)
+
+    @disnake.ui.select(placeholder="Select Legacy Preference", options=_LEGACY_PREFERENCE_SELECT_OPTIONS, row=3)
+    async def legacy_preference_select(self, select: disnake.ui.Select, interaction: disnake.Interaction):
+        self.settings.legacy_preference = int(select.values[0])
         await self.commit_settings()
         await self.refresh_content(interaction)
 
@@ -357,6 +365,14 @@ class _LookupSettingsUI(ServerSettingsMenuBase):
             value=(
                 f"**{self.settings.allow_character_override}**\n"
                 "*If this is enabled, users are able to use their own character version vs being locked to the server version.*"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Enable Button Selection",
+            value=(
+                f"**{self.settings.enable_button_selection}**\n"
+                "*If this is enabled, all lookup selections will use interactive buttons instead of text-based selection.*"
             ),
             inline=False,
         )

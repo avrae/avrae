@@ -5,6 +5,9 @@ This module contains all constants used across the selection system to ensure
 consistency and maintainability.
 """
 
+# System Default
+ENABLE_BUTTON_SELECTION_DEFAULT = False
+
 # Timeout Values
 SELECTION_TIMEOUT = 60.0
 DM_NOTIFICATION_TIMEOUT = 15

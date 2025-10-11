@@ -1,9 +1,4 @@
-"""
-Main selection functions for stateless button-based selection system.
-
-This module provides the core selection logic that supports both
-button interactions and text input, with complete statelessness for production use.
-"""
+"""Main selection functions for stateless button-based selection system."""
 
 import asyncio
 import logging
@@ -30,7 +25,6 @@ from .selection_views import (
 log = logging.getLogger(__name__)
 
 
-# ==== main selection functions ====
 async def get_selection_with_buttons(
     ctx,
     choices: List[Any],
@@ -70,10 +64,8 @@ async def get_selection_with_buttons(
     elif len(choices) == 1 and not force_select:
         return choices[0]
 
-    # Store original channel mention before potential PM sending
-    original_channel_mention = ctx.channel.mention if ctx.channel else None
+    original_channel_mention = getattr(ctx.channel, "mention", None) if ctx.channel else None
 
-    # Use optimized helper functions for consistent behavior
     def create_embed(page: int) -> disnake.Embed:
         return create_selection_embed(
             choices=choices,
@@ -96,9 +88,7 @@ async def get_selection_with_buttons(
     else:
         select_msg = await ctx.send(embed=embed, view=view)
 
-    # Dual input handling loop
     updating_page = False
-
     event_count = 0
     while event_count < constants.MAX_EVENTS:
         try:

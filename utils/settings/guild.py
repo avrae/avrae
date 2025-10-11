@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from . import SettingsBaseModel
 from utils.enums import CritDamageType
+from utils.selection.constants import ENABLE_BUTTON_SELECTION_DEFAULT
 
 DEFAULT_DM_ROLE_NAMES = {"dm", "gm", "dungeon master", "game master"}
 
@@ -41,6 +42,7 @@ class ServerSettings(SettingsBaseModel):
     legacy_preference: LegacyPreference = LegacyPreference.LATEST
     version: str = "2024"  # Versions: 2024(Free Rules/PHB 2024) or 2014(BR/PHB 2014)
     allow_character_override: bool = False
+    enable_button_selection: bool = ENABLE_BUTTON_SELECTION_DEFAULT
 
     randchar_dice: str = "4d6kh3"
     randchar_sets: int = 1

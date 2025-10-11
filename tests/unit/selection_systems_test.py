@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
-from gamedata.lookuputils import _create_selector, _create_monster_selector, search_entities
+from gamedata.lookuputils import _create_selector, search_entities
 from gamedata.shared import Sourced
 from utils.settings.guild import LegacyPreference, ServerSettings
 
@@ -51,9 +51,12 @@ class MockContext:
         self.guild = Mock() if guild else None
         self.author = Mock()
         self.author.id = 12345
+        self.author.send = AsyncMock()
         self.channel = Mock()
         self.channel.mention = "<#123456789>"
+        self.channel.send = AsyncMock()
         self.bot = Mock()
+        self.bot.wait_for = AsyncMock()
 
     async def get_server_settings(self):
         settings = Mock(spec=ServerSettings)
@@ -95,6 +98,16 @@ def spell():
     return MockSpell("Fireball", is_legacy=False, is_free=True)
 
 
+def setup_mock_settings(mock_ctx, legacy_pref=LegacyPreference.ASK, enable_buttons=False):
+    """Helper to set up mock server settings on a context"""
+    mock_ctx.get_server_settings = AsyncMock()
+    settings = Mock()
+    settings.legacy_preference = legacy_pref
+    settings.enable_button_selection = enable_buttons
+    mock_ctx.get_server_settings.return_value = settings
+    return settings
+
+
 class TestCreateSelector:
     """Test the text-based selector for non-monster entities"""
 
@@ -123,15 +136,19 @@ class TestCreateSelector:
             assert result == spell1
 
     @pytest.mark.asyncio
-    async def test_pm_context_defers_to_get_selection(self, mock_ctx_pm, available_ids, legacy_monster, modern_monster):
+    async def test_pm_context_defers_to_get_selection(self, mock_ctx_pm, available_ids):
+        # Use spells instead of monsters for non-monster test
+        legacy_spell = MockSpell("Ancient Fireball", is_legacy=True, is_free=True)
+        modern_spell = MockSpell("Fireball", is_legacy=False, is_free=True)
+
         with patch("gamedata.lookuputils.get_selection") as mock_get_selection:
-            mock_get_selection.return_value = modern_monster
+            mock_get_selection.return_value = modern_spell
             selector = _create_selector(available_ids)
 
-            result = await selector(mock_ctx_pm, [legacy_monster, modern_monster])
+            result = await selector(mock_ctx_pm, [legacy_spell, modern_spell])
 
             mock_get_selection.assert_called_once()
-            assert result == modern_monster
+            assert result == modern_spell
 
     @pytest.mark.asyncio
     async def test_legacy_preference_ask_defers_to_get_selection(
@@ -151,10 +168,7 @@ class TestCreateSelector:
     async def test_legacy_preference_latest_returns_latest(
         self, mock_ctx, available_ids, legacy_monster, modern_monster
     ):
-        mock_ctx.get_server_settings = AsyncMock()
-        settings = Mock()
-        settings.legacy_preference = LegacyPreference.LATEST
-        mock_ctx.get_server_settings.return_value = settings
+        setup_mock_settings(mock_ctx, legacy_pref=LegacyPreference.LATEST)
 
         with patch("gamedata.lookuputils.can_access", return_value=True):
             selector = _create_selector(available_ids)
@@ -167,10 +181,7 @@ class TestCreateSelector:
     async def test_legacy_preference_legacy_returns_legacy(
         self, mock_ctx, available_ids, legacy_monster, modern_monster
     ):
-        mock_ctx.get_server_settings = AsyncMock()
-        settings = Mock()
-        settings.legacy_preference = LegacyPreference.LEGACY
-        mock_ctx.get_server_settings.return_value = settings
+        setup_mock_settings(mock_ctx, legacy_pref=LegacyPreference.LEGACY)
 
         with patch("gamedata.lookuputils.can_access", return_value=True):
             selector = _create_selector(available_ids)
@@ -181,69 +192,83 @@ class TestCreateSelector:
 
 
 class TestCreateMonsterSelector:
-    """Test the monster-specific selector"""
+    """Test the selector routing behavior (selector now just forwards to get_selection)"""
 
     @pytest.mark.asyncio
-    async def test_single_monster_channel_uses_buttons(self, mock_ctx, available_ids, modern_monster):
-        with patch("gamedata.lookuputils.get_selection_with_buttons") as mock_buttons:
-            mock_buttons.return_value = modern_monster
-            selector = _create_monster_selector(available_ids)
+    async def test_single_monster_channel_defers_to_get_selection(self, mock_ctx, available_ids, modern_monster):
+        setup_mock_settings(mock_ctx, enable_buttons=True)
+
+        with patch("gamedata.lookuputils.get_selection") as mock_get_selection:
+            mock_get_selection.return_value = modern_monster
+            selector = _create_selector(available_ids)
 
             result = await selector(mock_ctx, [modern_monster], pm=False)
 
-            mock_buttons.assert_called_once()
-            call_args = mock_buttons.call_args
-            assert call_args[1]["pm"] is False
+            mock_get_selection.assert_called_once()
             assert result == modern_monster
 
     @pytest.mark.asyncio
-    async def test_single_monster_pm_uses_dm_feedback(self, mock_ctx_pm, available_ids, modern_monster):
-        with patch("gamedata.lookuputils.select_monster_with_dm_feedback") as mock_dm_feedback:
-            mock_dm_feedback.return_value = modern_monster
-            selector = _create_monster_selector(available_ids)
+    async def test_guild_context_pm_menu_defers_to_get_selection(
+        self, mock_ctx, available_ids, legacy_monster, modern_monster
+    ):
+        setup_mock_settings(mock_ctx, enable_buttons=True)
+
+        with patch("gamedata.lookuputils.get_selection") as mock_get_selection:
+            mock_get_selection.return_value = modern_monster
+            selector = _create_selector(available_ids)
+
+            result = await selector(mock_ctx, [legacy_monster, modern_monster], pm=True)
+
+            mock_get_selection.assert_called_once()
+            assert result == modern_monster
+
+    @pytest.mark.asyncio
+    async def test_single_monster_pm_uses_get_selection(self, mock_ctx_pm, available_ids, modern_monster):
+        with patch("gamedata.lookuputils.get_selection") as mock_get_selection:
+            mock_get_selection.return_value = modern_monster
+            selector = _create_selector(available_ids)
 
             result = await selector(mock_ctx_pm, [modern_monster], pm=True)
 
-            mock_dm_feedback.assert_called_once()
+            mock_get_selection.assert_called_once()
             assert result == modern_monster
 
     @pytest.mark.asyncio
-    async def test_legacy_preference_ask_channel_uses_buttons(
+    async def test_legacy_preference_ask_defers_to_get_selection(
         self, mock_ctx, available_ids, legacy_monster, modern_monster
     ):
-        with patch("gamedata.lookuputils.get_selection_with_buttons") as mock_buttons:
-            mock_buttons.return_value = modern_monster
-            selector = _create_monster_selector(available_ids)
+        setup_mock_settings(mock_ctx, enable_buttons=True)
+
+        with patch("gamedata.lookuputils.get_selection") as mock_get_selection:
+            mock_get_selection.return_value = modern_monster
+            selector = _create_selector(available_ids)
 
             result = await selector(mock_ctx, [legacy_monster, modern_monster], pm=False)
 
-            mock_buttons.assert_called_once()
+            mock_get_selection.assert_called_once()
             assert result == modern_monster
 
     @pytest.mark.asyncio
-    async def test_legacy_preference_ask_pm_uses_dm_feedback(
+    async def test_legacy_preference_ask_pm_defers_to_get_selection(
         self, mock_ctx_pm, available_ids, legacy_monster, modern_monster
     ):
-        with patch("gamedata.lookuputils.select_monster_with_dm_feedback") as mock_dm_feedback:
-            mock_dm_feedback.return_value = modern_monster
-            selector = _create_monster_selector(available_ids)
+        with patch("gamedata.lookuputils.get_selection") as mock_get_selection:
+            mock_get_selection.return_value = modern_monster
+            selector = _create_selector(available_ids)
 
             result = await selector(mock_ctx_pm, [legacy_monster, modern_monster], pm=True)
 
-            mock_dm_feedback.assert_called_once()
+            mock_get_selection.assert_called_once()
             assert result == modern_monster
 
     @pytest.mark.asyncio
     async def test_legacy_preference_latest_returns_latest(
         self, mock_ctx, available_ids, legacy_monster, modern_monster
     ):
-        mock_ctx.get_server_settings = AsyncMock()
-        settings = Mock()
-        settings.legacy_preference = LegacyPreference.LATEST
-        mock_ctx.get_server_settings.return_value = settings
+        setup_mock_settings(mock_ctx, legacy_pref=LegacyPreference.LATEST)
 
         with patch("gamedata.lookuputils.can_access", return_value=True):
-            selector = _create_monster_selector(available_ids)
+            selector = _create_selector(available_ids)
 
             result = await selector(mock_ctx, [legacy_monster, modern_monster], pm=False)
 

@@ -86,7 +86,6 @@ async def select_monster_with_dm_feedback(
 
     original_channel_mention = ctx.channel.mention if ctx.channel else None
 
-    # Use optimized helper functions for consistent monster selection behavior
     def create_embed(page: int) -> disnake.Embed:
         return create_selection_embed(
             choices=choices,
@@ -109,7 +108,7 @@ async def select_monster_with_dm_feedback(
     await _send_dm_notification(ctx, select_msg)
 
     # Dual input handling - buttons OR text
-    updating_page = False  # Atomic flag to prevent rapid click race conditions
+    updating_page = False
 
     event_count = 0
     while event_count < constants.MAX_EVENTS:  # Prevent runaway loops, typical use should be <5 events
@@ -135,11 +134,11 @@ async def select_monster_with_dm_feedback(
             for task in pending:
                 task.cancel()
                 try:
-                    await task  # Ensure cancellation completes
+                    await task
                 except asyncio.CancelledError:
-                    pass  # Expected when task is cancelled
+                    pass
 
-            if not done:  # Timeout
+            if not done:
                 break
 
             event_count += 1

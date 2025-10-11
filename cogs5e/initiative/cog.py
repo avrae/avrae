@@ -1010,15 +1010,16 @@ class InitTracker(commands.Cog):
             else:
                 targets.append(target)
 
-        tickon = None
-
-        for t in [target_name] + args.get("tickon")[-1:]:
+        tick_on_combatant_id = None
+        tickon_arg = args.last("tickon")
+        if tickon_arg:
             tickon = await combat.select_combatant(
                 ctx,
-                t,
+                tickon_arg,
                 f"Pick the combatant in whose turn this effect timer would tick.",
                 select_group=False,
             )
+            tick_on_combatant_id = tickon.id
 
         duration = args.last("dur", -1, int)
         conc = args.last("conc", False, bool)
@@ -1049,7 +1050,7 @@ class InitTracker(commands.Cog):
                     end_on_turn_end=end,
                     concentration=conc,
                     desc=desc,
-                    tick_on_combatant_id=tickon.id,
+                    tick_on_combatant_id=tick_on_combatant_id,
                 )
                 result = combatant.add_effect(effect_obj)
                 if parent:

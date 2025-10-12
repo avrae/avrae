@@ -904,15 +904,14 @@ class Customization(commands.Cog):
 
         character: Character = await ctx.get_character()
 
-        if value is None:  # try to read from attachment otherwise display value
-            value = await _get_value_or_file(ctx, None, CVAR_FILE_SIZE_LIMIT, allow_empty=True)
-            if value is None:
-                cvar = character.get_scope_locals().get(name)
-                if cvar is None:
-                    return await ctx.send("This cvar is not defined.")
-                return await send_long_code_text(
-                    ctx, outside_codeblock=f"**{name}**:".replace("_", r"\_"), inside_codeblock=cvar
-                )
+        value = await _get_value_or_file(ctx, value, CVAR_FILE_SIZE_LIMIT, allow_empty=True)
+        if value is None:
+            cvar = character.get_scope_locals().get(name)
+            if cvar is None:
+                return await ctx.send("This cvar is not defined.")
+            return await send_long_code_text(
+                ctx, outside_codeblock=f"**{name}**:".replace("_", r"\_"), inside_codeblock=cvar
+            )
 
         helpers.set_cvar(character, name, value)
 
@@ -977,13 +976,12 @@ class Customization(commands.Cog):
 
         user_vars = await helpers.get_uvars(ctx)
 
-        if value is None:  # try to read from attachment otherwise display value
-            value = await _get_value_or_file(ctx, None, UVAR_FILE_SIZE_LIMIT, allow_empty=True)
-            if value is None:
-                uvar = user_vars.get(name)
-                if uvar is None:
-                    return await ctx.send("This uvar is not defined.")
-                return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=uvar)
+        value = await _get_value_or_file(ctx, value, UVAR_FILE_SIZE_LIMIT, allow_empty=True)
+        if value is None:
+            uvar = user_vars.get(name)
+            if uvar is None:
+                return await ctx.send("This uvar is not defined.")
+            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=uvar)
 
         await helpers.set_uvar(ctx, name, value)
         await send_long_code_text(ctx, outside_codeblock=f"User variable `{name}` set to:", inside_codeblock=value)
@@ -1037,13 +1035,12 @@ class Customization(commands.Cog):
         if name is None:
             return await self.svar_list(ctx)
 
-        if value is None:  # try to read from attachment otherwise display value
-            value = await _get_value_or_file(ctx, None, SVAR_FILE_SIZE_LIMIT, allow_empty=True)
-            if value is None:
-                svar = await helpers.get_svar(ctx, name)
-                if svar is None:
-                    return await ctx.send("This svar is not defined.")
-                return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=svar)
+        value = await _get_value_or_file(ctx, value, SVAR_FILE_SIZE_LIMIT, allow_empty=True)
+        if value is None:
+            svar = await helpers.get_svar(ctx, name)
+            if svar is None:
+                return await ctx.send("This svar is not defined.")
+            return await send_long_code_text(ctx, outside_codeblock=f"**{name}**:", inside_codeblock=svar)
 
         if not await _can_edit_servaliases(ctx):
             return await ctx.send(

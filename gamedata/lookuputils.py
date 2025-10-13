@@ -234,38 +234,43 @@ def source_slug(source):
 
 
 # ==== search ====
-def _create_selector(available_ids: dict[str, set[int]]):
-    async def legacy_entity_selector(ctx: "AvraeContext", choices: List["Sourced"], *args, **kwargs) -> "Sourced":
-        """Given a choice between only a legacy and non-legacy entity, respect the server's legacy preferences."""
-        # if the choices aren't between 2 entities or it's in PMs, defer
-        if len(choices) != 2 or ctx.guild is None:
-            return await get_selection(ctx, choices, *args, **kwargs)
+async def _handle_legacy_preference(
+    ctx: "AvraeContext", choices: List["Sourced"], available_ids: dict[str, set[int]]
+) -> "Sourced | None":
+    """
+    Auto-select between legacy and modern entities based on guild preferences.
 
-        # if it's not actually a choice between a legacy and non-legacy entity, defer
-        a, b = choices
-        if a.is_legacy == b.is_legacy:
-            return await get_selection(ctx, choices, *args, **kwargs)
+    Returns the preferred entity if auto-selection applies, None otherwise.
+    """
+    # Only applies to exactly 2 choices in a guild context
+    if len(choices) != 2 or ctx.guild is None:
+        return None
 
-        legacy: "Sourced" = a if a.is_legacy else b
-        latest: "Sourced" = a if not a.is_legacy else b
+    # Only applies if one is legacy and one is modern
+    a, b = choices
+    if a.is_legacy == b.is_legacy:
+        return None
 
-        guild_settings = await ctx.get_server_settings()
-        # if the guild setting is to ask, defer
-        if guild_settings.legacy_preference == LegacyPreference.ASK:
-            return await get_selection(ctx, choices, *args, **kwargs)
-        # if the user has access to the preferred entity, return it
-        if guild_settings.legacy_preference == LegacyPreference.LATEST and can_access(
-            latest, available_ids[latest.entitlement_entity_type]
-        ):
-            return latest
-        elif guild_settings.legacy_preference == LegacyPreference.LEGACY and can_access(
-            legacy, available_ids[legacy.entitlement_entity_type]
-        ):
-            return legacy
-        # otherwise defer to asking
-        return await get_selection(ctx, choices, *args, **kwargs)
+    legacy: "Sourced" = a if a.is_legacy else b
+    latest: "Sourced" = a if not a.is_legacy else b
 
-    return legacy_entity_selector
+    guild_settings = await ctx.get_server_settings()
+
+    # If set to ASK, don't auto-select
+    if guild_settings.legacy_preference == LegacyPreference.ASK:
+        return None
+
+    # Auto-select preferred entity if user has access
+    if guild_settings.legacy_preference == LegacyPreference.LATEST and can_access(
+        latest, available_ids[latest.entitlement_entity_type]
+    ):
+        return latest
+    elif guild_settings.legacy_preference == LegacyPreference.LEGACY and can_access(
+        legacy, available_ids[legacy.entitlement_entity_type]
+    ):
+        return legacy
+
+    return None
 
 
 def create_selectkey(available_ids: dict[str, set[int]]):
@@ -428,13 +433,22 @@ async def search_entities(
     # get licensed objects, mapped by entity type
     available_ids = {k: await ctx.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k) for k in entities}
 
+    # Custom selector that handles legacy preference and routes to get_selection()
+    async def selector(ctx, choices, *args, **kwargs):
+        # Try legacy preference auto-selection
+        preferred = await _handle_legacy_preference(ctx, choices, available_ids)
+        if preferred is not None:
+            return preferred
+        # Otherwise use standard selection routing
+        return await get_selection(ctx, choices, *args, entity_type=query_type, **kwargs)
+
     result, metadata = await search_and_select(
         ctx,
         list(itertools.chain.from_iterable(entities.values())),
         query,
         lambda e: e.name,
         selectkey=create_selectkey(available_ids),
-        selector=_create_selector(available_ids),
+        selector=selector,
         return_metadata=True,
         **kwargs,
     )

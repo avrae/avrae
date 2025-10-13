@@ -16,6 +16,9 @@ from rapidfuzz import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 from utils import constants, enums
+from utils.pagination import get_page_choices, get_total_pages
+from utils.selection import get_selection_with_buttons
+from utils.selection.constants import ENABLE_BUTTON_SELECTION_DEFAULT, SELECTION_TIMEOUT
 
 if TYPE_CHECKING:
     from utils.context import AvraeContext
@@ -113,13 +116,6 @@ def search(
         return results[0], True
 
 
-def paginate(choices: list[_HaystackT], per_page: int) -> list[list[_HaystackT]]:
-    out = []
-    for start_idx in range(0, len(choices), per_page):
-        out.append(choices[start_idx : start_idx + per_page])
-    return out
-
-
 async def get_selection(
     ctx,
     choices: list[_HaystackT],
@@ -129,8 +125,57 @@ async def get_selection(
     message=None,
     force_select=False,
     query=None,
+    entity_type=None,
 ):
     """Returns the selected choice, or raises an error.
+
+    This is a router function that checks the enable_button_selection setting and routes to either
+    button-based or text-based selection accordingly.
+
+    If delete is True, will delete the selection message and the response.
+    If length of choices is 1, will return the only choice unless force_select is True.
+
+    :param entity_type: Optional entity type (e.g., "monster") for specialized selection flows.
+    :raises NoSelectionElements: if len(choices) is 0.
+    :raises SelectionCancelled: if selection is cancelled."""
+
+    # Determine if we should use button selection
+    if ctx.guild:
+        # Guild context: use guild setting
+        guild_settings = await ctx.get_server_settings()
+        use_buttons = getattr(guild_settings, "enable_button_selection", ENABLE_BUTTON_SELECTION_DEFAULT) is True
+    else:
+        # PM context: use system default
+        use_buttons = ENABLE_BUTTON_SELECTION_DEFAULT
+
+    if use_buttons:
+        # Use monster DM feedback for monster PM selections
+        if pm and entity_type == "monster":
+            from utils.selection import select_monster_with_dm_feedback
+
+            return await select_monster_with_dm_feedback(ctx, choices, key=key, query=query)
+        return await get_selection_with_buttons(
+            ctx, choices, key=key, delete=delete, pm=pm, message=message, force_select=force_select, query=query
+        )
+    else:
+        return await _get_selection_text_based(
+            ctx, choices, key=key, delete=delete, pm=pm, message=message, force_select=force_select, query=query
+        )
+
+
+async def _get_selection_text_based(
+    ctx,
+    choices: list[_HaystackT],
+    key: Callable[[_HaystackT], str],
+    delete=True,
+    pm=False,
+    message=None,
+    force_select=False,
+    query=None,
+):
+    """Text-based selection implementation.
+
+    Returns the selected choice, or raises an error.
     If delete is True, will delete the selection message and the response.
     If length of choices is 1, will return the only choice unless force_select is True.
 
@@ -142,7 +187,7 @@ async def get_selection(
         return choices[0]
 
     page = 0
-    pages = paginate(choices, 10)
+    total_pages = get_total_pages(choices, 10)
     m = None
     select_msg = None
 
@@ -156,15 +201,15 @@ async def get_selection(
         return msg.author == ctx.author and msg.channel == ctx.channel and valid
 
     for n in range(200):
-        _choices = pages[page]
+        _choices = get_page_choices(choices, page, 10)
         names = [key(o) for o in _choices]
         embed = disnake.Embed()
         embed.title = "Multiple Matches Found"
         select_str = f"Your input was: `{query}`\n" if query else ""
         select_str += "Which one were you looking for? (Type the number or `c` to cancel)\n"
-        if len(pages) > 1:
+        if total_pages > 1:
             select_str += "`n` to go to the next page, or `p` for previous\n"
-            embed.set_footer(text=f"Page {page + 1}/{len(pages)}")
+            embed.set_footer(text=f"Page {page + 1}/{total_pages}")
         for i, r in enumerate(names):
             select_str += f"**[{i + 1 + page * 10}]** - {r}\n"
         embed.description = select_str
@@ -186,14 +231,14 @@ async def get_selection(
             select_msg = await ctx.author.send(embed=embed)
 
         try:
-            m = await ctx.bot.wait_for("message", timeout=30, check=chk)
+            m = await ctx.bot.wait_for("message", timeout=SELECTION_TIMEOUT, check=chk)
         except asyncio.TimeoutError:
             m = None
 
         if m is None:
             break
         if m.content.lower() == "n":
-            if page + 1 < len(pages):
+            if page + 1 < total_pages:
                 page += 1
             else:
                 await ctx.channel.send("You are already on the last page.")

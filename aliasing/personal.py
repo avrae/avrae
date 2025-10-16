@@ -97,7 +97,7 @@ class _AliasBase(_CustomizationBase, abc.ABC):
     @staticmethod
     def precreate_checks(name, code):
         if len(code) > ALIAS_SIZE_LIMIT:
-            raise InvalidArgument(f"Aliases must be shorter than {ALIAS_SIZE_LIMIT} characters.")
+            raise InvalidArgument(f"Aliases must be shorter than {ALIAS_SIZE_LIMIT:,} characters.")
         if " " in name:
             raise InvalidArgument("Alias names cannot contain spaces.")
 
@@ -106,7 +106,7 @@ class _SnippetBase(_CustomizationBase, abc.ABC):
     @staticmethod
     def precreate_checks(name, code):
         if len(code) > SNIPPET_SIZE_LIMIT:
-            raise InvalidArgument(f"Snippets must be shorter than {SNIPPET_SIZE_LIMIT} characters.")
+            raise InvalidArgument(f"Snippets must be shorter than {SNIPPET_SIZE_LIMIT:,} characters.")
         if len(name) < 2:
             raise InvalidArgument("Snippet names must be at least 2 characters long.")
         if " " in name:

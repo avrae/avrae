@@ -2,13 +2,22 @@ import pytest
 import asyncio
 from unittest.mock import MagicMock
 
-from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
+from aliasing.constants import (
+    ALIAS_SIZE_LIMIT,
+    CVAR_SIZE_LIMIT,
+    GVAR_SIZE_LIMIT,
+    SNIPPET_SIZE_LIMIT,
+    SVAR_SIZE_LIMIT,
+    UVAR_SIZE_LIMIT,
+)
 from cogsmisc.customization import (
     UTF8_MAX_BYTES_PER_CHAR,
+    ALIAS_FILE_SIZE_LIMIT,
     CVAR_FILE_SIZE_LIMIT,
-    UVAR_FILE_SIZE_LIMIT,
-    SVAR_FILE_SIZE_LIMIT,
     GVAR_FILE_SIZE_LIMIT,
+    SNIPPET_FILE_SIZE_LIMIT,
+    SVAR_FILE_SIZE_LIMIT,
+    UVAR_FILE_SIZE_LIMIT,
     read_file_from_message,
     _get_value_or_file,
 )
@@ -19,6 +28,8 @@ from cogs5e.models.errors import InvalidArgument
 def variable_limits():
     """Fixture providing variable size limits for parameterized testing"""
     return [
+        (ALIAS_SIZE_LIMIT, ALIAS_FILE_SIZE_LIMIT, "ALIAS"),
+        (SNIPPET_SIZE_LIMIT, SNIPPET_FILE_SIZE_LIMIT, "SNIPPET"),
         (CVAR_SIZE_LIMIT, CVAR_FILE_SIZE_LIMIT, "CVAR"),
         (UVAR_SIZE_LIMIT, UVAR_FILE_SIZE_LIMIT, "UVAR"),
         (SVAR_SIZE_LIMIT, SVAR_FILE_SIZE_LIMIT, "SVAR"),
@@ -45,6 +56,8 @@ class MockContext:
 class TestFileSizeLimits:
     def test_file_size_constants(self):
         """Test file size constants match variable limits"""
+        assert ALIAS_FILE_SIZE_LIMIT == UTF8_MAX_BYTES_PER_CHAR * ALIAS_SIZE_LIMIT
+        assert SNIPPET_FILE_SIZE_LIMIT == UTF8_MAX_BYTES_PER_CHAR * SNIPPET_SIZE_LIMIT
         assert CVAR_FILE_SIZE_LIMIT == UTF8_MAX_BYTES_PER_CHAR * CVAR_SIZE_LIMIT
         assert UVAR_FILE_SIZE_LIMIT == UTF8_MAX_BYTES_PER_CHAR * UVAR_SIZE_LIMIT
         assert SVAR_FILE_SIZE_LIMIT == UTF8_MAX_BYTES_PER_CHAR * SVAR_SIZE_LIMIT

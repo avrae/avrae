@@ -969,6 +969,7 @@ class InitTracker(commands.Cog):
         `end` - Makes the effect duration tick on the end of turn, rather than the beginning.
         `-t <target>` - Specifies more combatants to target, chainable (e.g., "-t or1 -t or2").
         `-parent <"[combatant]|[effect]">` - Sets a parent effect from a specified combatant.
+        `-tickon <combatant>` - Specifies the combatant in whose turn the effect timer would tick.
         __Attacks__
         `adv`/`dis` - Give advantage or disadvantage to all attack rolls.
         `-b <bonus>` - Adds a bonus to hit.
@@ -1009,6 +1010,17 @@ class InitTracker(commands.Cog):
             else:
                 targets.append(target)
 
+        tick_on_combatant_id = None
+        tickon_arg = args.last("tickon")
+        if tickon_arg:
+            tickon = await combat.select_combatant(
+                ctx,
+                tickon_arg,
+                f"Pick the combatant in whose turn this effect timer would tick.",
+                select_group=False,
+            )
+            tick_on_combatant_id = tickon.id
+
         duration = args.last("dur", -1, int)
         conc = args.last("conc", False, bool)
         end = args.last("end", False, bool)
@@ -1038,6 +1050,7 @@ class InitTracker(commands.Cog):
                     end_on_turn_end=end,
                     concentration=conc,
                     desc=desc,
+                    tick_on_combatant_id=tick_on_combatant_id,
                 )
                 result = combatant.add_effect(effect_obj)
                 if parent:

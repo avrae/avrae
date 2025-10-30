@@ -116,6 +116,7 @@ class InitTracker(commands.Cog):
         `dyn` - Dynamic initiative; Rerolls all initiatives at the start of a round.
         `turnnotif` - Notifies the controller of the next combatant in initiative.
         `deathdelete` - Disables deleting monsters below 0 hp.
+        `initscore` - Use initiative scores instead of rolling initiative for monsters by default.
         `-name <name>` - Sets a name for the combat instance.
         `norecord` - If the server has opted in to the Natural Language Training project, omit this combat from recording.
         """  # noqa E501
@@ -133,6 +134,8 @@ class InitTracker(commands.Cog):
             options.turnnotif = True
         if "deathdelete" in args:
             options.deathdelete = False
+        if "initscore" in args:
+            options.initscore = True
         norecord = "norecord" in args
 
         temp_summary_msg = await ctx.send("```Awaiting combatants...```")
@@ -246,6 +249,7 @@ class InitTracker(commands.Cog):
         `-group <group>` - Adds the combatant to a group.
         `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
         `-b <condition bonus>` - Adds a bonus to the combatant's initiative roll.
+        `initscore` - Uses the monster's Initiative score instead of rolling. Applies adv/dis as ±5 bonuses.
         `rollhp` - Rolls the monsters HP, instead of using the default value.
         `-hp <hp>` - Sets starting HP.
         `-thp <thp>` - Sets starting THP.
@@ -272,6 +276,9 @@ class InitTracker(commands.Cog):
 
         combat = await ctx.get_combat()
 
+        # Use combat setting as default if initscore flag not explicitly provided
+        initscore = args.last("initscore", combat.options.initscore, bool)
+
         msgs = []
         to_pm = []
 
@@ -288,14 +295,20 @@ class InitTracker(commands.Cog):
                 break
 
             check_roll = None  # to make things happy
-            if p is None:
+            if p is not None:
+                init = int(p)
+            elif initscore:
+                init = 10 + init_skill.value
+                if adv is True:
+                    init += 5
+                elif adv is False:
+                    init -= 5
+            else:
                 if b:
                     check_roll = roll(f"{init_skill.d20(base_adv=adv)}+{b}")
                 else:
                     check_roll = roll(init_skill.d20(base_adv=adv))
                 init = check_roll.total
-            else:
-                init = int(p)
 
             # -controller (#1368)
             if args.last("controller"):
@@ -324,7 +337,19 @@ class InitTracker(commands.Cog):
 
             if group is None:
                 combat.add_combatant(me)
-                msgs.append(f"{name} was added to combat with initiative {check_roll.result if p is None else p}.")
+                if p is not None:
+                    init_display = p
+                elif initscore:
+                    base = 10 + init_skill.value
+                    if adv is True:
+                        init_display = f"{base} + 5 (adv) = {init}"
+                    elif adv is False:
+                        init_display = f"{base} - 5 (dis) = {init}"
+                    else:
+                        init_display = init
+                else:
+                    init_display = check_roll.result if check_roll else init
+                msgs.append(f"{name} was added to combat with initiative {init_display}.")
             else:
                 grp = combat.get_group(group, create=init)
                 grp.add_combatant(me)
@@ -570,6 +595,7 @@ class InitTracker(commands.Cog):
         `dyn` - Dynamic initiative; Rerolls all initiatives at the start of a round.
         `turnnotif` - Notifies the controller of the next combatant in initiative.
         `deathdelete` - Toggles removing monsters below 0 HP.
+        `initscore` - Use initiative scores instead of rolling initiative for monsters by default.
         `-name <name>` - Sets a name for the combat instance.
         `-combatdm <@mention>` - Changes this combat's DM.
         """
@@ -590,6 +616,9 @@ class InitTracker(commands.Cog):
         if args.last("deathdelete", default=False, type_=bool):
             options.deathdelete = not options.deathdelete
             out += f"Monsters at 0 HP will be {'removed' if options.deathdelete else 'left'}.\n"
+        if args.last("initscore", default=False, type_=bool):
+            options.initscore = not options.initscore
+            out += f"Initiative score (static init) turned {'on' if options.initscore else 'off'}.\n"
         if combat_dm := args.last("combatdm"):
             try:
                 member = await commands.MemberConverter().convert(ctx, combat_dm)

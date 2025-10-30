@@ -30,6 +30,7 @@ class CombatOptions(BaseModel):
     dynamic: bool = False
     turnnotif: bool = False
     deathdelete: bool = True
+    initscore: bool = False
     name: Optional[str] = None
 
 

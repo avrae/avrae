@@ -352,3 +352,59 @@ async def test_commands_nlp_recording(avrae, dhttp):
             avrae.message(command)
             await dhttp.drain()
         await end_init(avrae, dhttp)
+
+
+@pytest.fixture
+async def ieffect_combat(avrae, dhttp):
+    """Fixture that starts and ends combat for each test, ensuring cleanup even on failure."""
+    await start_init(avrae, dhttp)
+    yield
+    await end_init(avrae, dhttp)
+
+
+@pytest.mark.usefixtures("init_fixture", "character", "ieffect_combat")
+class TestInitiativeShuffleWithIEffects:
+    """Test that !init shuffle accounts for initiative effects (AVR-1069)"""
+
+    async def test_shuffle_with_ieffect(self, avrae, dhttp):
+        """Test that !init shuffle applies ieffects"""
+        avrae.message("!init madd kobold")
+        await dhttp.drain()
+
+        avrae.message('!i effect KO1 "Enhanced Init" -cb 10')
+        await dhttp.drain()
+
+        dhttp.clear()
+        avrae.message("!init shuffle")
+        await dhttp.receive_delete()
+
+        match = await dhttp.receive_message(r"Rerolled initiative! New order:")
+
+        message_content = match.string
+        assert "+ 10" in message_content
+
+    async def test_shuffle_group_uses_first_combatant_effects(self, avrae, dhttp):
+        """Test that !init shuffle uses first combatant's effects for grouped combatants"""
+        avrae.message("!init madd kobold -n 3")
+        await dhttp.drain()
+
+        avrae.message("!init opt ko1 -group kobolds")
+        await dhttp.drain()
+        avrae.message("!init opt ko2 -group kobolds")
+        await dhttp.drain()
+
+        avrae.message('!i effect KO2 "Ignored Bonus" -cb 20')
+        await dhttp.drain()
+
+        avrae.message('!i effect KO1 "Used Bonus" -cb 15')
+        await dhttp.drain()
+
+        dhttp.clear()
+        avrae.message("!init shuffle")
+        await dhttp.receive_delete()
+
+        match = await dhttp.receive_message(r"Rerolled initiative! New order:")
+
+        message_content = match.string
+        assert "+ 15" in message_content
+        assert "+ 20" not in message_content

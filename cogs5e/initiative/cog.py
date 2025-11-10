@@ -297,17 +297,14 @@ class InitTracker(commands.Cog):
             check_roll = None  # to make things happy
             if p is not None:
                 init = int(p)
-            elif initscore:
-                init = 10 + init_skill.value
-                if adv is True:
-                    init += 5
-                elif adv is False:
-                    init -= 5
             else:
-                if b:
-                    check_roll = roll(f"{init_skill.d20(base_adv=adv)}+{b}")
+                if initscore:
+                    base_init = 10 + init_skill.value
+                    adv_bonus = 5 if adv is True else -5 if adv is False else 0
+                    roll_str = f"{base_init + adv_bonus}{'+' + b if b else ''}"
                 else:
-                    check_roll = roll(init_skill.d20(base_adv=adv))
+                    roll_str = f"{init_skill.d20(base_adv=adv)}{'+' + b if b else ''}"
+                check_roll = roll(roll_str)
                 init = check_roll.total
 
             # -controller (#1368)
@@ -339,14 +336,6 @@ class InitTracker(commands.Cog):
                 combat.add_combatant(me)
                 if p is not None:
                     init_display = p
-                elif initscore:
-                    base = 10 + init_skill.value
-                    if adv is True:
-                        init_display = f"{base} + 5 (adv) = {init}"
-                    elif adv is False:
-                        init_display = f"{base} - 5 (dis) = {init}"
-                    else:
-                        init_display = init
                 else:
                     init_display = check_roll.result if check_roll else init
                 msgs.append(f"{name} was added to combat with initiative {init_display}.")

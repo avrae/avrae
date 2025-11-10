@@ -408,3 +408,135 @@ class TestInitiativeShuffleWithIEffects:
         message_content = match.string
         assert "+ 15" in message_content
         assert "+ 20" not in message_content
+
+
+@pytest.mark.usefixtures("init_fixture", "character")
+class TestInitScoreFeature:
+    async def test_per_monster_initscore_override(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init begin")
+        await dhttp.drain()
+        avrae.message("!init madd kobold initscore")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold = combat.get_combatant("KO1")
+        assert kobold.init == 12, f"Expected static init 12 with initscore flag, got {kobold.init}"
+        avrae.message("!init madd kobold")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold2 = combat.get_combatant("KO2")
+        assert 3 <= kobold2.init <= 22, f"Expected rolled init (3-22), got {kobold2.init}"
+        dhttp.clear()
+        avrae.message("!i remove KO1")
+        await dhttp.drain()
+        avrae.message("!i remove KO2")
+        await dhttp.drain()
+
+    async def test_initscore_with_advantage(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init madd kobold initscore adv")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold = combat.get_combatant("KO1")
+        assert kobold.init == 17, f"Expected static init with adv 17 (12+5), got {kobold.init}"
+        dhttp.clear()
+        avrae.message("!i remove KO1")
+        await dhttp.drain()
+
+    async def test_initscore_with_disadvantage(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init madd kobold initscore dis")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold = combat.get_combatant("KO1")
+        assert kobold.init == 7, f"Expected static init with dis 7 (12-5), got {kobold.init}"
+        dhttp.clear()
+        avrae.message("!i remove KO1")
+        await dhttp.drain()
+
+    async def test_initscore_with_bonus_roll(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init madd kobold initscore -b 2")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold = combat.get_combatant("KO1")
+        assert kobold.init == 14, f"Expected static init with +2 bonus = 14 (12+2), got {kobold.init}"
+        await end_init(avrae, dhttp)
+
+    async def test_combat_wide_initscore_setting(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init begin initscore")
+        await dhttp.drain()
+        avrae.message("!init madd kobold")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold = combat.get_combatant("KO1")
+        assert kobold.init == 12, f"Expected static init 12 (10+2), got {kobold.init}"
+        dhttp.clear()
+        avrae.message("!i remove KO1")
+        await dhttp.drain()
+
+    async def test_initscore_overridden_by_manual_init(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init madd kobold -p 25")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold = combat.get_combatant("KO1")
+        assert kobold.init == 25, f"Expected manual init 25, got {kobold.init}"
+        dhttp.clear()
+        avrae.message("!i remove KO1")
+        await dhttp.drain()
+
+    async def test_multiple_monsters_same_static_init(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init madd kobold -n 3")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        ko1 = combat.get_combatant("KO1")
+        ko2 = combat.get_combatant("KO2")
+        ko3 = combat.get_combatant("KO3")
+        assert ko1.init == 12, f"KO1 expected 12, got {ko1.init}"
+        assert ko2.init == 12, f"KO2 expected 12, got {ko2.init}"
+        assert ko3.init == 12, f"KO3 expected 12, got {ko3.init}"
+        dhttp.clear()
+        avrae.message("!i remove KO1")
+        await dhttp.drain()
+        avrae.message("!i remove KO2")
+        await dhttp.drain()
+        avrae.message("!i remove KO3")
+        await dhttp.drain()
+
+    async def test_initscore_with_different_monsters(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init madd kobold")
+        await dhttp.drain()
+        avrae.message("!init madd mage")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold = combat.get_combatant("KO1")
+        mage = combat.get_combatant("MA1")
+        assert kobold.init == 12, f"Kobold expected 12, got {kobold.init}"
+        assert mage.init == 12, f"Mage expected 12, got {mage.init}"
+        await end_init(avrae, dhttp)
+
+    async def test_initscore_meta_toggle(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init begin")
+        await dhttp.drain()
+        avrae.message("!init meta initscore")
+        await dhttp.drain()
+        avrae.message("!init madd kobold")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold = combat.get_combatant("KO1")
+        assert kobold.init == 12, f"Expected static init 12 after meta toggle on, got {kobold.init}"
+        avrae.message("!init meta initscore")
+        await dhttp.drain()
+        avrae.message("!init madd kobold")
+        await dhttp.drain()
+        combat = await active_combat(avrae)
+        kobold2 = combat.get_combatant("KO2")
+        assert 3 <= kobold2.init <= 22, f"Expected rolled init (3-22) after toggle off, got {kobold2.init}"
+
+    async def test_initscore_teardown(self, avrae, dhttp):
+        await end_init(avrae, dhttp)

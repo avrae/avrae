@@ -12,6 +12,7 @@ from utils import config
 
 import asyncio
 import faulthandler
+import json
 import logging
 import random
 import time
@@ -259,6 +260,45 @@ async def on_ready():
     log.info(bot.user.name)
     log.info(bot.user.id)
     log.info("------")
+
+
+@bot.event
+async def on_interaction(interaction: disnake.Interaction):
+    """Cache DM button interactions for cross-shard handling."""
+    if (
+        interaction.guild_id is not None
+        or interaction.type != disnake.InteractionType.component
+        or not interaction.message
+        or not interaction.user
+    ):
+        return
+
+    try:
+        key = f"interaction:{interaction.message.id}:{interaction.user.id}"
+        data = {
+            "message_id": str(interaction.message.id),
+            "user_id": str(interaction.user.id),
+            "custom_id": interaction.data.custom_id if interaction.data else None,
+            "channel_id": str(interaction.channel_id),
+            "shard_id": bot.shard_id if bot.shard_id is not None else 0,
+        }
+
+        try:
+            await asyncio.wait_for(interaction.response.defer(), timeout=2.5)
+        except asyncio.TimeoutError:
+            log.warning(f"[Shard {bot.shard_id}] Defer timeout: skipping cache")
+            return
+        except disnake.HTTPException:
+            pass
+
+        await bot.rdb.setex(key, json.dumps(data), 60)
+        await bot.rdb.publish(f"interaction:{interaction.message.id}", "ping")
+
+        log.debug(
+            f"[Shard {bot.shard_id}] Cached DM interaction msg={interaction.message.id} user={interaction.user.id}"
+        )
+    except Exception as e:
+        log.error(f"Redis interaction cache failed: {e}", exc_info=True)
 
 
 @bot.listen("on_command_error")

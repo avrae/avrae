@@ -105,9 +105,7 @@ async def select_monster_with_dm_feedback(
     if interaction is not None:
         try:
             combat_channel = ctx.channel.mention
-            await interaction.followup.send(
-                f"✅ Adding **{key(choice)}** to combat in {combat_channel}!", ephemeral=True
-            )
+            await interaction.followup.send(f"✅ Adding **{key(choice)}** to combat in {combat_channel}!")
         except disnake.HTTPException:
             pass
 

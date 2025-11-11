@@ -14,6 +14,7 @@ DM_NOTIFICATION_TIMEOUT = 60
 
 # Event Limits
 MAX_EVENTS = 100
+MAX_REDIS_POLL_SECONDS = 120
 
 # Pagination
 MAX_BUTTONS_PER_ROW = 5  # Change this to auto arrange btns (recommended: 4 or 5)

@@ -3,6 +3,7 @@ Helper utilities for the selection system.
 """
 
 import asyncio
+import json
 import logging
 from dataclasses import dataclass
 from typing import List, Optional, Any, Callable
@@ -86,27 +87,136 @@ async def _safe_delete(*messages) -> None:
             pass
 
 
-async def _wait_for_input(ctx, select_msg, choices, timeout):
-    """Wait for either button interaction or text message."""
-    done, pending = await asyncio.wait(
-        [
-            asyncio.create_task(
-                ctx.bot.wait_for(
-                    "interaction",
-                    check=lambda i: (i.message and i.message.id == select_msg.id and i.user.id == ctx.author.id),
+class _RedisInteractionFollowup:
+    """Cross-shard DM interaction followup."""
+
+    def __init__(self, bot, channel_id, message_id):
+        self._bot = bot
+        self._channel_id = channel_id
+        self._message_id = message_id
+
+    async def send(self, content=None, **kwargs):
+        try:
+            channel = self._bot.get_channel(int(self._channel_id))
+            if channel:
+                reference = disnake.MessageReference(
+                    message_id=int(self._message_id), channel_id=int(self._channel_id), fail_if_not_exists=False
                 )
-            ),
-            asyncio.create_task(ctx.bot.wait_for("message", check=lambda msg: text_input_check(msg, ctx, choices))),
-        ],
-        return_when=asyncio.FIRST_COMPLETED,
-        timeout=timeout,
-    )
+                return await channel.send(content, reference=reference, **kwargs)
+            else:
+                log.warning(f"Could not find DM channel {self._channel_id} for cross-shard followup")
+        except Exception as e:
+            log.warning(f"Failed to send cross-shard followup message: {e}")
+
+
+class _RedisInteraction:
+    """Mock interaction from Redis cache for cross-shard interactions."""
+
+    def __init__(self, data, bot):
+        self.data = type("obj", (object,), {"custom_id": data.get("custom_id")})()
+        self.message = type("obj", (object,), {"id": int(data.get("message_id"))})()
+        self.user = type("obj", (object,), {"id": int(data.get("user_id"))})()
+        self._from_redis = True
+
+        channel_id = data.get("channel_id")
+        message_id = data.get("message_id")
+        if channel_id and message_id:
+            self.followup = _RedisInteractionFollowup(bot, channel_id, message_id)
+        else:
+            self.followup = _NoOpFollowup()
+
+    class response:
+        """Response already handled by receiving shard."""
+
+        @staticmethod
+        async def defer(*args, **kwargs):
+            pass  # Already deferred by shard that received the interaction
+
+        @staticmethod
+        async def send_message(*args, **kwargs):
+            pass  # Can't send from different shard
+
+
+class _NoOpFollowup:
+    """Fallback followup handler."""
+
+    async def send(self, *args, **kwargs):
+        log.debug("Skipping cross-shard followup message (no webhook available)")
+
+
+async def _wait_for_redis_interaction(ctx, select_msg, pubsub):
+    try:
+        poll_count = 0
+        while poll_count < constants.MAX_REDIS_POLL_SECONDS:
+            poll_count += 1
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if message and message["type"] == "message":
+                key = f"interaction:{select_msg.id}:{ctx.author.id}"
+                data = await ctx.bot.rdb.getdel(key)
+                if data:
+                    interaction_data = json.loads(data)
+                    log.debug(
+                        f"[Shard {ctx.bot.shard_id}] Received Redis interaction for msg={select_msg.id} from shard={interaction_data.get('shard_id')}"  # noqa: E501
+                    )
+                    return _RedisInteraction(interaction_data, ctx.bot)
+    except asyncio.TimeoutError:
+        return None
+    except Exception as e:
+        log.error(f"Redis interaction fetch failed: {e}", exc_info=True)
+        return None
+
+
+async def _wait_for_input(ctx, select_msg, choices, timeout):
+    """Wait for button interaction (local OR Redis), or text message."""
+    key = f"interaction:{select_msg.id}:{ctx.author.id}"
+    try:
+        cached = await ctx.bot.rdb.getdel(key)
+        if cached:
+            interaction_data = json.loads(cached)
+            log.debug(f"[Shard {ctx.bot.shard_id}] Found cached interaction before subscribe msg={select_msg.id}")
+            return _RedisInteraction(interaction_data, ctx.bot)
+    except Exception as e:
+        log.debug(f"Cache pre-check failed (non-critical): {e}")
+
+    channel = f"interaction:{select_msg.id}"
+    pubsub = None
+    try:
+        pubsub = await ctx.bot.rdb.subscribe(channel)
+    except Exception as e:
+        log.warning(f"Redis subscribe failed, cross-shard interactions won't work: {e}")
+
+    tasks = [
+        asyncio.create_task(
+            ctx.bot.wait_for(
+                "interaction",
+                check=lambda i: (
+                    i.message
+                    and i.message.id == select_msg.id
+                    and i.user.id == ctx.author.id
+                    and i.guild_id is not None  # Only guild interactions; DMs handled via Redis
+                ),
+            )
+        ),
+        asyncio.create_task(ctx.bot.wait_for("message", check=lambda msg: text_input_check(msg, ctx, choices))),
+    ]
+
+    if pubsub:
+        tasks.append(asyncio.create_task(_wait_for_redis_interaction(ctx, select_msg, pubsub)))
+
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED, timeout=timeout)
 
     for task in pending:
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
+            pass
+
+    if pubsub:
+        try:
+            await pubsub.unsubscribe(channel)
+            await pubsub.close()
+        except Exception:
             pass
 
     if done:
@@ -123,15 +233,19 @@ async def _handle_button_navigation(interaction, action, page, total_pages):
     boundary, msg = _check_navigation_boundary(action, page, total_pages)
     if boundary:
         try:
-            await interaction.response.send_message(msg, ephemeral=True)
+            if getattr(interaction, "_from_redis", False):
+                await interaction.followup.send(msg)
+            else:
+                await interaction.response.send_message(msg, ephemeral=True)
         except disnake.HTTPException:
             pass
         return SelectionAction(type="ignore")
 
-    try:
-        await interaction.response.defer()
-    except disnake.HTTPException:
-        pass
+    if not getattr(interaction, "_from_redis", False):
+        try:
+            await interaction.response.defer()
+        except disnake.HTTPException:
+            pass
 
     new_page = page + 1 if action == "next" else page - 1
     return SelectionAction(type="navigate", page=new_page)
@@ -159,11 +273,11 @@ async def _handle_button_selection(interaction, action, choices, pm):
 
     selected_choice = choices[choice_idx]
 
-    # Defer interaction to prevent timeout, use ephemeral for PM to allow ephemeral followup
-    try:
-        await interaction.response.defer(ephemeral=pm)
-    except disnake.HTTPException:
-        pass
+    if not getattr(interaction, "_from_redis", False):
+        try:
+            await interaction.response.defer()
+        except disnake.HTTPException:
+            pass
 
     return SelectionAction(type="select", choice=selected_choice, interaction=interaction)
 
@@ -184,7 +298,8 @@ async def _handle_button_interaction(interaction, page, total_pages, choices, pm
         return SelectionAction(type="ignore")
 
     if action == "cancel":
-        await interaction.response.defer()
+        if not getattr(interaction, "_from_redis", False):
+            await interaction.response.defer()
         return SelectionAction(type="cancel")
 
     if action in ("next", "prev"):
@@ -282,7 +397,7 @@ async def _handle_selection_loop(
 
             event_count += 1
 
-            if isinstance(result, disnake.Interaction):
+            if isinstance(result, (disnake.Interaction, _RedisInteraction)):
                 action = await _handle_button_interaction(result, page, total_pages, choices, pm)
             else:
                 action = await _handle_text_input(ctx, result, page, total_pages, choices)

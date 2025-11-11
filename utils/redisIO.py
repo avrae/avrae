@@ -43,6 +43,11 @@ class RedisIO:
     async def delete(self, *keys):
         return await self._db.delete(*keys)
 
+    async def getdel(self, key, default=None):
+        """Atomically get and delete a key."""
+        encoded_data = await self._db.getdel(key)
+        return encoded_data.decode() if encoded_data is not None else default
+
     async def setex(self, key, value, expiration):
         return await self._db.setex(key, expiration, value)
 

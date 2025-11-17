@@ -20,11 +20,11 @@ class Homebrew(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def clear_cache(self, ctx, entity_type):
+    async def _clear_entity_cache(self, ctx, entity_type, guild_wide=False):
+        """Clear entity cache by delegating to the Lookup cog."""
         lookup = self.bot.get_cog("Lookup")
-        if lookup is None:
-            return await ctx.send("Error: Lookup cog not loaded.")
-        await lookup.clear_cache(ctx, entity_type)
+        if lookup is not None:
+            await lookup.clear_cache(ctx, entity_type, guild_wide=guild_wide)
 
     @commands.group(invoke_without_command=True)
     async def bestiary(self, ctx, *, name=None):
@@ -46,7 +46,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Bestiary not found.")
             await bestiary.set_active(ctx)
-            await self.clear_cache(ctx, "monster")
+            await self._clear_entity_cache(ctx, "monster")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
         if bestiary.desc:
@@ -79,6 +79,7 @@ class Homebrew(commands.Cog):
 
         if resp:
             await bestiary.unsubscribe(ctx)
+            await self._clear_entity_cache(ctx, "monster")
             return await ctx.send("{} has been deleted.".format(bestiary.name))
         else:
             return await ctx.send("OK, cancelling.")
@@ -126,6 +127,7 @@ class Homebrew(commands.Cog):
 
         await bestiary.subscribe(ctx)
         await bestiary.set_active(ctx)
+        await self._clear_entity_cache(ctx, "monster")
 
         await loading.edit(content=f"Imported {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
@@ -161,6 +163,8 @@ class Homebrew(commands.Cog):
             await bestiary.subscribe(ctx)
             await bestiary.add_server_subscriptions(ctx, old_server_subs)
             await bestiary.set_active(ctx)
+            # Guild-wide if server subs exist, otherwise personal only
+            await self._clear_entity_cache(ctx, "monster", guild_wide=bool(old_server_subs))
 
         await loading.edit(content=f"Imported and updated {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
@@ -180,6 +184,7 @@ class Homebrew(commands.Cog):
         Requires __Manage Server__ permissions or a role named "Server Brewer" or "Dragonspeaker" to run."""
         bestiary = await Bestiary.from_ctx(ctx)
         is_server_active = await bestiary.toggle_server_active(ctx)
+        await self._clear_entity_cache(ctx, "monster", guild_wide=True)
         if is_server_active:
             await ctx.send(f"Ok, {bestiary.name} is now active on {ctx.guild.name}!")
         else:
@@ -206,6 +211,7 @@ class Homebrew(commands.Cog):
 
         bestiary = await search_and_select(ctx, bestiaries, bestiary_name, lambda b: b.name)
         await bestiary.toggle_server_active(ctx)
+        await self._clear_entity_cache(ctx, "monster", guild_wide=True)
         await ctx.send(f"Ok, {bestiary.name} is no longer active on {ctx.guild.name}.")
 
     @commands.group(invoke_without_command=True)
@@ -230,7 +236,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Pack not found.")
             await pack.set_active(ctx)
-            await self.clear_cache(ctx, "item")
+            await self._clear_entity_cache(ctx, "item")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = pack.name
         embed.description = pack.desc
@@ -354,7 +360,7 @@ class Homebrew(commands.Cog):
             except NoSelectionElements:
                 return await ctx.send("Tome not found.")
             await tome.set_active(ctx)
-            await self.clear_cache(ctx, "spell")
+            await self._clear_entity_cache(ctx, "spell")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = tome.name
         embed.description = tome.desc

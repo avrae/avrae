@@ -4,19 +4,31 @@ import logging
 from contextlib import suppress
 
 import disnake
+import gamedata
 from d20 import roll
 from disnake.ext import commands
 from disnake.ext.commands import NoPrivateMessage
 
 from aliasing import helpers
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, EmbedWithColor
+from cogs5e.models.embeds import EmbedPaginator, EmbedWithAuthor, EmbedWithCharacter, EmbedWithColor
 from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.utils import actionutils, checkutils, gameutils, targetutils
 from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
-from gamedata.lookuputils import select_monster_full, select_spell_full
+from gamedata.lookuputils import (
+    AUTOCOMPLETE_FAVORITES_LIMIT,
+    AUTOCOMPLETE_MAX_RESULTS,
+    USER_MONSTER_FAVORITES_CACHE,
+    create_selectkey,
+    get_monster_choices,
+    get_user_favorite_monsters,
+    madd_monster_converter,
+    select_monster_full,
+    select_spell_full,
+    slash_match_key,
+)
 from utils import checks, constants
 from utils.argparser import argparse
 from utils.functions import (
@@ -24,6 +36,7 @@ from utils.functions import (
     get_guild_member,
     get_initials,
     get_selection,
+    search,
     search_and_select,
     try_delete,
     camel_to_title,
@@ -237,31 +250,12 @@ class InitTracker(commands.Cog):
         await ctx.send("\n".join(msgs))
         await combat.final(ctx)
 
-    @init.command()
-    async def madd(self, ctx, monster_name: str, *, args=""):
-        """Adds a monster to combat.
-        __Valid Arguments__
-        `-name <name>` - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
-        `-n <number or dice>` - Adds more than one monster. Supports dice.
-        `-h` - Hides HP, AC, Resists, etc. Default: True.
-        `-p <value>` - Places combatant at the given value, instead of rolling.
-        `-controller <controller>` - Pings a different person on turn.
-        `-group <group>` - Adds the combatant to a group.
-        `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
-        `-b <condition bonus>` - Adds a bonus to the combatant's initiative roll.
-        `initscore` - Uses the monster's Initiative score instead of rolling. Applies adv/dis as ±5 bonuses.
-        `rollhp` - Rolls the monsters HP, instead of using the default value.
-        `-hp <hp>` - Sets starting HP.
-        `-thp <thp>` - Sets starting THP.
-        `-ac <ac>` - Sets the combatant's starting AC.
-        `-note <note>` - Sets the combatant's note.
-        """
-
-        monster = await select_monster_full(ctx, monster_name, pm=True)
-
-        args = argparse(args)
+    async def _madd_impl(self, ctx, monster, args_str):
+        """Shared implementation for !madd and /madd."""
+        args = argparse(args_str)
         private = not args.last("h", type_=bool)
         controller = ctx.author.id
+        author_id = ctx.author.id
         group = args.last("group")
         adv = args.adv(boolwise=True)
         b = args.join("b", "+")
@@ -274,7 +268,7 @@ class InitTracker(commands.Cog):
         name_template = args.last("name", f"{get_name(monster)}#")
         init_skill = monster.skills.initiative
 
-        combat = await ctx.get_combat()
+        combat = await Combat.from_ctx(ctx)
 
         # Use combat setting as default if initscore flag not explicitly provided
         initscore = args.last("initscore", combat.options.initscore, bool)
@@ -287,6 +281,7 @@ class InitTracker(commands.Cog):
             msgs.append(roll_result)
         name_builder = combatant_builders.CombatantNameBuilder(name_template, combat, always_number_first_name=False)
 
+        monster_added = False
         for _ in range(num_combatants):
             try:
                 name = name_builder.next()
@@ -344,10 +339,136 @@ class InitTracker(commands.Cog):
                 grp.add_combatant(me)
                 msgs.append(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
 
+            monster_added = True
+
+        if monster_added:
+            try:
+                await ctx.bot.mdb.analytics_monster_usage.update_one(
+                    {
+                        "user_id": author_id,
+                        "monster_name": monster.name,
+                        "monster_id": getattr(monster, "entity_id", None),
+                    },
+                    {"$inc": {"count": 1}, "$currentDate": {"last_used": True}},
+                    upsert=True,
+                )
+            except Exception:
+                log.exception("Failed to track monster usage for user %s, monster %s", author_id, monster.name)
+
+            try:
+                del USER_MONSTER_FAVORITES_CACHE[author_id]
+            except KeyError:
+                pass
+
         await combat.final(ctx)
         await ctx.send("\n".join(msgs))
         if to_pm:
             await ctx.author.send("\n".join(to_pm))
+
+    @init.command()
+    async def madd(self, ctx, monster_name: str, *, args=""):
+        """Adds a monster to combat.
+        __Valid Arguments__
+        `-name <name>` - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
+        `-n <number or dice>` - Adds more than one monster. Supports dice.
+        `-h` - Hides HP, AC, Resists, etc. Default: True.
+        `-p <value>` - Places combatant at the given value, instead of rolling.
+        `-controller <controller>` - Pings a different person on turn.
+        `-group <group>` - Adds the combatant to a group.
+        `adv`/`dis` - Give advantage or disadvantage to the initiative roll.
+        `-b <condition bonus>` - Adds a bonus to the combatant's initiative roll.
+        `initscore` - Uses the monster's Initiative score instead of rolling. Applies adv/dis as ±5 bonuses.
+        `rollhp` - Rolls the monsters HP, instead of using the default value.
+        `-hp <hp>` - Sets starting HP.
+        `-thp <thp>` - Sets starting THP.
+        `-ac <ac>` - Sets the combatant's starting AC.
+        `-note <note>` - Sets the combatant's note.
+        """
+        monster = await select_monster_full(ctx, monster_name, pm=True)
+        await self._madd_impl(ctx, monster, args)
+
+    @commands.slash_command(name="madd", description="Adds a monster to combat.")
+    async def slash_madd(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        monster: gamedata.Monster = commands.Param(
+            description="The monster to add to combat", converter=madd_monster_converter
+        ),
+        args: str = commands.Param(description="Additional arguments (same format as !i madd)", default=""),
+    ):
+        """Adds a monster to combat."""
+        await inter.response.defer(ephemeral=True)
+        await self._madd_impl(inter, monster, args)
+
+    @slash_madd.autocomplete("monster")
+    async def slash_madd_auto(self, inter: disnake.ApplicationCommandInteraction, user_input: str):
+        """Autocomplete handler for monster parameter."""
+        lookup_cog = self.bot.get_cog("Lookup")
+        choices = await lookup_cog._get_entities(inter, "monster", get_monster_choices)
+
+        favorites = await get_user_favorite_monsters(inter, inter.author.id)
+
+        available_ids = {"monster": await self.bot.ddb.get_accessible_entities(inter, inter.author.id, "monster")}
+        select_key = create_selectkey(available_ids)
+
+        if not user_input:
+            choices_by_id = {}
+            choices_by_name_homebrew = {}
+            for m in choices:
+                eid = getattr(m, "entity_id", None)
+                if eid is not None:
+                    choices_by_id[eid] = m
+                else:
+                    choices_by_name_homebrew.setdefault(m.name, []).append(m)
+
+            # Build recent list from favorites, matching by id (official) or name (homebrew)
+            recent = []
+            seen_objects = set()
+            for name, mid in favorites:
+                if mid and mid in choices_by_id:
+                    monster = choices_by_id[mid]
+                    if monster not in seen_objects:
+                        recent.append(monster)
+                        seen_objects.add(monster)
+                elif name in choices_by_name_homebrew:
+                    for monster in choices_by_name_homebrew[name]:
+                        if monster not in seen_objects:
+                            recent.append(monster)
+                            seen_objects.add(monster)
+                if len(recent) >= AUTOCOMPLETE_MAX_RESULTS:
+                    break
+
+            # Backfill with SRD only if <7 favorites
+            if len(favorites) < 7 and len(recent) < AUTOCOMPLETE_MAX_RESULTS:
+                for m in choices:
+                    if m.is_free and m not in seen_objects:
+                        recent.append(m)
+                        if len(recent) >= AUTOCOMPLETE_MAX_RESULTS:
+                            break
+
+            return [select_key(m, True) for m in recent[:AUTOCOMPLETE_MAX_RESULTS]]
+
+        # Boost user favorites to top
+        result, strict = search(choices, user_input, slash_match_key)
+
+        if strict:
+            return [select_key(result, True)]
+
+        limited_results = result[:AUTOCOMPLETE_FAVORITES_LIMIT]
+
+        favorite_ids = {(name, mid) for name, mid in favorites}
+
+        favorite_results = []
+        other_results = []
+        for monster in limited_results:
+            monster_id = getattr(monster, "entity_id", None)
+            if (monster.name, monster_id) in favorite_ids:
+                favorite_results.append(monster)
+            else:
+                other_results.append(monster)
+
+        boosted = favorite_results + other_results
+        return [select_key(r, True) for r in boosted[:AUTOCOMPLETE_MAX_RESULTS]]
 
     @init.command(name="join", aliases=["cadd", "dcadd"])
     async def join(self, ctx, *, args: str = ""):
@@ -1607,6 +1728,30 @@ class InitTracker(commands.Cog):
             "ask a server administrator to disable `Contribute Message Data to Natural Language AI Training` in the "
             f"`{ctx.clean_prefix}servsettings` command."
         )
+
+    @commands.command(hidden=True)
+    async def mfav(self, ctx):
+        """Lists your most frequently used monsters."""
+        results = (
+            await ctx.bot.mdb.analytics_monster_usage.find({"user_id": ctx.author.id})
+            .sort([("count", -1), ("last_used", -1)])
+            .limit(AUTOCOMPLETE_FAVORITES_LIMIT)
+            .to_list(None)
+        )
+
+        if not results:
+            return await ctx.send("You haven't added any monsters to combat yet!")
+
+        ep = EmbedPaginator(colour=disnake.Colour.blurple())
+        ep.add_title(f"{ctx.author.display_name}'s Favorite Monsters ({len(results)} total)")
+        ep.add_field(name="Most Frequently Used", value="")
+
+        for idx, data in enumerate(results, 1):
+            timestamp = f"<t:{int(data['last_used'].timestamp())}:F>"
+            line = f"`{idx:>3}.` **{data['monster_name']}** - {data['count']}x - {timestamp}\n"
+            ep.extend_field(line)
+
+        await ep.send_to(ctx)
 
 
 monster_name_exceptions = (294945, 2059697)

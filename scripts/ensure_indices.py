@@ -26,6 +26,11 @@ INDICES = {
         IndexModel("guild_id"),
     ],
     "analytics_ddb_activity": [IndexModel("user_id", unique=True), IndexModel([("last_link_time", DESCENDING)])],
+    "analytics_monster_usage": [
+        IndexModel([("user_id", ASCENDING), ("monster_name", ASCENDING), ("monster_id", ASCENDING)], unique=True),
+        IndexModel([("user_id", ASCENDING), ("count", DESCENDING), ("last_used", DESCENDING)]),
+        IndexModel("last_used", expireAfterSeconds=63072000),
+    ],
     "analytics_nsrd_lookup": [IndexModel("type")],
     "analytics_alias_events": [IndexModel("object_id"), IndexModel("type"), IndexModel([("timestamp", DESCENDING)])],
     "analytics_daily": [IndexModel([("timestamp", DESCENDING)])],

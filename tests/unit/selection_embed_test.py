@@ -1,7 +1,10 @@
 import pytest
 import asyncio
-from unittest.mock import Mock
+import json
+import disnake
+from unittest.mock import Mock, AsyncMock
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
+from gamedata.lookuputils import create_selectkey
 from utils.selection import (
     get_selection_with_buttons,
     text_input_check,
@@ -9,6 +12,12 @@ from utils.selection import (
     create_selection_embed,
     create_pm_selection_embed,
     StatelessSelectionView,
+)
+from utils.selection.selection_helpers import (
+    _RedisInteraction,
+    _wait_for_input,
+    _handle_button_selection,
+    _handle_button_navigation,
 )
 
 
@@ -265,8 +274,6 @@ def test_monster_specific_instruction_text():
 
 def test_legacy_entity_marking():
     """Test that legacy entities are properly marked with *legacy* in the embed"""
-    from gamedata.lookuputils import create_selectkey
-
     # Mock legacy entity
     legacy_monster = Mock()
     legacy_monster.name = "Ancient Goblin"
@@ -304,8 +311,6 @@ def test_legacy_entity_marking():
 @pytest.mark.asyncio
 async def test_monster_dm_feedback_embed_behavior(mock_ctx):
     """Test embed creation when using DM feedback for monsters"""
-    from unittest.mock import patch, AsyncMock
-
     choices = ["Goblin", "Goblin Archer"]
 
     # Mock the author.send method
@@ -533,6 +538,142 @@ async def test_button_custom_id_format():
     cancel_buttons = [btn for btn in all_buttons if btn.custom_id.endswith("_cancel")]
     assert len(cancel_buttons) == 1
     assert cancel_buttons[0].custom_id == f"{user_id}_cancel"
+
+
+# === Cross-Shard DM Interaction Tests ===
+
+
+@pytest.mark.asyncio
+async def test_redis_interaction_construction():
+    """_RedisInteraction builds from cache data, defer is no-op, followup works"""
+    mock_bot = Mock()
+    mock_channel = Mock()
+    mock_channel.send = AsyncMock(return_value=Mock())
+    mock_bot.get_channel = Mock(return_value=mock_channel)
+
+    data = {"custom_id": "123_select_1", "message_id": "789", "user_id": "456", "channel_id": "999"}
+    interaction = _RedisInteraction(data, mock_bot)
+
+    assert interaction.data.custom_id == "123_select_1"
+    assert interaction.message.id == 789
+    assert interaction.user.id == 456
+    assert interaction._from_redis is True
+    await interaction.response.defer()
+
+    await interaction.followup.send("test")
+    mock_channel.send.assert_called_once()
+    assert mock_channel.send.call_args[1]["reference"].message_id == 789
+
+
+@pytest.mark.asyncio
+async def test_wait_for_input_cache_paths():
+    """Cache hit skips subscribe, cache miss uses pubsub, both delete cache"""
+
+    # Create a wait_for that never completes (to let pubsub path win)
+    async def never_completes(*args, **kwargs):
+        await asyncio.sleep(10)
+
+    def setup_ctx():
+        ctx = Mock()
+        ctx.bot = Mock(shard_id=0, wait_for=AsyncMock(side_effect=never_completes))
+        ctx.author = Mock(id=123)
+        return ctx
+
+    ctx1 = setup_ctx()
+    cached = json.dumps({"message_id": "789", "user_id": "123", "custom_id": "x", "channel_id": "999"})
+    ctx1.bot.rdb = Mock(getdel=AsyncMock(return_value=cached), subscribe=AsyncMock())
+
+    result1 = await _wait_for_input(ctx1, Mock(id=789), ["c1"], 30)
+    assert result1._from_redis is True
+    ctx1.bot.rdb.subscribe.assert_not_called()
+    ctx1.bot.rdb.getdel.assert_called_once()
+
+    # Cache miss -> pubsub path
+    ctx2 = setup_ctx()
+
+    async def mock_get_message(ignore_subscribe_messages=False, timeout=None):
+        await asyncio.sleep(0.01)
+        return {"type": "message"}
+
+    pubsub = Mock(get_message=AsyncMock(side_effect=mock_get_message), unsubscribe=AsyncMock(), close=AsyncMock())
+    ctx2.bot.rdb = Mock(
+        getdel=AsyncMock(side_effect=[None, cached]),  # First None (pre-check), then cached (after pubsub message)
+        subscribe=AsyncMock(return_value=pubsub),
+    )
+
+    result2 = await _wait_for_input(ctx2, Mock(id=789), ["c1"], 30)
+    assert result2._from_redis is True
+    ctx2.bot.rdb.subscribe.assert_called_once()
+    pubsub.unsubscribe.assert_called_once()
+    assert ctx2.bot.rdb.getdel.call_count == 2  # Pre-check + pubsub path
+
+
+@pytest.mark.asyncio
+async def test_defer_skipped_for_redis_interactions():
+    """Redis interactions skip defer in button selection and navigation"""
+    local = Mock(response=Mock(defer=AsyncMock(), send_message=AsyncMock()))
+    local._from_redis = False
+    local.data = Mock(custom_id="123_select_1")
+    await _handle_button_selection(local, "select_1", ["c1"], False)
+    local.response.defer.assert_called_once()
+
+    redis = Mock(_from_redis=True, response=Mock(defer=AsyncMock()), followup=Mock(send=AsyncMock()))
+    redis.data = Mock(custom_id="456_select_1")
+    await _handle_button_selection(redis, "select_1", ["c1"], False)
+    redis.response.defer.assert_not_called()
+
+    local2 = Mock(response=Mock(send_message=AsyncMock()))
+    local2._from_redis = False
+    local2.data = Mock(custom_id="789_prev")
+    await _handle_button_navigation(local2, "prev", 0, 5)
+    assert local2.response.send_message.call_args[1]["ephemeral"] is True
+
+    redis2 = Mock(_from_redis=True, followup=Mock(send=AsyncMock()))
+    redis2.data = Mock(custom_id="999_next")
+    await _handle_button_navigation(redis2, "next", 4, 5)
+    redis2.followup.send.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_redis_errors_graceful():
+    """Redis failures don't crash, on_interaction filter logic"""
+
+    async def never_completes(*args, **kwargs):
+        await asyncio.sleep(10)
+
+    ctx = Mock(bot=Mock(shard_id=0, wait_for=AsyncMock(side_effect=never_completes)), author=Mock(id=123))
+    ctx.bot.rdb = Mock(get=AsyncMock(side_effect=Exception("fail")), subscribe=AsyncMock(side_effect=Exception("fail")))
+
+    result = await _wait_for_input(ctx, Mock(id=789), ["c1"], 0.1)
+    assert result is None
+
+    def should_process_interaction(interaction):
+        """Simulate dbot.py on_interaction filter"""
+        if (
+            interaction.guild_id is not None
+            or interaction.type != disnake.InteractionType.component
+            or not interaction.message
+            or not interaction.user
+        ):
+            return False
+        return True
+
+    def make_interaction(guild_id, interaction_type, has_message, has_user):
+        i = Mock()
+        i.guild_id = guild_id
+        i.type = interaction_type
+        i.message = Mock() if has_message else None
+        i.user = Mock() if has_user else None
+        return i
+
+    assert should_process_interaction(make_interaction(123, disnake.InteractionType.component, True, True)) is False
+    assert (
+        should_process_interaction(make_interaction(None, disnake.InteractionType.application_command, True, True))
+        is False
+    )
+    assert should_process_interaction(make_interaction(None, disnake.InteractionType.component, False, True)) is False
+    assert should_process_interaction(make_interaction(None, disnake.InteractionType.component, True, False)) is False
+    assert should_process_interaction(make_interaction(None, disnake.InteractionType.component, True, True)) is True
 
 
 if __name__ == "__main__":

@@ -1020,7 +1020,7 @@ class InitTracker(commands.Cog):
             target = await combat.select_combatant(
                 ctx,
                 t,
-                f"Pick your {ordinal(i+1)} target.",
+                f"Pick your {ordinal(i + 1)} target.",
                 select_group=True,
             )
             if isinstance(target, CombatantGroup):

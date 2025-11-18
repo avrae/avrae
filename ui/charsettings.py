@@ -441,5 +441,7 @@ def autoconvert_coins_desc(mode):
     return (
         "Always Ask"
         if mode == CoinsAutoConvert.ASK
-        else "Always Convert" if mode == CoinsAutoConvert.ALWAYS else "Never Convert"
+        else "Always Convert"
+        if mode == CoinsAutoConvert.ALWAYS
+        else "Never Convert"
     )

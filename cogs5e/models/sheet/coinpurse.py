@@ -119,9 +119,13 @@ class Coinpurse(HasIntegrationMixin):
         )
 
     def set_currency(self, pp: int = 0, gp: int = 0, ep: int = 0, sp: int = 0, cp: int = 0):
-        if not all(
-            (isinstance(pp, int), isinstance(gp, int), isinstance(ep, int), isinstance(sp, int), isinstance(cp, int))
-        ):
+        if not all((
+            isinstance(pp, int),
+            isinstance(gp, int),
+            isinstance(ep, int),
+            isinstance(sp, int),
+            isinstance(cp, int),
+        )):
             raise TypeError("All values must be integers.")
 
         if not all((pp >= 0, gp >= 0, ep >= 0, sp >= 0, cp >= 0)):

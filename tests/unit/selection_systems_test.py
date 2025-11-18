@@ -271,7 +271,6 @@ class TestSearchEntities:
                     mock_ddb.get_accessible_entities = AsyncMock(return_value={1, 2, 3})
                     with patch("gamedata.lookuputils.add_training_data"):
                         with patch("gamedata.lookuputils.can_access", return_value=True):
-
                             result = await search_entities(mock_ctx, entities, "goblin")
 
                             # Verify search_and_select was called
@@ -296,7 +295,6 @@ class TestSearchEntities:
                     mock_ddb.get_accessible_entities = AsyncMock(return_value={1, 2, 3})
                     with patch("gamedata.lookuputils.add_training_data"):
                         with patch("gamedata.lookuputils.can_access", return_value=True):
-
                             result = await search_entities(mock_ctx, entities, "fireball")
 
                             # Verify search_and_select was called

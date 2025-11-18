@@ -105,9 +105,11 @@ class Bestiary(CommonHomebrewMixin):
         # otherwise commit a new one to the db and return that
         sha256 = sha256_hash.hexdigest()
         log.debug(f"Bestiary hash: {sha256}")
-        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one(
-            {"upstream": url, "sha256": sha256, "site_type": "BESTIARY_BUILDER"}
-        )
+        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one({
+            "upstream": url,
+            "sha256": sha256,
+            "site_type": "BESTIARY_BUILDER",
+        })
         if existing_bestiary:
             log.info("This bestiary already exists")
             existing_bestiary = Bestiary.from_dict(existing_bestiary)
@@ -148,9 +150,11 @@ class Bestiary(CommonHomebrewMixin):
         # otherwise commit a new one to the db and return that
         sha256 = sha256_hash.hexdigest()
         log.debug(f"Bestiary hash: {sha256}")
-        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one(
-            {"upstream": url, "sha256": sha256, "site_type": "CRITTER_DB"}
-        )
+        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one({
+            "upstream": url,
+            "sha256": sha256,
+            "site_type": "CRITTER_DB",
+        })
         if existing_bestiary:
             log.info("This bestiary already exists")
             existing_bestiary = Bestiary.from_dict(existing_bestiary)
@@ -219,9 +223,11 @@ class Bestiary(CommonHomebrewMixin):
         await super().unsubscribe(ctx)
 
         # remove all server subs that I provide
-        await self.sub_coll(ctx).delete_many(
-            {"type": "server_active", "provider_id": ctx.author.id, "object_id": self.id}
-        )
+        await self.sub_coll(ctx).delete_many({
+            "type": "server_active",
+            "provider_id": ctx.author.id,
+            "object_id": self.id,
+        })
 
         # if no one is subscribed to this bestiary anymore, delete it.
         if not await self.num_subscribers(ctx):
@@ -243,16 +249,20 @@ class Bestiary(CommonHomebrewMixin):
     async def server_subscriptions(self, ctx):
         """Returns a list of server ids (ints) representing server subscriptions supplied by the contextual author.
         Mainly used to determine what subscriptions should be carried over to a new bestiary when updated."""
-        subs = ctx.bot.mdb.bestiary_subscriptions.find(
-            {"type": "server_active", "object_id": self.id, "provider_id": ctx.author.id}
-        )
+        subs = ctx.bot.mdb.bestiary_subscriptions.find({
+            "type": "server_active",
+            "object_id": self.id,
+            "provider_id": ctx.author.id,
+        })
         return [s["subscriber_id"] async for s in subs]
 
     async def add_server_subscriptions(self, ctx, serv_ids):
         """Subscribes a list of servers to this bestiary."""
-        existing = await ctx.bot.mdb.bestiary_subscriptions.find(
-            {"type": "server_active", "subscriber_id": {"$in": serv_ids}, "object_id": self.id}
-        ).to_list(None)
+        existing = await ctx.bot.mdb.bestiary_subscriptions.find({
+            "type": "server_active",
+            "subscriber_id": {"$in": serv_ids},
+            "object_id": self.id,
+        }).to_list(None)
         existing = {e["subscriber_id"] for e in existing}
         sub_docs = [
             {"type": "server_active", "subscriber_id": serv_id, "object_id": self.id, "provider_id": ctx.author.id}
@@ -265,9 +275,10 @@ class Bestiary(CommonHomebrewMixin):
     @staticmethod
     async def num_user(ctx):
         """Returns the number of bestiaries a user has imported."""
-        return await ctx.bot.mdb.bestiary_subscriptions.count_documents(
-            {"type": "subscribe", "subscriber_id": ctx.author.id}
-        )
+        return await ctx.bot.mdb.bestiary_subscriptions.count_documents({
+            "type": "subscribe",
+            "subscriber_id": ctx.author.id,
+        })
 
     async def get_server_sharer(self, ctx):
         """Returns the user ID of the user who shared this bestiary with the server."""
@@ -567,7 +578,7 @@ def _monster_factory_critterdb(data, bestiary_name):
         raise ExternalImportError(f"Monster is missing hit die or hit die size ({data['name']}).")
     con_by_level = num_hit_die * ability_scores.get_mod("con")
     hp = floor(((hit_die_size + 1) / 2) * num_hit_die) + con_by_level
-    hitdice = f"{num_hit_die}d{hit_die_size} {'+-'[con_by_level<0]} {abs(con_by_level)}"
+    hitdice = f"{num_hit_die}d{hit_die_size} {'+-'[con_by_level < 0]} {abs(con_by_level)}"
 
     proficiency = data["stats"]["proficiencyBonus"]
     if proficiency is None:
@@ -721,9 +732,12 @@ def parse_critterdb_traits(data, key):
                 ):
                     damage = f"{verse_damage} [{vers_damage_type}]" + bonus
                     attacks.append(
-                        Attack.from_dict(
-                            {"name": f"2 Handed {name}", "attackBonus": attack_bonus, "damage": damage, "details": desc}
-                        )
+                        Attack.from_dict({
+                            "name": f"2 Handed {name}",
+                            "attackBonus": attack_bonus,
+                            "damage": damage,
+                            "details": desc,
+                        })
                     )
 
                 # Ranged Attacks
@@ -732,9 +746,12 @@ def parse_critterdb_traits(data, key):
                 ):  # ranged
                     damage = f"{ranged_damage}[{ranged_damage_type}]" + bonus
                     attacks.append(
-                        Attack.from_dict(
-                            {"name": f"Ranged {name}", "attackBonus": attack_bonus, "damage": damage, "details": desc}
-                        )
+                        Attack.from_dict({
+                            "name": f"Ranged {name}",
+                            "attackBonus": attack_bonus,
+                            "damage": damage,
+                            "details": desc,
+                        })
                     )
 
                 # Base Attack

@@ -488,9 +488,10 @@ class SimpleCombatant(AliasStatBlock):
                 validators.ButtonInteraction.parse_obj(b) for b in validators.unsafeify(buttons, self._interpreter)
             ]
             parsed_buttons = [
-                init.effects.ButtonInteraction.from_dict(
-                    {**b.dict(exclude_none=True), "id": init.utils.create_button_interaction_id()}
-                )
+                init.effects.ButtonInteraction.from_dict({
+                    **b.dict(exclude_none=True),
+                    "id": init.utils.create_button_interaction_id(),
+                })
                 for b in normalized_buttons
             ]
 

@@ -458,9 +458,12 @@ class WorkshopAlias(WorkshopCollectableObject):
     # helpers
     async def log_invocation(self, ctx, is_server):
         inv_type = "workshop_alias" if not is_server else "workshop_servalias"
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": inv_type,
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
     async def get_subalias_named(self, ctx, name):
         alias = await ctx.bot.mdb.workshop_aliases.find_one({"parent_id": self.id, "name": name})
@@ -488,9 +491,12 @@ class WorkshopSnippet(WorkshopCollectableObject):
     # helpers
     async def log_invocation(self, ctx, is_server):
         inv_type = "workshop_snippet" if not is_server else "workshop_servsnippet"
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": inv_type,
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
 
 class CodeVersion:

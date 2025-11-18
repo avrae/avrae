@@ -489,12 +489,12 @@ class DicecloudV2Parser(SheetLoaderABC):
 
         if missing_skills := set(SKILL_NAMES) - set(skills):
             raise ExternalImportError(
-                f"Your sheet is missing the following skill{'s' if len(missing_skills)>1 else ''}:"
+                f"Your sheet is missing the following skill{'s' if len(missing_skills) > 1 else ''}:"
                 f" {', '.join(missing_skills)}"
             )
         if missing_saves := set(SAVE_NAMES) - set(saves):
             raise ExternalImportError(
-                f"Your sheet is missing the following save{'s' if len(missing_saves)>1 else ''}:"
+                f"Your sheet is missing the following save{'s' if len(missing_saves) > 1 else ''}:"
                 f" {', '.join(missing_saves)}"
             )
 
@@ -709,7 +709,9 @@ class DicecloudV2Parser(SheetLoaderABC):
         verb, proper = (
             ("casts", True)
             if atk_prop["type"] == "spell"
-            else ("uses", False) if atk_prop["actionType"] != "attack" else (None, False)
+            else ("uses", False)
+            if atk_prop["actionType"] != "attack"
+            else (None, False)
         )
         log.debug(f"Parsing {atk_prop['type']}")
         activation = ACTIVATION_MAP.get(atk_prop["actionType"], ActivationType.SPECIAL)

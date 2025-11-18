@@ -79,7 +79,7 @@ def test_embed_pm_vs_channel():
 
 def test_embed_footer_pagination():
     # Multi-page scenario (15 choices = 2 pages at 10 per page)
-    choices = [f"Choice {i+1}" for i in range(15)]
+    choices = [f"Choice {i + 1}" for i in range(15)]
     embed_multi = create_selection_embed(choices=choices, page=1, key=lambda x: x)  # Second page (0-indexed)
 
     assert embed_multi.footer.text == "Page 2/2"
@@ -93,7 +93,7 @@ def test_embed_footer_pagination():
 
 def test_choice_formatting():
     # Create 13 total choices so page 1 will have choices 11-13
-    all_choices = [f"Item {chr(65+i)}" for i in range(13)]  # Item A through Item M
+    all_choices = [f"Item {chr(65 + i)}" for i in range(13)]  # Item A through Item M
     embed = create_selection_embed(choices=all_choices, page=1, key=lambda x: x)  # Second page (0-indexed)
 
     # On page 1, we should see choices 11-13 (global indices)
@@ -367,7 +367,7 @@ async def test_button_layout_4_choices():
 
     # Should have 4 selection buttons in row 0
     assert len(row_0_buttons) == 4
-    assert all(btn.custom_id.endswith(f"select_{i+1}") for i, btn in enumerate(row_0_buttons))
+    assert all(btn.custom_id.endswith(f"select_{i + 1}") for i, btn in enumerate(row_0_buttons))
 
     # Should have no buttons in row 1
     assert len(row_1_buttons) == 0
@@ -391,7 +391,7 @@ async def test_button_layout_7_choices():
 
     # Should have 5 selection buttons in row 0 (1-5)
     assert len(row_0_buttons) == 5
-    assert all(btn.custom_id.endswith(f"select_{i+1}") for i, btn in enumerate(row_0_buttons))
+    assert all(btn.custom_id.endswith(f"select_{i + 1}") for i, btn in enumerate(row_0_buttons))
 
     # Should have 2 selection buttons in row 1 (6-7)
     assert len(row_1_buttons) == 2
@@ -406,7 +406,7 @@ async def test_button_layout_7_choices():
 @pytest.mark.asyncio
 async def test_button_layout_10_choices():
     """Test button layout with exactly 10 choices - should fill rows 0 and 1"""
-    choices = [f"Choice {i+1}" for i in range(10)]
+    choices = [f"Choice {i + 1}" for i in range(10)]
     view = StatelessSelectionView(choices, current_page=0, query="test", user_id=123456789)
 
     # Get all buttons and group by row
@@ -416,11 +416,11 @@ async def test_button_layout_10_choices():
 
     # Should have 5 selection buttons in row 0 (1-5)
     assert len(row_0_buttons) == 5
-    assert all(btn.custom_id.endswith(f"select_{i+1}") for i, btn in enumerate(row_0_buttons))
+    assert all(btn.custom_id.endswith(f"select_{i + 1}") for i, btn in enumerate(row_0_buttons))
 
     # Should have 5 selection buttons in row 1 (6-10)
     assert len(row_1_buttons) == 5
-    assert all(btn.custom_id.endswith(f"select_{i+6}") for i, btn in enumerate(row_1_buttons))
+    assert all(btn.custom_id.endswith(f"select_{i + 6}") for i, btn in enumerate(row_1_buttons))
 
     # Should have only cancel button in row 2 (no navigation needed)
     assert len(row_2_buttons) == 1
@@ -430,7 +430,7 @@ async def test_button_layout_10_choices():
 @pytest.mark.asyncio
 async def test_button_layout_14_choices_page_0():
     """Test button layout with 14 choices on page 0 - should have navigation"""
-    choices = [f"Choice {i+1}" for i in range(14)]
+    choices = [f"Choice {i + 1}" for i in range(14)]
     view = StatelessSelectionView(choices, current_page=0, query="test", user_id=123456789)
 
     # Get all buttons and group by row
@@ -440,11 +440,11 @@ async def test_button_layout_14_choices_page_0():
 
     # Should have 5 selection buttons in row 0 (1-5)
     assert len(row_0_buttons) == 5
-    assert all(btn.custom_id.endswith(f"select_{i+1}") for i, btn in enumerate(row_0_buttons))
+    assert all(btn.custom_id.endswith(f"select_{i + 1}") for i, btn in enumerate(row_0_buttons))
 
     # Should have 5 selection buttons in row 1 (6-10)
     assert len(row_1_buttons) == 5
-    assert all(btn.custom_id.endswith(f"select_{i+6}") for i, btn in enumerate(row_1_buttons))
+    assert all(btn.custom_id.endswith(f"select_{i + 6}") for i, btn in enumerate(row_1_buttons))
 
     # Should have navigation + cancel buttons in row 2
     assert len(row_2_buttons) == 3  # prev, next, cancel
@@ -457,7 +457,7 @@ async def test_button_layout_14_choices_page_0():
 @pytest.mark.asyncio
 async def test_button_layout_14_choices_page_1():
     """Test button layout with 14 choices on page 1 - should show remaining 4 choices"""
-    choices = [f"Choice {i+1}" for i in range(14)]
+    choices = [f"Choice {i + 1}" for i in range(14)]
     view = StatelessSelectionView(choices, current_page=1, query="test", user_id=123456789)
 
     # Get all buttons and group by row
@@ -467,7 +467,7 @@ async def test_button_layout_14_choices_page_1():
 
     # Should have 4 selection buttons in row 0 (11-14)
     assert len(row_0_buttons) == 4
-    assert all(btn.custom_id.endswith(f"select_{i+11}") for i, btn in enumerate(row_0_buttons))
+    assert all(btn.custom_id.endswith(f"select_{i + 11}") for i, btn in enumerate(row_0_buttons))
 
     # Should have no buttons in row 1 (page 1 only has 4 items)
     assert len(row_1_buttons) == 0

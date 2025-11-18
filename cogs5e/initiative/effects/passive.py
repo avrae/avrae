@@ -118,7 +118,7 @@ def _str_save_bonus(value: str) -> str:
         else:
             bonus_map["all"] = bonus_map.get("all", []) + [split_value]
     return "; ".join(
-        f"{stat_name.upper()+' ' if stat_name != 'all' else ''}Save Bonus: {'+'.join(dice_strs)}"
+        f"{stat_name.upper() + ' ' if stat_name != 'all' else ''}Save Bonus: {'+'.join(dice_strs)}"
         for stat_name, dice_strs in bonus_map.items()
     )
 

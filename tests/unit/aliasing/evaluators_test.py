@@ -198,9 +198,7 @@ async def test_naughty_yaml(draconic_evaluator):
           Clark : Evans
           Brian : Ingerson
           Oren  : Ben-Kiki
-        """: {
-            "Block style": {"Clark": "Evans", "Brian": "Ingerson", "Oren": "Ben-Kiki"}
-        },
+        """: {"Block style": {"Clark": "Evans", "Brian": "Ingerson", "Oren": "Ben-Kiki"}},
         """
         Bestiary: !!omap
           - aardvark: African pig-like ant eater. Ugly.
@@ -231,18 +229,14 @@ async def test_naughty_yaml(draconic_evaluator):
         """
         # set: safe
         baseball teams: !!set { Boston Red Sox, Detroit Tigers, New York Yankees }
-        """: {
-            "baseball teams": {"Boston Red Sox", "New York Yankees", "Detroit Tigers"}
-        },
+        """: {"baseball teams": {"Boston Red Sox", "New York Yankees", "Detroit Tigers"}},
         """
         # seq: Safe
         Block style: !!seq
           - Mercury
           - Venus
           - Earth
-        """: {
-            "Block style": ["Mercury", "Venus", "Earth"]
-        },
+        """: {"Block style": ["Mercury", "Venus", "Earth"]},
         """
         # bools
         canonical: y
@@ -355,9 +349,7 @@ async def test_naughty_yaml(draconic_evaluator):
         - !!python/object:__main__.avrae 1
         - !!python/object/new:dbot.Avrae 1
         - !!python/object/apply:dbot.Avrae 1
-        """: {
-            "scaries": ["1", "1", "1", "1", "1"]
-        },
+        """: {"scaries": ["1", "1", "1", "1", "1"]},
     }
 
     for expr, expected_result in extra_expressions.items():

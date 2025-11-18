@@ -395,7 +395,7 @@ def trim_str(text, max_len):
     """Trims a string to max_len."""
     if len(text) < max_len:
         return text
-    return f"{text[:max_len - 4]}..."
+    return f"{text[: max_len - 4]}..."
 
 
 def chunk_text(text, max_chunk_size=1024, chunk_on=("\n\n", "\n", ". ", ", ", " "), chunker_i=0):

@@ -129,9 +129,12 @@ class Alias(_AliasBase):
         await mdb.aliases.delete_one({"owner": self.owner, "name": self.name})
 
     async def log_invocation(self, ctx, _):
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "alias", "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": "alias",
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -202,9 +205,12 @@ class Snippet(_SnippetBase):
         await mdb.snippets.delete_one({"owner": self.owner, "name": self.name})
 
     async def log_invocation(self, ctx, _):
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "snippet", "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": "snippet",
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
     @staticmethod
     async def get_ctx_map(ctx):

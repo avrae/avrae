@@ -81,7 +81,7 @@ async def definitely_combat(ctx: "AvraeContext", combat: "Combat", args: ParsedA
             target = await combat.select_combatant(
                 ctx,
                 t,
-                f"Pick your {ordinal(i+1)} target.",
+                f"Pick your {ordinal(i + 1)} target.",
                 select_group=allow_groups,
             )
         except SelectionException:

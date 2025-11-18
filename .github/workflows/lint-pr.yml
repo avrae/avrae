@@ -44,6 +44,6 @@ jobs:
           # exit-zero treats all errors as warnings. We use a line length of 120
           git diff -u origin/master HEAD | uv run flake8 . --count --exit-zero --max-line-length=120 --statistics --diff
 
-      - name: Ensure code is blackified
+      - name: Ensure code is ruff formatted
         run: |
-          uv run black . --check --diff
+          uv run ruff format --check .

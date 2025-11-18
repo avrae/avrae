@@ -53,7 +53,7 @@ class GameLogEvent:
             persist=True,
             messageScope="gameId",
             messageTarget=game_id,
-            **kwargs
+            **kwargs,
         )
 
     # ser/deser for event saving

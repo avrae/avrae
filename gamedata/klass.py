@@ -19,7 +19,7 @@ class Class(Sourced):
         subclass_feature_levels,
         optional_features,
         description=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :type name: str
@@ -166,7 +166,7 @@ class ClassFeature(LimitedUseGrantorMixin, DescribableMixin, Sourced):
             url=d.get("url", source_class.raw_url),
             entitlement_entity_id=entitlement_entity_id,
             entitlement_entity_type=entitlement_entity_type,
-            **kwargs
+            **kwargs,
         )
         if "options" in d:
             inst.options = [ClassFeatureOption.from_data(o, source_class, inst) for o in d["options"]]
@@ -190,5 +190,5 @@ class ClassFeatureOption(ClassFeature):
             parent=class_feature,
             entitlement_entity_id=d.get("entitlementEntityId", class_feature.entitlement_entity_id),
             entitlement_entity_type=d.get("entitlementEntityType", class_feature.entitlement_entity_type),
-            **kwargs
+            **kwargs,
         )

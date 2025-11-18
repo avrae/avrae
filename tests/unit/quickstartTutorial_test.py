@@ -54,13 +54,11 @@ async def test_quickstarttutorial_start(
             TutorialState
         ), f"Method '{method_name}' must be overridden in {start_state.__class__.__name__}"
 
-    with patch.object(
-        start_state, "objective", AsyncMock(return_value=asyncio.Future())
-    ) as mock_objective, patch.object(
-        start_state, "listener", AsyncMock(return_value=asyncio.Future())
-    ) as mock_listener, patch.object(
-        start_state, "transition", AsyncMock(return_value=asyncio.Future())
-    ) as mock_transition:
+    with (
+        patch.object(start_state, "objective", AsyncMock(return_value=asyncio.Future())) as mock_objective,
+        patch.object(start_state, "listener", AsyncMock(return_value=asyncio.Future())) as mock_listener,
+        patch.object(start_state, "transition", AsyncMock(return_value=asyncio.Future())) as mock_transition,
+    ):
         await start_state.objective(ctx_mock, state_map_mock)
         await start_state.listener(ctx_mock, state_map_mock)
         await start_state.transition(ctx_mock, state_map_mock)
@@ -82,13 +80,11 @@ async def test_quickstarttutorial_import_character(
             TutorialState
         ), f"Method '{method_name}' must be overridden in {import_state.__class__.__name__}"
 
-    with patch.object(
-        import_state, "objective", AsyncMock(return_value=asyncio.Future())
-    ) as mock_objective, patch.object(
-        import_state, "listener", AsyncMock(return_value=asyncio.Future())
-    ) as mock_listener, patch.object(
-        import_state, "transition", AsyncMock(return_value=asyncio.Future())
-    ) as mock_transition:
+    with (
+        patch.object(import_state, "objective", AsyncMock(return_value=asyncio.Future())) as mock_objective,
+        patch.object(import_state, "listener", AsyncMock(return_value=asyncio.Future())) as mock_listener,
+        patch.object(import_state, "transition", AsyncMock(return_value=asyncio.Future())) as mock_transition,
+    ):
         await import_state.objective(ctx_mock, state_map_mock)
         await import_state.listener(ctx_mock, state_map_mock)
         await import_state.transition(ctx_mock, state_map_mock)
@@ -110,13 +106,11 @@ async def test_quickstarttutorial_checks_attacks_saves(
             TutorialState
         ), f"Method '{method_name}' must be overridden in {checks_state.__class__.__name__}"
 
-    with patch.object(
-        checks_state, "objective", AsyncMock(return_value=asyncio.Future())
-    ) as mock_objective, patch.object(
-        checks_state, "listener", AsyncMock(return_value=asyncio.Future())
-    ) as mock_listener, patch.object(
-        checks_state, "transition", AsyncMock(return_value=asyncio.Future())
-    ) as mock_transition:
+    with (
+        patch.object(checks_state, "objective", AsyncMock(return_value=asyncio.Future())) as mock_objective,
+        patch.object(checks_state, "listener", AsyncMock(return_value=asyncio.Future())) as mock_listener,
+        patch.object(checks_state, "transition", AsyncMock(return_value=asyncio.Future())) as mock_transition,
+    ):
         await checks_state.objective(ctx_mock, state_map_mock)
         await checks_state.listener(ctx_mock, state_map_mock)
         await checks_state.transition(ctx_mock, state_map_mock)
@@ -138,13 +132,11 @@ async def test_quickstarttutorial_actions(
             TutorialState
         ), f"Method '{method_name}' must be overridden in {actions_state.__class__.__name__}"
 
-    with patch.object(
-        actions_state, "objective", AsyncMock(return_value=asyncio.Future())
-    ) as mock_objective, patch.object(
-        actions_state, "listener", AsyncMock(return_value=asyncio.Future())
-    ) as mock_listener, patch.object(
-        actions_state, "transition", AsyncMock(return_value=asyncio.Future())
-    ) as mock_transition:
+    with (
+        patch.object(actions_state, "objective", AsyncMock(return_value=asyncio.Future())) as mock_objective,
+        patch.object(actions_state, "listener", AsyncMock(return_value=asyncio.Future())) as mock_listener,
+        patch.object(actions_state, "transition", AsyncMock(return_value=asyncio.Future())) as mock_transition,
+    ):
         await actions_state.objective(ctx_mock, state_map_mock)
         await actions_state.listener(ctx_mock, state_map_mock)
         await actions_state.transition(ctx_mock, state_map_mock)

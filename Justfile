@@ -34,10 +34,10 @@ docker-tests:
 	docker compose -f docker-compose.ci.yml -p avrae up -d --build
 	docker logs -f avrae-tests-1
 
-# Run black + flake8 against the repo
+# Run ruff format + flake8 against the repo
 [group('lint')]
 lint: sync-lint
-	uv run black . --check --diff
+	uv run ruff format --check .
 	git diff -u origin/master HEAD | uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --diff
 	git diff -u origin/master HEAD | uv run flake8 . --count --exit-zero --max-line-length=120 --statistics --diff
 

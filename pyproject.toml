@@ -52,7 +52,7 @@ test = [
 # pre-commit and linting dependencies
 lint = [
     "pre-commit==2.17.0",
-    "black~=24.1.1",
+    "ruff~=0.5.5",
     "flake8==5.0.4"
 ]
 docs = [
@@ -60,7 +60,12 @@ docs = [
     "sphinx-rtd-theme==1.0.0"
 ]
 
-# linter config
-[tool.black]
+# formatter config
+[tool.ruff]
 line-length = 120
 preview = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false

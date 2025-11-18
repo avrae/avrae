@@ -274,15 +274,15 @@ $ uv run make html
 
 ### Committing, Formatting, and Linting
 
-Avrae uses [Black](https://black.readthedocs.io/) to format and lint its Python code.
-Black is automatically run on every commit via pre-commit hook, and takes its configuration options from the `pyproject.toml` file.
+Avrae uses [Ruff](https://docs.astral.sh/ruff/) to format its Python code and [Flake8](https://flake8.pycqa.org/en/latest/) for linting.
+Ruff's formatter is automatically run on every commit via pre-commit hook, and takes its configuration options from the `pyproject.toml` file.
 
 Install the pre-commit hook by running `uv run pre-commit install` from the repo root.
 The hook's configuration is governed by the `.pre-commit-config.yaml` file.
 
 #### Dependencies
 
-In order to run `pre-commit` or `black`, install the lint dependency group:
+In order to run `pre-commit`, `ruff`, or `flake8`, install the lint dependency group:
 
 ```bash
 $ uv sync --group lint

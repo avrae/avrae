@@ -72,6 +72,32 @@ DEFAULT_BUILTINS = {
     "randchoice": randchoice,
     "randchoices": randchoices,
 }
+
+RESERVED_BUILTINS = set(DEFAULT_BUILTINS.keys()) | {
+    # ScriptingEvaluator built-in methods
+    "exists",
+    "get",
+    "combat",
+    "character",
+    "get_gvar",
+    "get_svar",
+    "set_uvar",
+    "get_uvars",
+    "get_uvar",
+    "delete_uvar",
+    "set_uvar_nx",
+    "uvar_exists",
+    "load_json",
+    "dump_json",
+    "load_yaml",
+    "dump_yaml",
+    "argparse",
+    "ctx",
+    "signature",
+    "verify_signature",
+    "using",
+}
+
 SCRIPTING_RE = re.compile(
     r"(?<!\\)(?:"  # backslash-escape
     r"{{(?P<drac1>.+?)}}"  # {{drac1}}

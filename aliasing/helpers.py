@@ -259,6 +259,8 @@ def set_cvar(character, name, value):
         raise InvalidArgument(f"Cvar name must be shorter than {VAR_NAME_LIMIT} characters.")
     elif name in character.get_scope_locals(True):
         raise InvalidArgument(f"The variable `{name}` is already built in.")
+    elif name in evaluators.RESERVED_BUILTINS:
+        raise InvalidArgument(f"The variable `{name}` is a reserved function name.")
     elif len(value) > CVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Cvars must be shorter than {CVAR_SIZE_LIMIT:,} characters.")
 
@@ -281,6 +283,8 @@ async def set_uvar(ctx, name, value):
         )
     elif len(name) > VAR_NAME_LIMIT:
         raise InvalidArgument(f"Uvar name must be shorter than {VAR_NAME_LIMIT} characters.")
+    elif name in evaluators.RESERVED_BUILTINS:
+        raise InvalidArgument(f"The variable `{name}` is a reserved function name.")
     elif len(value) > UVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Uvars must be shorter than {UVAR_SIZE_LIMIT:,} characters.")
     await ctx.bot.mdb.uvars.update_one({"owner": str(ctx.author.id), "name": name}, {"$set": {"value": value}}, True)

@@ -1,3 +1,0 @@
--r ../requirements.txt
-Sphinx==5.3.0
-sphinx-rtd-theme==1.0.0

@@ -57,7 +57,7 @@ Check out [README-docker.md](README-docker.md).
 - Ubuntu 18.04+ or other UNIX system (Windows is compatible but untested)
 - Redis Server 4+ (<https://redis.io/download>)
 - MongoDB Community Server 3.6+ (<https://www.mongodb.com/try/download/community>)
-- Python 3.8+ (<https://www.python.org/downloads/>)
+- Python 3.10 (<https://www.python.org/downloads/>)
 
 **Support Files**
 
@@ -69,33 +69,20 @@ the project root.
 
 **Python Packages**
 
-We recommend using a [Virtual Environment](https://docs.python.org/3/library/venv.html) for Avrae development to prevent
-package installs from polluting the global Python install. You can create and active a virtual environment by running:
+We use [uv](https://github.com/astral-sh/uv) to manage the dependencies defined in `pyproject.toml`/`uv.lock`. Install uv and run the following from the repo root to create `.venv` pinned to Python 3.10 and install all runtime dependencies:
 
 ```bash
-$ python3 --version  # to ensure that you are creating a venv from the right python version
-$ python3 -m venv venv
-$ source venv/bin/activate
-# if the venv was set up correctly, you should see (venv) before your username in the terminal
-# run these commands to check the installed version and path
-(venv) $ python --version
-Python 3.X.X
-(venv) $ pip --version
-pip X.Y.Z from (project root)/venv/lib/python3.X/site-packages/pip (python 3.X)
+$ uv sync
 ```
 
-To install the dependencies, run:
-
-```bash
-(venv) $ pip install -r requirements.txt
-```
+`uv run <command>` automatically uses this environment, or you can manually activate it with `source .venv/bin/activate` if you prefer running commands directly.
 
 *Optional* - You can install the `avrae-automation-common` and `draconic` dependencies from your local filesystem
 rather than pip+git, to make working on depended libraries in parallel easier:
 
 ```bash
-(venv) $ pip install /path/to/automation-common -e
-(venv) $ pip install /path/to/draconic -e
+$ uv pip install /path/to/automation-common -e
+$ uv pip install /path/to/draconic -e
 ```
 
 Any changes to the library will immediately be picked up in avrae without requiring a reinstall of the library.
@@ -242,7 +229,7 @@ These tests can be found in `tests/`.
 #### Dependencies
 
 ```bash
-(venv) $ pip install -r tests/requirements.txt
+$ uv sync --group test
 ```
 
 #### Running
@@ -261,7 +248,7 @@ Once tests complete, it is recommended to clean up the containers with `docker-c
 **Manually**
 
 ```bash
-(venv) $ TESTING=1 pytest tests/
+$ TESTING=1 uv run pytest tests/
 ```
 
 In either case, you should set `NO_DICECLOUD=1`.
@@ -277,12 +264,12 @@ You can also build the docs manually:
 
 ```bash
 # install dependencies
-(venv) $ cd docs
-(venv) $ pip install -r requirements.txt
+$ uv sync --group docs
+$ cd docs
 # build and open browser
-(venv) $ make preview
+$ uv run make preview
 # build
-(venv) $ make html
+$ uv run make html
 ```
 
 ### Committing, Formatting, and Linting
@@ -290,14 +277,13 @@ You can also build the docs manually:
 Avrae uses [Black](https://black.readthedocs.io/) to format and lint its Python code.
 Black is automatically run on every commit via pre-commit hook, and takes its configuration options from the `pyproject.toml` file.
 
-The pre-commit hook is installed by by running `pre-commit install` from the repo root.
+Install the pre-commit hook by running `uv run pre-commit install` from the repo root.
 The hook's configuration is governed by the `.pre-commit-config.yaml` file.
 
 #### Dependencies
 
-In order to run `pre-commit` or `black`, they must be installed.
-These dependencies are contained within the `test/requirements.txt` file, and can be installed like so:
+In order to run `pre-commit` or `black`, install the lint dependency group:
 
 ```bash
-(venv) $ pip install -r test/requirements.txt
+$ uv sync --group lint
 ```

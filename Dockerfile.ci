@@ -1,16 +1,20 @@
-FROM --platform=linux/amd64 python:3.10
+# syntax=docker/dockerfile:1
 
-WORKDIR /app
+FROM --platform=linux/amd64 ghcr.io/astral-sh/uv:python3.10-bookworm
+
+RUN useradd --create-home avrae && mkdir -p /app/shared && chown -R avrae:avrae /app
+USER avrae
+WORKDIR /home/avrae
+
 ENV NO_DICECLOUD=1
 ENV TESTING=1
 
-COPY requirements.txt .
-COPY tests/requirements.txt tests/
-RUN pip install -r requirements.txt
-RUN pip install -r tests/requirements.txt
-
 RUN mkdir shared
 
-COPY . .
+COPY --chown=avrae:avrae pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --group test
+ENV PATH="/home/avrae/.venv/bin:${PATH}"
 
-ENTRYPOINT pytest tests/
+COPY --chown=avrae:avrae . .
+
+ENTRYPOINT ["pytest", "tests/"]

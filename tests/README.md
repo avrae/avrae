@@ -6,7 +6,7 @@ gamedata simulation testing (`gamedata/`).
 ## Setup
 
 ```shell
-(venv) $ pip install -r tests/requirements.txt
+$ uv sync --group test
 ```
 
 The test environment requires MongoDB and Redis to be set up to facilitate the E2E tests. You can either use Docker
@@ -33,7 +33,7 @@ In order to run the gamedata simulation tests, you'll also need to set the follo
 Once all the environment variables have been set, you can run the tests with:
 
 ```shell
-(venv) $ pytest
+$ uv run pytest
 ```
 
 If you have set the gamedata tests to point to real gamedata, this will run over 55,000 tests! To filter this, a number

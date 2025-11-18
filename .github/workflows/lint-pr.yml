@@ -16,26 +16,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
         with:
           python-version: "3.10"
 
-      - name: Cache pip
+      - name: Cache uv
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          path: |
+            .venv
+            ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
-            ${{ runner.os }}-
+            ${{ runner.os }}-uv-
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt
-          pip install -r tests/requirements.txt
-          pip install flake8==5.0.4
+        run: uv sync --frozen --group lint
 
       - name: Setup flake8 annotations
         uses: rbialon/flake8-annotations@v1
@@ -43,10 +40,10 @@ jobs:
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          git diff -u origin/master HEAD | flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --diff
+          git diff -u origin/master HEAD | uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --diff
           # exit-zero treats all errors as warnings. We use a line length of 120
-          git diff -u origin/master HEAD | flake8 . --count --exit-zero --max-line-length=120 --statistics --diff
+          git diff -u origin/master HEAD | uv run flake8 . --count --exit-zero --max-line-length=120 --statistics --diff
 
       - name: Ensure code is blackified
         run: |
-          black . --check --diff
+          uv run black . --check --diff

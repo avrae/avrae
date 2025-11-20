@@ -7,10 +7,12 @@ import aliasing.evaluators
 import cogs5e.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
 from utils.enums import AdvantageType, CritDamageType
+from .entities import AutomationCombatant, AutomationEffect, AutomationGroup, wrap_automation_entity
 from .errors import AutomationEvaluationException, AutomationException, InvalidIntExpression
-from .utils import maybe_alias_statblock, parse_save_bonuses
+from .utils import parse_save_bonuses
 
 __all__ = ("AutomationContext", "AutomationTarget")
+
 
 if TYPE_CHECKING:
     import disnake
@@ -57,10 +59,11 @@ class AutomationContext:
         self.evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster)
         self.metavars = {
             # caster, targets as default (#1335)
-            "caster": aliasing.api.statblock.AliasStatBlock(caster),
-            "targets": [maybe_alias_statblock(t) for t in targets],
+            "caster": wrap_automation_entity(caster),
+            "targets": [wrap_automation_entity(t) for t in targets],
             "choice": self.args.last("choice", original_choice).lower(),
         }
+        self._populate_combat_metavars()
 
         # spellcasting utils
         self.spell = spell
@@ -78,7 +81,7 @@ class AutomationContext:
         # InitiativeEffect utils
         self.ieffect = ieffect
         if ieffect is not None:
-            self.metavars["ieffect"] = aliasing.api.combat.SimpleEffect(ieffect)
+            self.metavars["ieffect"] = AutomationEffect(ieffect)
         self.from_button = from_button
         self.allow_caster_ieffects = allow_caster_ieffects
         self.allow_target_ieffects = allow_target_ieffects
@@ -109,6 +112,28 @@ class AutomationContext:
         self.combatant: Optional[init.Combatant] = None
         if isinstance(caster, init.Combatant):
             self.combatant: init.Combatant = caster  # type annotation to narrow type here
+
+    def _populate_combat_metavars(self):
+        """Injects combat-related metavars so automation can inspect turn/round state."""
+        self.metavars["combatRound"] = self.combat.round_num if self.combat else None
+        self.metavars["turnCombatant"] = None
+        self.metavars["turnCombatants"] = []
+
+        if not self.combat:
+            return
+
+        current = getattr(self.combat, "current_combatant", None)
+        if current is None:
+            return
+        turn_entity = wrap_automation_entity(current)
+        self.metavars["turnCombatant"] = turn_entity
+
+        if isinstance(turn_entity, AutomationGroup):
+            self.metavars["turnCombatants"] = turn_entity.combatants
+        elif isinstance(turn_entity, AutomationCombatant):
+            self.metavars["turnCombatants"] = [turn_entity]
+        elif turn_entity:
+            self.metavars["turnCombatants"] = [turn_entity]
 
     # ===== embed builder =====
     def queue(self, text):

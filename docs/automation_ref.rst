@@ -34,10 +34,18 @@ Runtime Variables
 
 All Automation runs provide the following variables:
 
-- ``caster`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The character, combatant, or monster who is running the
-  automation.
-- ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`, :class:`str`, or None) A list of combatants
-  targeted by this automation (i.e. the ``-t`` argument).
+- ``caster`` (:class:`~cogs5e.models.automation.entities.AutomationCombatant`) The character, combatant, or monster who
+  is running the automation.
+- ``targets`` (list of :class:`~cogs5e.models.automation.entities.AutomationCombatant`, :class:`str`, or ``None``) A
+  list of combatants targeted by this automation (i.e. the ``-t`` argument). Entries that refer to creatures outside of
+  initiative will expose the basic :class:`~aliasing.api.statblock.AliasStatBlock` placeholder instead.
+- ``combatRound`` (:class:`int` or ``None``) The current initiative round if the automation is running in combat.
+- ``turnCombatant`` (:class:`~cogs5e.models.automation.entities.AutomationCombatant`,
+  :class:`~cogs5e.models.automation.entities.AutomationGroup`, or ``None``) The creature or group whose turn it is when
+  the automation resolves. Available only while an initiative is active.
+- ``turnCombatants`` (list of :class:`~cogs5e.models.automation.entities.AutomationCombatant`) A convenience list
+  containing the members of ``turnCombatant``. If the current turn belongs to a group, this contains all group
+  members; otherwise it is a single-element list.
 - ``spell_attack_bonus`` (:class:`int` or None) - The attack bonus for the spell, or the caster's default attack bonus.
 - ``spell_dc`` (:class:`int` or None) - The DC for the spell, or the caster's default DC.
 - ``spell`` (:class:`int` or None) - The casting mod for the spell, or the caster's default casting mod.
@@ -47,8 +55,222 @@ All Automation runs provide the following variables:
 Additionally, runs triggered by an initiative effect (such as automation provided in a :ref:`ButtonInteraction`) provide
 the following variables:
 
-- ``ieffect`` (:class:`~aliasing.api.combat.SimpleEffect`) The initiative effect responsible for providing the
-  automation.
+- ``ieffect`` (:class:`~cogs5e.models.automation.entities.AutomationEffect`) The initiative effect responsible for
+  providing the automation.
+
+Automation Runtime Helper Types
+-------------------------------
+
+Some variables (such as ``caster`` and ``targets``) expose helper objects that mirror the combat state without allowing
+automation to mutate it.
+
+.. autoclass:: cogs5e.models.automation.entities.AutomationCombatant(aliasing.api.statblock.AliasStatBlock)
+   :members:
+   :inherited-members:
+
+   Read-only representation of a creature participating in automation. Inherits all
+   :class:`~aliasing.api.statblock.AliasStatBlock` statblock data (name, AC, HP, saves, spellbook, etc.) and adds
+   combat-specific attributes useful in automation contexts.
+
+   .. attribute:: id
+
+        Unique identifier of the combatant within initiative.
+
+        :type: str
+
+   .. attribute:: controller_id
+
+        The Discord user ID that controls the combatant.
+
+        :type: int
+
+   .. attribute:: init
+
+        The combatant's rolled initiative.
+
+        :type: int
+
+   .. attribute:: initiative_bonus
+
+        The initiative modifier used when rolling initiative.
+
+        :type: int
+
+   .. attribute:: note
+
+        Any note text attached to the combatant.
+
+        :type: str or None
+
+   .. attribute:: is_private
+
+        Whether the combatant is hidden from other players.
+
+        :type: bool
+
+   .. attribute:: combatant_type
+
+        The underlying combatant type (e.g. ``"pc"`` or ``"monster"``).
+
+        :type: str
+
+   .. attribute:: group
+
+        The name of the initiative group the combatant belongs to, if any.
+
+        :type: str or None
+
+   .. attribute:: effects
+
+        The initiative effects currently active on the combatant.
+
+        :type: list of :class:`AutomationEffect`
+
+   .. method:: get_effect_by_name(name, strict=None)
+      :noindex:
+
+        Gets an effect on a combatant. If an exact name is not found, it will attempt partial matching unless `strict=True`
+
+        :rtype: :class:`AutomationEffect` or None
+
+   .. method:: hp_str(private=False)
+      :noindex:
+
+        Returns a human-readable HP string (``"12/20"`` style). If ``private`` is true, hides the exact HP for monsters
+        that are configured as private in initiative.
+
+        :rtype: str
+
+   .. method:: is_concentrating()
+      :noindex:
+
+        Whether the combatant currently has any concentration effect active.
+
+        :rtype: bool
+
+.. autoclass:: cogs5e.models.automation.entities.AutomationGroup
+   :members:
+
+   Read-only representation of an initiative group.
+
+   .. attribute:: id
+
+        Unique identifier of the group.
+
+        :type: str
+
+   .. attribute:: name
+
+        The group name.
+
+        :type: str
+
+   .. attribute:: init
+
+        The initiative roll for the group.
+
+        :type: int
+
+   .. attribute:: size
+
+        Number of combatants in the group.
+
+        :type: int
+
+   .. attribute:: combatants
+
+        Members of the group.
+
+        :type: list of :class:`AutomationCombatant`
+
+.. autoclass:: cogs5e.models.automation.entities.AutomationEffect
+   :members:
+
+   Read-only representation of an initiative effect.
+
+   .. attribute:: id
+
+        Unique identifier of the effect.
+
+        :type: str
+
+   .. attribute:: name
+
+        Name of the effect.
+
+        :type: str
+
+   .. attribute:: duration
+
+        Total duration in rounds, or ``None``.
+
+        :type: int or None
+
+   .. attribute:: remaining
+
+        Remaining duration in rounds, or ``None``.
+
+        :type: int or None
+
+   .. attribute:: description
+
+        Effect description text.
+
+        :type: str
+
+   .. attribute:: concentration
+
+        Whether the effect requires concentration.
+
+        :type: bool
+
+   .. attribute:: ends_on_turn_end
+
+        Whether the effect expires at the end of the bearer’s turn.
+
+        :type: bool
+
+   .. attribute:: effect
+
+        Serialized automation payload applied by the effect.
+
+        :type: dict
+
+   .. attribute:: attacks
+
+        Serialized attack payloads attached to the effect.
+
+        :type: list of dict
+
+   .. attribute:: buttons
+
+        Serialized button payloads attached to the effect.
+
+        :type: list of dict
+
+   .. attribute:: combatant_id
+
+        ID of the combatant the effect is on.
+
+        :type: str or None
+
+   .. attribute:: combatant_name
+
+        Name of the combatant the effect is on.
+
+        :type: str or None
+
+   .. attribute:: parent
+
+        Parent effect if this was created by another effect.
+
+        :type: :class:`AutomationEffect` or None
+
+   .. attribute:: children
+
+        Child effects created from this effect.
+
+        :type: list of :class:`AutomationEffect`
 
 Target
 ------

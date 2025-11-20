@@ -5,6 +5,7 @@ from cogs5e.models.errors import RequiresLicense, InvalidArgument
 from utils.functions import smart_trim
 from . import Effect
 from .ieffect import IEffectMetaVar
+from ..entities import AutomationEffect
 from ..results import CastSpellResult
 
 
@@ -81,7 +82,7 @@ class CastSpell(Effect):
             # parenting
             explicit_parent = None
             if self.parent is not None and (parent_ref := autoctx.metavars.get(self.parent, None)) is not None:
-                if not isinstance(parent_ref, (IEffectMetaVar, aliasing.api.combat.SimpleEffect)):
+                if not isinstance(parent_ref, (IEffectMetaVar, aliasing.api.combat.SimpleEffect, AutomationEffect)):
                     raise InvalidArgument(
                         f"Could not set IEffect parent: The variable `{self.parent}` is not an IEffectMetaVar "
                         f"(got `{type(parent_ref).__name__}`)."

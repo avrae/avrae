@@ -2,6 +2,7 @@ from typing import Any, List, TYPE_CHECKING, Tuple, Union
 
 from . import Effect
 from .. import results, utils
+from ..entities import wrap_automation_entity
 from ..errors import TargetException
 from ..runtime import AutomationTarget
 
@@ -60,7 +61,7 @@ class Target(Effect):
 
         # restore the previous target
         autoctx.target = previous_target
-        autoctx.metavars["target"] = utils.maybe_alias_statblock(previous_target)  # #1335
+        autoctx.metavars["target"] = wrap_automation_entity(previous_target)  # #1335
 
         return results.TargetResult(iteration_results)
 
@@ -143,7 +144,7 @@ class Target(Effect):
     def run_effects(self, autoctx, target, target_index=0, original_target_index=None) -> list[results.TargetIteration]:
         # set up autoctx and metavars
         autoctx.target = AutomationTarget(autoctx, target)
-        autoctx.metavars["target"] = utils.maybe_alias_statblock(target)  # #1335
+        autoctx.metavars["target"] = wrap_automation_entity(target)  # #1335
         autoctx.metavars["targetIndex"] = target_index  # #1711
         autoctx.metavars["targetNumber"] = target_index + 1
 

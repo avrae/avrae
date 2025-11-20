@@ -12,7 +12,8 @@ from cogs5e.models import automation
 from cogs5e.models.automation.utils import parse_save_bonuses
 from cogs5e.models.sheet.statblock import StatBlock
 from gamedata.compendium import compendium
-from tests.utils import active_character, active_combat, end_init, requires_data, start_init
+from tests.utils import ContextBotProxy, active_character, active_combat, end_init, requires_data, start_init
+from utils.argparser import ParsedArguments
 
 log = logging.getLogger(__name__)
 pytestmark = pytest.mark.asyncio
@@ -595,6 +596,88 @@ async def test_usecounter_build_str(counter, amount):
     result = usecounter.build_str(DEFAULT_CASTER, DEFAULT_EVALUATOR)
     log.info(f"UseCounter str: ({counter=!r}, {amount=!r}) -> {result}")
     assert result
+
+
+class TestAutomationMetavars:
+    @pytest.mark.usefixtures("character", "init_fixture")
+    async def test_combat_metavars_executor(self, avrae, dhttp):
+        effects = [{
+            "type": "target",
+            "target": "self",
+            "effects": [{
+                "type": "text",
+                "text": "{combatRound}|{turnCombatants[0].name}",
+            }],
+        }]
+        auto = automation.Automation.from_data(effects)
+        caster = StatBlock("Caster")
+        args = ParsedArguments.empty_args()
+        ctx = ContextBotProxy(avrae)
+
+        await start_init(avrae, dhttp)
+        avrae.message("!init join")
+        await dhttp.drain()
+
+        combat = await active_combat(avrae)
+        combat.round_num = 1
+
+        embed = disnake.Embed()
+        await auto.run(ctx=ctx, embed=embed, caster=caster, targets=[], args=args, combat=combat)
+        assert embed.fields[-1].value.startswith("1|")
+
+        combat.round_num = 2
+        embed = disnake.Embed()
+        await auto.run(ctx=ctx, embed=embed, caster=caster, targets=[], args=args, combat=combat)
+        assert embed.fields[-1].value.startswith("2|")
+
+        await end_init(avrae, dhttp)
+
+    @pytest.mark.usefixtures("character", "init_fixture")
+    async def test_set_hp_side_effects(self, avrae, dhttp):
+        attack = textwrap.dedent(
+            """
+            {
+              "name": "Set HP Automation Test",
+              "_v": 2,
+              "automation": [
+                {
+                  "type": "target",
+                  "target": "self",
+                  "effects": [
+                    {
+                      "type": "text",
+                      "text": "{target.set_hp(max(target.hp - 10, 0))}"
+                    }
+                  ]
+                }
+              ]
+            }
+            """
+        ).strip()
+
+        await start_init(avrae, dhttp)
+        avrae.message("!init join")
+        await dhttp.drain()
+
+        avrae.message(f"!a import {attack}")
+        await dhttp.receive_message(r"Imported 1 attacks.*\n.*", regex=True)
+
+        char = await active_character(avrae)
+        original_hp = char.hp
+
+        avrae.message('!a "Set HP Automation Test"')
+        await dhttp.drain()
+
+        char = await active_character(avrae)
+        combat = await active_combat(avrae)
+        combatant = combat.get_combatant(char.name, strict=True)
+
+        expected_hp = max(original_hp - 10, 0)
+        assert combatant.hp == expected_hp
+        assert char.hp == expected_hp
+
+        combatant.set_hp(original_hp)
+        await end_init(avrae, dhttp)
 
 
 # ==== Check ====

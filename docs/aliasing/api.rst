@@ -976,6 +976,9 @@ Some examples are provided below.
         override_default_dc: Optional[int]
         override_default_attack_bonus: Optional[int]
         override_default_casting_mod: Optional[int]
+        granting_spell_id: Optional[int]
+        granting_spell_cast_level: Optional[int]
+        original_choice: Optional[str]
 
     class ButtonInteraction:
         automation: Automation  # this can be any automation built on the Avrae Dashboard
@@ -985,6 +988,9 @@ Some examples are provided below.
         override_default_dc: Optional[int]
         override_default_attack_bonus: Optional[int]
         override_default_casting_mod: Optional[int]
+        granting_spell_id: Optional[int]
+        granting_spell_cast_level: Optional[int]
+        original_choice: Optional[str]
 
 **Example: Passive Effects**
 

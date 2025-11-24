@@ -57,6 +57,10 @@ class AttackInteraction(BaseModel):
     override_default_dc: Optional[int]
     override_default_attack_bonus: Optional[int]
     override_default_casting_mod: Optional[int]
+    # include -choice and spell cast level
+    granting_spell_id: Optional[int] = None
+    granting_spell_cast_level: Optional[int] = None
+    original_choice: Optional[str] = ""
 
     def dict(self, *args, **kwargs):
         kwargs.setdefault("by_alias", True)
@@ -71,6 +75,9 @@ class ButtonInteraction(BaseModel):
     override_default_dc: Optional[int]
     override_default_attack_bonus: Optional[int]
     override_default_casting_mod: Optional[int]
+    granting_spell_id: Optional[int] = None
+    granting_spell_cast_level: Optional[int] = None
+    original_choice: Optional[str] = ""
 
 
 # ==== helpers ====

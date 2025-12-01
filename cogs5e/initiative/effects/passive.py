@@ -3,7 +3,7 @@ from typing import Callable, Iterable, List, Optional, Set, Tuple, Type, TypeVar
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.resistance import Resistance
 from utils.argparser import ParsedArguments
-from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
+from utils.constants import SAVE_BONUS_PATTERN, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES, normalize_save_bonus_token
 from utils.enums import AdvantageType
 from utils.functions import camel_to_title, verbose_stat
 
@@ -105,7 +105,10 @@ def _str_save_dis(value: Set[str]):
 
 def _str_save_bonus(value: str) -> str:
     bonus_map: dict[str, list[str]] = {}
-    for split_value in value.split("+"):
+    for match in SAVE_BONUS_PATTERN.finditer(value):
+        split_value = normalize_save_bonus_token(match.group(1))
+        if not split_value:
+            continue
         if "|" in split_value:
             dice, stat = split_value.split("|", 1)
             bonus_map[stat] = bonus_map.get(stat, []) + [dice]

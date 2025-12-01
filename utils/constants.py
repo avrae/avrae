@@ -1,3 +1,4 @@
+import re
 from collections import namedtuple
 
 # ==== useful constants ====
@@ -30,6 +31,25 @@ STAT_ABBR_MAP = {
     "wis": "Wisdom",
     "cha": "Charisma",
 }
+
+
+def normalize_save_bonus_token(token: str) -> str:
+    """Removes whitespace outside bracketed roll comments and strips a leading +."""
+    normalized = []
+    depth = 0
+    for ch in token:
+        if ch == "[":
+            depth += 1
+        elif ch == "]" and depth:
+            depth -= 1
+        if ch == " " and depth == 0:
+            continue
+        normalized.append(ch)
+    return "".join(normalized).lstrip("+")
+
+
+# Matches save bonus tokens like "+1", "-2", "1d4+1d3[test]|str"; allows mixed dice/ints/comments before an optional stat
+SAVE_BONUS_PATTERN = re.compile(r"([+-]*\d(?:[0-9d+ \-\[\]aA-zZ])*(?:\|\w{3})?)")
 
 SKILL_NAMES = (
     "acrobatics",

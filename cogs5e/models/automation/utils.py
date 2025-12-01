@@ -7,6 +7,7 @@ from d20.utils import TreeType
 
 import aliasing.api.statblock
 from cogs5e.models.sheet.statblock import StatBlock
+from utils.constants import SAVE_BONUS_PATTERN, normalize_save_bonus_token
 
 
 def maybe_alias_statblock(target):
@@ -183,7 +184,10 @@ def parse_save_bonuses(save_type: str, save_bonuses: list[str]) -> list[str]:
     out = []
     for save_bonus_combo in save_bonuses:
         current_out = []
-        for save_bonus in save_bonus_combo.split("+"):
+        for match in SAVE_BONUS_PATTERN.finditer(save_bonus_combo):
+            save_bonus = normalize_save_bonus_token(match.group(1))
+            if not save_bonus:
+                continue
             if "|" not in save_bonus:
                 out.append(save_bonus)
                 continue

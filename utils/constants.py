@@ -49,7 +49,7 @@ def normalize_save_bonus_token(token: str) -> str:
 
 
 # Matches save bonus tokens like "+1", "-2", "1d4+1d3[test]|str"; allows mixed dice/ints/comments before an optional stat
-SAVE_BONUS_PATTERN = re.compile(r"([+-]*\d(?:[0-9d+ \-\[\]aA-zZ])*(?:\|\w{3})?)")
+SAVE_BONUS_PATTERN = re.compile(r"(?<=\|...)")
 
 SKILL_NAMES = (
     "acrobatics",

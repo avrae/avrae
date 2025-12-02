@@ -105,8 +105,11 @@ def _str_save_dis(value: Set[str]):
 
 def _str_save_bonus(value: str) -> str:
     bonus_map: dict[str, list[str]] = {}
-    for match in SAVE_BONUS_PATTERN.finditer(value):
-        split_value = normalize_save_bonus_token(match.group(1))
+
+    for split_value in SAVE_BONUS_PATTERN.split(value):
+        if not split_value:
+            continue
+        split_value = normalize_save_bonus_token(split_value)
         if not split_value:
             continue
         if "|" in split_value:

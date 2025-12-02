@@ -184,8 +184,10 @@ def parse_save_bonuses(save_type: str, save_bonuses: list[str]) -> list[str]:
     out = []
     for save_bonus_combo in save_bonuses:
         current_out = []
-        for match in SAVE_BONUS_PATTERN.finditer(save_bonus_combo):
-            save_bonus = normalize_save_bonus_token(match.group(1))
+        for match_text in SAVE_BONUS_PATTERN.split(save_bonus_combo):
+            if not match_text:
+                continue
+            save_bonus = normalize_save_bonus_token(match_text)
             if not save_bonus:
                 continue
             if "|" not in save_bonus:

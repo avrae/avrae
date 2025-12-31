@@ -620,6 +620,7 @@ class SimpleEffect:
         self.conc = self._effect.concentration
         self.desc = self._effect.desc
         self.ticks_on_end = self._effect.end_on_turn_end
+        self.tick_on_combatant_id = self._effect.tick_on_combatant_id
         self.combatant_name = self._effect.combatant.name
         self._parent = None
         self._children = None

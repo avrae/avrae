@@ -1109,9 +1109,10 @@ class Lookup(commands.Cog):
         """Looks up an item."""
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
+        embed.url = item.url
+        color = embed.colour
 
         embed.title = item.name
-        embed.url = item.url
         embed.description = item.meta
 
         if item.attunement:
@@ -1120,16 +1121,32 @@ class Lookup(commands.Cog):
             else:
                 embed.add_field(name="Attunement", value=f"Requires Attunement {item.attunement}", inline=False)
 
-        text = trim_str(item.desc, 5500)
-        add_fields_from_long_text(embed, "Description", text)
+        pieces = chunk_text(item.desc)
 
+        embed.add_field(name="Description", value=pieces[0], inline=False)
+
+        embed_queue = [embed]
+        if len(pieces) > 1:
+            for i, piece in enumerate(pieces[1::2]):
+                temp_embed = disnake.Embed()
+                temp_embed.colour = color
+                if (next_idx := (i + 1) * 2) < len(pieces):
+                    temp_embed.description = piece + pieces[next_idx]
+                else:
+                    temp_embed.description = piece
+                embed_queue.append(temp_embed)
+
+        lookuputils.handle_source_footer(embed_queue[-1], item, "Item")
         if item.image:
-            embed.set_thumbnail(url=item.image)
-
-        lookuputils.handle_source_footer(embed, item, "Item")
+            embed_queue[0].set_thumbnail(url=item.image)
 
         await Stats.increase_stat(ctx, "items_looked_up_life")
-        await destination.send(embed=embed)
+
+        for i, embed in enumerate(embed_queue):
+            if i == 0:
+                await destination.send(embed=embed)
+            else:
+                await destination.channel.send(embed=embed)
 
     # ==== server settings ====
     @commands.command(hidden=True)

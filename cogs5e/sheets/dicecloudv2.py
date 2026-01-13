@@ -584,6 +584,7 @@ class DicecloudV2Parser(SheetLoaderABC):
                 continue
 
             import_action = "avrae:no_action" not in spell["tags"] + spell.get("libraryTags", [])
+            spell_actions = []
             if import_action:
                 spell_actions = self.persist_actions_for_name(spell["name"])
                 actions += spell_actions

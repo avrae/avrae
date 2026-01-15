@@ -15,7 +15,7 @@ import gamedata
 from gamedata.lookuputils import VALID_VERSIONS, extract_and_set_version, filter_spells_by_version
 import ui
 import utils.settings
-from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
+from cogs5e.models.embeds import EmbedPaginator, EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
 from cogs5e.models.errors import RequiresLicense
 from cogsmisc.stats import Stats
 from gamedata import lookuputils
@@ -1110,8 +1110,6 @@ class Lookup(commands.Cog):
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
         embed.url = item.url
-        color = embed.colour
-
         embed.title = item.name
         embed.description = item.meta
 
@@ -1121,28 +1119,18 @@ class Lookup(commands.Cog):
             else:
                 embed.add_field(name="Attunement", value=f"Requires Attunement {item.attunement}", inline=False)
 
-        pieces = chunk_text(item.desc)
+        ep = EmbedPaginator(embed)
+        ep.add_field(name="Description", inline=False)
+        ep.extend_field(item.desc)
 
-        embed.add_field(name="Description", value=pieces[0], inline=False)
-
-        embed_queue = [embed]
-        if len(pieces) > 1:
-            for i, piece in enumerate(pieces[1::2]):
-                temp_embed = disnake.Embed()
-                temp_embed.colour = color
-                if (next_idx := (i + 1) * 2) < len(pieces):
-                    temp_embed.description = piece + pieces[next_idx]
-                else:
-                    temp_embed.description = piece
-                embed_queue.append(temp_embed)
-
-        lookuputils.handle_source_footer(embed_queue[-1], item, "Item")
+        embeds_list = ep.embeds
         if item.image:
-            embed_queue[0].set_thumbnail(url=item.image)
+            embeds_list[0].set_thumbnail(url=item.image)
+        lookuputils.handle_source_footer(embeds_list[-1], item, "Item")
 
         await Stats.increase_stat(ctx, "items_looked_up_life")
 
-        for i, embed in enumerate(embed_queue):
+        for i, embed in enumerate(embeds_list):
             if i == 0:
                 await destination.send(embed=embed)
             else:

@@ -54,7 +54,7 @@ class Roll(Effect):
 
         if not (self.fixedValue or self.hidden):
             d = autoctx.args.join("d", "+", ephem=True)
-            # #224: filter bonuses by sign: positive for damage, negative for healing
+            # #224: filter bonuses by type: 'heal' for healing, else for damage
             all_bonuses = autoctx.caster_active_effects(mapper=lambda e: e.effects.damage_bonus, default=[])
             effect_bonuses = utils.filter_dmg_bonuses(dice_str, all_bonuses)
             if effect_bonuses:

@@ -178,9 +178,9 @@ def tree_map_prefix(func: Callable[[TreeType], tuple[TreeType, bool]], node: Tre
 
 
 def filter_dmg_bonuses(damage_str: str, bonuses: list[str]) -> list[str]:
-    """Positive bonuses for damage, negative for healing."""
+    """Filter bonuses by type: 'heal' for healing rolls, else for damage rolls."""
     is_healing = damage_str.lstrip().startswith("-")
-    return [b for b in bonuses if is_healing == b.lstrip().startswith("-")]
+    return [b for b in bonuses if is_healing == ("heal" in b.lower())]
 
 
 def parse_save_bonuses(save_type: str, save_bonuses: list[str]) -> list[str]:

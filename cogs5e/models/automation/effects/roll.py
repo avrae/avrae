@@ -48,21 +48,18 @@ class Roll(Effect):
     def run(self, autoctx):
         super().run(autoctx)
 
-        dice_ast = copy.copy(d20.parse(autoctx.parse_annostr(self.dice)))
+        dice_str = autoctx.parse_annostr(self.dice)
+        dice_ast = copy.copy(d20.parse(dice_str))
         dice_ast = utils.upcast_scaled_dice(self, autoctx, dice_ast)
 
         if not (self.fixedValue or self.hidden):
             d = autoctx.args.join("d", "+", ephem=True)
-
-            # add on combatant damage effects (#224)
-            effect_d = autoctx.caster_active_effects(
-                mapper=lambda effect: effect.effects.damage_bonus, reducer="+".join
-            )
-            if effect_d:
-                if d:
-                    d = f"{d}+{effect_d}"
-                else:
-                    d = effect_d
+            # #224: filter bonuses by sign: positive for damage, negative for healing
+            all_bonuses = autoctx.caster_active_effects(mapper=lambda e: e.effects.damage_bonus, default=[])
+            effect_bonuses = utils.filter_dmg_bonuses(dice_str, all_bonuses)
+            if effect_bonuses:
+                effect_d = "+".join(effect_bonuses)
+                d = f"{d}+{effect_d}" if d else effect_d
 
             if d:
                 d_ast = d20.parse(d)

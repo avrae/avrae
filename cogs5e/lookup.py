@@ -15,7 +15,7 @@ import gamedata
 from gamedata.lookuputils import VALID_VERSIONS, extract_and_set_version, filter_spells_by_version
 import ui
 import utils.settings
-from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
+from cogs5e.models.embeds import EmbedPaginator, EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
 from cogs5e.models.errors import RequiresLicense
 from cogsmisc.stats import Stats
 from gamedata import lookuputils
@@ -1109,9 +1109,8 @@ class Lookup(commands.Cog):
         """Looks up an item."""
         destination = await self._get_destination(ctx)
         embed = EmbedWithAuthor(ctx)
-
-        embed.title = item.name
         embed.url = item.url
+        embed.title = item.name
         embed.description = item.meta
 
         if item.attunement:
@@ -1120,16 +1119,22 @@ class Lookup(commands.Cog):
             else:
                 embed.add_field(name="Attunement", value=f"Requires Attunement {item.attunement}", inline=False)
 
-        text = trim_str(item.desc, 5500)
-        add_fields_from_long_text(embed, "Description", text)
+        ep = EmbedPaginator(embed)
+        ep.add_field(name="Description", inline=False)
+        ep.extend_field(item.desc)
 
+        embeds_list = ep.embeds
         if item.image:
-            embed.set_thumbnail(url=item.image)
-
-        lookuputils.handle_source_footer(embed, item, "Item")
+            embeds_list[0].set_thumbnail(url=item.image)
+        lookuputils.handle_source_footer(embeds_list[-1], item, "Item")
 
         await Stats.increase_stat(ctx, "items_looked_up_life")
-        await destination.send(embed=embed)
+
+        for i, embed in enumerate(embeds_list):
+            if i == 0:
+                await destination.send(embed=embed)
+            else:
+                await destination.channel.send(embed=embed)
 
     # ==== server settings ====
     @commands.command(hidden=True)

@@ -148,6 +148,7 @@ class ContextBotProxy:
 class MessageProxy:
     def __init__(self):
         self.id = int(MESSAGE_ID)
+        self.reference = None
 
 
 # ==== assertion helpers ====

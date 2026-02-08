@@ -305,7 +305,7 @@ class CollectableManagementGroup(commands.Group):
                 codeblock_language="py",
             )
             return
-        else:  # collection
+        else:  # collection. AVR-1089 reworked to use EmbedPaginator
             ep = embeds.EmbedPaginator(EmbedWithAuthor(ctx))
             the_collection = await collectable.load_collection(ctx)
             owner = await user_from_id(ctx, the_collection.owner)

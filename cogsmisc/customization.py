@@ -318,7 +318,8 @@ class CollectableManagementGroup(commands.Group):
                 if collectable.subcommands:
                     lines = [f"**{sc.name}** - {sc.short_docs}" for sc in collectable.subcommands]
                     # AVR-1089 split over multiple fields but chunk to avoid the 25 field limit
-                    chunks = current = []
+                    chunks = []
+                    current = []
                     current_len = 0
                     for line in lines:
                         line_len = len(line)

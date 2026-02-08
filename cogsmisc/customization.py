@@ -316,8 +316,26 @@ class CollectableManagementGroup(commands.Group):
             if isinstance(collectable, workshop.WorkshopAlias):
                 await collectable.load_subcommands(ctx)
                 if collectable.subcommands:
-                    subcommands = "\n".join(f"**{sc.name}** - {sc.short_docs}" for sc in collectable.subcommands)
-                    embed.add_field(name="Subcommands", value=subcommands, inline=False)
+                    lines = [f"**{sc.name}** - {sc.short_docs}" for sc in collectable.subcommands]
+                    # AVR-1089 split over multiple fields but chunk to avoid the 25 field limit
+                    chunks = current = []
+                    current_len = 0
+                    for line in lines:
+                        line_len = len(line)
+                        # +1 for newline when joining, unless this is the first line
+                        extra = line_len if not current else line_len + 1
+                        if current and current_len + extra > 1024:
+                            chunks.append("\n".join(current))
+                            current = [line]
+                            current_len = line_len
+                        else:
+                            current.append(line)
+                            current_len += extra
+                    if current:
+                        chunks.append("\n".join(current))
+                    for i, chunk in enumerate(chunks, start=1):
+                        name = "Subcommands" if len(chunks) == 1 else f"Subcommands ({i}/{len(chunks)})"
+                        embed.add_field(name=name, value=chunk, inline=False)
 
             return await ctx.send(embed=embed)
 

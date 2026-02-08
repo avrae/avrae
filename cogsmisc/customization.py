@@ -306,39 +306,24 @@ class CollectableManagementGroup(commands.Group):
             )
             return
         else:  # collection
-            embed = EmbedWithAuthor(ctx)
+            ep = embeds.EmbedPaginator(EmbedWithAuthor(ctx))
             the_collection = await collectable.load_collection(ctx)
             owner = await user_from_id(ctx, the_collection.owner)
-            embed.title = f"{ctx.prefix}{name}" if self.is_alias else name
-            embed.description = f"From {the_collection.name} by {owner}.\n[View on Workshop]({the_collection.url})"
-            embeds.add_fields_from_long_text(embed, "Help", collectable.docs or "No documentation.")
+            ep.add_title(f"{ctx.prefix}{name}" if self.is_alias else name)
+            ep.add_description(f"From {the_collection.name} by {owner}.\n[View on Workshop]({the_collection.url})")
+
+            ep.add_field(name="Help")
+            for line in (collectable.docs or "No documentation.").splitlines():
+                ep.extend_field(line)
 
             if isinstance(collectable, workshop.WorkshopAlias):
                 await collectable.load_subcommands(ctx)
                 if collectable.subcommands:
-                    lines = [f"**{sc.name}** - {sc.short_docs}" for sc in collectable.subcommands]
-                    # AVR-1089 split over multiple fields but chunk to avoid the 25 field limit
-                    chunks = []
-                    current = []
-                    current_len = 0
-                    for line in lines:
-                        line_len = len(line)
-                        # +1 for newline when joining, unless this is the first line
-                        extra = line_len if not current else line_len + 1
-                        if current and current_len + extra > 1024:
-                            chunks.append("\n".join(current))
-                            current = [line]
-                            current_len = line_len
-                        else:
-                            current.append(line)
-                            current_len += extra
-                    if current:
-                        chunks.append("\n".join(current))
-                    for i, chunk in enumerate(chunks, start=1):
-                        name = "Subcommands" if len(chunks) == 1 else f"Subcommands ({i}/{len(chunks)})"
-                        embed.add_field(name=name, value=chunk, inline=False)
+                    ep.add_field(name="Subcommands")
+                    for sc in collectable.subcommands:
+                        ep.extend_field(f"**{sc.name}** - {sc.short_docs}")
 
-            return await ctx.send(embed=embed)
+            return await ep.send_to(ctx)
 
     async def list(self, ctx, page: int = 1):
         ep = embeds.EmbedPaginator(EmbedWithAuthor(ctx))

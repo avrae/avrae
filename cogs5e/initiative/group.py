@@ -74,11 +74,8 @@ class CombatantGroup(Combatant):
 
     @property
     def init_skill(self):
-        # groups: if all combatants are the same type, return the first one's skill, otherwise +0
-        if (
-            all(c.type == CombatantType.MONSTER for c in self._combatants)
-            and len(set(c.monster_name for c in self._combatants)) == 1
-        ):
+        # groups: return the initiative of the first combatant in the group if there is one, otherwise +0
+        if self._combatants:
             return self._combatants[0].init_skill
         return Skill(0)
 
@@ -115,6 +112,8 @@ class CombatantGroup(Combatant):
         self._combatants.append(combatant)
         combatant.group = self.id
         combatant.init = self.init
+        # Adding the first combatant changes the group's init_skill tie-breaker.
+        self.combat.sort_combatants()
 
     def remove_combatant(self, combatant):
         self._combatants.remove(combatant)

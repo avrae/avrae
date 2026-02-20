@@ -16,7 +16,8 @@ from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, DYNAMO_ENTITLEME
 # env: AWS_ACCESS_KEY_ID
 # env: AWS_SECRET_ACCESS_KEY
 
-AUTH_DISCORD = f"{AUTH_BASE_URL}/v1/discord-token"
+AUTH_DISCORD_V1 = f"{AUTH_BASE_URL}/v1/discord-token"
+AUTH_DISCORD_V2 = f"{AUTH_BASE_URL}/v2/discord-token"
 
 # cache
 # in addition to caching in redis, we have a LRU cache for 64 entity types and the 128 most recent users
@@ -102,20 +103,21 @@ class BeyondClient(BeyondClientBase):
 
         return accessible
 
-    async def get_ddb_user(self, ctx, user_id=None):
+    async def get_ddb_user(self, ctx, user_id=None, auth_v1: bool = False):
         """
         Gets a Discord user's DDB user, communicating with the Auth Service if necessary.
         Returns None if the user has no DDB link.
 
         :type ctx: disnake.ext.commands.Context
         :param int user_id: The Discord user ID to get the DDB user of. If None, defaults to ctx.author.id.
+        :param bool auth_v1: Whether to use the v1 auth endpoint, otherwise uses v2 as default.
         :rtype: auth.BeyondUser or None
         """
         if user_id is None:
             user_id = ctx.author.id
 
         log.debug(f"Getting DDB user for Discord ID {user_id}")
-        user_cache_key = f"beyond.user.{user_id}"
+        user_cache_key = f"beyond.user.{user_id}" + (".v1" if auth_v1 else "")
         unlinked_sentinel = {"unlinked": True}
 
         cached_user = await ctx.bot.rdb.jget(user_cache_key)
@@ -125,7 +127,7 @@ class BeyondClient(BeyondClientBase):
             return auth.BeyondUser.from_dict(cached_user)
 
         user_claim = auth.jwt_for_user(user_id)
-        token, ttl = await self._fetch_token(user_claim)
+        token, ttl = await self._fetch_token(user_claim, auth_v1)
 
         if token is None:
             # cache unlinked if user is unlinked
@@ -214,18 +216,22 @@ class BeyondClient(BeyondClientBase):
         return entity_e10s
 
     # ---- low-level auth ----
-    async def _fetch_token(self, claim: str):
+    async def _fetch_token(self, claim: str, auth_v1: bool = False):
         """
         Requests a short-term token from the DDB Auth Service given a Discord user claim in JWT form.
 
         :param str claim: The JWT representing the Discord user.
+        :param bool auth_v1: Whether to use the v1 auth endpoint, otherwise uses v2 as default.
         :returns: A tuple representing the short-term token for the user and its TTL, or (None, None).
         :rtype: tuple[str, int] or tuple[None, None]
         """
         body = {"Token": claim}
         try:
-            async with self.http.post(AUTH_DISCORD, json=body) as resp:
-                if not 199 < resp.status < 300:
+            async with self.http.post(AUTH_DISCORD_V1 if auth_v1 else AUTH_DISCORD_V2, json=body) as resp:
+                if resp.status == 401:
+                    log.debug(f"Auth Service returned 401 Unauthorized - user not linked: {await resp.text()}")
+                    return None, None
+                elif not 199 < resp.status < 300:
                     log.warning(f"Auth Service returned {resp.status}: {await resp.text()}")
                     raise AuthException(f"D&D Beyond returned an error: {resp.status} {resp.reason}")
                 try:

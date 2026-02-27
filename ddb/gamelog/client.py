@@ -53,7 +53,7 @@ class GameLogClient(BaseClient):
         :rtype: CampaignLink
         """
         # is the current user authorized to link this campaign?
-        ddb_user = await self.ddb.get_ddb_user(ctx, ctx.author.id)
+        ddb_user = await self.ddb.get_ddb_user(ctx, ctx.author.id, auth_v1=True)
         if ddb_user is None:
             raise CampaignLinkException(
                 "You do not have a D&D Beyond account connected to your Discord account. "

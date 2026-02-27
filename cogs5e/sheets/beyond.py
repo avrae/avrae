@@ -157,7 +157,7 @@ class BeyondSheetParser(SheetLoaderABC):
         character = None
         headers = {}
 
-        ddb_user = await self.ctx.bot.ddb.get_ddb_user(self.ctx, self.ctx.author.id)
+        ddb_user = await self.ctx.bot.ddb.get_ddb_user(self.ctx, self.ctx.author.id, auth_v1=True)
         if ddb_user is not None:
             headers = {"Authorization": f"Bearer {ddb_user.token}"}
 

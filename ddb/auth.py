@@ -40,7 +40,12 @@ class BeyondUser:
         :rtype: BeyondUser
         """
         payload = jwt.decode(
-            token, WATERDEEP_SECRET, algorithms=["HS256"], issuer=ISSUER, audience=[AUDIENCE, ISSUER], verify=True
+            token,
+            WATERDEEP_SECRET,
+            algorithms=["HS256"],
+            issuer=ISSUER,
+            audience=[AUDIENCE, ISSUER],
+            options={"verify_signature": False},
         )
         return cls(
             token,

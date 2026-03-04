@@ -19,6 +19,7 @@ class AliasContext:
         self._prefix = ctx.prefix
         self._alias = ctx.invoked_with
         self._message_id = ctx.message.id
+        self._reply_to_id = ctx.message.reference.message_id if ctx.message.reference else None
 
     @property
     def guild(self):
@@ -82,10 +83,23 @@ class AliasContext:
         """
         return self._message_id
 
+    @property
+    def reply_to_id(self):
+        """
+        The ID of the message being replied to, if the alias was invoked as a reply.
+        Returns None if the alias invocation was not a reply.
+
+        >>> !test {{ctx.reply_to_id}}
+        982495360129847306
+
+        :rtype: int or None
+        """
+        return self._reply_to_id
+
     def __repr__(self):
         return (
             f"<{self.__class__.__name__} guild={self.guild!r} channel={self.channel!r} author={self.author!r} "
-            f"prefix={self.prefix!r} alias={self.alias!r} message={self.message_id!r}>"
+            f"prefix={self.prefix!r} alias={self.alias!r} message={self.message_id!r} reply_to={self.reply_to_id!r}>"
         )
 
 

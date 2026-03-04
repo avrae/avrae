@@ -6,6 +6,7 @@ Created on Jan 13, 2017
 
 from math import sqrt
 
+import disnake
 from disnake.ext import commands
 
 from cogs5e.models import embeds
@@ -48,6 +49,8 @@ class PBPUtils(commands.Cog):
         -color [hex color]
             Leave blank for random color.
         -t <timeout (0..600)>
+        -reply <message_id>
+            Makes the bot's message a reply to the specified message.
         """
         await try_delete(ctx.message)
 
@@ -72,10 +75,19 @@ class PBPUtils(commands.Cog):
             except:
                 pass
 
+        reference = None
+        try:
+            reply_id = args.last("reply", type_=int)
+            if reply_id:
+                reference = disnake.MessageReference(
+                    message_id=reply_id, channel_id=ctx.channel.id, fail_if_not_exists=False
+                )
+        except (ValueError, TypeError):
+            pass
         if timeout:
-            await ctx.send(embed=embed, delete_after=timeout)
+            await ctx.send(embed=embed, delete_after=timeout, reference=reference, mention_author=False)
         else:
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, reference=reference, mention_author=False)
 
     @commands.command()
     async def br(self, ctx):

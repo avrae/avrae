@@ -111,7 +111,7 @@ class RollRequestRoll:
     def from_dict(cls, d):
         dice_notation = DiceNotation.from_dict(d["diceNotation"])
         roll_type = RollType(d["rollType"])
-        roll_kind = RollKind(d["rollKind"])
+        roll_kind = RollKind(d.get("rollKind", RollKind.NONE.value))
         if (result := d.get("result")) is not None:
             result = RollResult.from_dict(result)
         return cls(dice_notation, roll_type, roll_kind, result)

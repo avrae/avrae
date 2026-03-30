@@ -2,12 +2,12 @@ from utils import config
 
 # datadog - if DD_SERVICE not set, don't do any tracing/patching
 # patches all happen before any imports
-# if config.DD_SERVICE is not None:
-#     from utils import datadog
+if config.DD_SERVICE is not None:
+    from utils import datadog
 
-#     datadog.do_patches()
-#     datadog.start_profiler()
-#     from utils.datadog import datadog_logger
+    datadog.do_patches()
+    datadog.start_profiler()
+    from utils.datadog import datadog_logger
 
 
 import asyncio
@@ -304,6 +304,12 @@ async def on_interaction(interaction: disnake.Interaction):
 @bot.listen("on_command_error")
 @bot.listen("on_slash_command_error")
 async def command_errors(ctx, error):
+    # send error to datadog
+    if isinstance(error, CommandInvokeError):
+        bot.log_exception(error.original, ctx)
+    else:
+        bot.log_exception(error, ctx)
+
     if isinstance(error, commands.CommandNotFound):
         return
 
@@ -365,12 +371,6 @@ async def command_errors(ctx, error):
                 return await ctx.send(f"Error: Message is too long, malformed, or empty.\n{original.text}")
             elif 499 < original.response.status < 600:
                 return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
-
-    # send error to datadog
-    if isinstance(error, CommandInvokeError):
-        bot.log_exception(error.original, ctx)
-    else:
-        bot.log_exception(error, ctx)
 
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "

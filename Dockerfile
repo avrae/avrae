@@ -18,4 +18,4 @@ COPY --chown=avrae:avrae . .
 # Download AWS pubkey to connect to documentDB
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
-ENTRYPOINT python dbot.py $DBOT_ARGS
+ENTRYPOINT /home/avrae/.local/bin/ddtrace-run python dbot.py $DBOT_ARGS

@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
   id-token: write
-  
+
 jobs:
   # ===== ecs deploy =====
   deploy:
@@ -47,7 +47,9 @@ jobs:
           ECR_REPOSITORY: avrae/${{ env.IMAGE_NAME }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $SERVICE_NAME --build-arg COMMIT=$GITHUB_SHA .
+          docker build -t $SERVICE_NAME --build-arg COMMIT=$GITHUB_SHA \
+            --label 'com.datadoghq.ad.logs=[{"source":"python","log_processing_rules":[{"type":"include_at_match","name":"datadog_error_only","pattern":"\"level\"\\s*:\\s*\"ERROR\""}]}]' \
+            .
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$TAG_ENV
           docker push -a $ECR_REGISTRY/$ECR_REPOSITORY
@@ -55,5 +57,3 @@ jobs:
       - name: Deploy Amazon ECS task definition
         run: |
           aws ecs update-service --cluster $CLUSTER_NAME-$CLUSTER_ENV --service $SERVICE_NAME --force-new-deployment --region $REGION --task-definition avrae-bot-nightly-ecs-task-definition
-
-

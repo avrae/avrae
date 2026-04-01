@@ -221,7 +221,8 @@ class Core(commands.Cog):
     @commands.command()
     async def dderror(self, ctx):
         """Causes an error on purpose to test datadog error reporting."""
-        raise Exception('Testing datadog reporting using dderror command.')
+        raise Exception("Testing datadog reporting using dderror command.")
+
 
 def setup(bot):
     bot.add_cog(Core(bot))

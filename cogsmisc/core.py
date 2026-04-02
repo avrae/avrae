@@ -4,6 +4,7 @@ Created on Dec 26, 2016
 @author: andrew
 """
 
+import logging
 import random
 import time
 from datetime import datetime, timedelta
@@ -15,6 +16,8 @@ from disnake.ext import commands
 
 from cogs5e.models import embeds
 from cogsmisc.stats import Stats
+
+log = logging.getLogger(__name__)
 
 CHANGELOG_CHANNEL_ID = 342667972223172608
 
@@ -221,6 +224,11 @@ class Core(commands.Cog):
     @commands.command()
     async def dderror(self, ctx):
         """Causes an error on purpose to test datadog error reporting."""
+        log.info("Info log test in dderror")
+        log.debug("Debug log test in dderror")
+        log.warning("Warning log test in dderror")
+        log.error("Error log test in dderror")
+        print("Console print test in dderror")
         raise Exception("Testing datadog reporting using dderror command.")
 
 

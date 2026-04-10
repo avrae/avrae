@@ -47,6 +47,15 @@ from confluent_client.producer import KafkaProducer
 
 producer = KafkaProducer()
 
+from disnake.state import ConnectionState
+
+
+def _skip_parse_guild_create(self, data):
+    return
+
+
+ConnectionState.parse_guild_create = _skip_parse_guild_create
+
 # This method will load the variables from .env into the environment for running in local
 # from dotenv import load_dotenv
 # load_dotenv()

@@ -29,6 +29,7 @@ from disnake.errors import Forbidden, HTTPException, NotFound
 from disnake.ext import commands
 from disnake.ext.commands import CommandSyncFlags
 from disnake.ext.commands.errors import CommandInvokeError
+from disnake.gateway import DiscordWebSocket
 
 from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
@@ -47,14 +48,24 @@ from confluent_client.producer import KafkaProducer
 
 producer = KafkaProducer()
 
-from disnake.state import ConnectionState
+_original_received_message = DiscordWebSocket.received_message
 
 
-def _skip_parse_guild_create(self, data):
-    return
+async def _received_message_without_guild_create(self, raw_msg):
+    if isinstance(raw_msg, bytes):
+        self._buffer.extend(raw_msg)
+        if len(raw_msg) < 4 or raw_msg[-4:] != b"\x00\x00\xff\xff":
+            return
+        raw_msg = self._zlib.decompress(self._buffer).decode("utf-8")
+        self._buffer = bytearray()
+
+    if '"t":"GUILD_CREATE"' in raw_msg or '"t": "GUILD_CREATE"' in raw_msg:
+        return
+
+    await _original_received_message(self, raw_msg)
 
 
-ConnectionState.parse_guild_create = _skip_parse_guild_create
+DiscordWebSocket.received_message = _received_message_without_guild_create
 
 # This method will load the variables from .env into the environment for running in local
 # from dotenv import load_dotenv

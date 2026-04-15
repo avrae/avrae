@@ -30,6 +30,7 @@ DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", "!")
 
 # ---- monitoring ----
 DD_SERVICE = os.getenv("DD_SERVICE")
+DD_PROFILING_ENABLED = os.getenv("DD_PROFILING_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 
 # ---- character sheets ---
 NO_DICECLOUD = os.environ.get("NO_DICECLOUD", "DICECLOUD_USER" not in os.environ)

@@ -6,7 +6,8 @@ if config.DD_SERVICE is not None:
     from utils import datadog
 
     datadog.do_patches()
-    datadog.start_profiler()
+    if config.DD_PROFILING_ENABLED:
+        datadog.start_profiler()
     from utils.datadog import datadog_logger
 
 

@@ -1,5 +1,6 @@
 import draconic
 
+from utils import config, safe_eval
 from . import Effect
 from ..errors import AutomationEvaluationException, InvalidIntExpression, StopExecution
 from ..results import SetVariableResult
@@ -49,13 +50,36 @@ class SetVariable(Effect):
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
-        try:
-            value = evaluator.eval(self.value)
-        except draconic.DraconicException:
+        if config.SAFE_EVAL_ENABLED and "caster.attacks" in self.value:
+            safe_names = {
+                "caster": safe_eval.SafeCaster(
+                    attacks=[attack.name for attack in caster.attacks],
+                    name=caster.name,
+                ),
+                **{
+                    key: val
+                    for key, val in evaluator.builtins.items()
+                    if isinstance(val, (int, float, str, bool, type(None)))
+                },
+            }
             try:
-                value = evaluator.eval(self.on_error)
+                value = safe_eval.eval_expr(self.value, safe_names, config.SAFE_EVAL_TIMEOUT_SECONDS)
+            except Exception:
+                if self.on_error is not None:
+                    try:
+                        value = safe_eval.eval_expr(self.on_error, safe_names, config.SAFE_EVAL_TIMEOUT_SECONDS)
+                    except Exception:
+                        value = self.value
+                else:
+                    value = self.value
+        else:
+            try:
+                value = evaluator.eval(self.value)
             except draconic.DraconicException:
-                value = self.value
+                try:
+                    value = evaluator.eval(self.on_error)
+                except draconic.DraconicException:
+                    value = self.value
         try:
             evaluator.builtins[self.name] = int(value)
         except (TypeError, ValueError):

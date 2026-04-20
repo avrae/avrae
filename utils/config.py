@@ -27,6 +27,8 @@ REDIS_DB_NUM = int(os.getenv("REDIS_DB_NUM", 0))
 
 # ---- user ----
 DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", "!")
+SAFE_EVAL_ENABLED = os.getenv("SAFE_EVAL_ENABLED", "true").lower() in ("1", "true", "yes", "on")
+SAFE_EVAL_TIMEOUT_SECONDS = float(os.getenv("SAFE_EVAL_TIMEOUT_SECONDS", "5"))
 
 # ---- monitoring ----
 DD_SERVICE = os.getenv("DD_SERVICE")

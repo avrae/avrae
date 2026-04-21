@@ -1,5 +1,4 @@
 from functools import cached_property
-import logging
 from typing import List, Optional, TYPE_CHECKING, Union
 
 import aliasing.api.combat
@@ -7,13 +6,11 @@ import aliasing.api.statblock
 import aliasing.evaluators
 import cogs5e.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
-from utils import config, safe_eval
 from utils.enums import AdvantageType, CritDamageType
 from .errors import AutomationEvaluationException, AutomationException, InvalidIntExpression
 from .utils import maybe_alias_statblock, parse_save_bonuses
 
 __all__ = ("AutomationContext", "AutomationTarget")
-log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import disnake
@@ -237,37 +234,12 @@ class AutomationContext:
         self.evaluator.builtins.update(self.metavars)
         expr = annostr.strip("{}")
         try:
-            if config.SAFE_EVAL_ENABLED and "caster.attacks" in expr:
-                log.debug("automation.safe_eval.attempt expr=%r", expr)
-                try:
-                    result = safe_eval.eval_expr(
-                        expr,
-                        self._safe_eval_names(),
-                        config.SAFE_EVAL_TIMEOUT_SECONDS,
-                    )
-                    log.debug("automation.safe_eval.used expr=%r", expr)
-                    return result
-                except safe_eval.SafeEvalTimeout as ex:
-                    log.warning("automation.safe_eval.timeout expr=%r", expr)
-                    raise AutomationEvaluationException(ex, expr)
-                except Exception:
-                    log.exception("automation.safe_eval.fallback expr=%r", expr)
             out = self.evaluator.eval(expr)
         except Exception as ex:
             raise AutomationEvaluationException(ex, expr)
         finally:
             self.evaluator.builtins = original_names
         return out
-
-    def _safe_eval_names(self):
-        return {
-            "caster": safe_eval.SafeCaster(
-                attacks=[attack.name for attack in self.caster.attacks],
-                name=self.caster.name,
-            ),
-            "targets": [getattr(target, "name", str(target)) for target in self.targets],
-            **{key: value for key, value in self.metavars.items() if isinstance(value, (int, float, str, bool, type(None)))},
-        }
 
     def parse_intexpression(self, intexpression):
         """

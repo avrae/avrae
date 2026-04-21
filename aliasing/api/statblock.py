@@ -359,6 +359,10 @@ class AliasAttackList:
         self._parent_statblock = parent_statblock
 
     def __str__(self):
+        from utils import automation_display
+
+        if automation_display.attack_display_depth() >= 1:
+            return automation_display.compact_attack_list_lines(self._attack_list)
         return self._attack_list.build_str(self._parent_statblock)
 
     def __iter__(self):

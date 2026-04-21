@@ -136,7 +136,7 @@ class Automation:
         """
         if not self.effects:
             return "No effects."
-        evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster)
+        evaluator = aliasing.evaluators.DisplayOnlyAutomationEvaluator.with_caster(caster)
         evaluator.builtins["caster"] = aliasing.api.statblock.AliasStatBlock(caster)
         inner = Effect.build_child_str(self.effects, caster, evaluator)
         if not inner:

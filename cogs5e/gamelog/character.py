@@ -29,7 +29,7 @@ class CharacterHandler(GameLogCallbackHandler):
             return
 
         character_id = data.character_id
-        ddb_user = await self.bot.ddb.get_ddb_user(gctx, gctx.discord_user_id)
+        ddb_user = await self.bot.ddb.get_ddb_user(gctx, gctx.discord_user_id, auth_v1=True)
         resp = await self.bot.ddb.scds.get_characters(ddb_user, [character_id])
         if not resp.found_characters:
             return

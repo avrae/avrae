@@ -184,7 +184,7 @@ class GameLog(commands.Cog):
         if campaign_link.channel_id != ctx.channel.id:
             return None, None
         # and the user must have their ddb acct connected
-        ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+        ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id, auth_v1=True)
         if ddb_user is None:
             return campaign_id, None
         # and they must be allowed to use game log send by feature flag

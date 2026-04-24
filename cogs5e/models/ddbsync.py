@@ -17,7 +17,7 @@ class DDBSheetSync(LiveIntegration):
             raise ValueError("Attempted to call DDB sheet sync method with no valid context")
         if self._ddb_user is not _sentinel:
             return self._ddb_user
-        ddb_user = await self._ctx.bot.ddb.get_ddb_user(self._ctx)
+        ddb_user = await self._ctx.bot.ddb.get_ddb_user(self._ctx, auth_v1=True)
         self._ddb_user = ddb_user
         return ddb_user
 
@@ -102,7 +102,7 @@ class DDBSheetSync(LiveIntegration):
             pass
 
     async def commit(self, ctx):
-        ddb_user = await ctx.bot.ddb.get_ddb_user(ctx)
+        ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, auth_v1=True)
         self._ddb_user = ddb_user
         if ddb_user is None:
             return

@@ -26,6 +26,7 @@ import d20
 from .constants import DiceOperation, RollKind, RollType
 
 SUPPORTED_DIE_SIZES = (4, 6, 8, 10, 12, 20, 100)
+DEFAULT_OPERAND = 1
 
 
 class RollRequest:
@@ -298,7 +299,10 @@ class DieTerm:
     def from_dict(cls, d):
         dice = [Die.from_dict(die) for die in d["dice"]]
         operation = DiceOperation(d["operation"])
-        return cls(d["count"], d["dieType"], dice, operation, d.get("operand"))
+        operand = d.get("operand")
+        if operand in (None, ""):
+            operand = DEFAULT_OPERAND
+        return cls(d["count"], d["dieType"], dice, operation, operand)
 
     def to_dict(self):
         dice = [die.to_dict() for die in self.dice]

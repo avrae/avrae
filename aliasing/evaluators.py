@@ -801,6 +801,35 @@ class AutomationEvaluator(MathEvaluator):
         return output
 
 
+_DISPLAY_ONLY_STRIP = frozenset(
+    {
+        "roll",
+        "vroll",
+        "err",
+        "rand",
+        "randint",
+        "randchoice",
+        "randchoices",
+        "parse_coins",
+        "time",
+    }
+)
+
+
+class DisplayOnlyAutomationEvaluator(AutomationEvaluator):
+    """
+    Evaluator for automation display stringification (build_str paths).
+    Omits side-effecting or expensive callables so display snippets cannot roll dice or sleep.
+    """
+
+    @classmethod
+    def with_caster(cls, caster):
+        inst = super().with_caster(caster)
+        for key in _DISPLAY_ONLY_STRIP:
+            inst.builtins.pop(key, None)
+        return inst
+
+
 if __name__ == "__main__":
     e = ScriptingEvaluator(None)
     while True:

@@ -1,6 +1,6 @@
 from typing import Optional, TYPE_CHECKING
 
-from utils import enums
+from utils import automation_display, enums
 
 if TYPE_CHECKING:
     from cogs5e.models.automation import Automation
@@ -142,12 +142,13 @@ class Attack:
         )
 
     def build_str(self, caster):
-        if self.list_display_override:
-            action_description = caster.evaluate_annostr(self.list_display_override)
-        else:
-            action_description = self.automation.build_str(caster)
+        with automation_display.attack_display_guard():
+            if self.list_display_override:
+                action_description = caster.evaluate_annostr(self.list_display_override)
+            else:
+                action_description = self.automation.build_str(caster)
 
-        return f"**{self.name}**: {action_description}"
+            return f"**{self.name}**: {action_description}"
 
     def __str__(self):
         return f"**{self.name}**: {str(self.automation)}"
@@ -172,6 +173,8 @@ class AttackList:
 
     # utils
     def build_str(self, caster):
+        if automation_display.attack_display_depth() >= 1:
+            return automation_display.compact_attack_list_lines(self)
         return "\n".join(atk.build_str(caster) for atk in sorted(self.attacks, key=lambda atk: atk.name))
 
     def __str__(self):

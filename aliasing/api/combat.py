@@ -3,12 +3,13 @@ from typing import Optional, TYPE_CHECKING
 from d20 import roll
 
 import cogs5e.initiative as init
-from aliasing.api.functions import SimpleRollResult
+from aliasing.api.roll import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
-from cogs5e.models.automation.utils import parse_save_bonuses
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
+from cogs5e.models.automation.saveutils import parse_save_bonuses
+
 from . import validators
 
 if TYPE_CHECKING:

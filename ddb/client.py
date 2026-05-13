@@ -241,8 +241,8 @@ class BeyondClient(BeyondClientBase):
                     raise AuthException("Could not deserialize D&D Beyond response.")
                 token_val = data.get("token")
                 if resp.status == 200 and token_val is None:
-                    log.debug(f"Auth Service returned 200 with no token - user not linked: {data}")
-                    raise AuthException("D&D Beyond authentication failed. Please ensure your account is linked.")
+                    log.debug(f"Auth Service (v1) returned 200 with no token - user not linked: {data}")
+                    return None, None
         except aiohttp.ServerTimeoutError:
             raise AuthException("Timed out connecting to D&D Beyond. Please try again in a few minutes.")
         return data["token"], data.get("ttl")

@@ -35,6 +35,7 @@ from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
 from cogs5e.models.errors import AvraeException, RequiresLicense
 from ddb import BeyondClient, BeyondClientBase
+from ddb.errors import AuthException
 from ddb.gamelog import GameLogClient
 from gamedata.compendium import compendium
 from gamedata.lookuputils import handle_required_license
@@ -344,6 +345,9 @@ async def command_errors(ctx, error):
             return await handle_alias_required_licenses(ctx, original)
 
         elif isinstance(original, AvraeException):
+            return await ctx.send(str(original))
+
+        elif isinstance(original, AuthException):
             return await ctx.send(str(original))
 
         elif isinstance(original, d20.RollError):

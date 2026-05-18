@@ -499,11 +499,10 @@ class AdminUtils(commands.Cog):
     async def _set_dd_sample_rate(self, sample_rate: float):
         if config.DD_SERVICE is None:
             return "no DD_SERVICE set, this process is not sampling"
-        import ddtrace.sampler
+        import ddtrace
+        from ddtrace._trace.sampler import DatadogSampler, SamplingRule
 
-        ddtrace.tracer.configure(
-            sampler=ddtrace.sampler.DatadogSampler(rules=[ddtrace.sampler.SamplingRule(sample_rate=sample_rate)])
-        )
+        ddtrace.tracer._sampler = DatadogSampler(rules=[SamplingRule(sample_rate=sample_rate)])
         return f"sample rate set to {sample_rate}"
 
     async def _restart_shard(self, shard_id: int):

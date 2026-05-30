@@ -1,6 +1,7 @@
 import enum
 
 from utils.enums import AdvantageType
+from utils.constants import DAMAGE_TYPES
 
 
 class RollType(enum.Enum):
@@ -13,6 +14,17 @@ class RollType(enum.Enum):
     CHECK = "check"
     RECHARGE = "recharge"  # undocumented - seems to be from monster ability rechareg rolls?
 
+    # check for missing damage types, healing and assign them as damage or heal
+    @classmethod
+    def _missing_(cls, value):
+        if not isinstance(value, str):
+            return None
+        normalized = value.lower().split(" (", 1)[0].strip()
+        if normalized in DAMAGE_TYPES:
+            return cls.DAMAGE
+        if normalized == "healing":
+            return cls.HEAL
+        return None
 
 class RollKind(enum.Enum):
     NONE = ""

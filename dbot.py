@@ -41,6 +41,7 @@ from gamedata.compendium import compendium
 from gamedata.lookuputils import handle_required_license
 from utils import clustering, config, context
 from utils.feature_flags import AsyncLaunchDarklyClient
+from utils.health import HealthServer
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
@@ -128,6 +129,9 @@ class Avrae(commands.AutoShardedBot):
         self.glclient = GameLogClient(self)
         self.glclient.init()
 
+        # liveness endpoint for the ECS container healthCheck
+        self.health_server = HealthServer(self)
+
     async def setup_rdb(self):
         return RedisIO(await redis.from_url(url=config.REDIS_URL, health_check_interval=60))
 
@@ -211,6 +215,7 @@ class Avrae(commands.AutoShardedBot):
         #
         # These are caused by aioredis streams being GC'ed when discord.py cancels the tasks that create them
         # (because of course d.py decides it wants to cancel *all* tasks on its loop...)
+        await self.health_server.close()  # stop the liveness server before d.py cancels everything on the loop
         await super().close()
         await self.ddb.close()
         await self.rdb.close()
@@ -444,4 +449,5 @@ if __name__ == "__main__":
     faulthandler.enable()  # assumes we log errors to stderr, traces segfaults
     bot.state = "run"
     bot.loop.create_task(compendium.reload_task(bot.mdb))
+    bot.loop.create_task(bot.health_server.start())
     bot.run(config.TOKEN)

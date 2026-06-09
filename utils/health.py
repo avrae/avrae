@@ -23,7 +23,7 @@ class HealthServer:
             return
         app = web.Application()
         app.add_routes([web.get("/health", self._handle_health)])
-        # access_log=None: the probe runs every few seconds; without this aiohttp logs a line per request and floods Datadog
+        # access_log=None: avoid log per request
         self._runner = web.AppRunner(app, access_log=None)
         await self._runner.setup()
         await web.TCPSite(self._runner, "127.0.0.1", config.HEALTHCHECK_PORT).start()

@@ -15,6 +15,8 @@ NUM_CLUSTERS = int(os.getenv("NUM_CLUSTERS")) if "NUM_CLUSTERS" in os.environ el
 NUM_SHARDS = int(os.getenv("NUM_SHARDS")) if "NUM_SHARDS" in os.environ else None
 RELOAD_INTERVAL = os.getenv("RELOAD_INTERVAL", "0")  # compendium static data reload interval
 ECS_METADATA_ENDPT = os.getenv("ECS_CONTAINER_METADATA_URI")  # set by ECS
+# loopback port for the liveness endpoint probed by the ECS container healthCheck; if unset the server is disabled
+HEALTHCHECK_PORT = int(os.getenv("HEALTHCHECK_PORT")) if "HEALTHCHECK_PORT" in os.environ else None
 MONSTER_TOKEN_ENDPOINT = os.getenv("MONSTER_TOKEN_ENDPOINT")  # S3: monster tokens
 # secret for the draconic signature() function
 DRACONIC_SIGNATURE_SECRET = os.getenv("DRACONIC_SIGNATURE_SECRET", "secret").encode()

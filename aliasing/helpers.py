@@ -337,14 +337,33 @@ async def set_svar(ctx, name, value):
 
 
 # gvars
-async def create_gvar(ctx, value):
+async def create_gvar(ctx, value, script_writable=False):
     value = str(value)
     if len(value) > GVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT:,} characters.")
     name = str(uuid.uuid4())
-    data = {"key": name, "owner": str(ctx.author.id), "owner_name": str(ctx.author), "value": value, "editors": []}
+    data = {
+        "key": name,
+        "owner": str(ctx.author.id),
+        "owner_name": str(ctx.author),
+        "value": value,
+        "editors": [],
+        "script_writable": bool(script_writable),
+    }
     await ctx.bot.mdb.gvars.insert_one(data)
     return name
+
+
+async def update_gvars(ctx, gvar_cache, created, changed):
+    """
+    Commits queued scripting gvar writes. *created* is a dict of {address: metadata} to insert, *changed*
+    is a set of existing addresses to update.
+    """
+    for address, metadata in created.items():
+        data = {"key": address, "value": gvar_cache[address], **metadata}
+        await ctx.bot.mdb.gvars.insert_one(data)
+    for address in changed:
+        await ctx.bot.mdb.gvars.update_one({"key": address}, {"$set": {"value": gvar_cache[address]}})
 
 
 async def update_gvar(ctx, gid, value):

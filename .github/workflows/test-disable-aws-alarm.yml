@@ -20,7 +20,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AVRAE_GITHUB_OIDC_ROLE_ARN }}
-          role-session-name: "avrae-test-disable-aws-alarm
+          role-session-name: "avrae-test-disable-aws-alarm"
           aws-region: ${{ env.REGION }}
 
       - name: Alarm state - before

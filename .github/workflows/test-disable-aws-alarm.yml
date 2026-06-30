@@ -26,27 +26,11 @@ jobs:
           role-session-name: "avrae-test-disable-aws-alarm"
           aws-region: ${{ env.REGION }}
 
-      - name: Alarm state - before
-        run: |
-          aws cloudwatch describe-alarms \
-            --alarm-names "$ALARM_NAME" \
-            --region "$REGION" \
-            --query "MetricAlarms[0].{Name:AlarmName,ActionsEnabled:ActionsEnabled,State:StateValue}" \
-            --output table
-
       - name: Disable CloudWatch alarm actions
         run: |
           aws cloudwatch disable-alarm-actions \
             --alarm-names "$ALARM_NAME" \
             --region "$REGION"
-
-      - name: Alarm state - disabled
-        run: |
-          aws cloudwatch describe-alarms \
-            --alarm-names "$ALARM_NAME" \
-            --region "$REGION" \
-            --query "MetricAlarms[0].{Name:AlarmName,ActionsEnabled:ActionsEnabled,State:StateValue}" \
-            --output table
 
       - name: Wait for checking alarm status
         run: sleep 120
@@ -57,12 +41,3 @@ jobs:
           aws cloudwatch enable-alarm-actions \
             --alarm-names "$ALARM_NAME" \
             --region "$REGION"
-
-      - name: Alarm state - after
-        if: always()
-        run: |
-          aws cloudwatch describe-alarms \
-            --alarm-names "$ALARM_NAME" \
-            --region "$REGION" \
-            --query "MetricAlarms[0].{Name:AlarmName,ActionsEnabled:ActionsEnabled,State:StateValue}" \
-            --output table

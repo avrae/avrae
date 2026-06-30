@@ -2,6 +2,9 @@ name: Test Disable AWS Alarm
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - disable-aws-low-task-alarm-during-deploy
 
 permissions:
   contents: read

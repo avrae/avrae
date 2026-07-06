@@ -942,6 +942,12 @@ SimpleEffect
 
         :type: bool
 
+    .. attribute:: tick_on_combatant_id
+
+        The ID of the combatant whose turn the effect duration ticks on (defaults to the combatant the effect is on).
+
+        :type: str or None
+
     .. attribute:: attacks
 
         A list of the attacks granted by the effect.

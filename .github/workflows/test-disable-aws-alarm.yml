@@ -41,3 +41,4 @@ jobs:
           aws cloudwatch enable-alarm-actions \
             --alarm-names "$ALARM_NAME" \
             --region "$REGION"
+

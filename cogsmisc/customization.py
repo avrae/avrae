@@ -1149,7 +1149,7 @@ class Customization(commands.Cog):
         await ctx.send(f"Global variable `{name}` edited.")
 
     @globalvar.command(name="editor")
-    async def gvar_editor(self, ctx, name, user: disnake.Member = None):
+    async def gvar_editor(self, ctx, name, user: disnake.Member | disnake.User = None):
         """Toggles the editor status of a user."""
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:

@@ -873,17 +873,19 @@ class AutomationEvaluator(MathEvaluator):
         return output
 
 
-_DISPLAY_ONLY_STRIP = frozenset({
-    "roll",
-    "vroll",
-    "err",
-    "rand",
-    "randint",
-    "randchoice",
-    "randchoices",
-    "parse_coins",
-    "time",
-})
+_DISPLAY_ONLY_STRIP = frozenset(
+    {
+        "roll",
+        "vroll",
+        "err",
+        "rand",
+        "randint",
+        "randchoice",
+        "randchoices",
+        "parse_coins",
+        "time",
+    }
+)
 
 
 class DisplayOnlyAutomationEvaluator(AutomationEvaluator):

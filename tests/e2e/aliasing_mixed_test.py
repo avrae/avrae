@@ -158,14 +158,16 @@ async def test_gvar_scripting_toggle_requires_owner(avrae, dhttp):
 async def test_set_gvar_allowed_for_editor(avrae, dhttp):
     # a gvar owned by someone else, script-writable, with the invoking user listed as an editor
     address = "00000000-0000-4000-8000-0000000ed170"
-    await avrae.mdb.gvars.insert_one({
-        "key": address,
-        "owner": "999999999999999999",
-        "owner_name": "someone-else",
-        "value": "original",
-        "editors": [DEFAULT_USER_ID],
-        "script_writable": True,
-    })
+    await avrae.mdb.gvars.insert_one(
+        {
+            "key": address,
+            "owner": "999999999999999999",
+            "owner_name": "someone-else",
+            "value": "original",
+            "editors": [DEFAULT_USER_ID],
+            "script_writable": True,
+        }
+    )
     avrae.message(f"!test {{{{set_gvar('{address}', 'edited by editor')}}}}")
     await dhttp.receive_message(r".+:")  # set_gvar returns None, so the alias echoes nothing after the colon
     gvar = await avrae.mdb.gvars.find_one({"key": address})

@@ -4,6 +4,7 @@ import json
 import re
 import textwrap
 import time
+import uuid
 from collections import namedtuple
 from functools import cached_property
 from math import ceil, floor, sqrt
@@ -36,11 +37,12 @@ from aliasing.api.functions import (
     verify_signature,
     vroll,
 )
+from aliasing.constants import GVAR_SIZE_LIMIT, GVAR_WRITES_PER_EXECUTION
 from aliasing.errors import EvaluationError, FunctionRequiresCharacter
 from aliasing.personal import _CustomizationBase
 from aliasing.utils import ExecutionScope
 from aliasing.workshop import WorkshopCollectableObject
-from cogs5e.models.errors import InvalidArgument
+from cogs5e.models.errors import InvalidArgument, NotAllowed
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
 from utils.settings import ServerSettings
@@ -80,6 +82,8 @@ RESERVED_BUILTINS = set(DEFAULT_BUILTINS.keys()) | {
     "combat",
     "character",
     "get_gvar",
+    "set_gvar",
+    "create_gvar",
     "get_svar",
     "set_uvar",
     "get_uvars",
@@ -153,6 +157,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             combat=self.combat,
             character=self.character,
             get_gvar=self.get_gvar,
+            set_gvar=self.set_gvar,
+            create_gvar=self.create_gvar,
             get_svar=self.get_svar,
             set_uvar=self.set_uvar,
             get_uvars=self.get_uvars,
@@ -181,6 +187,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         self.character_changed = False
         self.combat_changed = False
         self.uvars_changed = set()
+        self.gvars_changed = set()
+        self.gvars_created = {}
+        self._gvar_writes = 0
         self.execution_scope: ExecutionScope = ExecutionScope.UNKNOWN
         self.invoking_object: _CodeInvokerT = None
 
@@ -229,6 +238,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             await self._cache["combat"].func_commit(self.ctx)
         if self.uvars_changed and "uvars" in self._cache and self._cache["uvars"] is not None:
             await helpers.update_uvars(self.ctx, self._cache["uvars"], self.uvars_changed)
+        if self.gvars_changed or self.gvars_created:
+            await helpers.update_gvars(self.ctx, self._cache["gvars"], self.gvars_created, self.gvars_changed)
 
     # helpers
     def exists(self, name):
@@ -286,6 +297,67 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 return None
             self._cache["gvars"][address] = result["value"]
         return self._cache["gvars"][address]
+
+    def _charge_gvar_write(self):
+        """Accounts for one distinct gvar create/edit op against the per-execution cap."""
+        if self._gvar_writes >= GVAR_WRITES_PER_EXECUTION:
+            raise InvalidArgument(
+                f"Too many gvar writes in a single execution (limit {GVAR_WRITES_PER_EXECUTION}); writes made"
+                " before the limit are still saved."
+            )
+        self._gvar_writes += 1
+
+    def set_gvar(self, address, value):
+        """
+        Sets the value of an existing gvar. The gvar must be flagged script-writable, and the user
+        invoking the alias must be the gvar's owner or an editor.
+
+        :param str address: The gvar address.
+        :param str value: The new value.
+        """
+        address = str(address)
+        value = str(value)
+        # validate (and account for the write) only the first time an address is dirtied this run
+        first_time = address not in self.gvars_changed and address not in self.gvars_created
+        if first_time:
+            # charge before the lookup so a caught-exception loop on a bad address can't spam reads
+            self._charge_gvar_write()
+            gvar = self.ctx.bot.mdb.gvars.delegate.find_one({"key": address})
+            if gvar is None:
+                raise InvalidArgument("Global variable not found.")
+            if not gvar.get("script_writable", False):
+                raise NotAllowed("This gvar is not writable by scripting.")
+            uid = str(self.ctx.author.id)
+            if gvar["owner"] != uid and uid not in gvar.get("editors", []):
+                raise NotAllowed("You are not allowed to edit this variable.")
+        if len(value) > GVAR_SIZE_LIMIT:
+            raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT:,} characters.")
+        if first_time:
+            self.gvars_changed.add(address)
+        self._cache["gvars"][address] = value
+
+    def create_gvar(self, value, script_writable=False):
+        """
+        Creates a new gvar owned by the user invoking the alias.
+
+        :param str value: The initial value of the gvar.
+        :param bool script_writable: Whether the new gvar may be edited via ``set_gvar``.
+        :return: The address (UUID) of the new gvar.
+        :rtype: str
+        """
+        value = str(value)
+        if len(value) > GVAR_SIZE_LIMIT:
+            raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT:,} characters.")
+        self._charge_gvar_write()
+        address = str(uuid.uuid4())
+        self.gvars_created[address] = {
+            "owner": str(self.ctx.author.id),
+            "owner_name": str(self.ctx.author),
+            "editors": [],
+            "script_writable": bool(script_writable),
+        }
+        self._cache["gvars"][address] = value
+        return address
 
     def get_svar(self, name, default=None):
         """
@@ -801,19 +873,17 @@ class AutomationEvaluator(MathEvaluator):
         return output
 
 
-_DISPLAY_ONLY_STRIP = frozenset(
-    {
-        "roll",
-        "vroll",
-        "err",
-        "rand",
-        "randint",
-        "randchoice",
-        "randchoices",
-        "parse_coins",
-        "time",
-    }
-)
+_DISPLAY_ONLY_STRIP = frozenset({
+    "roll",
+    "vroll",
+    "err",
+    "rand",
+    "randint",
+    "randchoice",
+    "randchoices",
+    "parse_coins",
+    "time",
+})
 
 
 class DisplayOnlyAutomationEvaluator(AutomationEvaluator):

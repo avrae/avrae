@@ -454,6 +454,10 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_gvar(address)
 
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.set_gvar(address, value)
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.create_gvar(value, script_writable=False)
+
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name[, default=None])
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_uvars()
@@ -615,8 +619,20 @@ etc.). These variables are automatically assigned a unique name on creation (in 
 must be *explicitly* retrieved in an alias by calling :meth:`~aliasing.evaluators.ScriptingEvaluator.get_gvar`.
 Gvars can be read by anyone, so be careful what data you store!
 
-Gvars can only be created using ``!gvar create <value>``, and by default can only be edited by its creator. See
-``!help gvar`` for more information.
+Gvars can be created with ``!gvar create <value>`` or from scripting with
+:meth:`~aliasing.evaluators.ScriptingEvaluator.create_gvar`, which returns the new gvar's address. By default a gvar
+can only be edited by its creator (and any editors added via ``!gvar editor``). See ``!help gvar`` for more
+information.
+
+By default gvars are **not** writable from scripting — they are intended as a mostly-static data store. To allow an
+alias to edit a gvar's value with :meth:`~aliasing.evaluators.ScriptingEvaluator.set_gvar`, the gvar's owner must first
+enable it with ``!gvar scripting <address>`` (off by default). Even then, a script may only write a gvar if the user
+invoking the alias is the gvar's owner or an editor. ``create_gvar`` can opt a new gvar in at creation time by passing
+``script_writable=True``. Writes made by ``set_gvar`` during an alias are committed once when the alias finishes, so
+repeatedly writing the same gvar in a loop results in a single write.
+
+A single alias execution may create or edit at most 50 distinct gvars. Reaching this limit stops further writes but
+does not undo writes already made earlier in that execution (they are still saved).
 
 Honorable Mention: Initiative Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -925,6 +941,12 @@ SimpleEffect
         Whether the effect duration ticks at the end of the combatant's turn or at the start.
 
         :type: bool
+
+    .. attribute:: tick_on_combatant_id
+
+        The ID of the combatant whose turn the effect duration ticks on (defaults to the combatant the effect is on).
+
+        :type: str or None
 
     .. attribute:: attacks
 

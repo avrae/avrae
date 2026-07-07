@@ -1109,6 +1109,8 @@ class Customization(commands.Cog):
         If run without a subcommand, shows the value of a global variable.
         Global variables are readable by all users, but only editable by the creator.
         Global variables must be accessed through scripting, with `get_gvar(gvar_id)`.
+        Scripting can also edit a global variable with `set_gvar(gvar_id, value)`, but only if the owner
+        has enabled it with `!gvar scripting <gvar_id>` (off by default).
         Global variables also support reading file attachments when creating or editing.
         See https://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
@@ -1132,6 +1134,7 @@ class Customization(commands.Cog):
     async def gvar_create(self, ctx, *, value=None):
         """Creates a global variable.
         A name will be randomly assigned upon creation.
+        New global variables are not writable by scripting; use `!gvar scripting <name>` to allow it.
         Attach a UTF-8 file instead of a value to create large global variables."""
         value = await _get_value_or_file(ctx, value, GVAR_FILE_SIZE_LIMIT, allow_empty=False)
         name = await helpers.create_gvar(ctx, value)
@@ -1146,7 +1149,7 @@ class Customization(commands.Cog):
         await ctx.send(f"Global variable `{name}` edited.")
 
     @globalvar.command(name="editor")
-    async def gvar_editor(self, ctx, name, user: disnake.Member = None):
+    async def gvar_editor(self, ctx, name, user: disnake.Member | disnake.User = None):
         """Toggles the editor status of a user."""
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
@@ -1173,6 +1176,19 @@ class Customization(commands.Cog):
                 editor_mentions.append(f"<@{editor}>")
             embed.description = ", ".join(editor_mentions) or "No editors."
             await ctx.send(embed=embed)
+
+    @globalvar.command(name="scripting")
+    async def gvar_scripting(self, ctx, name):
+        """Toggles whether a global variable can be edited from scripting (via `set_gvar`).
+        Off by default. Only the owner of the variable can change this."""
+        gvar = await self.bot.mdb.gvars.find_one({"key": name})
+        if gvar is None:
+            return await ctx.send("Global variable not found.")
+        if gvar["owner"] != str(ctx.author.id):
+            return await ctx.send("You are not the owner of this variable.")
+        new_state = not gvar.get("script_writable", False)
+        await self.bot.mdb.gvars.update_one({"key": name}, {"$set": {"script_writable": new_state}})
+        await ctx.send(f"Scripting writes for global variable `{name}` turned {'on' if new_state else 'off'}.")
 
     @globalvar.command(name="remove", aliases=["delete"])
     async def gvar_remove(self, ctx, name):

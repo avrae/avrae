@@ -2,13 +2,13 @@ name: Deploy
 
 on:
   release:
-    types: [ published ]
+    types: [published]
   workflow_dispatch:
 
 permissions:
   contents: read
   id-token: write
-  
+
 jobs:
   # ===== ecs deploy =====
   deploy:
@@ -19,6 +19,7 @@ jobs:
       SERVICE_NAME: avrae-bot
       DEPLOY_ENV: live
       REGION: us-east-1
+      ALARM_NAME: "Avrae Task Count Too Low"
 
     steps:
       - name: Checkout
@@ -61,6 +62,12 @@ jobs:
           container-name: avrae-bot
           image: ${{ env.IMAGE_NAME }}
 
+      - name: Disable CloudWatch Task count too low alarm actions
+        run: |
+          aws cloudwatch disable-alarm-actions \
+            --alarm-names "$ALARM_NAME" \
+            --region "$REGION"
+
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1.4.11
         with:
@@ -68,6 +75,13 @@ jobs:
           service: avrae-bot
           cluster: avrae-live
           wait-for-service-stability: true
+
+      - name: Re-enable CloudWatch Task count too low alarm actions
+        if: always()
+        run: |
+          aws cloudwatch enable-alarm-actions \
+            --alarm-names "$ALARM_NAME" \
+            --region "$REGION"
 
   # ===== help gen =====
   build-docs:

@@ -35,6 +35,9 @@ jobs:
       - name: Wait for checking alarm status
         run: sleep 120
 
+      - name: Force exit to test reenabling the alarm
+        run: exit 1
+
       - name: Re-enable CloudWatch alarm actions
         if: always()
         run: |

@@ -119,12 +119,10 @@ class Homebrew(commands.Cog):
             is_published = bool(match.group(1))
             bestiary = await Bestiary.from_critterdb(ctx, bestiary_id, published=is_published)
         else:
-            return await ctx.send(
-                (
-                    "This is not a valid Bestiary Builder or CritterDB link. "
-                    + "Ensure the link is to the bestiary and not an individual creature."
-                )
-            )
+            return await ctx.send((
+                "This is not a valid Bestiary Builder or CritterDB link. "
+                + "Ensure the link is to the bestiary and not an individual creature."
+            ))
 
         await bestiary.subscribe(ctx)
         await bestiary.set_active(ctx)

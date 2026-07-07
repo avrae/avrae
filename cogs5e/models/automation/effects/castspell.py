@@ -29,16 +29,14 @@ class CastSpell(Effect):
 
     def to_dict(self):
         out = super().to_dict()
-        out.update(
-            {
-                "id": self.id,
-                "level": self.level,
-                "dc": self.dc,
-                "attackBonus": self.attack_bonus,
-                "castingMod": self.casting_mod,
-                "parent": self.parent,
-            }
-        )
+        out.update({
+            "id": self.id,
+            "level": self.level,
+            "dc": self.dc,
+            "attackBonus": self.attack_bonus,
+            "castingMod": self.casting_mod,
+            "parent": self.parent,
+        })
         return out
 
     async def preflight(self, autoctx):

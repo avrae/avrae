@@ -677,14 +677,12 @@ def parse_critterdb_traits(data, key):
             for override in overrides:
                 if override.group("simple"):
                     attacks.append(
-                        Attack.from_dict(
-                            {
-                                "name": override.group(2) or name,
-                                "attackBonus": override.group(3) or None,
-                                "damage": override.group(4) or None,
-                                "details": desc,
-                            }
-                        )
+                        Attack.from_dict({
+                            "name": override.group(2) or name,
+                            "attackBonus": override.group(3) or None,
+                            "damage": override.group(4) or None,
+                            "details": desc,
+                        })
                     )
                 elif freeform_override := override.group("freeform"):
                     try:

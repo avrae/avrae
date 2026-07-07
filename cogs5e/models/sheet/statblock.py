@@ -197,16 +197,14 @@ class StatBlock:
             spell_mod = self.spellbook.sab - self.stats.prof_bonus
         else:
             spell_mod = None
-        out.update(
-            {
-                "name": self.name,
-                "armor": self.ac,
-                "hp": self.max_hp,
-                "level": self.levels.total_level,
-                "proficiencyBonus": self.stats.prof_bonus,
-                "spell": spell_mod,
-            }
-        )
+        out.update({
+            "name": self.name,
+            "armor": self.ac,
+            "hp": self.max_hp,
+            "level": self.levels.total_level,
+            "proficiencyBonus": self.stats.prof_bonus,
+            "spell": spell_mod,
+        })
         for cls, lvl in self.levels:
             out[f"{cls.replace(' ', '')}Level"] = lvl
         for stat in STAT_NAMES:

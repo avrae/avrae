@@ -277,16 +277,14 @@ class Monster(StatBlock, Sourced):
 
     def get_hidden_stat_array(self):
         stats = ["Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"]
-        for i, stat in enumerate(
-            (
-                self.stats.strength,
-                self.stats.dexterity,
-                self.stats.constitution,
-                self.stats.intelligence,
-                self.stats.wisdom,
-                self.stats.charisma,
-            )
-        ):
+        for i, stat in enumerate((
+            self.stats.strength,
+            self.stats.dexterity,
+            self.stats.constitution,
+            self.stats.intelligence,
+            self.stats.wisdom,
+            self.stats.charisma,
+        )):
             if stat <= 3:
                 stats[i] = "Very Low"
             elif 3 < stat <= 7:
@@ -314,26 +312,22 @@ class Monster(StatBlock, Sourced):
         return row
 
     def get_physical_stat_table(self):
-        return "\n".join(
-            [
-                "```swift\n        MOD SAV",
-                self._get_stat_table_row("strength"),
-                self._get_stat_table_row("dexterity"),
-                self._get_stat_table_row("constitution"),
-                "```",
-            ]
-        )
+        return "\n".join([
+            "```swift\n        MOD SAV",
+            self._get_stat_table_row("strength"),
+            self._get_stat_table_row("dexterity"),
+            self._get_stat_table_row("constitution"),
+            "```",
+        ])
 
     def get_mental_stat_table(self):
-        return "\n".join(
-            [
-                "```swift\n        MOD SAV",
-                self._get_stat_table_row("intelligence"),
-                self._get_stat_table_row("wisdom"),
-                self._get_stat_table_row("charisma"),
-                "```",
-            ]
-        )
+        return "\n".join([
+            "```swift\n        MOD SAV",
+            self._get_stat_table_row("intelligence"),
+            self._get_stat_table_row("wisdom"),
+            self._get_stat_table_row("charisma"),
+            "```",
+        ])
 
     def get_senses_str(self):
         if self.senses:

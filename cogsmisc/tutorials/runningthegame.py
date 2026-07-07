@@ -39,21 +39,19 @@ class RunningTheGame(Tutorial):
                 await state_map.commit(ctx)
                 embed = TutorialEmbed(self, ctx)
                 embed.title = "Objectives"
-                embed.description = checklist(
-                    [
+                embed.description = checklist([
+                    (
+                        f"Make a skill check for a monster with `{ctx.prefix}moncheck <name of monster> <skill>`.",
+                        state_map.data.get("has_check"),
+                    ),
+                    (
                         (
-                            f"Make a skill check for a monster with `{ctx.prefix}moncheck <name of monster> <skill>`.",
-                            state_map.data.get("has_check"),
+                            f"Make an ability save for a monster with `{ctx.prefix}monsave <name of monster>"
+                            " <ability>`."
                         ),
-                        (
-                            (
-                                f"Make an ability save for a monster with `{ctx.prefix}monsave <name of monster>"
-                                " <ability>`."
-                            ),
-                            state_map.data.get("has_save"),
-                        ),
-                    ]
-                )
+                        state_map.data.get("has_save"),
+                    ),
+                ])
                 await ctx.send(embed=embed)
 
             if state_map.data.get("has_check") and state_map.data.get("has_save"):

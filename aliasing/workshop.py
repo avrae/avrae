@@ -209,26 +209,22 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         snippet_bindings = await self._generate_default_snippet_bindings(ctx)
 
         # insert subscription
-        await self.sub_coll(ctx).insert_one(
-            {
-                "type": "subscribe",
-                "subscriber_id": ctx.author.id,
-                "object_id": self.id,
-                "alias_bindings": alias_bindings,
-                "snippet_bindings": snippet_bindings,
-            }
-        )
+        await self.sub_coll(ctx).insert_one({
+            "type": "subscribe",
+            "subscriber_id": ctx.author.id,
+            "object_id": self.id,
+            "alias_bindings": alias_bindings,
+            "snippet_bindings": snippet_bindings,
+        })
         # increase subscription count
         await ctx.bot.mdb.workshop_collections.update_one({"_id": self.id}, {"$inc": {"num_subscribers": 1}})
         # log subscribe event
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {
-                "type": "subscribe",
-                "object_id": self.id,
-                "timestamp": datetime.datetime.utcnow(),
-                "user_id": ctx.author.id,
-            }
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": "subscribe",
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
     async def unsubscribe(self, ctx):
         # remove sub doc
@@ -236,14 +232,12 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         # decr sub count
         await ctx.bot.mdb.workshop_collections.update_one({"_id": self.id}, {"$inc": {"num_subscribers": -1}})
         # log unsub event
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {
-                "type": "unsubscribe",
-                "object_id": self.id,
-                "timestamp": datetime.datetime.utcnow(),
-                "user_id": ctx.author.id,
-            }
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": "unsubscribe",
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
     async def set_server_active(self, ctx):
         """Sets the object as active for the contextual guild, with default name bindings."""
@@ -257,26 +251,22 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         snippet_bindings = await self._generate_default_snippet_bindings(ctx)
 
         # insert sub doc
-        await self.sub_coll(ctx).insert_one(
-            {
-                "type": "server_active",
-                "subscriber_id": ctx.guild.id,
-                "object_id": self.id,
-                "alias_bindings": alias_bindings,
-                "snippet_bindings": snippet_bindings,
-            }
-        )
+        await self.sub_coll(ctx).insert_one({
+            "type": "server_active",
+            "subscriber_id": ctx.guild.id,
+            "object_id": self.id,
+            "alias_bindings": alias_bindings,
+            "snippet_bindings": snippet_bindings,
+        })
         # incr sub count
         await ctx.bot.mdb.workshop_collections.update_one({"_id": self.id}, {"$inc": {"num_guild_subscribers": 1}})
         # log sub event
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {
-                "type": "server_subscribe",
-                "object_id": self.id,
-                "timestamp": datetime.datetime.utcnow(),
-                "user_id": ctx.author.id,
-            }
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": "server_subscribe",
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
     async def unset_server_active(self, ctx):
         if not await self.is_server_active(ctx):
@@ -287,14 +277,12 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         # decr sub count
         await ctx.bot.mdb.workshop_collections.update_one({"_id": self.id}, {"$inc": {"num_guild_subscribers": -1}})
         # log unsub event
-        await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {
-                "type": "server_unsubscribe",
-                "object_id": self.id,
-                "timestamp": datetime.datetime.utcnow(),
-                "user_id": ctx.author.id,
-            }
-        )
+        await ctx.bot.mdb.analytics_alias_events.insert_one({
+            "type": "server_unsubscribe",
+            "object_id": self.id,
+            "timestamp": datetime.datetime.utcnow(),
+            "user_id": ctx.author.id,
+        })
 
     async def _bindings_sanity_check(self, ctx, the_ids, the_bindings, binding_cls):
         # sanity check: ensure all aliases are in the bindings

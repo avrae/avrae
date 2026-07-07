@@ -20,9 +20,7 @@ def test_attack_display_guard_depth():
 
 def test_attack_list_build_str_nested_returns_compact():
     inner = automation.Automation([automation.SetVariable(name="x", value="1")])
-    outer = automation.Automation(
-        [automation.SetVariable(name="y", value="'a' in str(caster.attacks)")]
-    )
+    outer = automation.Automation([automation.SetVariable(name="y", value="'a' in str(caster.attacks)")])
     attacks = AttackList(
         [
             Attack("Zeta", inner),

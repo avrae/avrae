@@ -26,6 +26,7 @@ class RollType(enum.Enum):
             return cls.HEAL
         return None
 
+
 class RollKind(enum.Enum):
     NONE = ""
     ADVANTAGE = "advantage"

@@ -59,7 +59,6 @@ Target
         target: "all" | "each" | int | "self" | "parent" | "children";
         effects: Effect[];
         sortBy?: "hp_asc" | "hp_desc";
-        self_target?: boolean;
     }
 
 A Target effect should only show up as a top-level effect.

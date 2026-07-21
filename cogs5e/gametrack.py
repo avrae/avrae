@@ -44,16 +44,40 @@ class GameTrack(commands.Cog):
         await try_delete(ctx.message)
 
     @game.command(name="status", aliases=["summary"])
-    async def game_status(self, ctx):
-        """Prints the status of the current active character."""
+    async def game_status(self, ctx, page: int = 1):
+        """Prints the status of the current active character.
+        Use `!game status|summary <page>` to view pages if you have more than one page of counters."""
         character: Character = await ctx.get_character()
         embed = EmbedWithCharacter(character)
-        embed.add_field(name="Hit Points", value=character.hp_str())
-        embed.add_field(name="Spell Slots", value=character.spellbook.slots_str())
+        page1_fields = 2
         if character.death_saves.successes != 0 or character.death_saves.fails != 0:
-            embed.add_field(name="Death Saves", value=str(character.death_saves))
-        for counter in character.consumables:
-            embed.add_field(name=counter.name, value=counter.full_str())
+            page1_fields += 1
+        if page <= 1:
+            embed.add_field(name="Hit Points", value=character.hp_str())
+            embed.add_field(name="Spell Slots", value=character.spellbook.slots_str())
+            if character.death_saves.successes != 0 or character.death_saves.fails != 0:
+                embed.add_field(name="Death Saves", value=str(character.death_saves))
+        total = len(character.consumables)
+        if total:
+            page1_cap = max(1, 25 - page1_fields)
+            if total <= page1_cap:
+                maxpage = 1
+            else:
+                remaining = total - page1_cap
+                maxpage = 1 + (remaining + 25 - 1) // 25
+            page = max(1, min(page, maxpage))
+
+            if page == 1:
+                start = 0
+                end = page1_cap
+            else:
+                start = page1_cap + (page - 2) * 25
+                end = start + 25
+
+            for counter in character.consumables[start:end]:
+                embed.add_field(name=counter.name, value=counter.full_str())
+            if maxpage > 1:
+                embed.set_footer(text=f"Page [{page}/{maxpage}] | {ctx.prefix}game status <page>")
         await ctx.send(embed=embed)
 
     @game.command(name="spellbook", aliases=["sb"], hidden=True)

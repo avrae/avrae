@@ -441,7 +441,7 @@ def parse_bestiary_builder_traits(data, key):
             except pydantic.ValidationError as e:
                 err_fmt = automation_common.validation.utils.format_validation_error(e)
                 raise ExternalImportError(
-                    f"An automation YAML for {data['name']} contained an invalid attack: ```py\n{err_fmt}\n```"
+                    f"Automation YAML for {data['name']} contained an invalid attack ({name}): ```py\n{err_fmt}\n```"
                 )
 
             attacks.extend(Attack.from_dict(a.dict()) for a in normalized_obj)
@@ -699,7 +699,7 @@ def parse_critterdb_traits(data, key):
                     except pydantic.ValidationError as e:
                         err_fmt = automation_common.validation.utils.format_validation_error(e)
                         raise ExternalImportError(
-                            f"An automation YAML for {data['name']} contained an invalid attack: ```py\n{err_fmt}\n```"
+                            f"Automation YAML for {data['name']} contained an invalid attack ({name}): ```py\n{err_fmt}\n```"
                         )
 
                     attacks.extend(Attack.from_dict(a.dict()) for a in normalized_obj)

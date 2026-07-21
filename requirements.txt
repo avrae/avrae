@@ -11,7 +11,7 @@ cachetools==5.3.3
 markdownify==0.14.1
 psutil==5.9.8
 pydantic==1.10.19
-pyjwt==2.12.0
+pyjwt==2.13.0
 python-meteor==0.1.6
 pyyaml==6.0.1
 

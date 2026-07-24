@@ -51,7 +51,11 @@ class BeyondClient(BeyondClientBase):
     """
 
     def __init__(self, loop):
-        self.http = aiohttp.ClientSession(loop=loop)
+        # DummyCookieJar disables cookie storage/replay. DDB services authenticate via bearer
+        # token / request body, never cookies, so we don't need one. Replaying Set-Cookie values
+        # (notably the ALB stickiness cookie AWSALB, a random base64 blob) was intermittently
+        # tripping AWS WAF's AWSManagedRulesSQLiRuleSet (SQLi_COOKIE) and returning 403 Forbidden.
+        self.http = aiohttp.ClientSession(loop=loop, cookie_jar=aiohttp.DummyCookieJar())
 
         self.character = character.CharacterServiceClient(self.http)
         self.waterdeep = waterdeep.WaterdeepClient(self.http)

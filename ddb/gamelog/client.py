@@ -27,7 +27,9 @@ class GameLogClient(BaseClient):
         """
         :param bot: Avrae instance
         """
-        super().__init__(aiohttp.ClientSession(loop=bot.loop))
+        # DummyCookieJar: don't store/replay Set-Cookie (e.g. ALB's AWSALB). Replayed cookies
+        # trip AWS WAF's SQLi_COOKIE rule (403). DDB auth is bearer/body, so no jar needed.
+        super().__init__(aiohttp.ClientSession(loop=bot.loop, cookie_jar=aiohttp.DummyCookieJar()))
         self.bot = bot
         self.ddb = bot.ddb  # type: ddb.BeyondClient
         self.rdb = bot.rdb

@@ -78,15 +78,15 @@ class Damage(Effect):
         if autoctx.target.is_simple and self.is_meta(autoctx):
             return
 
-        d_args = []
-        # check if we actually need to care about the -d tag
-        if not (self.contains_roll_meta(autoctx) or self.fixedValue):
-            d_args = args.get("d", [], ephem=True)
-            # add on combatant damage effects (#224)
-            d_args.extend(autoctx.caster_active_effects(mapper=lambda effect: effect.effects.damage_bonus, default=[]))
-
         # set up damage AST
         damage = autoctx.parse_annostr(damage)
+        d_args = []
+        if not (self.contains_roll_meta(autoctx) or self.fixedValue):
+            d_args = args.get("d", [], ephem=True)
+            # #224: filter bonuses by type: 'heal' for healing, else for damage
+            effect_bonuses = autoctx.caster_active_effects(mapper=lambda e: e.effects.damage_bonus, default=[])
+            d_args.extend(utils.filter_dmg_bonuses(damage, effect_bonuses))
+
         dice_ast = copy.copy(d20.parse(damage))
         dice_ast = utils.upcast_scaled_dice(self, autoctx, dice_ast)
 

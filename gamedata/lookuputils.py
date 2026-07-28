@@ -4,6 +4,7 @@ Created on Jan 13, 2017
 @author: andrew
 """
 
+import cachetools
 import itertools
 import logging
 from typing import Dict, List, TYPE_CHECKING, TypeVar, Callable
@@ -33,6 +34,38 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 VALID_VERSIONS = ["2024", "2014", "Homebrew"]
+
+USER_FAVORITES_TTL = 5 * 60
+USER_MONSTER_FAVORITES_CACHE: cachetools.TTLCache[int, list[tuple[str, int | None]]] = cachetools.TTLCache(
+    maxsize=1000, ttl=USER_FAVORITES_TTL
+)
+AUTOCOMPLETE_FAVORITES_LIMIT = 150
+AUTOCOMPLETE_MAX_RESULTS = 25
+
+
+async def get_user_favorite_monsters(
+    ctx, user_id: int, limit: int = AUTOCOMPLETE_FAVORITES_LIMIT
+) -> list[tuple[str, int | None]]:
+    """Get user's most frequently used monsters (cached, MFU with recency tiebreaker).
+
+    Returns:
+        List of (monster_name, monster_id) tuples for priority-based matching.
+    """
+    try:
+        return USER_MONSTER_FAVORITES_CACHE[user_id]
+    except KeyError:
+        results = (
+            await ctx.bot.mdb.analytics_monster_usage.find(
+                {"user_id": user_id}, {"monster_name": 1, "monster_id": 1, "_id": 0}
+            )
+            .sort([("count", -1), ("last_used", -1)])
+            .limit(limit)
+            .to_list(None)
+        )
+
+        favorites = [(r["monster_name"], r["monster_id"]) for r in results]
+        USER_MONSTER_FAVORITES_CACHE[user_id] = favorites
+        return favorites
 
 
 # ==== entitlement search helpers ====
@@ -234,43 +267,55 @@ def source_slug(source):
 
 
 # ==== search ====
-async def _handle_legacy_preference(
-    ctx: "AvraeContext", choices: List["Sourced"], available_ids: dict[str, set[int]]
+def _select_preferred_entity(
+    a: "Sourced", b: "Sourced", legacy_preference: LegacyPreference, available_ids: set[int]
 ) -> "Sourced | None":
-    """
-    Auto-select between legacy and modern entities based on guild preferences.
-
-    Returns the preferred entity if auto-selection applies, None otherwise.
-    """
-    # Only applies to exactly 2 choices in a guild context
-    if len(choices) != 2 or ctx.guild is None:
-        return None
-
-    # Only applies if one is legacy and one is modern
-    a, b = choices
+    """Auto-select between legacy/modern entities based on preference."""
     if a.is_legacy == b.is_legacy:
         return None
 
-    legacy: "Sourced" = a if a.is_legacy else b
-    latest: "Sourced" = a if not a.is_legacy else b
+    legacy = a if a.is_legacy else b
+    latest = a if not a.is_legacy else b
 
-    guild_settings = await ctx.get_server_settings()
-
-    # If set to ASK, don't auto-select
-    if guild_settings.legacy_preference == LegacyPreference.ASK:
+    if legacy_preference == LegacyPreference.ASK:
         return None
 
-    # Auto-select preferred entity if user has access
-    if guild_settings.legacy_preference == LegacyPreference.LATEST and can_access(
-        latest, available_ids[latest.entitlement_entity_type]
-    ):
+    if legacy_preference == LegacyPreference.LATEST and can_access(latest, available_ids):
         return latest
-    elif guild_settings.legacy_preference == LegacyPreference.LEGACY and can_access(
-        legacy, available_ids[legacy.entitlement_entity_type]
-    ):
+    elif legacy_preference == LegacyPreference.LEGACY and can_access(legacy, available_ids):
         return legacy
 
     return None
+
+
+async def _handle_legacy_preference(
+    ctx: "AvraeContext", choices: List["Sourced"], available_ids: dict[str, set[int]]
+) -> "Sourced | None":
+    """Auto-select between legacy/modern entities based on guild settings."""
+    if len(choices) != 2 or ctx.guild is None:
+        return None
+
+    a, b = choices
+    guild_settings = await ctx.get_server_settings()
+
+    return _select_preferred_entity(a, b, guild_settings.legacy_preference, available_ids[a.entitlement_entity_type])
+
+
+async def _handle_legacy_preference_slash(
+    inter: "disnake.ApplicationCommandInteraction", result: list, entity_type: str, available_ids: set[int] = None
+) -> "Sourced | None":
+    """Handle legacy preference for slash commands."""
+    if len(result) != 2 or inter.guild is None:
+        return None
+
+    a, b = result
+    if a.is_legacy == b.is_legacy:
+        return None
+
+    guild_settings = await ServerSettings.for_guild(mdb=inter.bot.mdb, guild_id=inter.guild.id)
+    if available_ids is None:
+        available_ids = await inter.bot.ddb.get_accessible_entities(inter, inter.author.id, entity_type)
+    return _select_preferred_entity(a, b, guild_settings.legacy_preference, available_ids)
 
 
 def create_selectkey(available_ids: dict[str, set[int]]):
@@ -302,6 +347,63 @@ def slash_match_key(entity):
     return (
         f"{entity.name} ({'🍺 - ' if entity.homebrew else ''}{entity.source}{f'; legacy' if entity.is_legacy else ''})"
     )
+
+
+async def _fetch_single_monster(ctx, cached_monster) -> gamedata.Monster:
+    """
+    Efficiently fetch a single monster using metadata in ENTITY_CACHE.
+
+    :param ctx: Context or ApplicationCommandInteraction
+    :param cached_monster: CachedSourced object from ENTITY_CACHE
+    :return: Full Monster object
+    """
+    if cached_monster.entity_id is not None:
+        monster = compendium.lookup_entity("monster", cached_monster.entity_id)
+        if monster:
+            return monster
+        log.warning(
+            f"Monster '{cached_monster.name}' has entity_id {cached_monster.entity_id} "
+            f"but not found in compendium, cache may be stale"
+        )
+
+    if cached_monster.homebrew:
+        bestiary_name = cached_monster.source
+
+        bestiary_data = await ctx.bot.mdb.bestiaries.find_one(
+            {"name": bestiary_name, "monsters.name": cached_monster.name},
+            {"monsters.$": 1, "name": 1},  # $ returns only the matching element
+        )
+
+        if bestiary_data and "monsters" in bestiary_data and bestiary_data["monsters"]:
+            return gamedata.Monster.from_bestiary(bestiary_data["monsters"][0], bestiary_name)
+
+    raise ValueError(f"Monster '{cached_monster.name}' not found")
+
+
+async def madd_monster_converter(inter: disnake.ApplicationCommandInteraction, arg: str) -> gamedata.Monster:
+    """Converter for /madd that applies legacy preference and license checks."""
+    lookup_cog = inter.bot.get_cog("Lookup")
+    cached_choices = await lookup_cog._get_entities(inter, "monster", get_monster_choices)
+
+    result, strict = search(cached_choices, arg, slash_match_key)
+
+    if not result:
+        raise ValueError("That monster doesn't exist")
+
+    available_ids = await inter.bot.ddb.get_accessible_entities(inter, inter.author.id, "monster")
+
+    if not isinstance(result, list):
+        cached_monster = result
+    else:
+        preferred = await _handle_legacy_preference_slash(inter, result, "monster", available_ids)
+        cached_monster = preferred if preferred is not None else result[0]
+
+    if not can_access(cached_monster, available_ids):
+        raise RequiresLicense(cached_monster, available_ids is not None)
+
+    monster = await _fetch_single_monster(inter, cached_monster)
+
+    return monster
 
 
 def lookup_converter(entity_type: str) -> Callable:

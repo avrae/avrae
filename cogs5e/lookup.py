@@ -1244,14 +1244,40 @@ class Lookup(commands.Cog):
         await self.bot.rdb.jsetex(key, [m.to_dict() for m in converted_entities], ENTITY_TTL)
         return converted_entities
 
-    async def clear_cache(self, ctx, entity_type):
-        if ctx.guild is None:
-            key = f"{entity_type}.{ctx.author.id}"
+    async def clear_cache(self, ctx, entity_type, guild_wide=False):
+        """Clear entity cache. If guild_wide=True, clears all users in guild, otherwise only the acting user."""
+        if guild_wide:
+            if ctx.guild is None:
+                prefix = f"{entity_type}.{ctx.author.id}"
+                pattern = f"{entity_type}.{ctx.author.id}"
+            else:
+                prefix = f"{entity_type}.{ctx.guild.id}."
+                pattern = f"{entity_type}.{ctx.guild.id}.*"
+
+            # Clear L1 (in-memory) cache
+            l1_keys_to_delete = [k for k in ENTITY_CACHE if k.startswith(prefix)]
+            for k in l1_keys_to_delete:
+                del ENTITY_CACHE[k]
+
+            # Clear L2 (redis) cache in batches
+            batch = []
+            batch_size = 100
+            async for key in self.bot.rdb.iscan(match=pattern):
+                batch.append(key)
+                if len(batch) >= batch_size:
+                    await self.bot.rdb.delete(*batch)
+                    batch.clear()
+
+            if batch:
+                await self.bot.rdb.delete(*batch)
         else:
-            key = f"{entity_type}.{ctx.guild.id}.{ctx.author.id}"
-        if key in ENTITY_CACHE:
-            del ENTITY_CACHE[key]
-        await self.bot.rdb.delete(key)
+            if ctx.guild is None:
+                key = f"{entity_type}.{ctx.author.id}"
+            else:
+                key = f"{entity_type}.{ctx.guild.id}.{ctx.author.id}"
+            if key in ENTITY_CACHE:
+                del ENTITY_CACHE[key]
+            await self.bot.rdb.delete(key)
 
     # ==== listeners ====
     @commands.Cog.listener()

@@ -428,23 +428,29 @@ def parse_bestiary_builder_traits(data, key):
     for trait in data[key]:
         name = trait["name"]
         desc = trait["description"].strip()
-        automation = trait["automation"]
+        automation = trait.get("automation")
 
         if automation is not None:
-            if not isinstance(automation, list):
-                automation = [automation]
+            # Custom bestiaries sometimes stores trait automation here, only parse objects that are actual attacks to not cause crashes.
+            attack_automation = automation
 
-            try:
-                normalized_obj = pydantic.parse_obj_as(
-                    List[automation_common.validation.models.AttackModel], automation, type_name="AttackList"
-                )
-            except pydantic.ValidationError as e:
-                err_fmt = automation_common.validation.utils.format_validation_error(e)
-                raise ExternalImportError(
-                    f"Automation YAML for {data['name']} contained an invalid attack ({name}): ```py\n{err_fmt}\n```"
-                )
+            if not isinstance(attack_automation, list):
+                attack_automation = [attack_automation]
 
-            attacks.extend(Attack.from_dict(a.dict()) for a in normalized_obj)
+            if all(isinstance(a, dict) and "automation" in a for a in attack_automation):
+                try:
+                    normalized_obj = pydantic.parse_obj_as(
+                        List[automation_common.validation.models.AttackModel],
+                        attack_automation,
+                        type_name="AttackList",
+                    )
+                except pydantic.ValidationError as e:
+                    err_fmt = automation_common.validation.utils.format_validation_error(e)
+                    raise ExternalImportError(
+                        f"Automation YAML for {data['name']} contained an invalid attack ({name}): ```py\n{err_fmt}\n```"
+                    )
+
+                attacks.extend(Attack.from_dict(a.dict()) for a in normalized_obj)
 
         traits.append(Trait(name, desc))
     return traits, attacks

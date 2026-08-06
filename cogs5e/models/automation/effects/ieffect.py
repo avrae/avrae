@@ -137,7 +137,7 @@ class LegacyIEffect(Effect):
             # add
             effect_result = autoctx.target.target.add_effect(effect)
             is_hidden = autoctx.args.last("h", type_=bool) or effect.hidden
-            autoctx.queue(f"**Effect**: {effect.get_str(description=not is_hidden, parenthetical=not is_hidden)}")
+            autoctx.queue(f"**Effect**: {effect.get_str(description=False, parenthetical=not is_hidden)}")
             if conc_conflict := effect_result["conc_conflict"]:
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
 
@@ -157,7 +157,7 @@ class LegacyIEffect(Effect):
                 hidden=self.hidden,
             )
             is_hidden = autoctx.args.last("h", type_=bool) or effect.hidden
-            autoctx.queue(f"**Effect**: {effect.get_str(description=not is_hidden, parenthetical=not is_hidden)}")
+            autoctx.queue(f"**Effect**: {effect.get_str(description=False, parenthetical=not is_hidden)}")
 
         return IEffectResult(effect=effect, conc_conflict=conc_conflict)
 

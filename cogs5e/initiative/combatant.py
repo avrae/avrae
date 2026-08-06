@@ -484,13 +484,14 @@ class Combatant(BaseCombatant, StatBlock):
 
     def _get_long_effects(self, private=False, **kwargs) -> str:
         # Remove parenthetical and description from kwargs to avoid conflicts
-        kwargs.pop("parenthetical", None)
-        kwargs.pop("description", None)
+        kw_parenthetical = kwargs.pop("parenthetical", None)
+        kw_description = kwargs.pop("description", None)
 
-        return "\n".join(
-            f"* {e.get_str(description=private or not e.hidden, parenthetical=private or not e.hidden, **kwargs)}"
-            for e in self.get_effects()
-        )
+        return "\n".join(f"""* {e.get_str(
+            description=False if kw_description is False else (private or not e.hidden),
+            parenthetical=False if kw_parenthetical is False else (private or not e.hidden),
+            **kwargs,
+        )}""" for e in self.get_effects())
 
     def _get_effects_and_notes(self) -> str:
         out = []

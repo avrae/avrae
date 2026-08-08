@@ -6,7 +6,7 @@ consistency and maintainability.
 """
 
 # System Default
-ENABLE_BUTTON_SELECTION_DEFAULT = False
+ENABLE_BUTTON_SELECTION_DEFAULT = True
 
 # Timeout Values
 SELECTION_TIMEOUT = 60

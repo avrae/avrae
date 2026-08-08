@@ -3,6 +3,7 @@ from unittest.mock import Mock, AsyncMock, patch
 
 from gamedata.lookuputils import _handle_legacy_preference, search_entities
 from gamedata.shared import Sourced
+from utils.selection.constants import ENABLE_BUTTON_SELECTION_DEFAULT
 from utils.settings.guild import LegacyPreference, ServerSettings
 
 
@@ -165,6 +166,11 @@ class TestHandleLegacyPreference:
         with patch("gamedata.lookuputils.can_access", return_value=True):
             result = await _handle_legacy_preference(mock_ctx, [legacy_monster, modern_monster], available_ids)
             assert result == legacy_monster
+
+
+def test_button_selection_is_enabled_by_default():
+    assert ENABLE_BUTTON_SELECTION_DEFAULT is True
+    assert ServerSettings(guild_id=12345).enable_button_selection is True
 
 
 class TestMonsterPMSelectorLegacyPreference:

@@ -432,12 +432,20 @@ class AdminUtils(commands.Cog):
             return
 
     # ==== helper ====
-    @staticmethod
-    async def _send_replies(ctx, resp, base=None):
+    async def _send_replies(self, ctx, resp, base=None):
         sorted_replies = sorted(resp.items(), key=lambda i: i[0])
         out = "\n".join(f"{cid}: {rep}" for cid, rep in sorted_replies)
         if base:
             out = f"{base}\n{out}"
+        if not out:
+            self.bot.log_exception(
+                RuntimeError(
+                    f"admin_send_replies_empty "
+                    f"command={getattr(ctx.command, 'qualified_name', None)} "
+                    f"resp={resp!r} reply_count={len(resp)} "
+                    f"expected={config.NUM_CLUSTERS or 1}"
+                )
+            )
         await ctx.send(out)
 
     # ==== methods (called by pubsub) ====
@@ -533,7 +541,17 @@ class AdminUtils(commands.Cog):
             else:
                 await asyncio.sleep(0.1)
 
-        return self._ps_requests_pending.pop(request.id)
+        replies = self._ps_requests_pending.pop(request.id)
+        if len(replies) < expected_replies:
+            self.bot.log_exception(
+                RuntimeError(
+                    f"admin_pscall_incomplete command={command} "
+                    f"got={len(replies)} expected={expected_replies} "
+                    f"timeout={timeout} cluster_id={self.bot.cluster_id} "
+                    f"replies={replies!r}"
+                )
+            )
+        return replies
 
     async def _ps_recv(self, message):
         redis.pslogger.debug(message)
@@ -552,7 +570,11 @@ class AdminUtils(commands.Cog):
         if message.command not in self._ps_cmd_map:
             return
         command = self._ps_cmd_map[message.command]
-        result = await command(*message.args, **message.kwargs)
+        try:
+            result = await command(*message.args, **message.kwargs)
+        except Exception as e:
+            self.bot.log_exception(e)
+            raise
 
         if result is not False:
             response = redis.PubSubReply.new(self.bot, reply_to=message.id, data=result)

@@ -12,6 +12,7 @@ import json
 import logging
 import re
 import textwrap
+import time
 import traceback
 from contextlib import redirect_stdout
 from math import floor
@@ -48,6 +49,7 @@ class AdminUtils(commands.Cog):
         # pubsub stuff
         self._ps_cmd_map = {}  # set up in admin_pubsub()
         self._ps_requests_pending = {}
+        self._ps_request_commands = {}  # request_id -> command name (for reload_static tracing)
 
     # ==== setup tasks ====
     async def cog_load(self):
@@ -531,9 +533,23 @@ class AdminUtils(commands.Cog):
     # ==== pubsub ====
     async def pscall(self, command, args=None, kwargs=None, *, expected_replies=config.NUM_CLUSTERS or 1, timeout=30):
         """Makes an IPC call to all clusters. Returns a dict of {cluster_id: reply_data}."""
+        if command == "reload_static":
+            self._ps_request_commands = {
+                rid: cmd for rid, cmd in self._ps_request_commands.items() if cmd != "reload_static"
+            }
+
         request = redis.PubSubCommand.new(self.bot, command, args, kwargs)
         self._ps_requests_pending[request.id] = {}
+        self._ps_request_commands[request.id] = command
         await self.bot.rdb.publish(COMMAND_PUBSUB_CHANNEL, request.to_json())
+
+        if command == "reload_static":
+            self.bot.log_exception(
+                RuntimeError(
+                    f"admin_pubsub_send command={command} request_id={request.id} "
+                    f"cluster_id={self.bot.cluster_id} expected={expected_replies}"
+                )
+            )
 
         for _ in range(timeout * 10):  # timeout after 30 sec
             if len(self._ps_requests_pending[request.id]) >= expected_replies:
@@ -551,25 +567,59 @@ class AdminUtils(commands.Cog):
                     f"replies={replies!r}"
                 )
             )
+        if command != "reload_static":
+            self._ps_request_commands.pop(request.id, None)
         return replies
 
     async def _ps_recv(self, message):
         redis.pslogger.debug(message)
         msg = redis.deserialize_ps_msg(message)
+        if msg.type == "cmd" and msg.command == "reload_static":
+            self.bot.log_exception(
+                RuntimeError(
+                    f"admin_pubsub_recv_cmd command={msg.command} request_id={msg.id} "
+                    f"sender={msg.sender} cluster_id={self.bot.cluster_id}"
+                )
+            )
         if msg.type == "reply":
             await self._ps_reply(msg)
         elif msg.type == "cmd":
             await self._ps_cmd(msg)
 
     async def _ps_reply(self, message: redis.PubSubReply):
+        traced = self._ps_request_commands.get(message.reply_to) == "reload_static"
         if message.reply_to not in self._ps_requests_pending:
+            if traced:
+                self.bot.log_exception(
+                    RuntimeError(
+                        f"admin_pubsub_late_reply request_id={message.reply_to} "
+                        f"sender={message.sender} data={message.data!r} "
+                        f"cluster_id={self.bot.cluster_id}"
+                    )
+                )
             return
+        if traced:
+            self.bot.log_exception(
+                RuntimeError(
+                    f"admin_pubsub_reply_recv request_id={message.reply_to} "
+                    f"sender={message.sender} data={message.data!r} "
+                    f"cluster_id={self.bot.cluster_id}"
+                )
+            )
         self._ps_requests_pending[message.reply_to][message.sender] = message.data
 
     async def _ps_cmd(self, message: redis.PubSubCommand):
         if message.command not in self._ps_cmd_map:
             return
         command = self._ps_cmd_map[message.command]
+        t0 = time.perf_counter()
+        if message.command == "reload_static":
+            self.bot.log_exception(
+                RuntimeError(
+                    f"admin_pubsub_cmd_start command={message.command} request_id={message.id} "
+                    f"cluster_id={self.bot.cluster_id}"
+                )
+            )
         try:
             result = await command(*message.args, **message.kwargs)
         except Exception as e:
@@ -579,6 +629,14 @@ class AdminUtils(commands.Cog):
         if result is not False:
             response = redis.PubSubReply.new(self.bot, reply_to=message.id, data=result)
             await self.bot.rdb.publish(COMMAND_PUBSUB_CHANNEL, response.to_json())
+            if message.command == "reload_static":
+                self.bot.log_exception(
+                    RuntimeError(
+                        f"admin_pubsub_reply_send command={message.command} request_id={message.id} "
+                        f"cluster_id={self.bot.cluster_id} data={result!r} "
+                        f"elapsed={time.perf_counter() - t0:.2f}s"
+                    )
+                )
 
 
 def cleanup_code(content):

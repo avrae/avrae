@@ -291,7 +291,7 @@ class AdminUtils(commands.Cog):
     @admin.command(hidden=True, name="reload_static")
     @checks.user_permissions("content-admin")
     async def admin_reload_static(self, ctx):
-        resp = await self.pscall("reload_static")
+        resp = await self.pscall("reload_static", timeout=60)
         await self._send_replies(ctx, resp)
 
     @admin.group(hidden=True, name="debug_entity", invoke_without_command=True)

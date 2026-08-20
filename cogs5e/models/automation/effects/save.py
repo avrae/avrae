@@ -6,7 +6,8 @@ from utils.functions import maybe_mod, reconcile_adv, verbose_stat
 from . import Effect
 from ..errors import AutomationException, NoSpellDC, TargetException
 from ..results import SaveResult
-from ..utils import stringify_intexpr, parse_save_bonuses
+from ..utils import stringify_intexpr
+from ..saveutils import parse_save_bonuses
 
 
 class Save(Effect):

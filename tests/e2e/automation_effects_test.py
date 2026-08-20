@@ -9,7 +9,7 @@ import pytest
 from aliasing.evaluators import AutomationEvaluator
 from cogs5e.initiative.utils import InteractionMessageType, combatant_interaction_components
 from cogs5e.models import automation
-from cogs5e.models.automation.utils import parse_save_bonuses
+from cogs5e.models.automation.saveutils import parse_save_bonuses
 from cogs5e.models.sheet.statblock import StatBlock
 from gamedata.compendium import compendium
 from tests.utils import active_character, active_combat, end_init, requires_data, start_init

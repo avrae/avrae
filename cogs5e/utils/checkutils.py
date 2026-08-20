@@ -8,7 +8,7 @@ from cogs5e.initiative.utils import ieffect_handler
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.sheet.base import Skill
-from cogs5e.models.automation.utils import parse_save_bonuses
+from cogs5e.models.automation.saveutils import parse_save_bonuses
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.functions import a_or_an, camel_to_title, maybe_http_url, verbose_stat
 

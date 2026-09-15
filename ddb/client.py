@@ -34,7 +34,7 @@ class BeyondClientBase:  # for development - assumes no entitlements
     async def get_accessible_entities(self, ctx, user_id, entity_type):
         return None
 
-    async def get_ddb_user(self, ctx, user_id=None):
+    async def get_ddb_user(self, ctx, user_id=None, auth_v1: bool = False):
         return None
 
     async def close(self):

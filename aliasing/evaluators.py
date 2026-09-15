@@ -15,8 +15,8 @@ import d20
 import draconic
 import json.scanner
 import yaml
-from yaml import composer, parser, scanner
 
+import aliasing.api.automation as automation_api
 import aliasing.api.character as character_api
 import aliasing.api.combat as combat_api
 from aliasing import helpers
@@ -516,22 +516,27 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 data.update(value)
 
         DraconicConstructor.add_constructor(
-            "tag:yaml.org,2002:null", yaml.constructor.SafeConstructor.construct_yaml_null
+            "tag:yaml.org,2002:null",
+            yaml.constructor.SafeConstructor.construct_yaml_null,
         )
         DraconicConstructor.add_constructor(
-            "tag:yaml.org,2002:bool", yaml.constructor.SafeConstructor.construct_yaml_bool
+            "tag:yaml.org,2002:bool",
+            yaml.constructor.SafeConstructor.construct_yaml_bool,
         )
         DraconicConstructor.add_constructor(
             "tag:yaml.org,2002:int", yaml.constructor.SafeConstructor.construct_yaml_int
         )
         DraconicConstructor.add_constructor(
-            "tag:yaml.org,2002:float", yaml.constructor.SafeConstructor.construct_yaml_float
+            "tag:yaml.org,2002:float",
+            yaml.constructor.SafeConstructor.construct_yaml_float,
         )
         DraconicConstructor.add_constructor(
-            "tag:yaml.org,2002:omap", yaml.constructor.SafeConstructor.construct_yaml_omap
+            "tag:yaml.org,2002:omap",
+            yaml.constructor.SafeConstructor.construct_yaml_omap,
         )
         DraconicConstructor.add_constructor(
-            "tag:yaml.org,2002:pairs", yaml.constructor.SafeConstructor.construct_yaml_pairs
+            "tag:yaml.org,2002:pairs",
+            yaml.constructor.SafeConstructor.construct_yaml_pairs,
         )
         DraconicConstructor.add_constructor("tag:yaml.org,2002:set", DraconicConstructor.construct_yaml_set)
         DraconicConstructor.add_constructor("tag:yaml.org,2002:str", DraconicConstructor.construct_yaml_str)
@@ -569,7 +574,12 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         Serializes an object to a YAML string. See `yaml.safe_dump <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
         """
         return yaml.dump(
-            obj, Dumper=self._yaml_dumper, default_flow_style=False, line_break=True, indent=indent, sort_keys=False
+            obj,
+            Dumper=self._yaml_dumper,
+            default_flow_style=False,
+            line_break=True,
+            indent=indent,
+            sort_keys=False,
         )
 
     # ==== json ====
@@ -779,7 +789,10 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         pass
 
     async def transformed_str_async(
-        self, string, execution_scope: ExecutionScope = ExecutionScope.UNKNOWN, invoking_object: _CodeInvokerT = None
+        self,
+        string,
+        execution_scope: ExecutionScope = ExecutionScope.UNKNOWN,
+        invoking_object: _CodeInvokerT = None,
     ):
         """Async convenience method around :meth:`ScriptingEvaluator.transformed_str`."""
         return await asyncio.get_event_loop().run_in_executor(
@@ -787,7 +800,10 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         )
 
     def transformed_str(
-        self, string, execution_scope: ExecutionScope = ExecutionScope.UNKNOWN, invoking_object: _CodeInvokerT = None
+        self,
+        string,
+        execution_scope: ExecutionScope = ExecutionScope.UNKNOWN,
+        invoking_object: _CodeInvokerT = None,
     ):
         """
         Parses a scripting string (evaluating text in {{}}). The caller should pass the execution scope and invoking
@@ -835,18 +851,72 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         return output
 
 
-class AutomationEvaluator(MathEvaluator):
+class AutomationEvaluator(draconic.DraconicInterpreter):
+    """Draconic evaluator for automation with a narrow, read-only helper surface."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.builtins.update(
+            combat=self.combat,
+        )
+
+        self._roller = d20.Roller(context=PersistentRollContext(max_rolls=1_000, max_total_rolls=10_000))
+        self.builtins.update(vroll=self._limited_vroll, roll=self._limited_roll)
+
+        self._automation_caster = None
+        self._automation_combat = None
+        self._automation_cache = {}
+
     @classmethod
-    def with_caster(cls, caster):
+    def with_caster(cls, caster, spell_override=None):
         names = caster.get_scope_locals()
-        builtins = {**names, **DEFAULT_BUILTINS}
-        return cls(builtins=builtins)
+        if spell_override is not None:
+            names["spell"] = spell_override
+
+        inst = cls(builtins={**names, **DEFAULT_BUILTINS})
+        inst.set_automation_runtime(caster, getattr(caster, "combat", None))
+
+        try:
+            inst.builtins["caster"] = automation_api.wrap_statblock(caster)
+        except TypeError:
+            pass
+
+        return inst
+
+    @classmethod
+    def with_character(cls, character, spell_override=None):
+        return cls.with_caster(character, spell_override=spell_override)
+
+    def set_automation_runtime(self, caster, combat=None):
+        self._automation_caster = caster
+        self._automation_combat = combat
+        self._automation_cache.clear()
+        return self
+
+    def combat(self):
+        if self._automation_combat is None:
+            return None
+        if "combat" not in self._automation_cache:
+            self._automation_cache["combat"] = automation_api.AutomationCombat(self._automation_combat)
+        return self._automation_cache["combat"]
+
+    # ==== roll limiters ====
+    def _limited_vroll(self, dice, multiply=1, add=0):
+        return _vroll(str(dice), multiply, add, roller=self._roller)
+
+    def _limited_roll(self, dice):
+        return _roll(str(dice), roller=self._roller)
+
+    def _preflight(self):
+        """We don't want limits to reset."""
+        pass
 
     def transformed_str(self, string, extra_names=None):
         """Parses a spell-formatted string (evaluating {{}} and replacing {} with rollstrings)."""
-        original_names = None
+        original_builtins = None
         if extra_names:
-            original_names = self.builtins.copy()
+            original_builtins = self.builtins.copy()
             self.builtins.update(extra_names)
 
         def evalrepl(match):
@@ -856,7 +926,7 @@ class AutomationEvaluator(MathEvaluator):
                 elif match.group("roll"):  # {}
                     try:
                         evalresult = self.eval(match.group("roll").strip())
-                    except:
+                    except Exception:
                         evalresult = match.group(0)
                 else:
                     evalresult = None
@@ -865,10 +935,10 @@ class AutomationEvaluator(MathEvaluator):
 
             return str(evalresult) if evalresult is not None else ""
 
-        output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
+        output = re.sub(SCRIPTING_RE, evalrepl, string)
 
-        if original_names:
-            self.builtins = original_names
+        if original_builtins is not None:
+            self.builtins = original_builtins
 
         return output
 

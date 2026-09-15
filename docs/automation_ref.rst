@@ -34,10 +34,11 @@ Runtime Variables
 
 All Automation runs provide the following variables:
 
-- ``caster`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The character, combatant, or monster who is running the
-  automation.
-- ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`, :class:`str`, or None) A list of combatants
-  targeted by this automation (i.e. the ``-t`` argument).
+- ``caster`` (:class:`~aliasing.api.automation.AutomationCharacter`,
+  :class:`~aliasing.api.automation.AutomationCombatant`, or
+  :class:`~aliasing.api.automation.AutomationStatBlock`) The character, combatant, or monster who is running the automation.
+- ``targets`` A list of targets for this automation (i.e. the ``-t`` argument), If a target is only a name or missing, 
+  it is exposed as an :class:`~aliasing.api.automation.AutomationStatBlock` with the name set to that target or ``"Target"``.
 - ``spell_attack_bonus`` (:class:`int` or None) - The attack bonus for the spell, or the caster's default attack bonus.
 - ``spell_dc`` (:class:`int` or None) - The DC for the spell, or the caster's default DC.
 - ``spell`` (:class:`int` or None) - The casting mod for the spell, or the caster's default casting mod.
@@ -47,8 +48,484 @@ All Automation runs provide the following variables:
 Additionally, runs triggered by an initiative effect (such as automation provided in a :ref:`ButtonInteraction`) provide
 the following variables:
 
-- ``ieffect`` (:class:`~aliasing.api.combat.SimpleEffect`) The initiative effect responsible for providing the
+- ``ieffect`` (:class:`~aliasing.api.automation.AutomationEffect`) The initiative effect responsible for providing the
   automation.
+
+Automation Models
+--------------------
+
+.. py:currentmodule:: aliasing.api.automation
+
+.. function:: combat()
+
+    Returns the current combat as an :class:`~aliasing.api.automation.AutomationCombat` object, or ``None`` if the
+    automation is not running in combat.
+
+    :rtype: :class:`~aliasing.api.automation.AutomationCombat` or ``None``
+
+.. class:: AutomationStatBlock
+
+    A base class similar to AliasStatBlock.
+
+    .. attribute:: name
+
+        The creature's name.
+
+        :type: str
+
+    .. attribute:: stats
+
+        The creature's base stats.
+
+        :type: :class:`~aliasing.api.statblock.AliasBaseStats`
+
+    .. attribute:: levels
+
+        The creature's class levels.
+
+        :type: :class:`~aliasing.api.statblock.AliasLevels`
+
+    .. attribute:: attacks
+
+        The creature's attacks.
+
+        :type: :class:`~aliasing.api.statblock.AliasAttackList`
+
+    .. attribute:: skills
+
+        The creature's skills.
+
+        :type: :class:`~aliasing.api.statblock.AliasSkills`
+
+    .. attribute:: saves
+
+        The creature's saving throws.
+
+        :type: :class:`~aliasing.api.statblock.AliasSaves`
+
+    .. attribute:: resistances
+
+        The creature's damage resistances.
+
+        :type: :class:`~aliasing.api.statblock.AliasResistances`
+
+    .. attribute:: ac
+
+        The creature's armor class.
+
+        :type: int or ``None``
+
+    .. attribute:: max_hp
+
+        The creature's maximum hit points.
+
+        :type: int or ``None``
+
+    .. attribute:: hp
+
+        The creature's current hit points.
+
+        :type: int or ``None``
+
+    .. attribute:: temp_hp
+
+        The creature's temporary hit points.
+
+        :type: int
+
+    .. attribute:: spellbook
+
+        The creature's spellbook.
+
+        :type: :class:`~aliasing.api.automation.AutomationSpellbook`
+
+    .. attribute:: creature_type
+
+        The creature type, or ``None`` if unavailable.
+
+        :type: str or ``None``
+
+    .. method:: hp_str()
+
+        Returns a string describing the creature's current, max, and temp HP.
+
+        :rtype: str
+
+.. class:: AutomationCombatant
+
+    Subclass of AutomationStatBlock, represents a creature in Combat.
+
+    .. attribute:: id
+
+        The combatant ID.
+
+        :type: str
+
+    .. attribute:: note
+
+        The combatant's note field.
+
+        :type: str or ``None``
+
+    .. attribute:: controller
+
+        The controller's Discord user ID.
+
+        :type: int or ``None``
+
+    .. attribute:: group
+
+        The combat group name, or ``None`` if the combatant is not grouped.
+
+        :type: str or ``None``
+
+    .. attribute:: is_hidden
+
+        Whether the combatant is hidden/private in initiative.
+
+        :type: bool
+
+    .. attribute:: monster_name
+
+        The source monster name for monster combatants, or ``None``.
+
+        :type: str or ``None``
+
+    .. attribute:: monster_id
+
+        The source monster ID for monster combatants, or ``None``.
+
+        :type: int or ``None``
+
+    .. attribute:: effects
+
+        A list of initiative effects on the combatant.
+
+        :type: list of :class:`~aliasing.api.automation.AutomationEffect`
+
+    .. method:: get_effect(name, strict=False)
+
+        Returns the matching initiative effect, or ``None`` if no effect matches.
+
+        :rtype: :class:`~aliasing.api.automation.AutomationEffect` or ``None``
+
+.. class:: AutomationCharacter
+
+    Subclass of AutomationCombatant, representing a character in Combat.
+
+    .. attribute:: owner
+
+        The owning Discord user ID.
+
+        :type: str
+
+    .. attribute:: upstream
+
+        The upstream character sheet ID.
+
+        :type: str
+
+    .. attribute:: sheet_type
+
+        The source sheet type.
+
+        :type: str
+
+    .. attribute:: race
+
+        The character's race.
+
+        :type: str
+
+    .. attribute:: background
+
+        The character's background.
+
+        :type: str
+
+    .. attribute:: csettings
+
+        The character's CSettings as a dict.
+
+        :type: dict
+
+    .. attribute:: description
+
+        The full character description.
+
+        :type: str
+
+    .. attribute:: image
+
+        The character image URL.
+
+        :type: str
+
+    When not in initiative, fields such as ``id``, ``note``, ``controller``, 
+    and ``group`` are ``None``; ``is_hidden`` is ``False``; and ``effects`` is an empty list.
+
+.. class:: AutomationSpellbook
+
+    A read-only spellbook wrapper exposed by :attr:`~aliasing.api.automation.AutomationStatBlock.spellbook`.
+
+    .. attribute:: dc
+
+        The spell save DC.
+
+        :type: int or ``None``
+
+    .. attribute:: sab
+
+        The spell attack bonus.
+
+        :type: int or ``None``
+
+    .. attribute:: caster_level
+
+        The caster level.
+
+        :type: int
+
+    .. attribute:: spell_mod
+
+        The spellcasting modifier.
+
+        :type: int or ``None``
+
+    .. attribute:: spells
+
+        The known spells.
+
+        :type: list of :class:`~aliasing.api.statblock.AliasSpellbookSpell`
+
+    .. attribute:: pact_slot_level
+
+        The pact slot level, if any.
+
+        :type: int or ``None``
+
+    .. attribute:: num_pact_slots
+
+        The current number of pact slots.
+
+        :type: int
+
+    .. attribute:: max_pact_slots
+
+        The maximum number of pact slots.
+
+        :type: int or ``None``
+
+    .. method:: find(spell_name)
+
+        Returns spells whose names exactly match ``spell_name`` case-insensitively.
+
+        :rtype: list of :class:`~aliasing.api.statblock.AliasSpellbookSpell`
+
+    .. method:: slots_str(level)
+
+        Returns the formatted slot display for a spell level.
+
+        :rtype: str
+
+    .. method:: get_max_slots(level)
+
+        Returns the maximum slots for a spell level.
+
+        :rtype: int
+
+    .. method:: get_slots(level)
+
+        Returns the current slots for a spell level.
+
+        :rtype: int
+
+    .. method:: remaining_casts_of(spell, level)
+
+        Returns a string representing the remaining cast resources for a spell at the given level.
+
+        :rtype: str
+
+    .. method:: can_cast(spell, level)
+
+        Returns whether the spell can currently be cast at the given level.
+
+        :rtype: bool
+
+    ``spell_name in caster.spellbook`` can also be used to test whether a spell exists in the spellbook.
+
+.. class:: AutomationGroup
+
+    A group in initiative
+
+    .. attribute:: name
+
+        The group's name.
+
+        :type: str
+
+    .. attribute:: id
+
+        The group ID.
+
+        :type: str
+
+    .. attribute:: init
+
+        The group's initiative value.
+
+        :type: int
+
+    .. attribute:: combatants
+
+        The group's combatants.
+
+        :type: list of :class:`~aliasing.api.automation.AutomationCharacter` or :class:`~aliasing.api.automation.AutomationCombatant`
+
+    .. method:: get_combatant(name, strict=None)
+
+        Returns a matching combatant from the group, or ``None``.
+
+        :rtype: :class:`~aliasing.api.automation.AutomationCharacter`, :class:`~aliasing.api.automation.AutomationCombatant`, or ``None``
+
+.. class:: AutomationCombat
+
+    A representation of Combat.
+
+    .. attribute:: combatants
+
+        All combatants in combat.
+
+        :type: list of :class:`~aliasing.api.automation.AutomationCharacter` or :class:`~aliasing.api.automation.AutomationCombatant`
+
+    .. attribute:: groups
+
+        All combat groups.
+
+        :type: list of :class:`~aliasing.api.automation.AutomationGroup`
+
+    .. attribute:: round_num
+
+        The current round number.
+
+        :type: int
+
+    .. attribute:: turn_num
+
+        The current turn number.
+
+        :type: int
+
+    .. attribute:: current
+
+        The current combat turn holder.
+
+        :type: :class:`~aliasing.api.automation.AutomationGroup`, :class:`~aliasing.api.automation.AutomationCharacter`, :class:`~aliasing.api.automation.AutomationCombatant`, or ``None``
+
+    .. attribute:: name
+
+        The combat's configured name.
+
+        :type: str or ``None``
+
+    .. method:: get_combatant(name, strict=None)
+
+        Returns a matching combatant, or ``None``.
+
+        :rtype: :class:`~aliasing.api.automation.AutomationCharacter`, :class:`~aliasing.api.automation.AutomationCombatant`, or ``None``
+
+    .. method:: get_group(name, strict=None)
+
+        Returns a matching group, or ``None``.
+
+        :rtype: :class:`~aliasing.api.automation.AutomationGroup` or ``None``
+
+    .. method:: get_metadata(key, default=None)
+
+        Returns a combat metadata value.
+
+        :rtype: str
+
+.. class:: AutomationEffect
+
+    An effect in initiative.
+
+    .. attribute:: name
+
+        The effect name.
+
+        :type: str
+
+    .. attribute:: duration
+
+        The total duration.
+
+        :type: int or ``None``
+
+    .. attribute:: remaining
+
+        The remaining duration.
+
+        :type: int or ``None``
+
+    .. attribute:: effect
+
+        The effect's passive effect data as a dict.
+
+        :type: dict
+
+    .. attribute:: attacks
+
+        The effect's granted attacks as dicts.
+
+        :type: list of dict
+
+    .. attribute:: buttons
+
+        The effect's granted buttons as dicts.
+
+        :type: list of dict
+
+    .. attribute:: conc
+
+        Whether the effect requires concentration.
+
+        :type: bool
+
+    .. attribute:: desc
+
+        The effect description.
+
+        :type: str or ``None``
+
+    .. attribute:: ticks_on_end
+
+        Whether the effect ticks on turn end.
+
+        :type: bool
+
+    .. attribute:: combatant_name
+
+        The affected combatant's name, or ``None``.
+
+        :type: str or ``None``
+
+    .. attribute:: parent
+
+        The parent effect, or ``None``.
+
+        :type: :class:`~aliasing.api.automation.AutomationEffect` or ``None``
+
+    .. attribute:: children
+
+        The child effects.
+
+        :type: list of :class:`~aliasing.api.automation.AutomationEffect`
+
+Automation save results use :class:`~aliasing.api.functions.SimpleRollResult`, as documented in
+:doc:`aliasing/api`.
+
+.. py:currentmodule:: None
 
 Target
 ------
@@ -90,7 +567,9 @@ It designates what creatures to affect.
 
 **Variables**
 
-- ``target`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The current target.
+- ``target`` (:class:`~aliasing.api.automation.AutomationCharacter`,
+  :class:`~aliasing.api.automation.AutomationCombatant`, or
+  :class:`~aliasing.api.automation.AutomationStatBlock`) The current target.
 - ``targetIteration`` (:class:`int`) If running multiple iterations (i.e. ``-rr``), the current iteration (1-indexed).
 - ``targetIterations`` (:class:`int`) The total number of iterations. Minimum 1, maximum 25.
 - ``targetIndex`` (:class:`int`) The index of the target in the list of targets processed by this effect
@@ -1544,7 +2023,9 @@ Hand-written custom attacks may be written in JSON or YAML and imported using th
         
         *optional* - The display text to display in the action list (such as ``!a list`` ).
 
-        ``caster`` (:class:`~aliasing.api.statblock.AliasStatBlock)` is available in this attribute.
+        ``caster`` (:class:`~aliasing.api.automation.AutomationCharacter`,
+        :class:`~aliasing.api.automation.AutomationCombatant`, or
+        :class:`~aliasing.api.automation.AutomationStatBlock`) is available in this attribute.
 
     .. attribute:: activation_type
 

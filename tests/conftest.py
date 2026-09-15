@@ -21,9 +21,11 @@ pass
 
 from cogs5e.models.character import Character  # noqa: E402
 from cogs5e.initiative import Combat  # noqa: E402
+from cogs5e.initiative.combat import CombatOptions  # noqa: E402
 from tests.discord_mock_data import *  # noqa: E4
 from tests.mocks import MockAsyncLaunchDarklyClient, MockDiscordHTTP  # noqa: E402
 from tests.monkey import add_reaction, message, on_command_error  # noqa: E402
+from tests.utils import ContextBotProxy  # noqa: E402
 
 SENTINEL = object()
 
@@ -96,6 +98,13 @@ async def avrae(dhttp, mock_ldclient):
 
 
 # ===== Character Fixture =====
+@pytest.fixture(scope="module")
+def ara():
+    filename = os.path.join(dir_path, "static", "char-ara.json")
+    with open(filename) as f:
+        return Character.from_dict(json.load(f))
+
+
 @pytest.fixture(scope="class", params=["ara", "drakro"])
 def character(request, avrae):
     """Sets up an active character in the user's context, to be used in tests. Cleans up after itself."""
@@ -116,6 +125,21 @@ def character(request, avrae):
 
 
 # ===== Init Fixture/Utils =====
+@pytest.fixture()
+def mock_combat(avrae):
+    """
+    Sets up a combat in the channel's context, to be used in tests. Cleans up after itself.
+    """
+    new_combat = Combat.new(
+        channel_id=str(TEST_CHANNEL_ID),
+        message_id=int(MESSAGE_ID),
+        dm_id=int(DEFAULT_USER_ID),
+        options=CombatOptions(),
+        ctx=ContextBotProxy(avrae),
+    )
+    yield new_combat
+
+
 @pytest.fixture(scope="class")
 async def init_fixture(avrae):
     """Ensures we clean up before and after ourselves. Init tests should be grouped in a class."""

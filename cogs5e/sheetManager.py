@@ -934,7 +934,10 @@ class SheetManager(commands.Cog):
             try:
                 url = extract_gsheet_id_from_url(url)
             except ExternalImportError:
-                if re.match(r"https?://(?:(?:stage|www)\.)?bestiarybuilder.com/(?:bestiary-viewer|bestiary/view|bestiary/edit)/([0-9a-f]+)", url) or re.match(
+                if re.match(
+                    r"https?://(?:www\.)?bestiarybuilder.com/(?:bestiary-viewer|bestiary/view|bestiary/edit)/([0-9a-f]+)",  # noqa: E501
+                    url,
+                ) or re.match(
                     r"https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)", url
                 ):
                     return await ctx.send("Bestiaries must be imported with the `!bestiary import` command instead.")

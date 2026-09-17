@@ -58,6 +58,7 @@ class Monster(StatBlock, Sourced):
         la_per_round=3,
         passiveperc: int = None,
         hide_cr: bool = None,
+        gear: str = None,
         # augmented
         resistances: Resistances = None,
         attacks: AttackList = None,
@@ -145,6 +146,7 @@ class Monster(StatBlock, Sourced):
         self.mythic_actions = mythic_actions
         self.bonus_actions = bonus_actions
         self.la_per_round = la_per_round
+        self.gear = gear
         self.proper = proper
         self.image_url = image_url
         self.token_free_fp = token_free_fp
@@ -196,6 +198,7 @@ class Monster(StatBlock, Sourced):
             bonus_actions=bonus_actions,
             mythic_actions=mythic_actions,
             la_per_round=d["la_per_round"],
+            gear=d.get("gear"),
             passiveperc=d["passiveperc"],
             hide_cr=d.get("hide_cr"),
             # augmented
@@ -262,6 +265,7 @@ class Monster(StatBlock, Sourced):
             "bonus_actions": [t.to_dict() for t in self.bonus_actions],
             "mythic_actions": [t.to_dict() for t in self.mythic_actions],
             "la_per_round": self.la_per_round,
+            "gear": self.gear,
             "attacks": self.attacks.to_dict(),
             "proper": self.proper,
             "image_url": self.image_url,
@@ -379,6 +383,8 @@ class Monster(StatBlock, Sourced):
             immunities.append(titlecase(", ".join(map(str, self.condition_immune))))
         if immunities:
             desc += f"**Immunities** {'; '.join(immunities)}\n"
+        if self.gear:
+            desc += f"**Gear** {self.gear}\n"
         desc += f"**Senses** {self.get_senses_str()}\n"
         if self.languages:
             desc += f"**Languages** {', '.join(self.languages)}\n"

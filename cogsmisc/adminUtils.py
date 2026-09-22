@@ -432,7 +432,7 @@ class AdminUtils(commands.Cog):
             return
 
     # ==== helper ====
-    async def _send_replies(ctx, resp, base=None):
+    async def _send_replies(self, ctx, resp, base=None):
         sorted_replies = sorted(resp.items(), key=lambda i: i[0])
         out = "\n".join(f"{cid}: {rep}" for cid, rep in sorted_replies)
         if base:

@@ -136,7 +136,10 @@ class EmbedPaginator:
         """Terminate the current field and write it to the last embed."""
         value = "\n".join(self._current_field)
 
-        if self._embed_count + len(value) + len(self._current_field_name) > self.EMBED_MAX:
+        if (
+            self._embed_count + len(value) + len(self._current_field_name) > self.EMBED_MAX
+            or len(self._current.fields) >= MAX_NUM_FIELDS
+        ):
             self.close_embed()
 
         self._current.add_field(name=self._current_field_name, value=value, inline=self._current_field_inline)

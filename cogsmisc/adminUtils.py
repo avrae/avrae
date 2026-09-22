@@ -526,7 +526,6 @@ class AdminUtils(commands.Cog):
         self._ps_requests_pending[request.id] = {}
         await self.bot.rdb.publish(COMMAND_PUBSUB_CHANNEL, request.to_json())
 
-
         for _ in range(timeout * 10):  # timeout after 30 sec
             if len(self._ps_requests_pending[request.id]) >= expected_replies:
                 break

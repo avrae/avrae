@@ -487,11 +487,14 @@ class Combatant(BaseCombatant, StatBlock):
         kw_parenthetical = kwargs.pop("parenthetical", None)
         kw_description = kwargs.pop("description", None)
 
-        return "\n".join(f"""* {e.get_str(
+        return "\n".join(
+            f"""* {e.get_str(
             description=False if kw_description is False else (private or not e.hidden),
             parenthetical=False if kw_parenthetical is False else (private or not e.hidden),
             **kwargs,
-        )}""" for e in self.get_effects())
+        )}"""
+            for e in self.get_effects()
+        )
 
     def _get_effects_and_notes(self) -> str:
         out = []

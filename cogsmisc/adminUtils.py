@@ -6,12 +6,18 @@ Created on Sep 23, 2016
 
 import asyncio
 import copy
+import ctypes
+import gc
 import io
 import itertools
 import json
 import logging
+import os
 import re
+import sys
+import tempfile
 import textwrap
+import threading
 import traceback
 from contextlib import redirect_stdout
 from math import floor
@@ -75,6 +81,8 @@ class AdminUtils(commands.Cog):
             "restart_shard": self._restart_shard,
             "kill_cluster": self._kill_cluster,
             "set_dd_sample_rate": self._set_dd_sample_rate,
+            "memstats": self._memstats,
+            "malloc_trim": self._malloc_trim,
         }
         while True:  # if we ever disconnect from pubsub, wait 5s and try reinitializing
             try:  # connect to the pubsub channel
@@ -285,6 +293,26 @@ class AdminUtils(commands.Cog):
         resp = await self.pscall("set_dd_sample_rate", kwargs={"sample_rate": sample_rate})
         await self._send_replies(ctx, resp)
 
+    # ---- memory diagnostics ----
+    @admin.command(hidden=True, name="memstats")
+    @checks.is_owner()
+    async def admin_memstats(self, ctx):
+        """Reports a per-cluster breakdown of process memory."""
+        resp = await self.pscall("memstats", timeout=30)
+        paginated_embed = embeds.EmbedPaginator(first_embed=disnake.Embed(title="Cluster Memory Stats"))
+        for cluster, stats in sorted(resp.items(), key=lambda i: i[0]):
+            paginated_embed.add_field(name=f"Cluster {cluster}", value=stats)
+        await paginated_embed.send_to(ctx.channel)
+
+    @admin.command(hidden=True, name="malloc_trim")
+    @checks.is_owner()
+    async def admin_malloc_trim(self, ctx):
+        """Asks glibc to return free heap space to the OS on every cluster, reporting RSS either side."""
+        if not await confirm(ctx, "This calls malloc_trim(0) on every cluster. Continue? (yes/no)"):
+            return await ctx.send("ok, not trimming.")
+        resp = await self.pscall("malloc_trim", timeout=60)
+        await self._send_replies(ctx, resp)
+
     # ---- entity management ----
     @admin.command(hidden=True, name="reload_static")
     @checks.user_permissions("content-admin")
@@ -432,7 +460,7 @@ class AdminUtils(commands.Cog):
             return
 
     # ==== helper ====
-    async def _send_replies(ctx, resp, base=None):
+    async def _send_replies(self, ctx, resp, base=None):
         sorted_replies = sorted(resp.items(), key=lambda i: i[0])
         out = "\n".join(f"{cid}: {rep}" for cid, rep in sorted_replies)
         if base:
@@ -518,6 +546,163 @@ class AdminUtils(commands.Cog):
 
         os.kill(os.getpid(), signal.SIGTERM)  # please shut down gracefully
         return "Shutting down..."
+
+    # ==== memory diagnostics (called by pubsub) ====
+    @staticmethod
+    def _proc_rss():
+        """Current resident set size in bytes, or None if /proc/self/statm cannot be read."""
+        try:
+            with open("/proc/self/statm") as f:
+                resident_pages = int(f.read().split()[1])
+        except (OSError, IndexError, ValueError):
+            return None
+        return resident_pages * os.sysconf("SC_PAGE_SIZE")
+
+    @staticmethod
+    def _libc():
+        """Handle to glibc, or None if the process is not linked against it."""
+        try:
+            return ctypes.CDLL("libc.so.6")
+        except OSError:
+            return None
+
+    @classmethod
+    def _mallinfo(cls):
+        """
+        (total_arena, in_use, free) bytes from glibc's allocator, or None if unavailable.
+
+        mallinfo2 is used rather than mallinfo because mallinfo reports its fields as C ints,
+        which overflow above 2GB.
+        """
+        libc = cls._libc()
+        if libc is None:
+            return None
+        try:
+            mallinfo2 = libc.mallinfo2
+        except AttributeError:  # glibc < 2.33
+            return None
+
+        class MallInfo2(ctypes.Structure):
+            _fields_ = [
+                (name, ctypes.c_size_t)
+                for name in (
+                    "arena",
+                    "ordblks",
+                    "smblks",
+                    "hblks",
+                    "hblkhd",
+                    "usmblks",
+                    "fsmblks",
+                    "uordblks",
+                    "fordblks",
+                    "keepcost",
+                )
+            ]
+
+        mallinfo2.restype = MallInfo2
+        mallinfo2.argtypes = []
+        info = mallinfo2()
+        return info.arena + info.hblkhd, info.uordblks, info.fordblks
+
+    @staticmethod
+    def _pymalloc_stats():
+        """
+        (arena_count, total_bytes, live_bytes) for CPython's small-object allocator, or None.
+
+        sys._debugmallocstats() writes to file descriptor 2 rather than to sys.stderr, so the
+        output is captured by redirecting the descriptor itself.
+        """
+        try:
+            with tempfile.TemporaryFile() as tf:
+                saved = os.dup(2)
+                try:
+                    os.dup2(tf.fileno(), 2)
+                    sys._debugmallocstats()
+                finally:
+                    os.dup2(saved, 2)
+                    os.close(saved)
+                tf.seek(0)
+                out = tf.read().decode("utf-8", "replace")
+        except (OSError, AttributeError):
+            return None
+
+        def field(pattern):
+            match = re.search(pattern, out)
+            return int(match.group(1).replace(",", "")) if match else None
+
+        arenas = field(r"# arenas allocated current\s*=\s*([\d,]+)")
+        total = field(r"arenas \* \d+ bytes/arena\s*=\s*([\d,]+)")
+        live = field(r"# bytes in allocated blocks\s*=\s*([\d,]+)")
+        if total is None or live is None:
+            return None
+        return arenas, total, live
+
+    @staticmethod
+    def _bytesize(n):
+        if n is None:
+            return "?"
+        for unit in ("B", "K", "M"):
+            if abs(n) < 1024:
+                return f"{n:.0f}{unit}"
+            n /= 1024
+        return f"{n:.2f}G"
+
+    async def _memstats(self):
+        rss = self._proc_rss()
+        out = [
+            f"rss={self._bytesize(rss)}",
+            f"blocks={sys.getallocatedblocks():,}",
+            f"gc={'/'.join(str(c) for c in gc.get_count())}",
+            f"threads={threading.active_count()}",
+        ]
+        mallinfo = self._mallinfo()
+        if mallinfo is None:
+            out.append("(no glibc mallinfo2)")
+        else:
+            arena, in_use, free = mallinfo
+            out.append(f"arena={self._bytesize(arena)}")
+            out.append(f"used={self._bytesize(in_use)}")
+            out.append(f"free={self._bytesize(free)}")
+            # free as a share of the glibc heap rather than of RSS, since mallinfo2 does not
+            # account for pymalloc
+            if arena:
+                out.append(f"frag={free / arena:.0%}")
+            # share of RSS that glibc accounts for
+            if rss:
+                out.append(f"glibc_share={arena / rss:.0%}")
+
+        pymalloc = self._pymalloc_stats()
+        if pymalloc is None:
+            out.append("(no pymalloc stats)")
+        else:
+            arenas, py_total, py_live = pymalloc
+            out.append(f"py={self._bytesize(py_live)}/{self._bytesize(py_total)}")
+            out.append(f"py_arenas={arenas}")
+            out.append(f"py_frag={1 - py_live / py_total:.0%}")
+            # remainder: C extension allocations, thread stacks and direct mmap
+            if rss:
+                native = rss - py_total - (mallinfo[0] if mallinfo else 0)
+                out.append(f"native={self._bytesize(native)}")
+        return " ".join(out)
+
+    async def _malloc_trim(self):
+        libc = self._libc()
+        if libc is None:
+            return "malloc_trim unavailable (not glibc)"
+        trim = libc.malloc_trim
+        trim.argtypes = [ctypes.c_size_t]
+        trim.restype = ctypes.c_int
+
+        before = self._proc_rss()
+        # trim walks every arena, so run it off the event loop
+        released = await self.bot.loop.run_in_executor(None, trim, 0)
+        after = self._proc_rss()
+        if before is None or after is None:
+            return f"trimmed (released={bool(released)}), RSS unavailable"
+        return (
+            f"rss {self._bytesize(before)} -> {self._bytesize(after)} "
+            f"(freed {self._bytesize(before - after)}, released={bool(released)})"
+        )
 
     # ==== pubsub ====
     async def pscall(self, command, args=None, kwargs=None, *, expected_replies=config.NUM_CLUSTERS or 1, timeout=30):

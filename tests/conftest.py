@@ -11,6 +11,7 @@ import os
 import pathlib
 import random
 
+import disnake
 import pytest
 
 # setup bot
@@ -84,6 +85,10 @@ async def avrae(dhttp, mock_ldclient):
     bot._connection.parse_ready(DUMMY_READY)
     # noinspection PyProtectedMember
     bot._connection.parse_guild_create(DUMMY_GUILD_CREATE)
+    # without the members intent, disnake only caches the bot's own member from GUILD_CREATE
+    guild = bot.get_guild(int(TEST_GUILD_ID))
+    for member_data in DUMMY_GUILD_CREATE["members"]:
+        guild._add_member(disnake.Member(data=member_data, guild=guild, state=bot._connection))
     # noinspection PyProtectedMember
     bot._connection.add_dm_channel(DUMMY_DMCHANNEL_CREATE)
     # noinspection PyProtectedMember

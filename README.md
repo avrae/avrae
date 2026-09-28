@@ -159,7 +159,7 @@ To create a Discord bot user, go to the [Discord Developer Portal](https://disco
 
 2. **Configure the bot**
    - Navigate to the `Bot` tab.
-   - Under `Privileged Gateway Intents`, enable both `Server Members Intent` and `Message Content Intent`.
+   - Under `Privileged Gateway Intents`, enable `Message Content Intent`.
    - Click `Save Changes`.
 
 3. **Generate the bot token**

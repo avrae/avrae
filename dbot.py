@@ -234,7 +234,7 @@ desc = (
 )
 intents = disnake.Intents(
     guilds=True,
-    members=True,
+    members=False,
     messages=True,
     message_content=True,
     reactions=True,

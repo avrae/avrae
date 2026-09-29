@@ -10,6 +10,9 @@ WORKDIR /home/avrae
 
 ENV GIT_COMMIT_SHA=${COMMIT}
 
+# Cap glibc malloc arenas so freed memory is reused instead of fragmenting across per-thread heaps
+ENV MALLOC_ARENA_MAX=2
+
 COPY --chown=avrae:avrae requirements.txt .
 RUN pip install --user --no-warn-script-location -r requirements.txt
 

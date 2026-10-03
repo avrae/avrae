@@ -188,7 +188,7 @@ async def _wait_for_input(ctx, select_msg, choices, timeout):
     tasks = [
         asyncio.create_task(
             ctx.bot.wait_for(
-                "interaction",
+                "button_click",
                 check=lambda i: (
                     getattr(i, "message", None)
                     and i.message.id == select_msg.id

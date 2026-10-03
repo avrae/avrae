@@ -190,7 +190,7 @@ async def _wait_for_input(ctx, select_msg, choices, timeout):
             ctx.bot.wait_for(
                 "interaction",
                 check=lambda i: (
-                    i.message
+                    getattr(i, "message", None)
                     and i.message.id == select_msg.id
                     and i.user.id == ctx.author.id
                     and i.guild_id is not None  # Only guild interactions; DMs handled via Redis

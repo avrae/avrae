@@ -1,6 +1,6 @@
 import pytest
 
-from cogs5e.models.automation.utils import parse_save_bonuses
+from cogs5e.models.automation.saveutils import parse_save_bonuses
 
 
 @pytest.mark.parametrize(

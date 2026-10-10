@@ -4,9 +4,6 @@ import os
 
 import pytest
 
-from tests.discord_mock_data import DEFAULT_USER_ID, MESSAGE_ID, TEST_CHANNEL_ID
-from tests.utils import ContextBotProxy
-
 SIMULATION_BASE_PATH = os.getenv("TEST_SIMULATION_BASE_PATH")
 
 
@@ -87,16 +84,6 @@ def bob():
     return StatBlock("Bob", spellbook=Spellbook(dc=10, sab=2, spell_mod=0))
 
 
-@pytest.fixture(scope="module")
-def ara():
-    from cogs5e.models.character import Character
-
-    filename = os.path.join(os.path.dirname(__file__), f"../static/char-ara.json")
-    with open(filename) as f:
-        char = Character.from_dict(json.load(f))
-    return char
-
-
 # ==== automation ====
 @pytest.fixture(autouse=True, scope="session")
 def monkey_patch_effect_run():
@@ -171,22 +158,3 @@ def monkey_patch_use_spell_slot():
     UseCounter.use_spell_slot = use_spell_slot
     yield
     UseCounter.use_spell_slot = real_use_spell_slot
-
-
-# ===== mock combat =====
-@pytest.fixture()
-def mock_combat(avrae):
-    """
-    Sets up a combat in the channel's context, to be used in tests. Cleans up after itself.
-    """
-    from cogs5e.initiative.combat import Combat, CombatOptions
-
-    # noinspection PyTypeChecker
-    new_combat = Combat.new(
-        channel_id=str(TEST_CHANNEL_ID),
-        message_id=int(MESSAGE_ID),
-        dm_id=int(DEFAULT_USER_ID),
-        options=CombatOptions(),
-        ctx=ContextBotProxy(avrae),
-    )
-    yield new_combat

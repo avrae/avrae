@@ -10,52 +10,15 @@ import disnake.ext.commands
 import disnake.utils
 import draconic
 
-from cogs5e.utils.gameutils import parse_coin_args
 from utils import config
-from utils.dice import RerollableStringifier
 from .context import AliasAuthor, AliasChannel, AliasGuild
+from .roll import SimpleRollResult
 from ..errors import AliasException
 from ..utils import ExecutionScope
+from cogs5e.utils.gameutils import parse_coin_args
 from draconic.types import approx_len_of
 
 MAX_ITER_LENGTH = 10000
-
-
-# vroll(), roll()
-class SimpleRollResult:
-    def __init__(self, result):
-        """
-        :type result: d20.RollResult
-        """
-        self.dice = d20.MarkdownStringifier().stringify(result.expr.roll)
-        self.total = result.total
-        self.full = str(result)
-        self.result = result
-        self.raw = result.expr
-        self._roll = result
-
-    def __str__(self):
-        """
-        Equivalent to ``result.full``.
-        """
-        return self.full
-
-    def consolidated(self):
-        """
-        Gets the most simplified version of the roll string. Consolidates totals and damage types together.
-
-        Note that this modifies the result expression in place!
-
-        >>> result = vroll("3d6[fire]+1d4[cold]")
-        >>> str(result)
-        '3d6 (3, 3, 2) [fire] + 1d4 (2) [cold] = `10`'
-        >>> result.consolidated()
-        '8 [fire] + 2 [cold]'
-
-        :rtype: str
-        """
-        d20.utils.simplify_expr(self._roll.expr, ambig_inherit="left")
-        return RerollableStringifier().stringify(self._roll.expr.roll)
 
 
 def vroll(dice, multiply=1, add=0):
@@ -264,6 +227,7 @@ def parse_coins(args: str, include_total: bool = True) -> dict:
     :return: A dict of the coin changes, e.g. ``{"pp":0, "gp":1, "ep":0, "sp":-2, "cp":3, "total": 0.83}``
     :rtype: dict
     """
+
     coin_args = parse_coin_args(args)
     parsed = {
         "pp": coin_args.pp,
@@ -272,7 +236,6 @@ def parse_coins(args: str, include_total: bool = True) -> dict:
         "sp": coin_args.sp,
         "cp": coin_args.cp,
     }
-
     if include_total:
         parsed.update({"total": coin_args.total})
     return parsed

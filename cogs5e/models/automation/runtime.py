@@ -1,16 +1,18 @@
 from functools import cached_property
+import logging
 from typing import List, Optional, TYPE_CHECKING, Union
 
-import aliasing.api.combat
-import aliasing.api.statblock
+import aliasing.api.automation
 import aliasing.evaluators
 import cogs5e.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
 from utils.enums import AdvantageType, CritDamageType
 from .errors import AutomationEvaluationException, AutomationException, InvalidIntExpression
-from .utils import maybe_alias_statblock, parse_save_bonuses
+from .utils import maybe_automation_statblock
+from .saveutils import parse_save_bonuses
 
 __all__ = ("AutomationContext", "AutomationTarget")
+log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import disnake
@@ -55,10 +57,11 @@ class AutomationContext:
         # runtime internals
         self.caster_needs_commit = False
         self.evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(caster)
+        self.evaluator.set_automation_runtime(caster, combat)
         self.metavars = {
             # caster, targets as default (#1335)
-            "caster": aliasing.api.statblock.AliasStatBlock(caster),
-            "targets": [maybe_alias_statblock(t) for t in targets],
+            "caster": aliasing.api.automation.wrap_statblock(caster),
+            "targets": [maybe_automation_statblock(t) for t in targets],
             "choice": self.args.last("choice", original_choice).lower(),
         }
 
@@ -78,7 +81,7 @@ class AutomationContext:
         # InitiativeEffect utils
         self.ieffect = ieffect
         if ieffect is not None:
-            self.metavars["ieffect"] = aliasing.api.combat.SimpleEffect(ieffect)
+            self.metavars["ieffect"] = aliasing.api.automation.AutomationEffect(ieffect)
         self.from_button = from_button
         self.allow_caster_ieffects = allow_caster_ieffects
         self.allow_target_ieffects = allow_target_ieffects

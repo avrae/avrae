@@ -4,7 +4,6 @@ from typing import Callable, List, Optional, TYPE_CHECKING, TypeVar
 import disnake
 
 import aliasing.evaluators
-import aliasing.api.statblock
 import cogs5e.models.character
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
@@ -475,7 +474,6 @@ class Combatant(BaseCombatant, StatBlock):
         :returns str - the string with annotations evaluated
         """
         evaluator = aliasing.evaluators.AutomationEvaluator.with_caster(self)
-        evaluator.builtins["caster"] = aliasing.api.statblock.AliasStatBlock(self)
 
         try:
             return evaluator.transformed_str(varstr)

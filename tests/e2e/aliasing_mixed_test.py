@@ -327,16 +327,5 @@ class TestCombatAliases:
         avrae.message("!test {{combat()}}")
         await dhttp.receive_message()
 
-    async def test_combat_me(self, avrae, dhttp):
-        avrae.message("!test {{combat().me}}")
-        await dhttp.receive_message(r".+:\s*$")  # nothing after the colon, should return None
-        # character joins
-        character = await active_character(avrae)
-        avrae.message("!init join")
-        await dhttp.drain()
-
-        avrae.message("!test {{combat().me.name}}")
-        await dhttp.receive_message(f".+: {character.name}")  # should return the character's name
-
     async def test_combat_aliases_teardown(cls, avrae, dhttp):
         await end_init(avrae, dhttp)

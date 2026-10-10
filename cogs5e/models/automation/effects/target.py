@@ -60,7 +60,9 @@ class Target(Effect):
 
         # restore the previous target
         autoctx.target = previous_target
-        autoctx.metavars["target"] = utils.maybe_alias_statblock(previous_target)  # #1335
+        autoctx.metavars["target"] = utils.maybe_automation_statblock(
+            previous_target.target if previous_target else None
+        )
 
         return results.TargetResult(iteration_results)
 
@@ -143,7 +145,7 @@ class Target(Effect):
     def run_effects(self, autoctx, target, target_index=0, original_target_index=None) -> list[results.TargetIteration]:
         # set up autoctx and metavars
         autoctx.target = AutomationTarget(autoctx, target)
-        autoctx.metavars["target"] = utils.maybe_alias_statblock(target)  # #1335
+        autoctx.metavars["target"] = utils.maybe_automation_statblock(target)  # #1335
         autoctx.metavars["targetIndex"] = target_index  # #1711
         autoctx.metavars["targetNumber"] = target_index + 1
 

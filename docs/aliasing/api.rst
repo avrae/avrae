@@ -815,6 +815,11 @@ SimpleCombatant
     :inherited-members:
     :members:
 
+    ``save()`` and ``check()`` accept ``include_ieffects=True`` and
+    ``include_csettings=True`` to opt into initiative-effect modifiers and
+    character settings, respectively. Both options default to ``False`` for
+    compatibility with existing aliases.
+
     .. attribute:: effects
 
         A list of :class:`~aliasing.api.combat.SimpleEffect` active on the combatant.

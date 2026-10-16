@@ -305,21 +305,25 @@ class CollectableManagementGroup(commands.Group):
                 codeblock_language="py",
             )
             return
-        else:  # collection
-            embed = EmbedWithAuthor(ctx)
+        else:  # collection. AVR-1089 reworked to use EmbedPaginator
+            ep = embeds.EmbedPaginator(EmbedWithAuthor(ctx))
             the_collection = await collectable.load_collection(ctx)
             owner = await user_from_id(ctx, the_collection.owner)
-            embed.title = f"{ctx.prefix}{name}" if self.is_alias else name
-            embed.description = f"From {the_collection.name} by {owner}.\n[View on Workshop]({the_collection.url})"
-            embeds.add_fields_from_long_text(embed, "Help", collectable.docs or "No documentation.")
+            ep.add_title(f"{ctx.prefix}{name}" if self.is_alias else name)
+            ep.add_description(f"From {the_collection.name} by {owner}.\n[View on Workshop]({the_collection.url})")
+
+            ep.add_field(name="Help")
+            for line in (collectable.docs or "No documentation.").splitlines():
+                ep.extend_field(line)
 
             if isinstance(collectable, workshop.WorkshopAlias):
                 await collectable.load_subcommands(ctx)
                 if collectable.subcommands:
-                    subcommands = "\n".join(f"**{sc.name}** - {sc.short_docs}" for sc in collectable.subcommands)
-                    embed.add_field(name="Subcommands", value=subcommands, inline=False)
+                    ep.add_field(name="Subcommands")
+                    for sc in collectable.subcommands:
+                        ep.extend_field(f"**{sc.name}** - {sc.short_docs}")
 
-            return await ctx.send(embed=embed)
+            return await ep.send_to(ctx)
 
     async def list(self, ctx, page: int = 1):
         ep = embeds.EmbedPaginator(EmbedWithAuthor(ctx))

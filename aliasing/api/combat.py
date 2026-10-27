@@ -1,15 +1,11 @@
 from typing import Optional, TYPE_CHECKING
 
-from d20 import roll
-
 import cogs5e.initiative as init
-from aliasing.api.functions import SimpleRollResult
+from aliasing.api._rolls import roll_check, roll_save
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
-from cogs5e.models.automation.utils import parse_save_bonuses
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
-from utils.constants import SKILL_MAP
 from . import validators
 
 if TYPE_CHECKING:
@@ -266,6 +262,7 @@ class SimpleCombatant(AliasStatBlock):
         adv: bool = None,
         include_ieffects: bool = False,
         include_csettings: bool = False,
+        args: str = None,
     ):
         """
         Rolls a combatant's saving throw.
@@ -274,50 +271,20 @@ class SimpleCombatant(AliasStatBlock):
         :param bool adv: Whether to roll the save with advantage. Rolls with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
         :param bool include_ieffects: Whether to include initiative effects that modify save advantage or disadvantage.
         :param bool include_csettings: Whether to include character settings such as Halfling Luck.
+        :param str args: Optional roll arguments: ``adv``, ``dis``, ``-b``, ``-mc``, and ``-ro``.
+            Other arguments, including ``-rr``, are ignored.
         :returns: A SimpleRollResult describing the rolled save.
         :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
         """  # noqa: E501
-        try:
-            save = self._combatant.saves.get(str(ability))
-        except ValueError:
-            raise InvalidSaveType
-
-        # === Save bonuses ===
-        save_bonuses = self._combatant.active_effects(mapper=lambda effect: effect.effects.save_bonus, default=[])
-        sb = parse_save_bonuses(ability, save_bonuses)
-
-        final_adv = adv
-        reroll = None
-        if include_ieffects:
-            stat = str(ability)[:3].lower()
-            sadv_effects = self._combatant.active_effects(
-                mapper=lambda effect: effect.effects.save_adv,
-                reducer=lambda saves: set().union(*saves),
-                default=set(),
-            )
-            sdis_effects = self._combatant.active_effects(
-                mapper=lambda effect: effect.effects.save_dis,
-                reducer=lambda saves: set().union(*saves),
-                default=set(),
-            )
-
-            if final_adv is None:
-                if stat in sadv_effects:
-                    final_adv = True
-                elif stat in sdis_effects:
-                    final_adv = False
-
-        if include_csettings and hasattr(self._combatant, "character") and self._combatant.character:
-            reroll = self._combatant.character.options.reroll
-
-        # === BUILD ROLL ===
-        saveroll = save.d20(base_adv=final_adv, reroll=reroll)
-
-        if sb:
-            saveroll = f'{saveroll}+{"+".join(sb)}'
-
-        save_roll = roll(saveroll)
-        return SimpleRollResult(save_roll)
+        return roll_save(
+            self._combatant,
+            ability,
+            adv,
+            include_ieffects,
+            args,
+            combatant=self._combatant,
+            character=getattr(self._combatant, "character", None) if include_csettings else None,
+        )
 
     def check(
         self,
@@ -325,6 +292,7 @@ class SimpleCombatant(AliasStatBlock):
         adv: bool = None,
         include_ieffects: bool = False,
         include_csettings: bool = False,
+        args: str = None,
     ):
         """
         Rolls a combatant's skill check.
@@ -333,54 +301,20 @@ class SimpleCombatant(AliasStatBlock):
         :param bool adv: Whether to roll with advantage. Rolls with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
         :param bool include_ieffects: Whether to include initiative effects that modify check bonuses or advantage.
         :param bool include_csettings: Whether to include character settings such as Halfling Luck and Reliable Talent.
+        :param str args: Optional roll arguments: ``adv``, ``dis``, ``-b``, ``-mc``, ``-ro``, and ``guidance``.
+            Other arguments, including ``-rr``, are ignored.
         :returns: A SimpleRollResult describing the rolled check.
         :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
         """  # noqa: E501
-        try:
-            skill, skill_key = self._combatant.skills.get(str(skill_name), return_name=True)
-        except ValueError:
-            raise ValueError(f"Invalid skill: {skill_name}")
-
-        final_adv = adv
-        reroll = None
-        min_val = None
-        combat_bonuses = []
-        if include_ieffects:
-            base_ability_key = SKILL_MAP[skill_key]
-            combat_bonuses = self._combatant.active_effects(
-                mapper=lambda effect: effect.effects.check_bonus, default=[]
-            )
-            cadv_effects = self._combatant.active_effects(
-                mapper=lambda effect: effect.effects.check_adv,
-                reducer=lambda checks: set().union(*checks),
-                default=set(),
-            )
-            cdis_effects = self._combatant.active_effects(
-                mapper=lambda effect: effect.effects.check_dis,
-                reducer=lambda checks: set().union(*checks),
-                default=set(),
-            )
-
-            if final_adv is None:
-                if skill_key in cadv_effects or base_ability_key in cadv_effects:
-                    final_adv = True
-                elif skill_key in cdis_effects or base_ability_key in cdis_effects:
-                    final_adv = False
-
-        if include_csettings and hasattr(self._combatant, "character") and self._combatant.character:
-            char = self._combatant.character
-            reroll = char.options.reroll
-            if char.options.talent and skill.prof >= 1:
-                min_val = 10
-
-        # === BUILD ROLL ===
-        roll_str = skill.d20(base_adv=final_adv, reroll=reroll, min_val=min_val)
-
-        if combat_bonuses:
-            roll_str = f"{roll_str}+{'+'.join(combat_bonuses)}"
-
-        result = roll(roll_str)
-        return SimpleRollResult(result)
+        return roll_check(
+            self._combatant,
+            skill_name,
+            adv,
+            include_ieffects,
+            args,
+            combatant=self._combatant,
+            character=getattr(self._combatant, "character", None) if include_csettings else None,
+        )
 
     def damage(self, dice_str, crit=False, d=None, c=None, critdice=0, overheal=False):
         """

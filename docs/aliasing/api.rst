@@ -820,6 +820,10 @@ SimpleCombatant
     character settings, respectively. Both options default to ``False`` for
     compatibility with existing aliases.
 
+    ``args`` supports ``adv``, ``dis``, ``-b``, ``-mc``, and ``-ro``;
+    checks also support ``guidance``. For example, ``args="-b 1d4 -mc 10"``.
+    Other arguments, including ``-rr``, are ignored.
+
     .. attribute:: effects
 
         A list of :class:`~aliasing.api.combat.SimpleEffect` active on the combatant.
@@ -1185,6 +1189,16 @@ AliasCharacter
 .. autoclass:: aliasing.api.character.AliasCharacter(AliasStatBlock)
     :members:
     :inherited-members:
+
+    ``save()`` and ``check()`` work inside and outside combat. Pass
+    ``include_ieffects=True`` to include initiative effects and
+    ``include_csettings=True`` to include character settings. Both options
+    default to ``False``. ``include_ieffects`` is ignored when the character
+    is not in the current combat.
+
+    ``args`` supports ``adv``, ``dis``, ``-b``, ``-mc``, and ``-ro``;
+    checks also support ``guidance``. For example, ``args="-b 1d4 -mc 10"``.
+    Other arguments, including ``-rr``, are ignored.
 
 AliasCustomCounter
 ^^^^^^^^^^^^^^^^^^

@@ -218,7 +218,8 @@ class Core(commands.Cog):
             f"Subscription Tier: {ddb_user.subscription_tier}\n```"
         )
 
-    @commands.command()
+    @commands.command(hidden=True)
+    @commands.is_owner()
     async def dderror(self, ctx):
         """Causes an error on purpose to test datadog error reporting."""
         raise Exception("Testing datadog reporting using dderror command.")

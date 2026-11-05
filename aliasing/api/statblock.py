@@ -765,7 +765,7 @@ class AliasSpellbook:
         The spellcaster's pact slot level. If the spellcaster has no pact slots, returns None.
 
         .. note::
-            Only D&D Beyond character sheets support the explicit distinction between pact and non-pact slots.
+            D&D Beyond and Google Sheets character sheets support the explicit distinction between pact and non-pact slots.
 
         :rtype: int or None
         """
@@ -777,7 +777,7 @@ class AliasSpellbook:
         The number of pact slots the spellcaster has remaining. If the spellcaster has no pact slots, returns None.
 
         .. note::
-            Only D&D Beyond character sheets support the explicit distinction between pact and non-pact slots.
+            D&D Beyond and Google Sheets character sheets support the explicit distinction between pact and non-pact slots.
 
         :rtype: int or None
         """
@@ -790,7 +790,7 @@ class AliasSpellbook:
         None.
 
         .. note::
-            Only D&D Beyond character sheets support the explicit distinction between pact and non-pact slots.
+            D&D Beyond and Google Sheets character sheets support the explicit distinction between pact and non-pact slots.
 
         :rtype: int or None
         """

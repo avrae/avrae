@@ -573,7 +573,7 @@ class GoogleSheet(SheetLoaderABC):
         elif self.version == (2, 1):
             is_joat = bool(character.value("AQ59"))
             is_ra = bool(character.value("AQ67"))  # parsing for remarkable athlethe from champion 7
-            all_check_bonus = int(character.value("AR58"))
+            all_check_bonus = int(character.value("AR58") or 0)
         joat_bonus = int(is_joat and self.get_stats().prof_bonus // 2)
         # upside-down floor division to do ceiling division for half-prof bonus (rounded up) of remarkable athlethe
         ra_bonus = int(is_ra and -(self.get_stats().prof_bonus // -2))
@@ -733,7 +733,27 @@ class GoogleSheet(SheetLoaderABC):
                     spell_mod = int(spell_mod_value)
                 except (TypeError, ValueError):
                     spell_mod = None
-        spellbook = Spellbook(slots, slots, spells, dc, sab, self.total_level, spell_mod)
+        pact_slot_level = None
+        num_pact_slots = None
+        warlock_level = sum(level for name, level in self.get_levels() if name.strip().casefold() == "warlock")
+        if warlock_level:
+            pact_slot_level = min((warlock_level + 1) // 2, 5)
+            num_pact_slots = 1 if warlock_level == 1 else 2 if warlock_level < 11 else 3 if warlock_level < 17 else 4
+            # Sheet totals already include pact slots. Do not classify more slots than the sheet provides.
+            num_pact_slots = min(num_pact_slots, slots[str(pact_slot_level)])
+
+        spellbook = Spellbook(
+            slots,
+            slots.copy(),
+            spells,
+            dc,
+            sab,
+            self.total_level,
+            spell_mod,
+            pact_slot_level=pact_slot_level,
+            num_pact_slots=num_pact_slots,
+            max_pact_slots=num_pact_slots,
+        )
         return spellbook
 
     def get_actions(self):

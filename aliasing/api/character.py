@@ -2,6 +2,7 @@ from functools import cached_property
 
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
+from aliasing.api._rolls import roll_check, roll_save
 from aliasing.utils import optional_cast_arg_or_default, UNSET
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
@@ -29,7 +30,86 @@ class AliasCharacter(AliasStatBlock):
             raise ConsumableException(f"There is no counter named {name}.")
         return consumable
 
+    def _get_roll_combatant(self):
+        if self._interpreter is None:
+            return None
+        combat = self._interpreter.combat()
+        if combat is None:
+            return None
+        combatant = next(
+            (
+                c
+                for c in combat._combat.get_combatants()
+                if getattr(c, "character_id", None) == self._character.upstream
+                and getattr(c, "character_owner", None) == self._character.owner
+            ),
+            None,
+        )
+        if combatant is not None:
+            combatant._character = self._character  # keep the character reference current for combat commits
+        return combatant
+
     # methods
+    def save(
+        self,
+        ability: str,
+        adv: bool = None,
+        include_ieffects: bool = False,
+        include_csettings: bool = False,
+        args: str = None,
+    ):
+        """
+        Rolls the character's saving throw, inside or outside combat.
+
+        :param str ability: The type of save ("str", "dexterity", etc).
+        :param bool adv: Roll with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
+        :param bool include_ieffects: Include the character's initiative effects if they are in the current combat.
+            Ignored when the character is not in combat.
+        :param bool include_csettings: Include character settings such as Halfling Luck.
+        :param str args: Optional roll arguments: ``adv``, ``dis``, ``-b``, ``-mc``, and ``-ro``.
+            Other arguments, including ``-rr``, are ignored.
+        :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
+        """
+        return roll_save(
+            self._character,
+            ability,
+            adv,
+            include_ieffects,
+            args,
+            combatant=self._get_roll_combatant() if include_ieffects else None,
+            character=self._character if include_csettings else None,
+        )
+
+    def check(
+        self,
+        skill_name: str,
+        adv: bool = None,
+        include_ieffects: bool = False,
+        include_csettings: bool = False,
+        args: str = None,
+    ):
+        """
+        Rolls the character's skill check, inside or outside combat.
+
+        :param str skill_name: The name of the skill to check.
+        :param bool adv: Roll with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
+        :param bool include_ieffects: Include the character's initiative effects if they are in the current combat.
+            Ignored when the character is not in combat.
+        :param bool include_csettings: Include character settings such as Halfling Luck and Reliable Talent.
+        :param str args: Optional roll arguments: ``adv``, ``dis``, ``-b``, ``-mc``, ``-ro``, and ``guidance``.
+            Other arguments, including ``-rr``, are ignored.
+        :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
+        """
+        return roll_check(
+            self._character,
+            skill_name,
+            adv,
+            include_ieffects,
+            args,
+            combatant=self._get_roll_combatant() if include_ieffects else None,
+            character=self._character if include_csettings else None,
+        )
+
     # --- ccs ---
     @property
     def consumables(self):

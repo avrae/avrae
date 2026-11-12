@@ -4,6 +4,7 @@ import draconic
 import pytest
 import yaml.constructor
 
+from aliasing.errors import EvaluationError
 from aliasing.evaluators import ScriptingEvaluator
 from tests.utils import ContextBotProxy
 
@@ -371,6 +372,25 @@ async def test_naughty_yaml(draconic_evaluator):
         else:
             result = draconic_evaluator.eval("load_yaml(data)")
             assert result == expected_result
+
+
+# a list referenced 100 times that grows after being referenced: 100 * ~190k chars when converted
+_GROWN_SHARED_LIST = "a = ['x']\nb = [a] * 100\na.extend(['y' * 1000] * 190)\n"
+
+
+@pytest.mark.parametrize("dump", ["dump_json", "dump_yaml"])
+async def test_dump_output_len_limit(draconic_evaluator, dump):
+    with pytest.raises(draconic.IterableTooLong):
+        draconic_evaluator.execute(f"{_GROWN_SHARED_LIST}return {dump}(b)")
+    assert draconic_evaluator.execute(f"return {dump}([1, 2])").strip()
+
+
+async def test_result_conversion_output_len_limit(draconic_evaluator):
+    with pytest.raises(EvaluationError) as e:
+        draconic_evaluator.transformed_str(f"<drac2>{_GROWN_SHARED_LIST}return b</drac2>")
+    assert isinstance(e.value.original, draconic.IterableTooLong)
+    with pytest.raises(EvaluationError):
+        draconic_evaluator.transformed_str(f"<drac2>{_GROWN_SHARED_LIST}return tuple(b)</drac2>")
 
 
 # ==== evaulator fixture ====

@@ -38,7 +38,16 @@ from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.enums import ActivationType
-from utils.functions import confirm, get_positivity, list_get, search_and_select, try_delete, camel_to_title, chunk_text
+from utils.functions import (
+    camel_to_title,
+    chunk_text,
+    confirm,
+    get_positivity,
+    list_get,
+    safe_load_bounded_yaml,
+    search_and_select,
+    try_delete,
+)
 from utils.settings.character import CHARACTER_SETTINGS, CSetting
 
 log = logging.getLogger(__name__)
@@ -191,7 +200,7 @@ class SheetManager(commands.Cog):
         character: Character = await ctx.get_character()
 
         try:
-            attack_json = yaml.safe_load(data)
+            attack_json = safe_load_bounded_yaml(data)
         except yaml.YAMLError:
             return await ctx.send("This is not a valid attack: invalid data.")
 

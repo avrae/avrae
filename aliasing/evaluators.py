@@ -123,8 +123,9 @@ def _result_str(config, value, expr):
     try:
         check_output_len(config, value)  # covers tuples and other types without a size-checked repr
         return str(value)
-    except draconic.exceptions._PostponedRaise as pr:  # raised outside the interpreter, so it has no node yet
-        raise EvaluationError(pr.cls(*pr.args, node=None, expr=expr), expr)
+    except draconic.exceptions._PostponedRaise as pr:
+        # raised after the script ran, so there is no line to point a Draconic traceback at
+        raise EvaluationError(InvalidArgument(*pr.args), expr)
 
 
 class MathEvaluator(draconic.SimpleInterpreter):

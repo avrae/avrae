@@ -5,6 +5,7 @@ import pytest
 import yaml.constructor
 
 from aliasing.errors import EvaluationError
+from cogs5e.models.errors import AvraeException
 from aliasing.evaluators import ScriptingEvaluator
 from tests.utils import ContextBotProxy
 
@@ -386,11 +387,12 @@ async def test_dump_output_len_limit(draconic_evaluator, dump):
 
 
 async def test_result_conversion_output_len_limit(draconic_evaluator):
-    with pytest.raises(EvaluationError) as e:
-        draconic_evaluator.transformed_str(f"<drac2>{_GROWN_SHARED_LIST}return b</drac2>")
-    assert isinstance(e.value.original, draconic.IterableTooLong)
-    with pytest.raises(EvaluationError):
-        draconic_evaluator.transformed_str(f"<drac2>{_GROWN_SHARED_LIST}return tuple(b)</drac2>")
+    # an AvraeException is shown to the user as a plain message; a Draconic one would need a line for its traceback
+    for result in ("b", "tuple(b)"):
+        with pytest.raises(EvaluationError) as e:
+            draconic_evaluator.transformed_str(f"<drac2>{_GROWN_SHARED_LIST}return {result}</drac2>")
+        assert isinstance(e.value.original, AvraeException)
+        assert "too large" in str(e.value)
 
 
 # ==== evaulator fixture ====

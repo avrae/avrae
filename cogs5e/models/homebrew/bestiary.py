@@ -17,7 +17,7 @@ from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
 from gamedata.monster import Monster, MonsterSpellbook, Trait
-from utils.functions import search_and_select
+from utils.functions import safe_load_bounded_yaml, search_and_select
 from utils.subscription_mixins import CommonHomebrewMixin
 
 log = logging.getLogger(__name__)
@@ -694,7 +694,7 @@ def parse_critterdb_traits(data, key):
                     )
                 elif freeform_override := override.group("freeform"):
                     try:
-                        attack_yaml = yaml.safe_load(freeform_override)
+                        attack_yaml = safe_load_bounded_yaml(freeform_override)
                     except yaml.YAMLError:
                         raise ExternalImportError(f"Monster had an invalid automation YAML ({data['name']}: {name})")
                     if not isinstance(attack_yaml, list):

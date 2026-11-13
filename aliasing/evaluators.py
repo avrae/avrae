@@ -15,6 +15,7 @@ import d20
 import draconic
 import json.scanner
 import yaml
+from draconic.types import check_output_len
 from yaml import composer, parser, scanner
 
 import aliasing.api.character as character_api
@@ -113,6 +114,18 @@ SCRIPTING_RE = re.compile(
 # an alias/snippet that can invoke draconic code
 _CodeInvokerT = Optional[Union[_CustomizationBase, WorkshopCollectableObject]]
 ScriptingWarning = namedtuple("ScriptingWarning", "msg node expr")
+
+
+def _result_str(config, value, expr):
+    """Converts a script's result to a string, as a size-limit error rather than a crash when it is too large."""
+    if value is None:
+        return ""
+    try:
+        check_output_len(config, value)  # covers tuples and other types without a size-checked repr
+        return str(value)
+    except draconic.exceptions._PostponedRaise as pr:
+        # raised after the script ran, so there is no line to point a Draconic traceback at
+        raise EvaluationError(InvalidArgument(*pr.args), expr)
 
 
 class MathEvaluator(draconic.SimpleInterpreter):
@@ -568,6 +581,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Serializes an object to a YAML string. See `yaml.safe_dump <https://pyyaml.org/wiki/PyYAMLDocumentation>`_.
         """
+        check_output_len(self._config, obj)  # yaml.dump never calls the size-checked __repr__ of Draconic types
         return yaml.dump(
             obj, Dumper=self._yaml_dumper, default_flow_style=False, line_break=True, indent=indent, sort_keys=False
         )
@@ -610,6 +624,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Serializes an object to a JSON string. See :func:`json.dumps`.
         """
+        check_output_len(self._config, obj)  # json.dumps never calls the size-checked __repr__ of Draconic types
         return json.dumps(obj, default=self._dump_json_default)
 
     # ==== roll limiters ====
@@ -828,7 +843,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             else:
                 evalresult = None
 
-            return str(evalresult) if evalresult is not None else ""
+            return _result_str(self._config, evalresult, match.group(0))
 
         output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
@@ -863,7 +878,7 @@ class AutomationEvaluator(MathEvaluator):
             except Exception as ex:
                 raise EvaluationError(ex, match.group(0))
 
-            return str(evalresult) if evalresult is not None else ""
+            return _result_str(self._config, evalresult, match.group(0))
 
         output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 

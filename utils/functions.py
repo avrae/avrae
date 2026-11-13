@@ -12,6 +12,7 @@ from contextlib import suppress
 from typing import Callable, TYPE_CHECKING, TypeVar
 
 import disnake
+import yaml
 from rapidfuzz import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
@@ -632,3 +633,35 @@ def rulescase(text: str) -> str:
     for term in constants.CAPITALIZED_GAME_TERMS:
         text = text.replace(term.lower(), term)
     return text
+
+
+# the largest official automation expands to 3,490 values; this leaves room for big homebrew
+MAX_YAML_VALUES = 20_000
+
+
+def safe_load_bounded_yaml(data: str, max_values: int = MAX_YAML_VALUES):
+    """
+    yaml.safe_load for user-supplied automation. Anchors and aliases let a short document refer to one block many
+    times; validation then copies every reference, so the work grows exponentially with nesting. Raises
+    yaml.YAMLError if the document would expand to more than max_values values, or refers to itself.
+    """
+    obj = yaml.safe_load(data)
+    try:
+        expanded = _expanded_yaml_values(obj, {})
+    except RecursionError:
+        expanded = float("inf")
+    if expanded > max_values:
+        raise yaml.YAMLError(f"The data expands to more than {max_values:,} values.")
+    return obj
+
+
+def _expanded_yaml_values(obj, sizes):
+    """The number of values in obj with every shared reference counted again, memoized so it stays linear."""
+    if not isinstance(obj, (dict, list)):
+        return 1
+    if id(obj) in sizes:
+        return sizes[id(obj)]
+    sizes[id(obj)] = float("inf")  # a reference back to an object being counted is a cycle
+    children = [*obj.keys(), *obj.values()] if isinstance(obj, dict) else obj
+    sizes[id(obj)] = size = 1 + sum(_expanded_yaml_values(child, sizes) for child in children)
+    return size
